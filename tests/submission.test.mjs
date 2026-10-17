@@ -3,7 +3,7 @@
 // The copy runs the gate with --no-tests (the gate runs this suite, this test runs the gate).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync, existsSync, lstatSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -15,7 +15,7 @@ const git = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=gate', '-c',
 function copyRepo() {
   const dir = mkdtempSync(join(tmpdir(), 'synergy-gate-'));
   const files = git(root, 'ls-files', '--cached', '--others', '--exclude-standard').split('\n')
-    .filter(f => f && !f.endsWith('.png') && existsSync(join(root, f)));
+    .filter(f => f && !f.endsWith('.png') && existsSync(join(root, f)) && lstatSync(join(root, f)).isFile()); // no symlinks (node_modules)
   for (const f of files) { mkdirSync(dirname(join(dir, f)), { recursive: true }); copyFileSync(join(root, f), join(dir, f)); }
   git(dir, 'init', '-q'); git(dir, 'add', '-A'); git(dir, 'commit', '-q', '-m', 'copy');
   return dir;
