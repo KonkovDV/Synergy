@@ -405,3 +405,6 @@ h2 { font-weight: 800; letter-spacing: -0.2px; }
 .coach-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .coach-head .mio { flex: none; }
 .rest .mio { display: block; margin: 0 auto 4px; }
+
+/* Headings focused on a screen change (for screen readers) need no ring: they are not controls. */
+[tabindex="-1"]:focus { outline: none; }

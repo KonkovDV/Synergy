@@ -24,7 +24,8 @@ AAPT2="$CACHE/prebuilt/$PLAT/aapt2"; FRAMEWORK="$CACHE/prebuilt/android-framewor
 
 rm -rf "$OUT"; mkdir -p "$OUT/classes" "$OUT/res" "$OUT/assets/www"
 (cd "$ROOT" && node tools/build.mjs)
-cp -r "$ROOT/dist/index.html" "$ROOT/dist/app.js" "$ROOT/dist/app.css" "$ROOT/dist/manifest.webmanifest" "$ROOT/dist/icons" "$OUT/assets/www/"
+mkdir -p "$OUT/assets/www/icons" # the APK has launcher mipmaps: of the PWA icons only the SVG favicon is needed
+cp "$ROOT/dist/index.html" "$ROOT/dist/app.js" "$ROOT/dist/app.css" "$ROOT/dist/manifest.webmanifest" "$OUT/assets/www/" && cp "$ROOT/dist/icons/icon.svg" "$OUT/assets/www/icons/"
 
 "$AAPT2" compile --dir "$ROOT/android/res" -o "$OUT/res/compiled.zip"
 "$AAPT2" link -I "$FRAMEWORK" --manifest "$ROOT/android/AndroidManifest.xml" --min-sdk-version 21 --target-sdk-version 29 \

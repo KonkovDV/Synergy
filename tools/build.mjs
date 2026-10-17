@@ -1,6 +1,6 @@
 // Build: dist/ (installable offline PWA) + dist/synergy-standalone.html (one file, opens from file://).
 import { build } from 'esbuild';
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -40,12 +40,12 @@ ${body}
 writeFileSync(join(dist, 'app.js'), js);
 writeFileSync(join(dist, 'app.css'), css);
 writeFileSync(join(dist, 'index.html'), page({
-  head: '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="app.css">',
+  head: '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon.svg" type="image/svg+xml">\n<link rel="apple-touch-icon" href="icons/icon-180.png">\n<link rel="stylesheet" href="app.css">',
   body: '<script src="app.js"></script>',
 }));
-copyFileSync(join(root, 'public/icons/icon.svg'), join(dist, 'icons/icon.svg'));
+for (const f of readdirSync(join(root, 'public/icons'))) copyFileSync(join(root, 'public/icons', f), join(dist, 'icons', f));
 copyFileSync(join(root, 'public/manifest.webmanifest'), join(dist, 'manifest.webmanifest'));
-const shell = ['./', './index.html', './app.js', './app.css', './manifest.webmanifest', './icons/icon.svg'];
+const shell = ['./', './index.html', './app.js', './app.css', './manifest.webmanifest', ...readdirSync(join(root, 'public/icons')).map(f => `./icons/${f}`)];
 writeFileSync(join(dist, 'sw.js'), `// App-shell cache: the game works offline after the first visit.
 const CACHE = 'synergy-${pkg.version}';
 const SHELL = ${JSON.stringify(shell)};
