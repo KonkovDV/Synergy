@@ -15,7 +15,7 @@ const TRIPOD = "{ id: 'tripod', name: 'Трипод', command: 'close', grip: 't
 
 const tmp = mkdtempSync(join(tmpdir(), 'synergy-drill-'));
 try {
-  for (const dir of ['src', 'tests']) cpSync(join(root, dir), join(tmp, dir), { recursive: true });
+  for (const dir of ['src', 'tests', 'public']) cpSync(join(root, dir), join(tmp, dir), { recursive: true });
   cpSync(join(root, 'package.json'), join(tmp, 'package.json'));
   if (existsSync(join(root, 'node_modules'))) symlinkSync(join(root, 'node_modules'), join(tmp, 'node_modules'), 'dir'); // esbuild for the bundle test
   const file = join(tmp, 'src/core/vocabulary.js');
