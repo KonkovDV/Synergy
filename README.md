@@ -37,7 +37,7 @@
 ## Проверка качества
 
 ```bash
-npm ci && npm test              # 108 тестов: ядро, v5-модули, все игры × уровни × схемы (бот и модель новичка)
+npm ci && npm test              # 110 тестов: ядро, v5-модули, все игры × уровни × схемы (бот и модель новичка)
 npm run build                   # dist/ (PWA) + dist/synergy-standalone.html
 npm run drill:gestures          # учебная замена жеста: остальной код берёт набор из vocabulary.js
 python3 tools/serve.py --dist --port 8091 & node tests/e2e/v5.mjs   # мобильный e2e: 0 ошибок JS, axe-core — 0 нарушений на 14 экранах
@@ -63,9 +63,9 @@ CI (`.github/workflows`, actions закреплены по SHA): тесты + у
 
 ```
 src/core      домен: сигнал, протез, калибровка, прогресс, адаптация, самочувствие, обучение, аналитика
-src/input     эмулятор ЭМГ, WebSocket/postMessage-мост, Bluetooth (NUS), площадки и клавиатура
+src/input     эмулятор ЭМГ, WebSocket/postMessage-мост, Bluetooth (NUS)
 src/games     4 игры + проверка навыка, базовый класс, каталог, исполнитель шага
-src/ui        экраны · src/render графика · src/services звук, голос, вибрация, отчёты
+src/ui        экраны, площадки и клавиатура эмулятора · src/render графика · src/services звук, музыка, голос, вибрация, отчёты
 android/      WebView-оболочка (TTS, «Поделиться», печать) · bridge/ мост и прошивка · lab/ DSP + LDA
 tests/        node:test + Playwright · release/ готовые APK и HTML · legacy/v3 прошлая версия
 ```

@@ -2,7 +2,7 @@
 import { h } from './dom.js';
 import { segmented } from './widgets.js';
 import { SCHEME_INFO, OPENING_GESTURE } from '../core/vocabulary.js';
-import { gestureIcon } from '../input/controls.js';
+import { gestureIcon } from './controls.js';
 
 export function onboardingScreen(app) {
   let step = 0;

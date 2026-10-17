@@ -14,7 +14,7 @@ import { buildShowcaseState } from './core/showcase.js';
 import { EmgEmulator } from './input/emulator.js';
 import { BridgeSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
-import { bindKeyboard } from './input/controls.js';
+import { bindKeyboard } from './ui/controls.js';
 import { createGame, GAME_BY_ID, PLAN_CATALOG } from './games/registry.js';
 import { GameRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';

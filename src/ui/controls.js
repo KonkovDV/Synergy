@@ -3,7 +3,7 @@
 // both pads (two thumbs) or the «A+B» key = co-contraction. Gesture scheme: 7 gesture keys.
 import { GESTURES, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { drawHand } from '../render/draw.js';
-import { h } from '../ui/dom.js';
+import { h } from './dom.js';
 
 const MIN_LEVEL = 0.12;
 

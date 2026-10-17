@@ -4,7 +4,7 @@
 import { h, toast } from './dom.js';
 import { topBar, signalMeter } from './widgets.js';
 import { TutorialRun } from '../core/tutorial.js';
-import { createTwoChannelPads, createGesturePads } from '../input/controls.js';
+import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME } from '../core/vocabulary.js';
 import { ACHIEVEMENTS } from '../core/progress.js';
 import { drawHand, drawGauge, COLORS } from '../render/draw.js';
