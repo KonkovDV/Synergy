@@ -36,7 +36,7 @@
 ## Проверка качества
 
 ```bash
-npm ci && npm test              # 88 тестов: ядро, v5-модули, все игры × уровни × схемы (бот и модель новичка)
+npm ci && npm test              # 91 тест: ядро, v5-модули, все игры × уровни × схемы (бот и модель новичка)
 npm run build                   # dist/ (PWA) + dist/synergy-standalone.html
 python3 tools/serve.py --dist --port 8091 & node tests/e2e/v5.mjs   # мобильный e2e, 0 ошибок JS
 VERIFY_API=1 sh tools/build-apk.sh   # APK + сверка Android-заглушек с настоящим API 29

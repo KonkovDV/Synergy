@@ -19,6 +19,16 @@ export const SIGNAL = {
   thresholdIntensity: 0.6,  // fixed intensity of the threshold (two-button) scheme
 };
 
+/**
+ * Which gestures a classifier mixes up (open datasets NinaPro, EMG-EPN-612: similar grips are confused
+ * more often). Symmetric pair weights for the emulator and the demo profile; pairs with gestures that are
+ * not in the current set are ignored, every other pair weighs `other`.
+ */
+export const GESTURE_CONFUSION = {
+  pairs: [['pinch', 'key', 0.35], ['point', 'thumb', 0.30], ['fist', 'key', 0.15], ['fist', 'thumb', 0.10]],
+  other: 0.02,
+};
+
 export const HAND = {
   closeSpeed: 2.4,          // closure units / s at intensity 1 (proportional speed)
   openSpeed: 2.6,

@@ -5,6 +5,7 @@ import { createRng } from './rng.js';
 import { createProfile, recordRun, recordDayNote, starsFor, dayKey } from './progress.js';
 import { DEFAULT_SETTINGS } from './storage.js';
 import { defaultCalibration } from './signal.js';
+import { confusionPairs } from './confusion.js';
 
 const GAMES = [
   { id: 'grip', levels: 8, skills: ['precision', 'switching', 'stability', 'separation'] },
@@ -50,10 +51,15 @@ export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey()
   return { version: 4, profile, settings: { ...settings }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration() }, runs };
 }
 
-/** Safe in the gesture scheme: a few realistic confusions (pinch ↔ key, point ↔ thumb) that fade over time. */
+/** Safe in the gesture scheme: the classifier's likely confusions (GESTURE_CONFUSION), fading over time. */
 function safeDetails(rng, k) {
-  const c = v => Math.round(v * (1.2 - k) * (0.7 + 0.6 * rng()) * 10) / 10;
-  return { solved: 6, total: 7, confusion: { pinch: { key: c(1.4), fist: c(0.3) }, key: { pinch: c(0.9) }, point: { thumb: c(0.6) }, thumb: { point: c(0.4) } } };
+  const c = w => Math.round(w * (1.2 - k) * (0.7 + 0.6 * rng()) * 10) / 10;
+  const confusion = {};
+  for (const [x, y, w] of confusionPairs()) {
+    (confusion[x] ??= {})[y] = c(4 * w);
+    (confusion[y] ??= {})[x] = c(2.6 * w);
+  }
+  return { solved: 6, total: 7, confusion };
 }
 
 function assessmentRun(rng, date, scheme, k, profile) {
