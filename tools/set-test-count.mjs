@@ -4,9 +4,9 @@ import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { NUMBER_DOCS as DOCS } from './number-docs.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const DOCS = ['README.md', 'docs/JURY_STRATEGY.md', 'docs/AI_USAGE.md', 'MEMORY.md']; // same list as tools/check-submission.mjs
 const files = readdirSync(join(root, 'tests')).filter(f => f.endsWith('.test.mjs')).map(f => join(root, 'tests', f));
 const run = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...files], { cwd: root, encoding: 'utf8' });
 const n = Number(run.stdout.match(/^# tests (\d+)/m)?.[1]);

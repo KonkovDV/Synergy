@@ -6,6 +6,7 @@ import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
+import { NUMBER_DOCS } from './number-docs.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const draft = process.argv.includes('--draft');
@@ -35,7 +36,7 @@ if (runTests) {
   if (failed || run.status !== 0) fail(`тесты падают: ${failed || 'см. npm test'}`);
 }
 const apkKb = existsSync(apk) ? Math.round(statSync(apk).size / 1024) : null;
-for (const doc of ['README.md', 'docs/JURY_STRATEGY.md', 'docs/AI_USAGE.md', 'MEMORY.md']) {
+for (const doc of NUMBER_DOCS) {
   const text = read(doc);
   if (tests !== null) for (const m of text.matchAll(/(\d+)\s+(?:авто)?тест(?:а|ов)?(?![а-яёa-z])/gi)) if (Number(m[1]) !== tests) fail(`${doc}: «${m[0]}», а тестов ${tests}`);
   for (const m of text.matchAll(/APK[^\n|]{0,24}?(\d+)\s*КБ/g)) if (apkKb !== null && Math.abs(Number(m[1]) - apkKb) > 2) fail(`${doc}: «${m[0]}», а APK ${apkKb} КБ`);
