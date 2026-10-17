@@ -40,7 +40,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn ghost', onclick: () => { run.skipStep(); if (run.done) finish(); else showStep(); } }, 'Пропустить шаг'),
         h('button', { class: 'btn ghost', onclick: finish }, 'Завершить'))),
-    meter.node, pads ? h('div', { class: 'controls' }, pads) : null);
+    meter.node, pads ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, pads) : null);
 
   return {
     node,
