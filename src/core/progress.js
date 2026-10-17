@@ -195,7 +195,9 @@ export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(),
   const picked = ordered.slice(0, Math.min(exercises, ordered.length));
   const items = picked.map(g => ({ game: g.id, level: recommendedLevel(profile, g.id), done: false, retention: false }));
   if (items.length) items.push({ ...items[0], retention: true });
-  profile.plan = { day: today, scheme, items, rewarded: false };
+  // Rebuilt the same day (scheme switched): the plan bonus of today is not paid twice.
+  const rewarded = profile.plan?.day === today && !!profile.plan.rewarded;
+  profile.plan = { day: today, scheme, items, rewarded };
   return profile.plan;
 }
 

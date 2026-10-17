@@ -30,3 +30,21 @@ test('red team: a JSON «__proto__» key in a backup does not reach Object.proto
   assert.equal({}.polluted, undefined);
   assert.equal(state.settings.polluted, undefined);
 });
+
+test('logic: switching the scheme after finishing the plan does not pay the plan bonus twice', () => {
+  const p = createProfile();
+  const plan = buildDailyPlan(p, [], PLAN_CATALOG, 'proportional', today, { exercises: 1 });
+  let bonus = 0;
+  for (const item of plan.items) bonus += completePlanItem(p, { ...run, game: item.game, retention: item.retention }, today);
+  assert.ok(bonus > 0, 'first plan of the day pays');
+  const again = buildDailyPlan(p, [], PLAN_CATALOG, 'gesture', today, { exercises: 1 });
+  let second = 0;
+  for (const item of again.items) second += completePlanItem(p, { ...run, game: item.game, retention: item.retention }, today);
+  assert.equal(second, 0, 'the rebuilt plan of the same day pays nothing');
+  assert.equal(p.totals.plans, 1);
+});
+
+test('red team: a run with an unparseable date is dropped on import', () => {
+  const st = parseState(JSON.stringify({ version: 4, runs: [{ ...run, at: 'not-a-date' }, run, { game: 'grip', level: 1, score: 1, stars: 0 }] }));
+  assert.equal(st.runs.length, 2);
+});

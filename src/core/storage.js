@@ -55,6 +55,7 @@ function sameShape(value, def) {
 
 function validRun(r) {
   return isObject(r) && typeof r.game === 'string' && Number.isInteger(r.level) && Number.isFinite(r.score)
+    && (r.at === undefined || (typeof r.at === 'string' && !Number.isNaN(Date.parse(r.at))))
     && r.score >= 0 && r.score <= 100 && Number.isInteger(r.stars) && r.stars >= 0 && r.stars <= 3;
 }
 
