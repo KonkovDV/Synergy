@@ -51,10 +51,12 @@ export class SignalPipeline {
    * @param {string} options.scheme  threshold | proportional | gesture
    * @param {object} [options.calibration]
    * @param {object} [options.params] overrides of SIGNAL (user sensitivity)
+   * @param {import('./calibration.js').RestTracker} [options.restTracker] co-adaptive rest baseline (real sensors)
    */
-  constructor({ scheme = SCHEME.PROPORTIONAL, calibration = defaultCalibration(), params = {} } = {}) {
+  constructor({ scheme = SCHEME.PROPORTIONAL, calibration = defaultCalibration(), params = {}, restTracker = null } = {}) {
     this.scheme = scheme;
-    this.calibration = calibration;
+    this.restTracker = restTracker;
+    this.calibration = restTracker?.calibration ?? calibration;
     this.params = { ...SIGNAL, ...params };
     this.reset();
   }
@@ -87,6 +89,7 @@ export class SignalPipeline {
   ingest(frame, now) {
     const dt = this.lastT === null ? 0.02 : Math.min(0.1, (frame.t - this.lastT) / 1000);
     const k = 1 - Math.exp(-dt / (this.params.smoothingMs / 1000));
+    this.restTracker?.update([frame.a, frame.b], [this.aOn, this.bOn], dt);
     this.a += (normalize(frame.a, 0, this.calibration) - this.a) * k;
     this.b += (normalize(frame.b, 1, this.calibration) - this.b) * k;
     this.lastT = frame.t;

@@ -39,6 +39,21 @@ export const SESSION = {
 /** Child mode (with a parent): shorter plan, shorter rest, lower daily cap. */
 export const CHILD = { planExercises: 2, restBetweenExercisesS: 15, dailySoftCapMin: 20 };
 
+/**
+ * Co-adaptive calibration (Hahne et al. 2015: user and decoder adapt together). Only the rest baseline
+ * follows slow sensor drift (sweat, electrode contact), only in confirmed rest, bounded; a channel «on»
+ * without a break for stuckS means the baseline jumped (electrode moved) → ask to recalibrate.
+ */
+export const CALIBRATION_ADAPT = {
+  tauS: 60,          // time constant of the rest estimate
+  quietMs: 1000,     // confirmed rest: both channels off and quiet this long
+  quietFactor: 0.5,  // quiet = below quietFactor × onThreshold above the current rest estimate
+  maxShift: 0.2,     // applied shift ≤ 20 % of the calibrated span
+  driftWarn: 0.3,    // observed drift > 30 % of the span → «пора перекалибровать»
+  stuckS: 15,        // no game asks for 15 s of continuous contraction
+  reportShift: 0.02, // smaller shifts are noise: not saved, not reported
+};
+
 /** Challenge point inside an exercise: keep ~75 % of trials successful (Guadagnoli & Lee, 2004). */
 export const ADAPT = {
   window: 4,        // last N trials decide

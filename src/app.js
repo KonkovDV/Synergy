@@ -2,6 +2,7 @@
 import { APP } from './config.js';
 import { Store, memoryStorage } from './core/storage.js';
 import { SignalPipeline } from './core/signal.js';
+import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
 import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile } from './core/progress.js';
@@ -152,12 +153,11 @@ export class App {
   signalSource(demo = false) { return demo || this.sourceKind() === 'touch' ? this.emulator : this.bridge; }
   calibration(kind = this.sourceKind()) { return this.state.calibrations[kind]; }
 
-  createPipeline(demo = false) {
-    return new SignalPipeline({
-      scheme: this.settings.scheme,
-      calibration: demo ? this.state.calibrations.touch : this.calibration(),
-      params: { onThreshold: this.settings.sensitivity, coThreshold: this.settings.coThreshold },
-    });
+  createPipeline(demo = false, { adaptRest = false } = {}) {
+    const s = this.settings;
+    const calibration = demo ? this.state.calibrations.touch : this.calibration();
+    const restTracker = adaptRest ? new RestTracker(calibration, { onThreshold: s.sensitivity }) : null;
+    return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, coThreshold: s.coThreshold }, restTracker });
   }
 
   createHand() { return new BionicHand({ grips: HAND.twoChannelGrips }); }
@@ -191,7 +191,8 @@ export class App {
     const instance = createGame(game, { levelNumber: level, scheme: s.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
       mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: s.reduceMotion, guidance: demo ? 1 : this.guidance(game) });
     const hand = this.createHand();
-    const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });
+    const adaptRest = restAdaptationAllowed({ source: this.sourceKind(), enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
+    const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });
     return { id: game, level, retention, demo, game: instance, hand, runner, entry: GAME_BY_ID[game] };
   }
 
@@ -216,9 +217,18 @@ export class App {
     this.state.runs.push(run);
     const report = recordRun(this.profile, run, { today: dayKey(), weeklyGoal: this.settings.weeklyGoal });
     const planBonus = completePlanItem(this.profile, run, dayKey());
+    const calibrationNote = this.adoptRest(session.runner.pipeline.restTracker);
     this.save();
     if (report.levelUp) this.feedback.event({ name: 'levelup' });
-    return { run, report, planBonus };
+    return { run, report, planBonus, calibrationNote };
+  }
+
+  /** Co-adaptive calibration: keeps a bounded rest shift for the next session, or asks to recalibrate. */
+  adoptRest(tracker) {
+    if (!tracker) return null;
+    const s = tracker.summary();
+    if (s.keep) this.state.calibrations.bridge = { ...this.state.calibrations.bridge, ...s.calibration, adaptedAt: new Date().toISOString() };
+    return s.recalibrate || s.keep ? { recalibrate: s.recalibrate, shiftPct: Math.round(100 * s.shift), stuckChannel: s.stuckChannel } : null;
   }
 
   /** Next unfinished item of today's plan, or null. */

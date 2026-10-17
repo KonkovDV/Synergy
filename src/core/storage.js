@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS = {
   // Training
   adaptive: true,           // адаптивная сложность внутри упражнения
   fadedFeedback: true,      // затухающие подсказки: опытный игрок видит шкалу не в каждой попытке
+  adaptRest: true,          // подстройка покоя под дрейф датчиков (только внешний источник)
   audience: 'adult',        // adult | child (короче план, ниже дневной лимит)
   parentPin: '',            // хэш PIN родителя (детский режим): ворота, а не защита данных
   pinLock: { fails: 0, until: 0 }, // тормоз перебора PIN

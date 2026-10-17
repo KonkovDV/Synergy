@@ -1,5 +1,7 @@
 // Calibration — maps raw channel amplitude to 0..1 per user (like per-sensor sensitivity in Motorica Start).
 // Comfortable contraction (≈ 70 % effort, not maximum) becomes 1.0 to avoid fatigue.
+// RestTracker keeps the rest baseline right during a session with real sensors (co-adaptive calibration).
+import { CALIBRATION_ADAPT, SIGNAL } from '../config.js';
 
 export const CALIBRATION_STEPS = [
   { id: 'rest', channel: null, seconds: 3, title: 'Покой', text: 'Положите руку удобно и полностью расслабьте мышцы.' },
@@ -54,4 +56,71 @@ export class CalibrationRecorder {
     const safeMax = max.map((m, ch) => Math.max(m, rest[ch] + 1e-3));
     return { calibration: { rest, max: safeMax, at: new Date().toISOString() }, issues, separation };
   }
+}
+
+/**
+ * RestTracker — co-adaptive calibration of the rest baseline. Additive offset model: rest and max move
+ * together, the calibrated span stays. Adapts only after quietMs of confirmed rest, with time constant
+ * tauS; the applied shift is bounded by ±maxShift of the span, the observed drift is not (it raises
+ * the «recalibrate» flag). The pipeline normalizes by `calibration`, which this tracker updates in place.
+ */
+export class RestTracker {
+  constructor(calibration, { onThreshold = SIGNAL.onThreshold, params = CALIBRATION_ADAPT } = {}) {
+    this.params = params;
+    this.onThreshold = onThreshold;
+    this.rest0 = [...calibration.rest];
+    this.span = [0, 1].map(ch => Math.max(1e-6, calibration.max[ch] - calibration.rest[ch]));
+    this.observed = [...calibration.rest];
+    this.calibration = { ...calibration, rest: [...calibration.rest], max: [...calibration.max] };
+    this.quietFor = 0; this.onFor = [0, 0]; this.stuckChannel = null;
+  }
+
+  /**
+   * @param {number[]} raw [a, b] in source units
+   * @param {boolean[]} on channel flags of the pipeline ([aOn, bOn])
+   * @param {number} dt seconds since the previous frame
+   */
+  update(raw, on, dt) {
+    const { quietMs, quietFactor, tauS, maxShift, stuckS } = this.params;
+    on.forEach((o, ch) => {
+      this.onFor[ch] = o ? this.onFor[ch] + dt : 0;
+      if (this.onFor[ch] >= stuckS) this.stuckChannel ??= ch;
+    });
+    const quiet = !on[0] && !on[1] && raw.every((v, ch) => (v - this.observed[ch]) / this.span[ch] < quietFactor * this.onThreshold);
+    this.quietFor = quiet ? this.quietFor + dt : 0;
+    if (this.quietFor * 1000 < quietMs) return;
+    const k = Math.min(1, dt / tauS);
+    for (const ch of [0, 1]) {
+      this.observed[ch] += (raw[ch] - this.observed[ch]) * k;
+      const bound = maxShift * this.span[ch];
+      const rest = this.rest0[ch] + Math.max(-bound, Math.min(bound, this.observed[ch] - this.rest0[ch]));
+      this.calibration.rest[ch] = rest;
+      this.calibration.max[ch] = rest + this.span[ch];
+    }
+  }
+
+  /** Applied shift of the rest baseline, as a share of the span (the larger channel). */
+  shift() { return this.share(this.calibration.rest); }
+
+  /** Observed drift of the quiet level, as a share of the span — not bounded by maxShift. */
+  drift() { return this.share(this.observed); }
+
+  share(levels) { return Math.max(...[0, 1].map(ch => Math.abs(levels[ch] - this.rest0[ch]) / this.span[ch])); }
+
+  get needsRecalibration() { return this.stuckChannel !== null || this.drift() > this.params.driftWarn; }
+
+  /** Session outcome: the adapted calibration is worth keeping only when it moved and stayed in bounds. */
+  summary() {
+    const shift = this.shift();
+    return {
+      shift, drift: this.drift(), stuckChannel: this.stuckChannel, recalibrate: this.needsRecalibration,
+      keep: !this.needsRecalibration && shift >= this.params.reportShift,
+      calibration: { rest: [...this.calibration.rest], max: [...this.calibration.max] },
+    };
+  }
+}
+
+/** Rest adaptation is for real sensors only: not the on-screen emulator, not the demo, not fixed-protocol games. */
+export function restAdaptationAllowed({ source, enabled, demo = false, gameAdaptive = true }) {
+  return enabled && !demo && source === 'bridge' && gameAdaptive;
 }
