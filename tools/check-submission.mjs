@@ -38,12 +38,14 @@ for (const doc of ['README.md', 'docs/JURY_STRATEGY.md', 'MEMORY.md']) {
 const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n');
 
 // 3. Wording: no overstated claims in texts the jury or users read (code identifiers like predict() are fine).
+// Cyrillic needs explicit classes: \w in JS regexes is ASCII-only.
+const W = '[а-яёa-z]*';
 const BANNED = [
-  [/предсказыва\w* (перенос|управлени)/i, '«предсказывает перенос» — говорить «игровая метрика, которую исследование связывало с переносом»'],
+  [new RegExp(`предсказыва${W} (перенос|управлени)|перенос${W}[^.\\n]{0,60}предсказыва`, 'i'), '«предсказывает перенос» — говорить «игровая метрика, которую исследование связывало с переносом»'],
   [/predicts? transfer/i, '«predicts transfer» — «linked to transfer»'],
-  [/лучш\w* признак\w* переноса/i, '«лучший признак переноса»'],
-  [/(главн|основн)\w* «?клиническ\w*»? индикатор/i, '«клинический индикатор» — у игры нет клинической валидации'],
-  [/перенос\w* (на протез )?доказан(?!\?)/i, '«перенос доказан»'],
+  [new RegExp(`лучш${W} признак${W} переноса`, 'i'), '«лучший признак переноса»'],
+  [new RegExp(`(главн|основн)${W} «?клиническ${W}»? индикатор`, 'i'), '«клинический индикатор» — у игры нет клинической валидации'],
+  [new RegExp(`перенос${W} (на протез )?доказан(?!\\?)`, 'i'), '«перенос доказан»'],
 ];
 const textFiles = tracked.filter(f => /\.(md|js|mjs|html)$/.test(f) && !/^(legacy|lab)\//.test(f) && !['CHANGELOG.md', 'tools/check-submission.mjs'].includes(f));
 for (const f of textFiles) {
