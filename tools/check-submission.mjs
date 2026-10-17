@@ -35,7 +35,7 @@ if (runTests) {
   if (failed || run.status !== 0) fail(`тесты падают: ${failed || 'см. npm test'}`);
 }
 const apkKb = existsSync(apk) ? Math.round(statSync(apk).size / 1024) : null;
-for (const doc of ['README.md', 'docs/JURY_STRATEGY.md', 'MEMORY.md']) {
+for (const doc of ['README.md', 'docs/JURY_STRATEGY.md', 'docs/AI_USAGE.md', 'MEMORY.md']) {
   const text = read(doc);
   if (tests !== null) for (const m of text.matchAll(/(\d+)\s+(?:авто)?тест(?:а|ов)?(?![а-яёa-z])/gi)) if (Number(m[1]) !== tests) fail(`${doc}: «${m[0]}», а тестов ${tests}`);
   for (const m of text.matchAll(/APK[^\n|]{0,24}?(\d+)\s*КБ/g)) if (apkKb !== null && Math.abs(Number(m[1]) - apkKb) > 2) fail(`${doc}: «${m[0]}», а APK ${apkKb} КБ`);
@@ -65,6 +65,14 @@ for (const f of textFiles) {
   lines.forEach((line, i) => { for (const [re, why] of BANNED) if (re.test(line)) fail(`${f}:${i + 1}: ${why}`); });
 }
 
+const { GESTURE_IDS } = await import(pathToFileURL(join(root, 'src/core/vocabulary.js')).href);
+// Python cannot import vocabulary.js: its class lists (order = class index) must mirror it (PLAN C.3, step 6).
+for (const f of ['lab/lab7.py', 'bridge/ws_bridge.py'].filter(f => existsSync(join(root, f)))) {
+  const list = read(f).match(/^GESTURES\s*=\s*[[(]([^\])]*)[\])]/m)?.[1];
+  const ids = list ? [...list.matchAll(/'([^']+)'/g)].map(m => m[1]) : [];
+  if (ids.join() !== GESTURE_IDS.join()) fail(`${f}: GESTURES (${ids.join(', ')}) ≠ vocabulary.js (${GESTURE_IDS.join(', ')}) — порядок = индексы классов`);
+}
+
 // 3a. The gesture set: «состав — гипотеза» in the documents until the organizers publish their 7 gestures,
 // then the published set is recorded in MEMORY.md and must be exactly the set in vocabulary.js (PLAN C.3).
 const gestureLine = read('MEMORY.md').match(/^Набор жестов организатора:\s*(.+)$/m)?.[1]?.trim();
@@ -75,9 +83,13 @@ else if (/^не опубликован/i.test(gestureLine)) {
   if (!hypothesisDocs.includes('docs/JURY_STRATEGY.md')) fail('набор жестов не опубликован, а docs/JURY_STRATEGY.md не называет состав гипотезой');
 } else {
   for (const f of hypothesisDocs) fail(`${f}: состав 7 жестов назван гипотезой, а набор организатора уже записан в MEMORY.md`);
-  const { GESTURE_IDS } = await import(pathToFileURL(join(root, 'src/core/vocabulary.js')).href);
   const published = gestureLine.split(/[\s,;]+/).filter(Boolean);
   if ([...published].sort().join() !== [...GESTURE_IDS].sort().join()) fail(`vocabulary.js (${GESTURE_IDS.join(', ')}) ≠ набор организатора в MEMORY.md (${published.join(', ')})`);
+}
+
+// 3b. Documents name the current release (README kept «Synergy-5.0.0.apk» and a 5.0.0 badge through 5.2.0).
+for (const f of textFiles.filter(f => f.endsWith('.md') && f !== 'CHANGELOG.md')) {
+  for (const m of read(f).matchAll(/Synergy-(\d+\.\d+\.\d+)\.apk|версия-(\d+\.\d+\.\d+)/g)) if ((m[1] ?? m[2]) !== version) fail(`${f}: «${m[0]}», а версия ${version}`);
 }
 
 // 4. Rights and submission hygiene (Правила, п. 5.5, 6.6).
@@ -90,7 +102,8 @@ if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} �
 
 for (const w of warnings) console.log(`⚠ ${w}`);
 for (const e of errors) console.log(`✗ ${e}`);
-console.log(errors.length ? `Не готово к сдаче: ${errors.length} ошибок`
+const errorsWord = n => (n % 10 === 1 && n % 100 !== 11 ? 'ошибка' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'ошибки' : 'ошибок');
+console.log(errors.length ? `Не готово к сдаче: ${errors.length} ${errorsWord(errors.length)}`
   : warnings.length ? `Черновик без ошибок, предупреждений: ${warnings.length} (тестов ${tests ?? '—'}, APK ${apkKb} КБ, версия ${version})`
   : `Готово к сдаче (тестов ${tests ?? '—'}, APK ${apkKb} КБ, версия ${version})`);
 process.exit(errors.length ? 1 : 0);

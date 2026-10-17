@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.2.0',
+  version: '5.3.0',
   storageKey: 'synergy.v4',
 };
 
