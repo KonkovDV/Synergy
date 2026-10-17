@@ -1,7 +1,8 @@
 // «Сейф: код движения» — command/gesture selection, clean transitions through rest, consistency.
 // Gesture scheme: the 6 active gestures (+ rest between them). Two-channel schemes: graded commands
 // and co-contraction. Repeating each pattern consistently trains separable EMG patterns
-// (Kristoffersen et al. 2020: +51 % separability after game training).
+// (Kristoffersen et al. 2020, 25 able-bodied participants: about 51 % more separated patterns after game training;
+// the 2021 study with limb-absent users found no consistent gain, so this is a design idea, not a promise).
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand } from '../render/draw.js';

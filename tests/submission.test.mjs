@@ -23,6 +23,8 @@ function copyRepo() {
 
 // Built from parts: the gate lints every tracked file, this one included.
 const OVERSTATED = ['Перенос', 'на протез', 'доказан.'].join(' ');
+const UNVERIFIED = ['Попытки без живой', 'подсказки были', 'связаны с протезом.'].join(' ');
+const UP_TO_44 = ['Отказов', 'до', '44 %.'].join(' ');
 const gate = dir => spawnSync(process.execPath, ['tools/check-submission.mjs', '--draft', '--no-tests'], { cwd: dir, encoding: 'utf8' });
 const edit = (dir, f, fn) => writeFileSync(join(dir, f), fn(readFileSync(join(dir, f), 'utf8')));
 
@@ -35,6 +37,8 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
     const cases = [
       ['no APK', () => rmSync(join(dir, 'release', `Synergy-${version}.apk`)), `нет release/Synergy-${version}.apk`],
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
+      ['unverified claim (fact-check)', () => edit(dir, 'README.md', s => `${s}\n${UNVERIFIED}\n`), 'README.md:'],
+      ['«up to 44 %»', () => edit(dir, 'README.md', s => `${s}\n${UP_TO_44}\n`), 'README.md:'],
       ['stale APK name in README', () => edit(dir, 'README.md', s => `${s}\nrelease/Synergy-0.0.1.apk\n`), 'Synergy-0.0.1.apk'],
       ['overstated claim', () => edit(dir, 'README.md', s => `${s}\n${OVERSTATED}\n`), 'README.md:'], // the wording lint names the file and line
       ['gesture set published, docs still say «гипотеза»', () => edit(dir, 'MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, thumb')), 'назван гипотезой'],
