@@ -3,32 +3,40 @@ on:
   push: { branches: [main] }
   pull_request:
 permissions: { contents: read }
+# Actions are pinned to commit SHAs (OpenSSF Scorecard «Pinned-Dependencies»); Dependabot bumps them.
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { fetch-depth: 0 }
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm test
       - run: node tools/gesture-drill.mjs
       - run: npm run build
       - run: node tools/check-submission.mjs --draft
-      - name: e2e (mobile smoke, Playwright)
+      - name: e2e (mobile smoke + axe-core accessibility audit, Playwright)
         run: |
           npm i --no-save playwright@1.56.1
           npx playwright install --with-deps chromium
           python3 tools/serve.py --dist --port 8091 &
           sleep 1
           node tests/e2e/v5.mjs http://127.0.0.1:8091/index.html /tmp/shots
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: web-build, path: dist/ }
   lab:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with: { python-version: '3.12' }
       - run: pip install -r lab/requirements.txt && python -m unittest lab/test_lab7.py
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with: { fail-on-severity: moderate }
