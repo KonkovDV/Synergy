@@ -35,7 +35,12 @@ for (const doc of ['README.md', 'docs/JURY_STRATEGY.md', 'MEMORY.md']) {
   for (const m of text.matchAll(/APK[^\n|]{0,24}?(\d+)\s*КБ/g)) if (apkKb !== null && Math.abs(Number(m[1]) - apkKb) > 2) fail(`${doc}: «${m[0]}», а APK ${apkKb} КБ`);
 }
 
-const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n');
+const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
+// Build outputs must not be tracked: the archive excludes them and the receiver rebuilds (dist/ hole of 5.1.0).
+const builds = tracked.filter(f => /^(dist|android\/build|node_modules|tools\/\.cache)\//.test(f));
+if (builds.length) fail(`артефакты сборки в git (${builds.length}, напр. ${builds[0]}): git rm -r --cached`);
+const missing = tracked.filter(f => !existsSync(join(root, f)));
+if (missing.length) warn(`в git, но нет на диске: ${missing.length} (напр. ${missing[0]})`);
 
 // 3. Wording: no overstated claims in texts the jury or users read (code identifiers like predict() are fine).
 // Cyrillic needs explicit classes: \w in JS regexes is ASCII-only.
@@ -47,7 +52,8 @@ const BANNED = [
   [new RegExp(`(главн|основн)${W} «?клиническ${W}»? индикатор`, 'i'), '«клинический индикатор» — у игры нет клинической валидации'],
   [new RegExp(`перенос${W} (на протез )?доказан(?!\\?)`, 'i'), '«перенос доказан»'],
 ];
-const textFiles = tracked.filter(f => /\.(md|js|mjs|html)$/.test(f) && !/^(legacy|lab)\//.test(f) && !['CHANGELOG.md', 'tools/check-submission.mjs'].includes(f));
+// Everything the jury or a user may read, except the frozen v3 snapshot and this file (it quotes the patterns).
+const textFiles = tracked.filter(f => /\.(md|js|mjs|html|py)$/.test(f) && !/^legacy\//.test(f) && f !== 'tools/check-submission.mjs' && existsSync(join(root, f)));
 for (const f of textFiles) {
   const lines = read(f).split('\n');
   lines.forEach((line, i) => { for (const [re, why] of BANNED) if (re.test(line)) fail(`${f}:${i + 1}: ${why}`); });
