@@ -26,7 +26,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const meter = signalMeter(app);
   const bridgeInfo = h('p', { class: 'bridge-status' });
 
-  const controls = h('div', { class: 'controls' });
+  const controls = h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' });
   const renderControls = () => {
     if (demo) controls.replaceChildren(h('p', { class: 'pads-note' }, 'Демо: автопилот управляет эмулятором ЭМГ — тот же путь сигнала, что у вас. Результат не сохраняется.'));
     else {
@@ -46,8 +46,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       h('div', { class: 'play-title' }, h('b', {}, `${entry.title} · ур. ${level}`), badge ? h('small', {}, badge) : null),
       h('button', { class: 'icon-btn', 'aria-label': 'Пауза', onclick: () => pause() }, 'Ⅱ'),
       scoreEl),
-    h('div', { class: 'play-progress' }, bar),
-    h('div', { class: 'stage' }, canvas, hint, overlay),
+    h('div', { class: 'play-progress', 'aria-hidden': 'true' }, bar),
+    h('div', { class: 'stage', role: 'region', 'aria-label': 'Игровое поле' }, canvas, hint, overlay),
     s.showMeters ? meter.node : null,
     controls);
 

@@ -23,6 +23,7 @@ button { font: inherit; color: inherit; }
 .screen { display: flex; flex-direction: column; min-height: 100dvh; }
 .scroll { flex: 1; padding: 16px 16px 120px; }
 .scroll.center { text-align: center; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .eyebrow { font-size: 0.8125rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin: 0; }
 .note { font-size: 0.875rem; color: var(--muted); }
 .note.warn { color: var(--warn); }

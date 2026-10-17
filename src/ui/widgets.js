@@ -24,7 +24,7 @@ export function signalMeter(app) {
   };
   const A = bar('a'), B = bar('b');
   const chip = h('div', { class: 'meter-chip' }, 'Покой');
-  const node = h('div', { class: 'meter' },
+  const node = h('div', { class: 'meter', role: 'region', 'aria-label': 'Сигнал датчиков A и B' },
     h('div', { class: 'meter-row' }, h('span', { class: 'meter-label a' }, 'A'), A.node),
     chip,
     h('div', { class: 'meter-row' }, B.node, h('span', { class: 'meter-label b' }, 'B')));

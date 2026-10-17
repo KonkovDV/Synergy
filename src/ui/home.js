@@ -35,7 +35,7 @@ export function homeScreen(app) {
       h('div', { class: 'streak', title: 'Серия тренировочных дней (день отдыха не прерывает)' }, h('span', { 'aria-hidden': 'true' }, '🔥'), h('b', {}, streak))),
     h('div', { class: 'xp' },
       h('span', {}, `Уровень ${lvl.level}`),
-      h('div', { class: 'xp-track', role: 'progressbar', 'aria-valuenow': Math.round(lvl.progress * 100), 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: { width: `${Math.round(lvl.progress * 100)}%` } })),
+      h('div', { class: 'xp-track', role: 'progressbar', 'aria-label': `Опыт до уровня ${lvl.level + 1}`, 'aria-valuenow': Math.round(lvl.progress * 100), 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: { width: `${Math.round(lvl.progress * 100)}%` } })),
       h('small', {}, `ещё ${lvl.toNext} XP`)),
     h('div', { class: 'week' },
       ...week.days.map((d, i) => h('div', { class: `day ${week.trained[i] ? 'done' : ''} ${i === week.todayIndex ? 'today' : ''}` }, h('i'), h('small', {}, WEEKDAYS[i]))),

@@ -75,6 +75,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     h('p', { class: 'note' }, 'Ответ попадёт в отчёт для специалиста: так видно, подходит ли нагрузка.')) : null;
   const node = h('div', { class: 'screen results' },
     h('main', { class: 'scroll center' },
+      h('h1', { class: 'sr-only' }, `Итоги: ${g.title}`),
       h('p', { class: 'eyebrow' }, `${g.title} · уровень ${run.level}${run.retention ? ' · без подсказки' : ''}${demo ? ' · демо' : ''}`),
       h('div', { class: `big-stars s${run.stars}`, 'aria-label': `${run.stars} из 3 звёзд` }, starsText(run.stars)),
       h('p', { class: 'big-score' }, run.score, h('small', {}, ' / 100')),
@@ -108,7 +109,7 @@ export function restScreen(app, { next }) {
   const go = () => app.go('play', { game: next.game, level: next.level, retention: next.retention, plan: true });
   const node = h('div', { class: 'screen rest' },
     h('main', { class: 'scroll center' },
-      h('p', { class: 'eyebrow' }, 'Отдых'),
+      h('h1', { class: 'eyebrow' }, 'Отдых'),
       h('div', { class: 'breath', 'aria-hidden': 'true' }),
       count,
       h('p', {}, 'Полностью расслабьте руку. Дышите спокойно: вдох — круг растёт, выдох — сжимается.'),

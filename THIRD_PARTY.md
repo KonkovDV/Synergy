@@ -8,6 +8,7 @@
 |---|---|---|
 | esbuild | MIT | сборка JS (`npm run build`) |
 | Playwright | Apache-2.0 | e2e-тесты (`tests/e2e`) |
+| axe-core 4.13.0 | MPL-2.0 | автоаудит доступности в e2e (`tests/e2e/v5.mjs`); в Продукт не входит, исходники не изменялись |
 | aapt2 из apktool-lib 3.0.3 | Apache-2.0 | сборка APK |
 | dalvik-dx 16.0.1 | Apache-2.0 | сборка APK (DEX) |
 | Robolectric android-all 10 | Apache-2.0 | проверка сигнатур Android API (`VERIFY_API=1`) |
