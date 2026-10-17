@@ -4,7 +4,7 @@
 import { h } from './dom.js';
 import { signalMeter } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from '../input/controls.js';
-import { SCHEME, SCHEME_INFO, COMMAND } from '../core/vocabulary.js';
+import { SCHEME, SCHEME_INFO, COMMAND, gestureLegend } from '../core/vocabulary.js';
 import { COLORS } from '../render/draw.js';
 
 const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
@@ -65,7 +65,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   function showIntro() {
     phase = 'intro'; session.game.paused = true;
     const legend = s.scheme === SCHEME.GESTURE
-      ? 'Жесты: Кулак, Щепоть, Ключ, Указательный, Класс — закрыть нужным хватом · Ладонь — раскрыть · Покой — ничего не делать'
+      ? gestureLegend()
       : 'A — сжатие · B — раскрытие · A+B разом — коактивация (смена хвата) · покой — протез держит';
     overlay.replaceChildren(h('div', { class: 'sheet' },
       h('p', { class: 'eyebrow' }, `${SCHEME_INFO[s.scheme].name} режим${retention ? ' · без подсказки' : ''}`),

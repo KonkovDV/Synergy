@@ -24,14 +24,14 @@ if (!existsSync(join(root, 'release/synergy-standalone.html'))) fail('нет rel
 const stale = readdirSync(join(root, 'release')).filter(f => f.endsWith('.apk') && f !== `Synergy-${version}.apk`);
 if (stale.length) fail(`старые APK в release/: ${stale.join(', ')}`);
 
-// 2. Numbers quoted in the pitch documents match reality.
+// 2. Numbers quoted in the pitch documents match reality (no \b after Cyrillic: it is ASCII-only, PLAN C.1.1).
 const tap = execFileSync(process.execPath, ['--test', ...readdirSync(join(root, 'tests')).filter(f => f.endsWith('.test.mjs')).map(f => join(root, 'tests', f))], { encoding: 'utf8' });
 const tests = Number(tap.match(/^# tests (\d+)/m)?.[1]), failed = Number(tap.match(/^# fail (\d+)/m)?.[1]);
 if (failed) fail(`тесты падают: ${failed}`);
 const apkKb = existsSync(apk) ? Math.round(statSync(apk).size / 1024) : null;
 for (const doc of ['README.md', 'docs/JURY_STRATEGY.md', 'MEMORY.md']) {
   const text = read(doc);
-  for (const m of text.matchAll(/(\d+)\s+(?:авто)?тест(?:а|ов)?\b/g)) if (Number(m[1]) !== tests) fail(`${doc}: «${m[0]}», а тестов ${tests}`);
+  for (const m of text.matchAll(/(\d+)\s+(?:авто)?тест(?:а|ов)?(?![а-яёa-z])/gi)) if (Number(m[1]) !== tests) fail(`${doc}: «${m[0]}», а тестов ${tests}`);
   for (const m of text.matchAll(/APK[^\n|]{0,24}?(\d+)\s*КБ/g)) if (apkKb !== null && Math.abs(Number(m[1]) - apkKb) > 2) fail(`${doc}: «${m[0]}», а APK ${apkKb} КБ`);
 }
 

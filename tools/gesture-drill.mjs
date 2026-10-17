@@ -1,0 +1,36 @@
+// Drill for the day the organizers publish their 7 gestures (PLAN C.3): copy the code to a temp dir,
+// replace the gesture «Класс» (thumb) with «Трипод» (tripod) in src/core/vocabulary.js ONLY, run the suite.
+// Passes when the only failures are the expected reminders (EXPECTED below) — everything else derives
+// from vocabulary.js. Usage: node tools/gesture-drill.mjs
+import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+// Tests that name a gesture on purpose: each one is a step of the replacement checklist (docs/INTEGRATION.md).
+const EXPECTED = ['vocabulary: bridge synonyms point to existing gestures'];
+const TRIPOD = "{ id: 'tripod', name: 'Трипод', command: 'close', grip: 'tripod', pose: [0.6, 0.6, 0.6, 0.2, 0.2], introducedAt: 5, cue: 'Сведите большой, указательный и средний пальцы', use: 'Трёхпальцевый хват: ручка, крышка' },";
+
+const tmp = mkdtempSync(join(tmpdir(), 'synergy-drill-'));
+try {
+  for (const dir of ['src', 'tests']) cpSync(join(root, dir), join(tmp, dir), { recursive: true });
+  cpSync(join(root, 'package.json'), join(tmp, 'package.json'));
+  const file = join(tmp, 'src/core/vocabulary.js');
+  const before = readFileSync(file, 'utf8');
+  const after = before.replace(/^\s*\{ id: 'thumb'.*$/m, m => m.match(/^\s*/)[0] + TRIPOD);
+  if (after === before) throw new Error("vocabulary.js: строка жеста 'thumb' не найдена — обновите скрипт под текущий набор");
+  writeFileSync(file, after);
+  const tests = readdirSync(join(tmp, 'tests')).filter(f => f.endsWith('.test.mjs')).map(f => join(tmp, 'tests', f));
+  const run = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...tests], { cwd: tmp, encoding: 'utf8' });
+  const failed = [...run.stdout.matchAll(/^not ok \d+ - (.+)$/gm)].map(m => m[1].trim());
+  const total = Number(run.stdout.match(/^# tests (\d+)/m)?.[1] ?? 0);
+  const unexpected = failed.filter(t => !EXPECTED.includes(t));
+  console.log(`Учебная замена «Класс» → «Трипод»: тестов ${total}, упало ${failed.length}.`);
+  for (const t of failed) console.log(`${EXPECTED.includes(t) ? '  ожидаемо ' : '  ✗ ОШИБКА'} ${t}`);
+  if (!total || unexpected.length) { console.log('Набор жестов задан не в одном месте — см. упавшие тесты.'); process.exitCode = 1; }
+  else console.log('OK: остальной код берёт набор из vocabulary.js.');
+} finally {
+  rmSync(tmp, { recursive: true, force: true });
+}

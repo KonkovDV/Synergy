@@ -5,7 +5,7 @@ import { bottomNav, skillBar } from './widgets.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
 import { skillProfile, ACHIEVEMENTS, SKINS, skinUnlocked, playerLevel, dayKey } from '../core/progress.js';
 import { COLORS, drawHand } from '../render/draw.js';
-import { GESTURE_BY_ID } from '../core/vocabulary.js';
+import { gestureName as name, COMMAND_POSE } from '../core/vocabulary.js';
 import { buildReport, reportCsv, reportHtml, printHtml, download, wellbeingLog } from '../services/report.js';
 import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS } from '../core/wellbeing.js';
@@ -88,7 +88,6 @@ function dataTable(caption, head, rows, cellClass = () => '') {
 
 /** Gesture confusion matrix: rows = asked gesture, columns = recognized one; seconds of wrong recognition. */
 function confusionTable(conf) {
-  const name = id => GESTURE_BY_ID[id]?.name ?? id;
   const max = Math.max(0.1, ...conf.rows.flatMap(r => conf.cols.map(c => conf.cells[r]?.[c] ?? 0)));
   const rows = conf.rows.map(r => [name(r), ...conf.cols.map(c => (r === c ? '·' : conf.cells[r]?.[c] ? (Math.round(conf.cells[r][c] * 10) / 10).toFixed(1) : ''))]);
   const heat = (ri, ci) => {
@@ -111,7 +110,7 @@ export function progressScreen(app) {
   const skins = h('div', { class: 'skins' }, ...SKINS.map(sk => {
     const open = skinUnlocked(p, sk);
     const { canvas, ctx } = hiDpiCanvas(56, 56, 'skin-icon');
-    drawHand(ctx, { x: 28, y: 50, size: 22, pose: GESTURE_BY_ID.open.pose, skin: sk.id, sleeve: false });
+    drawHand(ctx, { x: 28, y: 50, size: 22, pose: COMMAND_POSE.open, skin: sk.id, sleeve: false });
     return h('button', { class: `skin ${p.skin === sk.id ? 'active' : ''}`, disabled: !open, 'aria-pressed': String(p.skin === sk.id),
       onclick: () => { p.skin = sk.id; app.save(); app.go('progress'); } },
       canvas, h('small', {}, open ? sk.name : sk.level ? `ур. ${sk.level}` : '7 дней'));
@@ -131,7 +130,7 @@ export function progressScreen(app) {
     checks.length >= 2 ? h('p', { class: 'note' }, trendText(checks)) : null);
   const confSection = conf.runs ? h('section', { class: 'card' }, h('h2', {}, 'Ошибки распознавания жестов'),
     confusionTable(conf),
-    h('p', { class: 'note' }, conf.top.length ? `Чаще всего: ${conf.top.map(t => `${GESTURE_BY_ID[t.wanted].name} → ${GESTURE_BY_ID[t.seen].name} (${t.seconds} с)`).join('; ')}. Тренируйте эти пары в «Сейфе»; если путаница не уходит — обсудите с протезистом переобучение распознавания.` : 'Ошибок нет — отличная разделимость жестов.')) : null;
+    h('p', { class: 'note' }, conf.top.length ? `Чаще всего: ${conf.top.map(t => `${name(t.wanted)} → ${name(t.seen)} (${t.seconds} с)`).join('; ')}. Тренируйте эти пары в «Сейфе»; если путаница не уходит — обсудите с протезистом переобучение распознавания.` : 'Ошибок нет — отличная разделимость жестов.')) : null;
   const wellSection = log.length ? h('section', { class: 'card' }, h('h2', {}, 'Самочувствие'),
     dataTable('Последние 7 записей', ['День', 'Боль', 'Усталость', 'Минут'],
       log.map(l => [ruDay(`${l.day}T12:00:00`), PAIN_LEVELS.find(x => x.id === l.pain)?.label ?? '—', FATIGUE_LEVELS.find(x => x.id === l.fatigue)?.label ?? '—', l.minutes]))) : null;

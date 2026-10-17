@@ -13,6 +13,7 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm test
+      - run: node tools/gesture-drill.mjs
       - run: npm run build
       - run: node tools/check-submission.mjs --draft
       - name: e2e (mobile smoke, Playwright)

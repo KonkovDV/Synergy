@@ -3,27 +3,24 @@
 // and co-contraction. Repeating each pattern consistently trains separable EMG patterns
 // (Kristoffersen et al. 2020: +51 % separability after game training).
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
-import { SCHEME, COMMAND, GESTURE_BY_ID } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand } from '../render/draw.js';
 
-/** Prompt pools per scheme; `from` = level where the prompt is introduced. */
-const PROMPTS = {
-  gesture: [
-    { id: 'fist', from: 1 }, { id: 'open', from: 1 }, { id: 'pinch', from: 2 },
-    { id: 'point', from: 3 }, { id: 'key', from: 4 }, { id: 'thumb', from: 5 },
-  ].map(p => ({ ...p, name: GESTURE_BY_ID[p.id].name, pose: GESTURE_BY_ID[p.id].pose, gesture: p.id })),
+/** Prompt pools per scheme; `from` = level where the prompt is introduced (gestures: GESTURES[].introducedAt). */
+export const PROMPTS = {
+  gesture: ACTIVE_GESTURES.map(g => ({ id: g.id, from: g.introducedAt ?? 1, name: g.name, pose: g.pose, gesture: g.id })),
   proportional: [
-    { id: 'close', name: 'Сжать', from: 1, command: 'close', band: [0.22, 1.01], pose: GESTURE_BY_ID.fist.pose },
-    { id: 'open', name: 'Раскрыть', from: 1, command: 'open', band: [0.22, 1.01], pose: GESTURE_BY_ID.open.pose },
-    { id: 'switch', name: 'Коактивация', from: 2, command: 'switch', band: [0, 1.01], pose: GESTURE_BY_ID.pinch.pose },
+    { id: 'close', name: 'Сжать', from: 1, command: 'close', band: [0.22, 1.01], pose: COMMAND_POSE.close },
+    { id: 'open', name: 'Раскрыть', from: 1, command: 'open', band: [0.22, 1.01], pose: COMMAND_POSE.open },
+    { id: 'switch', name: 'Коактивация', from: 2, command: 'switch', band: [0, 1.01], pose: COMMAND_POSE.switch },
     { id: 'close-soft', name: 'Сжать слабо', from: 3, command: 'close', band: [0.22, 0.45], pose: [0.5, 0.55, 0.55, 0.55, 0.55] },
-    { id: 'close-strong', name: 'Сжать сильно', from: 3, command: 'close', band: [0.65, 1.01], pose: GESTURE_BY_ID.fist.pose },
+    { id: 'close-strong', name: 'Сжать сильно', from: 3, command: 'close', band: [0.65, 1.01], pose: COMMAND_POSE.close },
     { id: 'open-soft', name: 'Раскрыть слабо', from: 4, command: 'open', band: [0.22, 0.45], pose: [0.15, 0.15, 0.15, 0.15, 0.15] },
   ],
   threshold: [
-    { id: 'close', name: 'Сжать', from: 1, command: 'close', band: [0, 1.01], pose: GESTURE_BY_ID.fist.pose },
-    { id: 'open', name: 'Раскрыть', from: 1, command: 'open', band: [0, 1.01], pose: GESTURE_BY_ID.open.pose },
-    { id: 'switch', name: 'Коактивация', from: 2, command: 'switch', band: [0, 1.01], pose: GESTURE_BY_ID.pinch.pose },
+    { id: 'close', name: 'Сжать', from: 1, command: 'close', band: [0, 1.01], pose: COMMAND_POSE.close },
+    { id: 'open', name: 'Раскрыть', from: 1, command: 'open', band: [0, 1.01], pose: COMMAND_POSE.open },
+    { id: 'switch', name: 'Коактивация', from: 2, command: 'switch', band: [0, 1.01], pose: COMMAND_POSE.switch },
   ],
 };
 
@@ -195,7 +192,7 @@ export class SafeGame extends Game {
       }
     }
     if (intent && !this.retention) {
-      const seen = intent.gesture ? GESTURE_BY_ID[intent.gesture]?.name : { rest: 'Покой', close: 'Сжатие', open: 'Раскрытие', switch: 'Коактивация' }[intent.command];
+      const seen = intent.gesture ? GESTURE_BY_ID[intent.gesture]?.name : COMMAND_NAME[intent.command];
       text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''}`, w / 2, cy + R * 1.32, { size: 13, color: COLORS.muted });
     }
   }
