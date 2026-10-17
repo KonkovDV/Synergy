@@ -10,8 +10,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CACHE="$ROOT/tools/.cache"; OUT="$ROOT/android/build"
 MAVEN=https://repo.maven.apache.org/maven2
 mkdir -p "$CACHE"
-[ -f "$CACHE/apktool-lib.jar" ] || curl -sSfL -o "$CACHE/apktool-lib.jar" "$MAVEN/org/apktool/apktool-lib/3.0.3/apktool-lib-3.0.3.jar"
-[ -f "$CACHE/dalvik-dx.jar" ] || curl -sSfL -o "$CACHE/dalvik-dx.jar" "$MAVEN/com/jakewharton/android/repackaged/dalvik-dx/16.0.1/dalvik-dx-16.0.1.jar"
+# Downloads are retried (Maven Central answers 429 under load) and pinned by SHA-256 (supply chain).
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -c1-64; }
+fetch() { # fetch <file> <maven path> <sha256>
+  [ -f "$CACHE/$1" ] || { curl -sSfL --retry 4 --retry-delay 5 -o "$CACHE/$1.part" "$MAVEN/$2" && mv "$CACHE/$1.part" "$CACHE/$1"; }
+  [ "$(sha256 "$CACHE/$1")" = "$3" ] || { echo "SHA-256 mismatch: $1 — удалите tools/.cache/$1 и повторите"; exit 1; }
+}
+fetch apktool-lib.jar org/apktool/apktool-lib/3.0.3/apktool-lib-3.0.3.jar 983773879fd89ede2cd938858e3efce2a90ac1123f6a5140e9d949dcf4464e3e
+fetch dalvik-dx.jar com/jakewharton/android/repackaged/dalvik-dx/16.0.1/dalvik-dx-16.0.1.jar 1e4b645628e3bdb097b5331d669e177ef235a551582a8c646dbe36865e541907
 case "$(uname -s)" in Darwin) PLAT=macosx;; *) PLAT=linux;; esac
 (cd "$CACHE" && unzip -o -q apktool-lib.jar "prebuilt/$PLAT/aapt2" prebuilt/android-framework.jar && chmod +x "prebuilt/$PLAT/aapt2")
 AAPT2="$CACHE/prebuilt/$PLAT/aapt2"; FRAMEWORK="$CACHE/prebuilt/android-framework.jar"
@@ -32,7 +38,7 @@ javac -encoding UTF-8 --release 8 -nowarn -cp "$OUT/stubs" -d "$OUT/classes" $SR
 # cached) and require identical bytecode — proves every stub signature matches the platform.
 if [ "${VERIFY_API:-0}" = "1" ]; then
   API_JAR="$CACHE/android-all-29.jar"
-  [ -f "$API_JAR" ] || curl -sSfL -o "$API_JAR" "$MAVEN/org/robolectric/android-all/10-robolectric-5803371/android-all-10-robolectric-5803371.jar"
+  fetch android-all-29.jar org/robolectric/android-all/10-robolectric-5803371/android-all-10-robolectric-5803371.jar a0ad701eedd47bdaefbac1c2cc80dd400c0adea3cccd8a3ad286f79da1ca294c
   mkdir -p "$OUT/verify"
   javac -encoding UTF-8 --release 8 -nowarn -cp "$API_JAR" -d "$OUT/verify" $SRC 2>/dev/null
   for f in $(cd "$OUT/classes" && find . -name '*.class'); do
