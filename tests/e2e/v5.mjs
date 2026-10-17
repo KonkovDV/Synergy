@@ -51,6 +51,10 @@ await go('rest', { next: { game: 'flight', level: 1, retention: false } }); awai
 await go('pin'); await wait(300); await audit('pin');
 await page.evaluate(() => { document.documentElement.classList.add('hc'); document.documentElement.style.setProperty('--text-scale', '1.3'); });
 await go('home'); await wait(300); await shot('v5-11-home-contrast'); await audit('home-contrast');
+// Route change: the new screen's heading has focus and names the tab (screen readers hear the change).
+await go('progress'); await wait(200);
+const route = await page.evaluate(() => ({ title: document.title, focus: document.activeElement?.tagName }));
+if (!/Прогресс/.test(route.title) || !/^H[12]$/.test(route.focus)) errors.push(`route announce: ${JSON.stringify(route)}`);
 console.log(JSON.stringify({ errors, a11y }, null, 1));
 await browser.close();
 process.exit(errors.length || a11y.length ? 1 : 0);

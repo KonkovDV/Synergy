@@ -243,6 +243,17 @@ export class App {
     this.screen = { name, ...screen };
     mount(this.root, ...(this.showcase ? [this.showcaseBanner()] : []), screen.node);
     this.root.scrollTop = 0; window.scrollTo(0, 0);
+    this.announce(screen.node);
+  }
+
+  /** Route change for assistive tech (SPA practice): the screen's heading takes focus and names the tab. */
+  announce(node) {
+    const heading = node.querySelector('h1, h2, [data-heading]');
+    const title = heading?.textContent.trim();
+    document.title = title && title !== APP.name ? `${title} · ${APP.name}` : APP.name;
+    if (!heading) return;
+    if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+    heading.focus({ preventScroll: true });
   }
 
   showcaseBanner() {
