@@ -8,7 +8,7 @@ import { confusionMatrix, assessmentHistory } from '../src/core/analytics.js';
 import { createProfile, buildDailyPlan, lightenPlan, updateStreak, streakAlive, sessionRules, skillProfile, assessmentStatus, recordRun } from '../src/core/progress.js';
 import { emptyState, exportState, importState, parseState } from '../src/core/storage.js';
 import { buildShowcaseState } from '../src/core/showcase.js';
-import { assessmentTrials } from '../src/games/assess.js';
+import { assessmentTrials, FITTS } from '../src/games/assess.js';
 import { PLAN_CATALOG, GAMES } from '../src/games/registry.js';
 import { parseExternal } from '../src/input/bridge.js';
 import { LineAssembler } from '../src/input/ble.js';
@@ -91,7 +91,7 @@ test('skill check: fixed protocol, Motion-Test metrics, passive = 0', () => {
   for (const scheme of ['threshold', 'proportional', 'gesture']) {
     const r = play('check', { scheme, levelNumber: 1 });
     assert.equal(r.details.completionRate, 100, scheme);
-    assert.ok(r.details.selectionMs > 0 && r.details.completionMs >= 1000, scheme);
+    assert.ok(r.details.selectionMs > 0 && r.details.completionMs >= 1000 * FITTS.dwellS, scheme);
     assert.equal(play('check', { scheme, levelNumber: 1, autopilot: false }).stars, 0);
   }
   assert.ok(!PLAN_CATALOG.some(g => g.id === 'check'), 'not part of the daily plan');

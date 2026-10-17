@@ -47,6 +47,7 @@ function trendText(checks) {
   const parts = [];
   if (Number.isFinite(a.completionRate) && Number.isFinite(b.completionRate)) parts.push(`выполнено ${a.completionRate} → ${b.completionRate} %`);
   if (Number.isFinite(a.selectionMs) && Number.isFinite(b.selectionMs)) parts.push(`время выбора ${a.selectionMs} → ${b.selectionMs} мс`);
+  if (Number.isFinite(a.throughputBps) && Number.isFinite(b.throughputBps)) parts.push(`пропускная способность ${a.throughputBps} → ${b.throughputBps} бит/с`);
   return parts.length ? `С первой проверки: ${parts.join(', ')}.` : '';
 }
 
@@ -124,8 +125,8 @@ export function progressScreen(app) {
   const ruDay = iso => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
   const checkSection = h('section', { class: 'card' }, h('h2', {}, '📋 Проверка навыка'),
     checks.length
-      ? dataTable('Последние проверки (стандартный набор)', ['Дата', 'Выполн., %', 'Выбор, мс', 'Выполн., мс', 'Точн., %'],
-        checks.map(c => [`${ruDay(c.at)} · ${SCHEME_INFO[c.scheme]?.name.slice(0, 5) ?? ''}`, c.completionRate, c.selectionMs, c.completionMs, c.accuracy]))
+      ? dataTable('Последние проверки (стандартный набор)', ['Дата', 'Выполн., %', 'Выбор, мс', 'Выполн., мс', 'Точн., %', 'ПС, бит/с'],
+        checks.map(c => [`${ruDay(c.at)} · ${SCHEME_INFO[c.scheme]?.name.slice(0, 5) ?? ''}`, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.throughputBps]))
       : h('p', { class: 'note' }, 'Пройдите проверку навыка на главной — раз в неделю, чтобы видеть рост в одних и тех же условиях.'),
     checks.length >= 2 ? h('p', { class: 'note' }, trendText(checks)) : null);
   const confSection = conf.runs ? h('section', { class: 'card' }, h('h2', {}, 'Ошибки распознавания жестов'),

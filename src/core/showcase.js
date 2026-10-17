@@ -64,7 +64,8 @@ function assessmentRun(rng, date, scheme, k, profile) {
     score: Math.round(60 + 32 * k), stars: starsFor(Math.round(60 + 32 * k)), durationS: 75,
     skills: { precision: Math.round(62 + 30 * k), timing: Math.round(58 + 34 * k), switching: completionRate },
     details: { assessment: true, completionRate, selectionMs: Math.round(900 - 480 * k + 60 * rng()), completionMs: Math.round(2900 - 1300 * k + 120 * rng()),
-      accuracy: Math.round(68 + 26 * k), overshoots: Math.max(0, Math.round(4 - 4 * k)) },
+      accuracy: Math.round(68 + 26 * k), overshoots: Math.max(0, Math.round(4 - 4 * k)),
+      ...(scheme === 'proportional' ? { throughputBps: Math.round(100 * (0.8 + 0.9 * k + 0.1 * rng())) / 100, fittsTrials: 6, pathEfficiency: Math.round(62 + 25 * k) } : {}) },
   };
   recordRun(profile, run, { today: dayKey(date) });
   return run;

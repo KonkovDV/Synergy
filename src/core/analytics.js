@@ -30,5 +30,6 @@ export function assessmentHistory(runs, scheme = null, last = 8) {
     at: r.at, scheme: r.scheme, score: r.score,
     completionRate: r.details.completionRate, selectionMs: r.details.selectionMs, completionMs: r.details.completionMs,
     accuracy: r.details.accuracy, overshoots: r.details.overshoots,
+    throughputBps: r.details.throughputBps ?? null, pathEfficiency: r.details.pathEfficiency ?? null,
   }));
 }

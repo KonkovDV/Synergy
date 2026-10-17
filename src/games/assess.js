@@ -3,13 +3,33 @@
 // reach it and hold it for 1 s. Fixed trial set, fixed seed, no adaptation — results are comparable
 // week to week. Metrics: completion rate, selection time (first correct frame), completion time,
 // accuracy (correct share of active time after selection), overshoots above the band.
-// Game metrics, not a clinically validated test.
+// Proportional scheme: the graded trials form a Fitts' law block (Fitts' law test of myoelectric control —
+// Kamavuako, Scheme & Englehart 2014; Gusman et al. 2017; Shannon ID as in ISO 9241-411):
+// distance D from rest × band width W, index of difficulty ID = log2(D/W + 1), movement time MT from the
+// target onset to the entry that led to a completed dwell (the dwell itself excluded), throughput
+// TP = mean(ID/MT) over completed trials («mean of means»), bits/s; plus path efficiency D / path.
+// Game metrics, not a clinically validated test; compare a person with themselves week to week.
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURE_IDS } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand, drawGauge } from '../render/draw.js';
 import { createRng } from '../core/rng.js';
 
-export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, bandHalf: 0.12, seed: 2026 };
+export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, seed: 2026 };
+/** Fitts block of the proportional scheme: every distance × width once, in a fixed shuffled order. */
+export const FITTS = { distances: [0.3, 0.55, 0.8], widths: [0.12, 0.24], dwellS: 0.5, minMtS: 0.05 };
+
+/** Index of difficulty, Shannon formulation (ISO 9241-411), bits. */
+export const fittsId = (d, w) => Math.log2(d / w + 1);
+
+const holdOf = t => (t.fitts ? FITTS.dwellS : ASSESS.holdS);
+const mean = xs => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : null);
+
+function fittsBlock() {
+  const rng = createRng(ASSESS.seed);
+  const combos = FITTS.distances.flatMap(d => FITTS.widths.map(w => ({ d, w })));
+  for (let i = combos.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [combos[i], combos[j]] = [combos[j], combos[i]]; }
+  return combos.map(({ d, w }, i) => ({ command: i % 2 ? COMMAND.OPEN : COMMAND.CLOSE, level: d, band: [d - w / 2, d + w / 2], fitts: { d, w, id: fittsId(d, w) } }));
+}
 
 
 /** The fixed trial set of each control scheme (gestures: every active gesture twice, shuffled by the fixed seed). */
@@ -29,11 +49,9 @@ export function assessmentTrials(scheme) {
   if (scheme === SCHEME.THRESHOLD) {
     return ['close', 'open', 'switch', 'close', 'open', 'switch'].map(c => ({ command: c, name: COMMAND_NAME[c], pose: COMMAND_POSE[c] }));
   }
-  const levels = [0.3, 0.55, 0.8];
-  const graded = levels.flatMap(l => ['close', 'open'].map(c => ({ command: c, level: l })));
-  return [...graded, { command: 'switch' }, { command: 'switch' }].map(t => ({
-    ...t, name: t.level ? `${COMMAND_NAME[t.command]} · ${Math.round(t.level * 100)} %` : COMMAND_NAME[t.command], pose: COMMAND_POSE[t.command],
-    band: t.level ? [t.level - ASSESS.bandHalf, t.level + ASSESS.bandHalf] : null,
+  return [...fittsBlock(), { command: COMMAND.SWITCH, band: null }, { command: COMMAND.SWITCH, band: null }].map(t => ({
+    ...t, pose: COMMAND_POSE[t.command],
+    name: t.fitts ? `${COMMAND_NAME[t.command]} · ${Math.round(t.level * 100)} % · ${t.fitts.w < 0.2 ? 'узко' : 'широко'}` : COMMAND_NAME[t.command],
   }));
 }
 
@@ -72,7 +90,10 @@ export class AssessmentGame extends Game {
     if (this.phase === 'rest') {
       this.restFor = intent.command === COMMAND.REST ? this.restFor + dt : 0;
       this.hint = 'Покой перед следующей попыткой';
-      if (this.restFor >= ASSESS.restS) { this.phase = 'trial'; Object.assign(t, { t: 0, hold: 0, selectedAt: null, correct: 0, active: 0, overshoots: 0, above: false }); }
+      if (this.restFor >= ASSESS.restS) {
+        this.phase = 'trial';
+        Object.assign(t, { t: 0, hold: 0, selectedAt: null, correct: 0, active: 0, overshoots: 0, above: false, enteredAt: null, path: 0, pathAtEntry: 0, lastX: null });
+      }
       return;
     }
     t.t += dt;
@@ -85,10 +106,17 @@ export class AssessmentGame extends Game {
       t.above = above;
     }
     if (t.gesture) this.confusion.add(t.gesture, intent.gesture, dt);
+    if (t.fitts) {
+      // Path of the controlled channel; the entry that starts an accumulating dwell is the end of the movement.
+      const x = t.command === COMMAND.CLOSE ? intent.a : intent.b;
+      if (t.lastX !== null) t.path += Math.abs(x - t.lastX);
+      t.lastX = x;
+      if (on && t.hold === 0) { t.enteredAt = t.t; t.pathAtEntry = t.path; }
+    }
     // Tolerant dwell: brief slips cost twice their duration instead of a full restart.
     t.hold = on ? t.hold + dt : Math.max(0, t.hold - 2 * dt);
     this.hint = on ? 'Держите…' : sel && t.band ? (intent.intensity < t.band[0] ? 'Сильнее' : 'Слабее') : `Нужно: ${t.name}`;
-    if (t.hold >= ASSESS.holdS) this.settle(t, true);
+    if (t.hold >= holdOf(t)) this.settle(t, true);
     else if (t.t >= ASSESS.timeoutS) this.settle(t, false);
   }
 
@@ -114,15 +142,18 @@ export class AssessmentGame extends Game {
   metrics() {
     const done = this.trials.filter(t => t.state !== 'wait');
     const ok = done.filter(t => t.state === 'ok');
-    const mean = xs => xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : null;
     const selected = done.filter(t => t.selectedAt !== null);
     const active = done.reduce((s, t) => s + (t.active ?? 0), 0);
+    const fitts = ok.filter(t => t.fitts);
     return {
       completionRate: done.length ? ok.length / this.trials.length : 0,
       selectionS: mean(selected.map(t => t.selectedAt)),
       completionS: mean(ok.map(t => t.completedAt)),
       accuracy: active > 0 ? done.reduce((s, t) => s + (t.correct ?? 0), 0) / active : null,
       overshoots: done.reduce((s, t) => s + (t.overshoots ?? 0), 0),
+      throughput: mean(fitts.map(t => t.fitts.id / Math.max(FITTS.minMtS, t.enteredAt))),
+      pathEfficiency: mean(fitts.map(t => clamp01(t.fitts.d / Math.max(1e-6, t.pathAtEntry)))),
+      fittsTrials: fitts.length,
     };
   }
 
@@ -130,7 +161,7 @@ export class AssessmentGame extends Game {
 
   scoreValue() {
     const m = this.metrics(), ok = this.trials.filter(t => t.state === 'ok');
-    const speed = ok.length ? ok.reduce((s, t) => s + clamp01(1 - (t.completedAt - ASSESS.holdS) / (ASSESS.timeoutS - ASSESS.holdS)), 0) / this.trials.length : 0;
+    const speed = ok.length ? ok.reduce((s, t) => s + clamp01(1 - (t.completedAt - holdOf(t)) / (ASSESS.timeoutS - holdOf(t))), 0) / this.trials.length : 0;
     return 100 * (0.7 * m.completionRate + 0.3 * speed);
   }
 
@@ -151,7 +182,14 @@ export class AssessmentGame extends Game {
       assessment: true, trialsTotal: this.trials.length,
       completionRate: Math.round(100 * m.completionRate), selectionMs: ms(m.selectionS), completionMs: ms(m.completionS),
       accuracy: m.accuracy === null ? null : Math.round(100 * m.accuracy), overshoots: m.overshoots,
-      trials: this.trials.map(t => ({ target: t.gesture ?? (t.level ? `${t.command}@${t.level}` : t.command), ok: t.state === 'ok', selMs: ms(t.selectedAt ?? null), doneMs: ms(t.completedAt ?? null) })),
+      ...(this.trials.some(t => t.fitts) ? {
+        throughputBps: m.throughput === null ? null : Math.round(100 * m.throughput) / 100, fittsTrials: m.fittsTrials,
+        pathEfficiency: m.pathEfficiency === null ? null : Math.round(100 * m.pathEfficiency),
+      } : {}),
+      trials: this.trials.map(t => ({
+        target: t.gesture ?? (t.fitts ? `${t.command}@${t.level}±${t.fitts.w / 2}` : t.command), ok: t.state === 'ok', selMs: ms(t.selectedAt ?? null), doneMs: ms(t.completedAt ?? null),
+        ...(t.fitts ? { id: Math.round(100 * t.fitts.id) / 100, mtMs: t.state === 'ok' ? ms(t.enteredAt) : null } : {}),
+      })),
       confusion: this.confusion.toJSON(),
     };
   }
@@ -178,7 +216,7 @@ export class AssessmentGame extends Game {
     const hx = x0 + cw * 0.3, hy = y0 + ch * 0.82, size = ch * 0.26;
     drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
     ctx.strokeStyle = COLORS.good; ctx.lineWidth = 6; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.arc(hx, y0 + ch * 0.5, ch * 0.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(t.hold / ASSESS.holdS)); ctx.stroke();
+    ctx.beginPath(); ctx.arc(hx, y0 + ch * 0.5, ch * 0.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(t.hold / holdOf(t))); ctx.stroke();
     text(ctx, t.name, x0 + cw * 0.68, y0 + ch * 0.38, { size: 18, weight: 800 });
     text(ctx, `${Math.max(0, ASSESS.timeoutS - t.t).toFixed(1)} с`, x0 + cw * 0.68, y0 + ch * 0.58, { size: 13, color: COLORS.muted });
     if (t.band && this.scheme === SCHEME.PROPORTIONAL && intent) {
