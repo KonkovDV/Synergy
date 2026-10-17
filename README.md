@@ -52,7 +52,7 @@ CI (`.github/workflows`, actions закреплены по SHA): тесты + у
 |---|---|
 | `docs/SCENARIOS.md` | все сценарии и граничные случаи → поведение → проверка |
 | `docs/RESEARCH.md` | заказчик (в т. ч. VR-платформа Attilan), конкуренты, наука, интерфейсы 2026 |
-| `docs/JURY_STRATEGY.md` | критерии, Murder Board, питч, демо, чек-лист сдачи |
+| `docs/JURY_STRATEGY.md` · `docs/PITCH.md` | критерии, Murder Board, чек-лист сдачи · 10 слайдов, видео 90 с, демо 3 мин |
 | `docs/GAME_DESIGN.md` · `docs/ARCHITECTURE.md` · `docs/INTEGRATION.md` | механики · слои и принципы · форматы и транспорты |
 | `docs/LEGAL.md` · `SECURITY.md` · `docs/ACCESSIBILITY.md` | право (п. 6.6, 152-ФЗ, 323-ФЗ) · модель угроз · доступность |
 | `docs/AI_USAGE.md` · `AUTHORS.md` · `THIRD_PARTY.md` | раскрытие ИИ · авторы и РИД · компоненты третьих лиц |
