@@ -7,7 +7,8 @@ export function createFeedback(settings) {
   return {
     event(e) {
       if (settings().sound) play(e.name, e);
-      const pattern = HAPTIC[e.name];
+      // Vibro-metronome: the beat of «Ритм» felt in the hand (deaf and hard-of-hearing players).
+      const pattern = e.name === 'beat' ? (settings().hapticBeat ? (e.strong ? 45 : 20) : null) : HAPTIC[e.name];
       if (pattern && settings().haptics && navigator.vibrate) navigator.vibrate(pattern);
     },
   };

@@ -1,8 +1,8 @@
 // Home: who I am today (level, series, weekly goal) → today's plan → free play.
 import { h, starsText } from './dom.js';
 import { bottomNav, topBar } from './widgets.js';
-import { GAMES, GAME_BY_ID } from '../games/registry.js';
-import { playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday } from '../core/progress.js';
+import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
+import { playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
 import { gestureIcon } from '../input/controls.js';
@@ -19,9 +19,12 @@ export function homeScreen(app) {
   const week = weeklyStatus(p, s.weeklyGoal, today);
   const plan = app.dailyPlan();
   const doneCount = plan.items.filter(i => i.done).length;
-  const streak = streakAlive(p.streak, today) ? p.streak.current : 0;
+  const allDone = doneCount === plan.items.length;
+  const resting = app.checkin()?.action === 'stop';
+  const streak = streakAlive(p.streak, today, painRestDays(p)) ? p.streak.current : 0;
   const tip = DAILY_TIPS[Math.floor(Date.now() / 86400000) % DAILY_TIPS.length];
-  const overCap = secondsToday(p, today) / 60 >= SESSION.dailySoftCapMin;
+  const overCap = secondsToday(p, today) / 60 >= app.rules.softCapMin;
+  const check = assessmentStatus(app.state.runs, s.scheme, today);
 
   const head = h('section', { class: 'hero' },
     h('div', { class: 'hero-top' },
@@ -39,7 +42,7 @@ export function homeScreen(app) {
       h('p', { class: 'week-note' }, `${week.done} из ${week.goal} дней в неделю`)));
 
   const planCard = h('section', { class: 'card plan' },
-    h('div', { class: 'card-head' }, h('h2', {}, 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
+    h('div', { class: 'card-head' }, h('h2', {}, plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
     h('ol', { class: 'plan-list' }, ...plan.items.map(item => {
       const g = GAME_BY_ID[item.game];
       return h('li', { class: item.done ? 'done' : '' },
@@ -47,14 +50,23 @@ export function homeScreen(app) {
         h('div', {}, h('b', {}, item.retention ? `${g.title}: без подсказки` : g.title),
           h('small', {}, item.retention ? 'Проверка: навык без живой подсказки' : `Уровень ${item.level} · ${g.skills.map(k => SKILL_NAME[k]).slice(0, 2).join(', ')}`)));
     })),
-    overCap ? h('p', { class: 'note warn' }, 'Сегодня уже больше 30 минут. Мышцам нужен отдых — продолжим завтра.') : null,
-    h('button', { class: 'btn primary big', disabled: doneCount === plan.items.length, onclick: () => startPlan(app) },
-      doneCount === plan.items.length ? 'План выполнен ✓' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`));
+    overCap ? h('p', { class: 'note warn' }, `Сегодня уже больше ${app.rules.softCapMin} минут. Мышцам нужен отдых — продолжим завтра.`) : null,
+    resting ? h('p', { class: 'note warn' }, 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.') : null,
+    h('button', { class: 'btn primary big', disabled: allDone || resting, onclick: () => app.startPlan() },
+      resting ? 'Сегодня — отдых' : allDone ? 'План выполнен ✓' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
+    resting ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null);
 
   const tipCard = h('section', { class: 'card tip' }, h('b', {}, 'Совет Мио'), h('p', {}, tip));
+  const tutorialCard = !p.tutorialDone ? h('section', { class: 'card tutorial-card' },
+    h('b', {}, '👋 Первые шаги · 2 минуты'), h('p', {}, 'Покой, сжатие, раскрытие, сила и коактивация — с живой подсказкой, до первой игры.'),
+    h('button', { class: 'btn primary', onclick: () => app.go('tutorial') }, 'Пройти обучение')) : null;
+  const checkCard = h('section', { class: `card g-check ${check.due ? 'due' : ''}` },
+    h('div', { class: 'card-head' }, h('b', {}, `${ASSESSMENT.icon} ${ASSESSMENT.title}`), h('span', { class: 'pill' }, check.last ? `${check.last.details.completionRate}%` : 'новое')),
+    h('p', { class: 'note' }, check.last ? (check.due ? `Прошло ${check.days} дн. — пора сравнить себя с собой.` : `Последняя: ${check.days ? `${check.days} дн. назад` : 'сегодня'}. Следующая — через ${SESSION.assessmentEveryDays - check.days} дн.`) : ASSESSMENT.tagline),
+    h('button', { class: `btn ${check.due ? 'primary' : 'ghost'}`, onclick: () => app.go('play', { game: ASSESSMENT.id, level: 1 }) }, check.due ? 'Пройти проверку · ≈ 2 мин' : 'Пройти ещё раз'));
 
   const games = h('section', { class: 'games' }, h('h2', {}, 'Игры'),
-    h('div', { class: 'game-grid' }, ...GAMES.map(g => {
+    h('div', { class: 'game-grid' }, ...TRAINING_GAMES.map(g => {
       const gp = gameProgress(p, g.id);
       const stars = Object.values(gp.stars).reduce((a, b) => a + b, 0);
       return h('button', { class: `game-card g-${g.id}`, onclick: () => app.go('levels', { game: g.id }) },
@@ -63,14 +75,7 @@ export function homeScreen(app) {
         h('span', { class: 'game-meta' }, `★ ${stars}/${g.Game.levels.length * 3} · ур. ${gp.unlocked}`));
     })));
 
-  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, planCard, tipCard, games), bottomNav(app, 'home')) };
-}
-
-export function startPlan(app) {
-  const item = app.nextPlanItem();
-  if (!item) return;
-  app.plan = { active: true };
-  app.go('play', { game: item.game, level: item.level, retention: item.retention, plan: true });
+  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, checkCard, tipCard, games), bottomNav(app, 'home')) };
 }
 
 export function levelsScreen(app, { game }) {
@@ -91,7 +96,7 @@ export function levelsScreen(app, { game }) {
           h('ul', { class: 'how' }, ...g.how.map(x => h('li', {}, x)))),
         h('h2', {}, 'Уровни'), list,
         h('div', { class: 'sticky-actions' },
-          h('button', { class: 'btn primary big', onclick: () => app.go('play', { game, level: rec }) }, `Играть · уровень ${rec}`),
-          h('button', { class: 'btn ghost', onclick: () => app.go('play', { game, level: rec, retention: true }) }, 'Испытание без подсказки')))),
+          h('button', { class: 'btn primary big', onclick: () => app.go('play', { game, level: rec }) }, g.assessment ? 'Начать проверку' : `Играть · уровень ${rec}`),
+          g.assessment ? null : h('button', { class: 'btn ghost', onclick: () => app.go('play', { game, level: rec, retention: true }) }, 'Испытание без подсказки')))),
   };
 }

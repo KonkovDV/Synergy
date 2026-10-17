@@ -4,16 +4,24 @@ import { Store, memoryStorage } from './core/storage.js';
 import { SignalPipeline } from './core/signal.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
-import { recordRun, completePlanItem, buildDailyPlan, dayKey } from './core/progress.js';
+import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements } from './core/progress.js';
+import { CHECKIN_ACTION } from './core/wellbeing.js';
+import { exportState, importState } from './core/storage.js';
+import { buildShowcaseState } from './core/showcase.js';
 import { EmgEmulator } from './input/emulator.js';
 import { BridgeSource } from './input/bridge.js';
+import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard } from './input/controls.js';
 import { createGame, GAME_BY_ID, PLAN_CATALOG } from './games/registry.js';
 import { GameRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
 import { setSoundEnabled, unlockAudio } from './services/audio.js';
-import { mount, toast } from './ui/dom.js';
+import { setVoiceEnabled, say } from './services/voice.js';
+import { setRenderOptions } from './render/draw.js';
+import { mount, toast, h } from './ui/dom.js';
 import { SCREENS } from './ui/screens.js';
+
+const PIN_SCREENS = ['settings', 'calibration', 'pin'];
 
 function safeStorage() {
   try { const k = '__synergy_probe'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return localStorage; } catch { return memoryStorage(); }
@@ -27,9 +35,9 @@ export class App {
     this.bridge = null;
     this.feedback = createFeedback(() => this.settings);
     this.screen = null;
-    this.plan = null;              // active daily-plan walk: { index }
     this.lastTime = performance.now();
-    setSoundEnabled(this.settings.sound);
+    this.ble = null;
+    this.applyPresentation();
     bindKeyboard(this.emulator, () => this.settings.scheme);
     window.addEventListener('pointerdown', unlockAudio, { once: true });
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.screen?.onHidden?.(); });
@@ -47,10 +55,26 @@ export class App {
     const before = this.settings.source;
     Object.assign(this.settings, patch);
     this.emulator.realism = this.settings.realism;
-    setSoundEnabled(this.settings.sound);
+    this.applyPresentation();
     if (patch.source !== undefined || patch.wsUrl !== undefined || before !== this.settings.source) this.applySource();
     this.save();
   }
+
+  /** Sound, voice and the accessibility presentation (text size, contrast, motion). */
+  applyPresentation() {
+    const s = this.settings, root = document.documentElement;
+    setSoundEnabled(s.sound);
+    setVoiceEnabled(s.voice);
+    root.style.setProperty('--text-scale', String(s.textScale));
+    root.classList.toggle('hc', !!s.contrast);
+    root.classList.toggle('rm', !!s.reduceMotion);
+    setRenderOptions({ scale: s.textScale, highContrast: s.contrast });
+  }
+
+  /** Voice prompt (no-op when the voice setting is off). */
+  say(text, options) { return say(text, options); }
+
+  get rules() { return sessionRules(this.settings.audience); }
 
   /** Window API for a native host / organizers' emulator / automated tests (docs/INTEGRATION.md). */
   exposeApi() {
@@ -68,12 +92,59 @@ export class App {
 
   applySource() {
     if (this.settings.source === 'bridge') {
+      this.ble?.disconnect(); this.ble = null;
       this.bridge?.stop();
       this.bridge = new BridgeSource({ url: this.settings.wsUrl, onStatus: s => this.screen?.onBridgeStatus?.(s) });
       this.bridge.start();
     } else if (this.bridge) {
+      this.ble?.disconnect(); this.ble = null;
       this.bridge.stop(); this.bridge = null;
     }
+  }
+
+  /** Bluetooth EMG sensor (Nordic UART Service): its text lines go through the same parser. */
+  async connectBle() {
+    if (!bleSupported()) throw new Error('Bluetooth недоступен: нужен Chrome на Android или ПК (в APK — через pushFrame).');
+    if (this.settings.source !== 'bridge') this.updateSettings({ source: 'bridge' });
+    this.ble?.disconnect();
+    this.ble = await connectBle({
+      onLine: line => this.bridge?.feed(line),
+      onStatus: st => { if (st === 'disconnected') this.bridge?.setStatus('waiting'); this.screen?.onBleStatus?.(st); },
+    });
+    return this.ble.name;
+  }
+
+  /** Showcase profile (pitch / demo to a specialist): synthetic data in memory, real data untouched. */
+  enterShowcase() {
+    if (this.showcase) return;
+    this.realStore = this.store;
+    this.store = new Store(memoryStorage());
+    this.store.replace(buildShowcaseState({ ...this.settings, source: 'touch' }, dayKey()));
+    this.showcase = true;
+    this.applySource();
+  }
+
+  exitShowcase() {
+    if (!this.showcase) return;
+    this.store = this.realStore; this.realStore = null; this.showcase = false;
+    this.applyPresentation(); this.applySource();
+  }
+
+  exportBackup() { return exportState(this.state); }
+
+  /** Replaces all local data with a validated backup (throws a user-facing message). */
+  importBackup(raw) {
+    this.store.replace(importState(raw));
+    this.applyPresentation();
+    this.applySource();
+  }
+
+  /** Marks the tutorial done and unlocks its achievement; returns new achievement ids. */
+  completeTutorial() {
+    this.profile.tutorialDone = true;
+    const fresh = unlockAchievements(this.profile, null, {}, dayKey());
+    this.save();
+    return fresh;
   }
 
   sourceKind() { return this.settings.source === 'bridge' ? 'bridge' : 'touch'; }
@@ -90,11 +161,34 @@ export class App {
 
   createHand() { return new BionicHand({ grips: HAND.twoChannelGrips }); }
 
-  dailyPlan() { return buildDailyPlan(this.profile, this.state.runs, PLAN_CATALOG, this.settings.scheme, dayKey()); }
+  /** Today's wellbeing check-in ({pain, fatigue, action} | {skipped} | undefined). */
+  checkin() { return this.profile.days[dayKey()]?.checkin; }
+
+  dailyPlan() {
+    const plan = buildDailyPlan(this.profile, this.state.runs, PLAN_CATALOG, this.settings.scheme, dayKey(), { exercises: this.rules.planExercises });
+    // A plan rebuilt today (e.g. after a scheme change) keeps today's «light session» answer.
+    if (this.checkin()?.action === CHECKIN_ACTION.LIGHT && !plan.light) lightenPlan(plan);
+    return plan;
+  }
+
+  /** Daily-plan flow: check-in once a day → next unfinished item (or home when resting today). */
+  startPlan({ checked = false } = {}) {
+    const item = this.nextPlanItem();
+    if (!item) return this.go('home');
+    const answer = this.checkin();
+    if (!checked && !answer) return this.go('checkin');
+    if (answer?.action === CHECKIN_ACTION.STOP) return this.go('home');
+    this.go('play', { game: item.game, level: item.level, retention: item.retention, plan: true });
+  }
+
+  /** Today's runs (for fatigue signs and the soft daily cap). */
+  runsToday() { const today = dayKey(); return this.state.runs.filter(r => !r.demo && dayKey(new Date(r.at)) === today); }
 
   /** Builds a runnable session for the play screen. */
   createSession({ game, level, retention = false, demo = false }) {
-    const instance = createGame(game, { levelNumber: level, scheme: this.settings.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin, mirror: this.settings.side === 'left' });
+    const s = this.settings;
+    const instance = createGame(game, { levelNumber: level, scheme: s.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
+      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: s.reduceMotion });
     const hand = this.createHand();
     const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });
     return { id: game, level, retention, demo, game: instance, hand, runner, entry: GAME_BY_ID[game] };
@@ -122,11 +216,17 @@ export class App {
   nextPlanItem() { return this.dailyPlan().items.find(i => !i.done) ?? null; }
 
   go(name, params = {}) {
+    if (!PIN_SCREENS.includes(name)) this.pinOk = false; // leaving the settings locks them again
     this.screen?.cleanup?.();
     const screen = SCREENS[name](this, params);
     this.screen = { name, ...screen };
-    mount(this.root, screen.node);
+    mount(this.root, ...(this.showcase ? [this.showcaseBanner()] : []), screen.node);
     this.root.scrollTop = 0; window.scrollTo(0, 0);
+  }
+
+  showcaseBanner() {
+    return h('div', { class: 'showcase-banner', role: 'status' }, 'Демо-профиль: синтетические данные',
+      h('button', { class: 'btn ghost small', onclick: () => { this.exitShowcase(); this.go('home'); } }, 'Выйти'));
   }
 
   /** Tells a bidirectional lab what the on-screen pads ask for (only when it changes). */

@@ -34,7 +34,7 @@ export class RhythmGame extends Game {
   constructor(opts) {
     super(opts);
     this.beat = 60 / this.level.bpm;
-    this.latency = LATENCY_S[this.scheme];
+    this.latency = LATENCY_S[this.scheme] * this.speed; // real input delay expressed in (slowed) game time
     this.graded = this.scheme !== SCHEME.THRESHOLD;
     this.notes = this.buildChart();
     this.total = (COUNT_IN_BEATS + this.level.beats + 2) * this.beat;
@@ -67,6 +67,9 @@ export class RhythmGame extends Game {
     return notes;
   }
 
+  /** Timing window for a «good» onset (challenge point). */
+  get good() { return this.adapt.widen(GOOD_S); }
+
   laneState(intent) {
     return {
       both: intent.command === COMMAND.SWITCH,
@@ -89,21 +92,21 @@ export class RhythmGame extends Game {
         n.held += dt;
         n.peak = Math.max(n.peak, intent.intensity);
         if (n.lane !== 'both') this.separation.add(intent, n.lane === 'a', dt);
-        if (n.dur > 0 && now >= n.at + n.dur + GOOD_S) this.settleHold(n, n.at + n.dur);
+        if (n.dur > 0 && now >= n.at + n.dur + this.good) this.settleHold(n, n.at + n.dur);
         if (n.dur === 0 && now > n.at + 0.3) this.settleTap(n);
       }
-      if (n.state === 'wait' && now > n.at + GOOD_S) { n.state = 'miss'; this.miss(n); }
+      if (n.state === 'wait' && now > n.at + this.good) { n.state = 'miss'; this.miss(n); }
     }
     this.popups = this.popups.filter(p => (p.t -= dt) > 0);
     if (this.time >= this.total) { for (const n of this.notes) if (n.state === 'active') n.dur ? this.settleHold(n, now) : this.settleTap(n); this.finish(); }
   }
 
   onset(lane, now) {
-    const candidates = this.notes.filter(n => n.state === 'wait' && Math.abs(now - n.at) <= GOOD_S);
+    const candidates = this.notes.filter(n => n.state === 'wait' && Math.abs(now - n.at) <= this.good);
     const note = candidates.find(n => n.lane === lane);
     if (!note) {
       // A co-contraction starts as a single channel for a few frames: not a false start near a wide note.
-      const nearBoth = this.notes.some(n => n.lane === 'both' && n.state === 'wait' && Math.abs(now - n.at) <= GOOD_S);
+      const nearBoth = this.notes.some(n => n.lane === 'both' && n.state === 'wait' && Math.abs(now - n.at) <= this.good);
       if (!nearBoth) { this.falseStarts++; this.combo = 0; this.popup(lane, 'Рано', COLORS.warn); }
       return;
     }
@@ -141,7 +144,7 @@ export class RhythmGame extends Game {
     const band = this.bandOk(note);
     const held = clamp01((releaseAt - note.at) / note.dur);
     const releaseErr = Math.abs(releaseAt - (note.at + note.dur));
-    const releaseOk = releaseErr <= GOOD_S;
+    const releaseOk = releaseErr <= this.good;
     note.score = (note.grade === 'perfect' ? 0.4 : 0.3) + 0.4 * Math.min(1, held) + (releaseOk ? 0.2 : 0);
     if (!band) note.score *= 0.7;
     note.state = 'done';
@@ -149,13 +152,14 @@ export class RhythmGame extends Game {
   }
 
   scored(note, band, issue = null) {
+    this.adapt.record(note.score >= 0.6);
     this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
     const label = issue ?? (!band ? (note.peak < BANDS[note.band][0] ? 'Слабее нужного' : 'Сильнее нужного') : note.grade === 'perfect' ? 'Отлично' : 'Хорошо');
     this.popup(note.lane, label, !band || issue ? COLORS.warn : note.grade === 'perfect' ? COLORS.good : COLORS.accent);
     if (this.combo > 0 && this.combo % 8 === 0) this.emit('perfect');
   }
 
-  miss(note) { this.combo = 0; note.score = 0; this.popup(note.lane, 'Мимо', COLORS.bad); this.emit('miss'); }
+  miss(note) { this.adapt.record(false); this.combo = 0; note.score = 0; this.popup(note.lane, 'Мимо', COLORS.bad); this.emit('miss'); }
   popup(lane, label, color) { this.popups.push({ lane, label, color, t: 0.7 }); }
 
   autopilot() {
@@ -194,7 +198,7 @@ export class RhythmGame extends Game {
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, '#120d2e'); g.addColorStop(1, '#2a1350');
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-    ctx.globalAlpha = 0.15 * (1 - beatPhase); ctx.fillStyle = COLORS.violet; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1;
+    if (!this.reduceMotion) { ctx.globalAlpha = 0.15 * (1 - beatPhase); ctx.fillStyle = COLORS.violet; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; }
     const y = t => hitY - ((t - this.time) / LOOKAHEAD_S) * hitY;
     // Lanes.
     for (const lane of ['a', 'b']) {

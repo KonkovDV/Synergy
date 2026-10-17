@@ -55,7 +55,12 @@ export class GripGame extends Game {
   nextObject() {
     const kind = this.queue.shift();
     if (!kind) { this.current = null; this.finish(); return; }
-    this.current = { kind, ...OBJECTS[kind], phase: 'arrive', t: 0, restFor: 0, liftForce: 0, x: -0.4, needSwitchAt: null };
+    const base = OBJECTS[kind];
+    // Challenge point: the green window widens or narrows around its centre; breaking stays above it.
+    const center = (base.min + base.max) / 2, half = this.adapt.widen((base.max - base.min) / 2);
+    const min = Math.max(0.05, center - half), max = Math.min(0.97, center + half);
+    this.current = { kind, ...base, min, max, breakAt: Math.max(base.breakAt, max + 0.06), limit: this.adapt.widen(this.level.limit),
+      phase: 'arrive', t: 0, restFor: 0, liftForce: 0, x: -0.4, needSwitchAt: null };
     this.hint = `${this.current.name}: хват «${GRIP_NAME[this.current.grip]}», сила в зелёной зоне`;
   }
 
@@ -101,10 +106,10 @@ export class GripGame extends Game {
       else if (hand.force > o.max) this.hint = 'Сильно! Ослабьте раскрытием (B) — коротко';
       else this.hint = 'Отлично — расслабьтесь, протез удержит сам';
       if (inWindow && o.restFor >= LIFT_REST_S) {
-        o.phase = 'carry'; o.t = 0; o.liftForce = hand.force; this.emit('lift');
+        o.phase = 'carry'; o.t = 0; o.liftForce = hand.force; this.stability.segment(); this.emit('lift');
       }
     }
-    if (o.t > this.level.limit) this.fail('timeout', hand);
+    if (o.t > o.limit) this.fail('timeout', hand);
   }
 
   stepCarry(dt, intent, hand, o) {
@@ -119,11 +124,13 @@ export class GripGame extends Game {
   stepRelease(dt, intent, hand, o) {
     this.hint = 'Над корзиной — раскройте кисть (B)';
     if (hand.force === 0 && hand.closure < o.contact - 0.08) {
-      const center = (o.min + o.max) / 2, half = (o.max - o.min) / 2;
+      // Skill against the level's original window: adaptive easing must not inflate «Точность».
+      const base = OBJECTS[o.kind], center = (base.min + base.max) / 2, half = (base.max - base.min) / 2;
       const precision = clamp01(1 - Math.abs(o.liftForce - center) / half);
-      const speed = clamp01(1 - (this.time - o.graspStart - this.level.carry) / this.level.limit);
+      const speed = clamp01(1 - (this.time - o.graspStart - this.level.carry) / o.limit);
       const points = 60 + 25 * precision + 15 * speed;
       this.results.push({ kind: o.kind, ok: true, points, precision });
+      this.adapt.record(true);
       if (o.fragile) this.fragileSaved++;
       o.phase = 'done'; o.t = 0; o.delivered = true;
       this.emit('success');
@@ -134,6 +141,7 @@ export class GripGame extends Game {
   fail(reason, hand) {
     const o = this.current;
     this.results.push({ kind: o.kind, ok: false, points: reason === 'drop' ? 10 : 0, reason });
+    this.adapt.record(false);
     o.phase = 'done'; o.t = 0; o.failed = reason;
     hand.clearObject();
     this.emit(reason === 'crush' ? 'crush' : 'miss');

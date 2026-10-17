@@ -3,6 +3,7 @@
 #   aapt2 + framework resources (from apktool-lib, Maven Central), dx (dalvik-dx, Maven Central),
 #   javac/keytool/jarsigner from the JDK. Requires: JDK 11+, Node 18+, curl, zip.
 # The APK is a WebView shell around the offline web build (dist/). Signed with a debug key (v1),
+# VERIFY_API=1 additionally checks the API stubs against the real framework (see below).
 # targetSdk 29 — fine for sideloading on Android 5–16; for Google Play/RuStore re-sign with your key.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,6 +27,20 @@ cp -r "$ROOT/dist/index.html" "$ROOT/dist/app.js" "$ROOT/dist/app.css" "$ROOT/di
 STUBS=$(find "$ROOT/android/stubs" -name '*.java'); SRC=$(find "$ROOT/android/src" -name '*.java')
 javac -encoding UTF-8 --release 8 -nowarn -d "$OUT/stubs" $STUBS 2>/dev/null
 javac -encoding UTF-8 --release 8 -nowarn -cp "$OUT/stubs" -d "$OUT/classes" $SRC 2>/dev/null
+
+# VERIFY_API=1: compile against the real Android 10 (API 29) framework (Robolectric android-all, 131 MB,
+# cached) and require identical bytecode — proves every stub signature matches the platform.
+if [ "${VERIFY_API:-0}" = "1" ]; then
+  API_JAR="$CACHE/android-all-29.jar"
+  [ -f "$API_JAR" ] || curl -sSfL -o "$API_JAR" "$MAVEN/org/robolectric/android-all/10-robolectric-5803371/android-all-10-robolectric-5803371.jar"
+  mkdir -p "$OUT/verify"
+  javac -encoding UTF-8 --release 8 -nowarn -cp "$API_JAR" -d "$OUT/verify" $SRC 2>/dev/null
+  for f in $(cd "$OUT/classes" && find . -name '*.class'); do
+    javap -c -p "$OUT/classes/$f" | grep -v 'Compiled from' > "$OUT/a.txt"; javap -c -p "$OUT/verify/$f" | grep -v 'Compiled from' > "$OUT/b.txt"
+    cmp -s "$OUT/a.txt" "$OUT/b.txt" || { echo "API mismatch in $f"; exit 1; }
+  done
+  echo "API check: stubs match android-29"
+fi
 java -cp "$CACHE/dalvik-dx.jar" com.android.dx.command.Main --dex --min-sdk-version=21 --output="$OUT/classes.dex" "$OUT/classes"
 (cd "$OUT" && zip -q -j unsigned.apk classes.dex)
 

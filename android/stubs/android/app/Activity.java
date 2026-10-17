@@ -7,4 +7,7 @@ public class Activity extends android.content.Context {
   public void setContentView(android.view.View v) {}
   public final void runOnUiThread(Runnable r) {}
   public void finish() {}
+  protected void onDestroy() {}
+  public Object getSystemService(String name) { return null; }
+  public void startActivity(android.content.Intent intent) {}
 }

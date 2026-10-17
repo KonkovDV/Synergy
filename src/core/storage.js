@@ -1,5 +1,5 @@
 // Versioned local persistence. Never throws to the UI; corrupt data is backed up, not overwritten.
-import { APP, SIGNAL, SESSION } from '../config.js';
+import { APP, SIGNAL, SESSION, HANDS_FREE } from '../config.js';
 import { createProfile } from './progress.js';
 import { defaultCalibration } from './signal.js';
 
@@ -17,6 +17,18 @@ export const DEFAULT_SETTINGS = {
   wsUrl: 'ws://127.0.0.1:8765',
   reminder: '19:00',
   name: '',
+  // Training
+  adaptive: true,           // адаптивная сложность внутри упражнения
+  audience: 'adult',        // adult | child (короче план, ниже дневной лимит)
+  parentPin: '',            // хэш PIN родителя (детский режим): ворота, а не защита данных
+  // Accessibility (Game Accessibility Guidelines, WCAG 2.2 / ГОСТ Р 52872-2019)
+  voice: false,             // озвучивание подсказок
+  textScale: 1,             // 1 · 1.15 · 1.3
+  contrast: false,          // высокий контраст
+  reduceMotion: false,      // без частиц, вспышек и параллакса
+  gameSpeed: 1,             // темп игрового мира 0.6–1
+  dwellS: HANDS_FREE.confirmS, // время удержания A для «без касания»
+  hapticBeat: false,        // вибро-метроном в «Ритме» (для слабослышащих)
 };
 
 const MAX_RUNS = 2000;
@@ -46,11 +58,26 @@ export function parseState(raw) {
   const profile = { ...base.profile, ...(isObject(data.profile) ? data.profile : {}) };
   profile.totals = { ...base.profile.totals, ...(profile.totals ?? {}) };
   profile.streak = { ...base.profile.streak, ...(profile.streak ?? {}) };
-  const settings = { ...base.settings, ...(isObject(data.settings) ? data.settings : {}) };
+  // Only known settings with the expected type survive (a backup file is untrusted input).
+  const stored = isObject(data.settings) ? data.settings : {};
+  const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, typeof stored[k] === typeof v && (typeof v !== 'number' || Number.isFinite(stored[k])) ? stored[k] : v]));
   const validCal = c => isObject(c) && [c.rest, c.max].every(v => Array.isArray(v) && v.length === 2 && v.every(Number.isFinite));
   const calibrations = Object.fromEntries(Object.keys(base.calibrations).map(k => [k, validCal(data.calibrations?.[k]) ? data.calibrations[k] : base.calibrations[k]]));
   const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS) : [];
   return { version: 4, profile, settings, calibrations, runs };
+}
+
+export const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
+
+/** Full local backup (the only copy of the user's data lives on this device). */
+export function exportState(state) {
+  return JSON.stringify({ ...state, exportedAt: new Date().toISOString(), app: APP.name, appVersion: APP.version });
+}
+
+/** Validates a backup file; throws a user-facing message on anything suspicious. */
+export function importState(raw) {
+  if (typeof raw !== 'string' || raw.length > MAX_BACKUP_BYTES) throw new Error('Файл слишком большой или пустой');
+  try { return parseState(raw); } catch { throw new Error('Это не копия «Синергии» или файл повреждён'); }
 }
 
 export class Store {
@@ -76,4 +103,6 @@ export class Store {
   }
 
   reset() { this.state = emptyState(); this.save(); }
+
+  replace(state) { this.state = state; this.save(); }
 }
