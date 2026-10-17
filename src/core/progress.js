@@ -175,7 +175,7 @@ export function skillProfile(runs, last = 12) {
 
 /**
  * Daily plan: three exercises aimed at the weakest skills + one retention probe
- * (the first exercise again, without live feedback — predicts transfer: Dupan et al. 2025).
+ * (the first exercise again, without live feedback — a game metric; Dupan et al. 2025 linked such attempts to transfer).
  * @param catalog [{ id, schemes, skills, levelCount }]
  */
 export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(), { exercises = SESSION.planExercises } = {}) {

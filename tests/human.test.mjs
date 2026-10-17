@@ -15,10 +15,13 @@ for (const entry of GAMES) {
   });
 }
 
-test('novice: the threshold scheme gets harder with the level (difficulty curve)', () => {
-  for (const id of ['grip', 'flight']) {
+test('novice: the threshold scheme gets harder with the level (difficulty curve, pinned balance)', () => {
+  // Balance of 5.1.0 (seed 5): grip L1 85 → L8 50, flight L1 81 → L8 47. Tolerances catch regressions both ways.
+  for (const [id, l1Range, l8Range] of [['grip', [75, 95], [35, 65]], ['flight', [70, 92], [32, 62]]]) {
     const l1 = playNovice(id, { scheme: 'threshold', levelNumber: 1 }).score;
     const l8 = playNovice(id, { scheme: 'threshold', levelNumber: 8 }).score;
+    assert.ok(l1 >= l1Range[0] && l1 <= l1Range[1], `${id} L1 ${l1} outside ${l1Range}`);
+    assert.ok(l8 >= l8Range[0] && l8 <= l8Range[1], `${id} L8 ${l8} outside ${l8Range}`);
     assert.ok(l8 < l1, `${id}: L1 ${l1}, L8 ${l8}`);
   }
 });
