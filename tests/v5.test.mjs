@@ -182,3 +182,11 @@ test('spaced plan: a game idle for a week returns even if it is not the weakest'
   const plan = buildDailyPlan(createProfile(), [old, ...recent], PLAN_CATALOG, 'proportional', '2026-10-17');
   assert.ok(plan.items.some(i => i.game === 'safe' && !i.retention), JSON.stringify(plan.items.map(i => i.game)));
 });
+
+test('coach mood: stop advice → rest, success → joy, otherwise support', async () => {
+  const { coachMood } = await import('../src/ui/coach.js');
+  assert.equal(coachMood({ stars: 3, stopAdvice: 'Пора отдохнуть' }), 'rest', 'safety beats celebration');
+  assert.equal(coachMood({ stars: 2 }), 'joy');
+  assert.equal(coachMood({ stars: 1 }), 'support');
+  assert.equal(coachMood(), 'support');
+});

@@ -6,9 +6,9 @@ import { SKILL_NAME, COMMAND } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday } from '../core/progress.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { fatigueSigns, EFFORT_LEVELS } from '../core/wellbeing.js';
-import { coachFeedback } from './coach.js';
+import { coachFeedback, coachMood } from './coach.js';
 import { CALIBRATION_ADAPT } from '../config.js';
-import { signalMeter, segmented } from './widgets.js';
+import { signalMeter, segmented, mioAvatar } from './widgets.js';
 
 const plural = (n, [one, few, many]) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many; };
 
@@ -88,7 +88,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       effortCard,
       assessmentCard,
       h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills),
-      h('section', { class: 'card coach' }, h('b', {}, 'Мио советует'), ...advice.map(t => h('p', {}, t))),
+      h('section', { class: 'card coach' }, h('div', { class: 'coach-head' }, mioAvatar(coachMood({ stars: run.stars, stopAdvice }), 52), h('b', {}, 'Мио советует')), ...advice.map(t => h('p', {}, t))),
       h('div', { class: 'sticky-actions' },
         h('button', { class: 'btn primary big', onclick: primary.go }, primary.label),
         h('div', { class: 'confirm' }, ring, h('span', {}, 'или удерживайте A — без касания')),
@@ -109,6 +109,7 @@ export function restScreen(app, { next }) {
   const go = () => app.go('play', { game: next.game, level: next.level, retention: next.retention, plan: true });
   const node = h('div', { class: 'screen rest' },
     h('main', { class: 'scroll center' },
+      mioAvatar('rest', 64),
       h('h1', { class: 'eyebrow' }, 'Отдых'),
       h('div', { class: 'breath', 'aria-hidden': 'true' }),
       count,

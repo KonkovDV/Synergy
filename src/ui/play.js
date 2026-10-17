@@ -6,12 +6,17 @@ import { signalMeter } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from '../input/controls.js';
 import { SCHEME, SCHEME_INFO, COMMAND, gestureLegend } from '../core/vocabulary.js';
 import { COLORS } from '../render/draw.js';
+import { MusicPlayer } from '../core/music.js';
+import { audioClock, playMusic } from '../services/audio.js';
 
 const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
 
 export function playScreen(app, { game, level, retention = false, plan = false, demo = false }) {
   const s = app.settings;
   let session = app.createSession({ game, level, retention, demo });
+  // Procedural music (only «Ритм» has a song): scheduled on the audio clock, heard when the note reaches the line.
+  const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: audioClock, play: playMusic }) : null; };
+  let music = musicFor(session);
   let phase = 'intro', countdown = 0, confirm = 0, doneAt = 0, lastScore = -1, lastSpoken = '', lastCount = 0, lastNow = null;
   const confirmS = s.dwellS;
   const entry = session.entry;
@@ -99,7 +104,9 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   }
 
   function restart(asDemo) {
+    music?.update(0, 1, false);
     session = app.createSession({ game, level, retention, demo: asDemo });
+    music = musicFor(session);
     if (asDemo !== demo) { app.go('play', { game, level, retention, plan, demo: asDemo }); return; }
     lastScore = -1; showIntro();
   }
@@ -133,7 +140,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       if (shown !== lastCount && shown > 0) { lastCount = shown; app.say(String(shown), { interrupt: true }); }
       if (countdown <= 0) { session.hand.reset(); session.game.paused = false; phase = 'running'; }
     }
-    for (const e of session.game.drainEvents()) app.feedback.event(e);
+    music?.update(session.game.time, session.game.speed, phase === 'running' && !session.game.done);
+    for (const e of session.game.drainEvents()) app.feedback.event(music && e.name === 'beat' ? { ...e, silent: true } : e);
     session.game.render(ctx, view, session.hand, intent);
     if (phase === 'countdown') drawCountdown();
     const lost = bridgeMode && session.runner.signalLost && phase === 'running';
@@ -159,6 +167,6 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     node, tick,
     onHidden: pause,
     onBridgeStatus: updateBridge,
-    cleanup() { observer.disconnect(); app.emulator.setTarget({ a: 0, b: 0, gesture: s.scheme === SCHEME.GESTURE ? 'rest' : null }); },
+    cleanup() { music?.update(0, 1, false); observer.disconnect(); app.emulator.setTarget({ a: 0, b: 0, gesture: s.scheme === SCHEME.GESTURE ? 'rest' : null }); },
   };
 }

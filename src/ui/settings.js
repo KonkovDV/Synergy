@@ -115,6 +115,7 @@ export function settingsScreen(app) {
         h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder), 'text/calendar') }, 'Добавить в календарь (.ics)'),
         h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) })),
         toggleRow('Звук', s.sound, v => app.updateSettings({ sound: v })),
+        toggleRow('Музыка в «Ритме»', s.music, v => app.updateSettings({ music: v }), 'барабаны, бас и аккорды в темпе уровня: такт слышен, когда нота доходит до линии'),
         toggleRow('Вибрация', s.haptics, v => app.updateSettings({ haptics: v })),
         toggleRow('Полоски сигнала в игре', s.showMeters, v => app.updateSettings({ showMeters: v }), 'мышечная обратная связь рядом с игровой')),
       section('Данные',

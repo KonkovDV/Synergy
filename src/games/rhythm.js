@@ -4,6 +4,7 @@
 import { Game, SeparationMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound } from '../render/draw.js';
+import { musicPattern } from '../core/music.js';
 
 const LEVELS = [
   { bpm: 72, beats: 28, every: 2, holdChance: 0, bands: [2], both: false },
@@ -66,6 +67,9 @@ export class RhythmGame extends Game {
     }
     return notes;
   }
+
+  /** The level's song: count-in, drums on the beat, bass and chords in the level's key. */
+  music() { return musicPattern({ bpm: this.level.bpm, beats: this.level.beats, countIn: COUNT_IN_BEATS, seed: this.seed, level: this.levelNumber }); }
 
   /** Timing window for a «good» onset (challenge point). */
   get good() { return this.adapt.widen(GOOD_S); }

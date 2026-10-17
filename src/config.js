@@ -80,6 +80,20 @@ export const GUIDANCE = { partialFrom: 60, sparseFrom: 80 }; // skill 0..100 →
 /** Spaced practice in the daily plan: a game not played for d days gains min(d, maxDays) × pointsPerDay of priority. */
 export const SPACING = { pointsPerDay: 3, maxDays: 7 };
 
+/**
+ * Procedural music of «Ритм»: drums, bass and chords on the level's tempo (no audio files, п. 5.5).
+ * Scheduled on the audio clock ahead of time and shifted by the output latency (Wilson, «A Tale of Two Clocks»;
+ * AudioContext.outputLatency), so a beat is heard when the note reaches the line. Gains are under the effects.
+ */
+export const MUSIC = {
+  keys: [48, 50, 53, 55, 52, 57, 51, 56], // tonic per level (MIDI): C3, D3, F3, G3, E3, A3, E♭3, A♭3
+  gain: { stick: 0.05, kick: 0.16, snare: 0.05, hat: 0.02, bass: 0.07, pad: 0.025 },
+  busGain: 0.8,
+  lookaheadS: 0.12,  // schedule this far ahead of what is heard
+  lateS: 0.05,       // an event already later than this (hitch, resume) is skipped, not played out of time
+  hatsFrom: 3,       // eighth-note hi-hats from this level
+};
+
 /** Frame-rate guard: below minFps (EMA of the frame time) for degradeAfterS → simpler graphics for the rest of the visit. */
 export const PERF = { minFps: 45, degradeAfterS: 3, smoothing: 0.1, pauseS: 0.5 }; // a frame longer than pauseS is a pause (tab hidden), not slowness
 
