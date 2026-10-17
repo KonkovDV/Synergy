@@ -52,9 +52,9 @@ const csvCell = v => {
 };
 
 export function reportCsv(state) {
-  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy'];
+  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
-    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '']);
+    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '']);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
 
@@ -93,8 +93,9 @@ ${table(['Схема управления', 'Сторона', 'Упражнен�
 ${table(Object.values(SKILL_NAME), [Object.keys(SKILL_NAME).map(k => skills[k] ?? '—')])}
 <p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью. Игровая метрика: в исследовании Dupan et al., 2025 попытки без живой обратной связи были связаны с переносом на протез; клинической валидации у этой игры нет.</p>
 <h2>Проверка навыка (стандартный набор, по мотивам Motion Test / TAC)</h2>
-${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 'Выполнение, мс', 'Точность, %', 'Перелёты'],
-  checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots]))}
+${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 'Выполнение, мс', 'Точность, %', 'Перелёты', 'ПС, бит/с', 'Эфф. пути, %'],
+  checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots, c.throughputBps ?? '—', c.pathEfficiency ?? '—']))}
+<p class="muted">ПС — пропускная способность по закону Фиттса (пропорциональная схема): log₂(D/W + 1) / время движения, среднее по попыткам; эффективность пути — расстояние до цели / пройденный путь сигнала. Сравнивайте с прошлыми неделями этого же человека: с цифрами из статей не сравнимо (другие задачи и устройства).</p>
 <h2>Ошибки распознавания жестов (с, последние ${conf.runs} упражнений)</h2>
 ${conf.top.length ? table(['Нужен жест', 'Распознан как', 'Секунд'], conf.top.map(t => [gname(t.wanted), gname(t.seen), t.seconds])) : '<p class="muted">нет данных в режиме жестов</p>'}
 <h2>Самочувствие (14 последних записей)</h2>
