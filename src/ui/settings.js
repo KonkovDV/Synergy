@@ -93,6 +93,7 @@ export function settingsScreen(app) {
           h('button', { class: 'btn ghost', onclick: () => app.go('tutorial', { from: 'settings' }) }, 'Первые шаги (обучение)'))),
       section('Тренировка',
         toggleRow('Адаптивная сложность', s.adaptive, v => app.updateSettings({ adaptive: v }), 'допуски подстраиваются, чтобы удавалось ~75 % попыток; испытание без подсказки и проверка — без подстройки'),
+        toggleRow('Затухающие подсказки', s.fadedFeedback, v => app.updateSettings({ fadedFeedback: v }), 'чем лучше навык, тем чаще шкала скрыта в отдельных попытках — так навык прочнее держится без экрана'),
         h('label', { class: 'row' }, h('span', {}, 'Кто занимается'),
           segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { app.updateSettings({ audience: v }); childBox.hidden = v !== 'child'; })),
         h('p', { class: 'note' }, 'Детский режим: план из 2 упражнений, отдых 15 с, дневной лимит 20 мин; настройки можно закрыть PIN-кодом.'),

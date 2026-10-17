@@ -1,6 +1,6 @@
 // Meta-game: XP, levels, training-day series, weekly goal, achievements, skins, daily plan.
 // Pure functions over plain data (easy to test and to persist).
-import { STARS, XP, SESSION, CHILD } from '../config.js';
+import { STARS, XP, SESSION, CHILD, SPACING } from '../config.js';
 import { SKILL } from './vocabulary.js';
 
 /** Session rules for the audience: a child trains with a parent — shorter plan, rest and daily cap. */
@@ -174,7 +174,7 @@ export function skillProfile(runs, last = 12) {
 }
 
 /**
- * Daily plan: three exercises aimed at the weakest skills + one retention probe
+ * Daily plan: exercises aimed at the weakest skills, spaced so that idle games recur, + one retention probe
  * (the first exercise again, without live feedback — a game metric; Dupan et al. 2025 linked such attempts to transfer).
  * @param catalog [{ id, schemes, skills, levelCount }]
  */
@@ -186,8 +186,12 @@ export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(),
     const values = g.skills.map(s => skills[s] ?? 50);
     return values.reduce((s, v) => s + v, 0) / values.length;
   };
+  // Spaced practice: a game not played for a while rises in priority, so every skill recurs within a week.
+  const lastPlayed = Object.fromEntries(games.map(g => [g.id, runs.filter(r => !r.demo && r.game === g.id).reduce((m, r) => (r.at > m ? r.at : m), '')]));
+  const idle = g => (lastPlayed[g.id] ? Math.min(SPACING.maxDays, dayIndex(today) - dayIndex(dayKey(new Date(lastPlayed[g.id])))) : SPACING.maxDays);
+  const priority = g => weakness(g) - idle(g) * SPACING.pointsPerDay;
   const seed = dayIndex(today);
-  const ordered = [...games].sort((x, y) => weakness(x) - weakness(y) || ((seed + x.id.length) % 3) - ((seed + y.id.length) % 3));
+  const ordered = [...games].sort((x, y) => priority(x) - priority(y) || ((seed + x.id.length) % 3) - ((seed + y.id.length) % 3));
   const picked = ordered.slice(0, Math.min(exercises, ordered.length));
   const items = picked.map(g => ({ game: g.id, level: recommendedLevel(profile, g.id), done: false, retention: false }));
   if (items.length) items.push({ ...items[0], retention: true });

@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.1.0',
+  version: '5.2.0',
   storageKey: 'synergy.v4',
 };
 
@@ -48,6 +48,12 @@ export const ADAPT = {
   limit: 1,         // ease ∈ [-1, 1]: −1 harder … +1 easier
   span: 0.3,        // tolerances scale by 1 ± 30 % at the limits
 };
+
+/** Faded feedback (guidance hypothesis, Winstein & Schmidt 1990): live feedback on fewer trials as the skill grows. */
+export const GUIDANCE = { partialFrom: 60, sparseFrom: 80 }; // skill 0..100 → all / 2 of 3 / 1 of 2 trials with live feedback
+
+/** Spaced practice in the daily plan: a game not played for d days gains min(d, maxDays) × pointsPerDay of priority. */
+export const SPACING = { pointsPerDay: 3, maxDays: 7 };
 
 /** Hands-free confirmation (hold A) — the phone is in the sound hand, sensors on the other arm. */
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5 };

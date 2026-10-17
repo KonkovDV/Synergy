@@ -55,8 +55,8 @@ export const GAME_BY_ID = Object.fromEntries(GAMES.map(g => [g.id, g]));
 /** Catalog view used by the pure planning code (core/progress.js). */
 export const PLAN_CATALOG = TRAINING_GAMES.map(g => ({ id: g.id, schemes: g.schemes, skills: g.skills, levelCount: g.Game.levels.length }));
 
-export function createGame(id, { levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion }) {
+export function createGame(id, { levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion, guidance }) {
   const entry = GAME_BY_ID[id];
   const level = entry.Game.levels[levelNumber - 1];
-  return new entry.Game({ level, levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion });
+  return new entry.Game({ level, levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion, guidance });
 }

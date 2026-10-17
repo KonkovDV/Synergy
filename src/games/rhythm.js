@@ -226,7 +226,8 @@ export class RhythmGame extends Game {
       for (let i = 0; i < n.band; i++) circle(ctx, x - (n.band - 1) * 7 + i * 14, ny, 4, '#120d2e');
     }
     // Intensity meter for graded notes.
-    if (this.graded && intent && !this.retention) {
+    // Faded feedback by bars of 8 beats: the force meter is hidden on some bars, the verdict still pops up.
+    if (this.graded && intent && this.liveFeedback(Math.floor(this.time / (this.beat * 8)))) {
       const mx = w - 26, my = h * 0.2, mh = h * 0.5;
       fillRound(ctx, mx, my, 12, mh, 6, 'rgba(255,255,255,0.08)');
       for (const b of [1, 2, 3]) { const [lo] = BANDS[b]; ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(mx - 4, my + mh * (1 - lo), 20, 2); }

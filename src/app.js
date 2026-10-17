@@ -4,7 +4,8 @@ import { Store, memoryStorage } from './core/storage.js';
 import { SignalPipeline } from './core/signal.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
-import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements } from './core/progress.js';
+import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile } from './core/progress.js';
+import { guidanceFor } from './core/guidance.js';
 import { CHECKIN_ACTION } from './core/wellbeing.js';
 import { exportState, importState } from './core/storage.js';
 import { buildShowcaseState } from './core/showcase.js';
@@ -188,10 +189,18 @@ export class App {
   createSession({ game, level, retention = false, demo = false }) {
     const s = this.settings;
     const instance = createGame(game, { levelNumber: level, scheme: s.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
-      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: s.reduceMotion });
+      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: s.reduceMotion, guidance: demo ? 1 : this.guidance(game) });
     const hand = this.createHand();
     const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });
     return { id: game, level, retention, demo, game: instance, hand, runner, entry: GAME_BY_ID[game] };
+  }
+
+  /** Faded feedback: share of trials with live feedback from this game's recent skill (all trials when off). */
+  guidance(game) {
+    if (!this.settings.fadedFeedback) return 1;
+    const profile = skillProfile(this.state.runs.filter(r => r.game === game));
+    const skills = GAME_BY_ID[game].skills.map(k => profile[k]).filter(Number.isFinite);
+    return guidanceFor(skills.length ? skills.reduce((a, b) => a + b, 0) / skills.length : NaN);
   }
 
   /** Persists a finished run and returns everything the results screen shows. */
