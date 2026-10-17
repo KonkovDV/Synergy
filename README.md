@@ -37,7 +37,7 @@
 ## Проверка качества
 
 ```bash
-npm ci && npm test              # 98 тестов: ядро, v5-модули, все игры × уровни × схемы (бот и модель новичка)
+npm ci && npm test              # 99 тестов: ядро, v5-модули, все игры × уровни × схемы (бот и модель новичка)
 npm run build                   # dist/ (PWA) + dist/synergy-standalone.html
 npm run drill:gestures          # учебная замена жеста: остальной код берёт набор из vocabulary.js
 python3 tools/serve.py --dist --port 8091 & node tests/e2e/v5.mjs   # мобильный e2e: 0 ошибок JS, axe-core — 0 нарушений на 14 экранах
