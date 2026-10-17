@@ -3,7 +3,7 @@
 // Threshold scheme: A/B climb/descend at a constant rate, rest holds altitude (velocity control).
 // Rings test hitting a level; «потоки» test holding it steadily; centre rings test relaxation.
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
-import { SCHEME, COMMAND } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound } from '../render/draw.js';
 
 const LEVELS = [
@@ -139,7 +139,7 @@ export class FlightGame extends Game {
     }
     const level = Math.max(-1, Math.min(1, (alt - 0.5) / 0.47));
     if (this.scheme === SCHEME.GESTURE) {
-      return { gesture: level > 0.04 ? 'fist' : level < -0.04 ? 'open' : 'rest', effort: Math.abs(level) };
+      return { gesture: level > 0.04 ? CLOSING_GESTURES[0].id : level < -0.04 ? OPENING_GESTURE.id : 'rest', effort: Math.abs(level) };
     }
     return { a: Math.max(0, level), b: Math.max(0, -level) };
   }

@@ -2,7 +2,7 @@
 // rhythm games gave the best EMG challenge in PlayBionic, Prahm et al. 2018).
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct } from './base.js';
-import { SCHEME, COMMAND } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound } from '../render/draw.js';
 
 const LEVELS = [
@@ -169,7 +169,7 @@ export class RhythmGame extends Game {
     if (!note || (note.state === 'active' && now > note.at + Math.max(note.dur, 0.14) - 0.05)) return this.scheme === SCHEME.GESTURE ? { gesture: 'rest', effort: 0 } : { a: 0, b: 0 };
     const level = note.band ? (BANDS[note.band][0] + Math.min(1, BANDS[note.band][1]) ) / 2 : 0.6;
     if (note.lane === 'both') return { a: 0.75, b: 0.75 };
-    if (this.scheme === SCHEME.GESTURE) return { gesture: note.lane === 'a' ? 'fist' : 'open', effort: level };
+    if (this.scheme === SCHEME.GESTURE) return { gesture: note.lane === 'a' ? CLOSING_GESTURES[0].id : OPENING_GESTURE.id, effort: level };
     return note.lane === 'a' ? { a: level, b: 0 } : { a: 0, b: level };
   }
 
