@@ -67,6 +67,7 @@ export class Game {
     this.mirror = mirror;            // левый протез — кисть рисуется зеркально
     this.levelNumber = levelNumber;
     this.scheme = scheme;
+    this.seed = seed;
     this.rng = createRng(seed);
     this.retention = retention;      // испытание без подсказки: текущая обратная связь скрыта
     this.time = 0;
@@ -118,6 +119,8 @@ export class Game {
   scoreValue() { return 0; }
   skillScores() { return {}; }
   details() { return {}; }
+  /** Procedural music of the game (core/music.js events) or null — only «Ритм» has a song. */
+  music() { return null; }
   hud() { return { progress: this.progress(), score: Math.round(this.scoreValue()), hint: this.hint }; }
 
   result() {

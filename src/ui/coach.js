@@ -42,6 +42,15 @@ export function coachFeedback(gameId, result, history = []) {
   return lines.slice(0, 2);
 }
 
+/**
+ * Mio's mood after an exercise (an affective pedagogical agent: the advice stays text — text agents helped
+ * learning more than narrated ones, Schroeder et al. 2013). Safety first: a stop advice always means rest.
+ */
+export function coachMood({ stars = 0, stopAdvice = null } = {}) {
+  if (stopAdvice) return 'rest';
+  return stars >= 2 ? 'joy' : 'support';
+}
+
 export const DAILY_TIPS = [
   'Короткие занятия каждый день полезнее одного длинного: 10–15 минут достаточно.',
   'Если мышцы устали или появилась боль — остановитесь. Отдых тоже часть тренировки.',

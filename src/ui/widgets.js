@@ -1,6 +1,7 @@
 // Reusable UI pieces (DRY): bottom navigation, live signal meter, form rows.
 import { h } from './dom.js';
 import { COMMAND_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
+import { drawMio } from '../render/draw.js';
 
 export function bottomNav(app, active) {
   const item = (id, icon, label) => h('button', { class: `nav-item ${active === id ? 'active' : ''}`, 'aria-current': active === id ? 'page' : null, onclick: () => app.go(id) }, h('span', { class: 'nav-icon', 'aria-hidden': 'true' }, icon), label);
@@ -67,3 +68,13 @@ export function toggleRow(label, value, onChange, sub = '') {
 export function skillBar(name, value) {
   return h('div', { class: 'skill' }, h('span', {}, name), h('div', { class: 'skill-track' }, h('i', { style: { width: `${value ?? 0}%` } })), h('b', {}, value ?? '—'));
 }
+
+/** Coach «Мио» as a small decorative picture (the advice itself is always text next to it). */
+export function mioAvatar(mood = 'support', size = 48) {
+  const canvas = h('canvas', { width: size * 2, height: size * 2, class: `mio mio-${mood}`, 'aria-hidden': 'true', style: { width: `${size}px`, height: `${size}px` } });
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+  drawMio(ctx, { x: size / 2, y: size * 0.58, size: size * 0.72, mood });
+  return canvas;
+}
+

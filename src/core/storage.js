@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS = {
   coThreshold: SIGNAL.coThreshold,
   realism: 0.5,             // шум и перекрёстные помехи эмулятора
   sound: true,
+  music: true,              // процедурная музыка в «Ритме» (вместе со звуком)
   haptics: true,
   showMeters: true,
   weeklyGoal: SESSION.weeklyGoalDefault,

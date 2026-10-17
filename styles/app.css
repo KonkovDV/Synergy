@@ -400,3 +400,8 @@ h2 { font-weight: 800; letter-spacing: -0.2px; }
 :root.hc .eyebrow { background: none; color: #ffe14d; }
 :root.hc .card, :root.hc .stats div, :root.hc .level, :root.hc .sheet { background: #000; box-shadow: none; }
 :root.hc .bottom-nav { background: #000; border: 2px solid #fff; }
+
+/* Coach «Мио» next to its advice (5.4) */
+.coach-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.coach-head .mio { flex: none; }
+.rest .mio { display: block; margin: 0 auto 4px; }

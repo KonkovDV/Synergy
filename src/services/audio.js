@@ -1,4 +1,6 @@
-// Procedural sound effects (WebAudio): no audio files, works offline, starts on first user gesture.
+// Procedural sound effects and music voices (WebAudio): no audio files, works offline, starts on first user gesture.
+import { MUSIC } from '../config.js';
+
 let ctx = null;
 let enabled = true;
 
@@ -17,27 +19,56 @@ function audio() {
 
 export function unlockAudio() { audio(); }
 
-function tone(freq, dur, { type = 'sine', gain = 0.15, slide = 0, delay = 0 } = {}) {
-  const ac = audio(); if (!ac) return;
-  const t0 = ac.currentTime + delay;
+/** One oscillator note. `at` — absolute audio time (scheduled music), else now + delay. Returns the node. */
+function tone(freq, dur, { type = 'sine', gain = 0.15, slide = 0, delay = 0, attack = 0, at, out } = {}) {
+  const ac = audio(); if (!ac) return null;
+  const t0 = at ?? ac.currentTime + delay;
   const osc = ac.createOscillator(), g = ac.createGain();
   osc.type = type; osc.frequency.setValueAtTime(freq, t0);
   if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t0 + dur);
-  g.gain.setValueAtTime(gain, t0);
-  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  osc.connect(g).connect(ac.destination);
+  if (attack) { g.gain.setValueAtTime(0.0001, t0); g.gain.linearRampToValueAtTime(gain, t0 + attack); } else g.gain.setValueAtTime(gain, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + Math.max(dur, attack + 0.01));
+  osc.connect(g).connect(out ?? ac.destination);
   osc.start(t0); osc.stop(t0 + dur + 0.02);
+  return osc;
 }
 
-function noise(dur, gain = 0.2, filter = 1200) {
-  const ac = audio(); if (!ac) return;
-  const buffer = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
+function noise(dur, gain = 0.2, filter = 1200, { type = 'lowpass', at, out } = {}) {
+  const ac = audio(); if (!ac) return null;
+  const buffer = ac.createBuffer(1, Math.max(1, Math.floor(ac.sampleRate * dur)), ac.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
   const src = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
-  f.type = 'lowpass'; f.frequency.value = filter;
+  f.type = type; f.frequency.value = filter;
   src.buffer = buffer; g.gain.value = gain;
-  src.connect(f).connect(g).connect(ac.destination); src.start();
+  src.connect(f).connect(g).connect(out ?? ac.destination); src.start(at ?? ac.currentTime);
+  return src;
+}
+
+/** Audio clock for scheduled music: what is started at T is heard at T + latency (outputLatency + baseLatency). */
+export function audioClock() {
+  const ac = audio();
+  if (!ac || ac.state !== 'running') return null;
+  return { now: ac.currentTime, latency: Math.min(0.5, Math.max(0, (ac.outputLatency || 0) + (ac.baseLatency || 0))) };
+}
+
+// Voices of the procedural music (events from core/music.js); k stretches durations when the game is slowed.
+const VOICES = {
+  stick: (e, at, out) => [tone(1800, 0.03, { type: 'square', gain: e.gain, at, out })],
+  kick: (e, at, out, k) => [tone(110, 0.16 * k, { type: 'sine', gain: e.gain, slide: -70, at, out })],
+  snare: (e, at, out) => [noise(0.12, e.gain, 2500, { at, out }), tone(190, 0.08, { type: 'triangle', gain: e.gain * 0.5, at, out })],
+  hat: (e, at, out) => [noise(0.03, e.gain, 8000, { type: 'highpass', at, out })],
+  bass: (e, at, out, k) => [tone(e.freq, e.dur * k, { type: 'triangle', gain: e.gain, attack: 0.01, at, out })],
+  pad: (e, at, out, k) => e.freqs.map(f => tone(f, e.dur * k, { type: 'sine', gain: e.gain, attack: 0.08, at, out })),
+};
+let musicBus = null;
+
+/** Plays one music event at audio time `at`; the handle stops it if it has not been heard yet. */
+export function playMusic(event, at, speed = 1) {
+  const ac = audio(); if (!ac || !VOICES[event.voice]) return null;
+  if (!musicBus) { musicBus = ac.createGain(); musicBus.gain.value = MUSIC.busGain; musicBus.connect(ac.destination); }
+  const nodes = VOICES[event.voice](event, at, musicBus, 1 / speed).filter(Boolean);
+  return { stop: () => nodes.forEach(n => { try { n.stop(); } catch { /* already stopped */ } }) };
 }
 
 const SOUNDS = {

@@ -121,3 +121,36 @@ export function drawStar(ctx, x, y, r, filled, color = COLORS.warn) {
   ctx.closePath();
   ctx.fillStyle = filled ? color : 'rgba(255,255,255,0.15)'; ctx.fill();
 }
+
+/**
+ * «Мио» — the coach: a round bionic buddy with a two-sensor antenna (channels A and B) and a visor face.
+ * Moods: joy (success), support (keep going), rest (stop for today). Procedural, no assets.
+ */
+export function drawMio(ctx, { x, y, size, mood = 'support' }) {
+  const r = size / 2, body = mood === 'rest' ? COLORS.violet : COLORS.accent;
+  ctx.save(); ctx.translate(x, y);
+  ctx.strokeStyle = COLORS.muted; ctx.lineWidth = r * 0.08; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, -r * 0.85); ctx.lineTo(0, -r * 1.12); ctx.stroke();
+  circle(ctx, -r * 0.16, -r * 1.16, r * 0.11, COLORS.a); circle(ctx, r * 0.16, -r * 1.16, r * 0.11, COLORS.b);
+  const grad = ctx.createLinearGradient(0, -r, 0, r);
+  grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.35, body); grad.addColorStop(1, mood === 'rest' ? '#5b3fc4' : '#2f7fd6');
+  circle(ctx, 0, 0, r, grad);
+  fillRound(ctx, -r * 0.66, -r * 0.4, r * 1.32, r * 0.9, r * 0.4, '#0f1a36');
+  const eyeY = -r * 0.1, eyeX = r * 0.3, ink = mood === 'rest' ? '#c4b5ff' : COLORS.good;
+  ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineWidth = r * 0.1;
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    if (mood === 'joy') ctx.arc(side * eyeX, eyeY + r * 0.06, r * 0.13, Math.PI * 1.1, Math.PI * 1.9);
+    else if (mood === 'rest') { ctx.moveTo(side * eyeX - r * 0.12, eyeY); ctx.lineTo(side * eyeX + r * 0.12, eyeY); }
+    else { ctx.arc(side * eyeX, eyeY, r * 0.11, 0, Math.PI * 2); ctx.fill(); }
+    ctx.stroke();
+  }
+  ctx.beginPath(); // mouth
+  if (mood === 'joy') ctx.arc(0, r * 0.12, r * 0.22, Math.PI * 0.15, Math.PI * 0.85);
+  else if (mood === 'rest') { ctx.moveTo(-r * 0.1, r * 0.25); ctx.lineTo(r * 0.1, r * 0.25); }
+  else ctx.arc(0, r * 0.14, r * 0.14, Math.PI * 0.25, Math.PI * 0.75);
+  ctx.stroke();
+  if (mood === 'joy') for (const side of [-1, 1]) circle(ctx, side * r * 0.5, r * 0.22, r * 0.08, 'rgba(255,130,170,0.7)');
+  ctx.restore();
+}
+

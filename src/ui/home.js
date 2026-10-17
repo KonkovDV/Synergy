@@ -1,6 +1,6 @@
 // Home: who I am today (level, series, weekly goal) → today's plan → free play.
 import { h, starsText } from './dom.js';
-import { bottomNav, topBar } from './widgets.js';
+import { bottomNav, topBar, mioAvatar } from './widgets.js';
 import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
 import { playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
@@ -56,7 +56,7 @@ export function homeScreen(app) {
       resting ? 'Сегодня — отдых' : allDone ? 'План выполнен ✓' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
     resting ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null);
 
-  const tipCard = h('section', { class: 'card tip' }, h('b', {}, 'Совет Мио'), h('p', {}, tip));
+  const tipCard = h('section', { class: 'card tip' }, h('div', { class: 'coach-head' }, mioAvatar('support', 40), h('b', {}, 'Совет Мио')), h('p', {}, tip));
   const tutorialCard = !p.tutorialDone ? h('section', { class: 'card tutorial-card' },
     h('b', {}, '👋 Первые шаги · 2 минуты'), h('p', {}, 'Покой, сжатие, раскрытие, сила и коактивация — с живой подсказкой, до первой игры.'),
     h('button', { class: 'btn primary', onclick: () => app.go('tutorial') }, 'Пройти обучение')) : null;
