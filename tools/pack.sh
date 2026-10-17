@@ -11,6 +11,8 @@ rm -f "$OUTDIR/$NAME.zip"
 (cd "$PARENT" && zip -qr "$OUTDIR/$NAME.zip" "$BASE" -x "$BASE/node_modules/*" "$BASE/dist/*" "$BASE/tools/.cache/*" "$BASE/android/build/*")
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
+# node_modules is not in the archive (the receiver runs npm ci): link ours so the bundle test can run.
+[ -d "$ROOT/node_modules" ] && ln -s "$ROOT/node_modules" "$TMP/$BASE/node_modules"
 echo "Проверка распакованного архива:"
 (cd "$TMP/$BASE" && node tools/check-submission.mjs --draft)
 echo "Архив: $OUTDIR/$NAME.zip ($(du -k "$OUTDIR/$NAME.zip" | cut -f1) КБ)"
