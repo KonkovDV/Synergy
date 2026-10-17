@@ -52,3 +52,19 @@ export function fatigueSigns(runsToday) {
   const drop = Math.round(first - last);
   return drop >= WELLBEING.scoreDropPoints ? { drop, minutes: Math.round(minutes) } : null;
 }
+
+/** Daily soft cap (adult 30 min, child 20 min — sessionRules): a suggestion to stop, never a lock. */
+export const overDailyCap = (secondsToday, softCapMin) => secondsToday / 60 >= softCapMin;
+export const capAdvice = softCapMin => `Сегодня уже больше ${softCapMin} минут. Мышцам нужен отдых — продолжим завтра.`;
+
+/** Safety after an exercise: signs of fatigue first, then the daily cap; null — the plan may go on. */
+export function adviseStop(runsToday, secondsToday, softCapMin) {
+  const fatigue = fatigueSigns(runsToday);
+  if (fatigue) return { reason: 'fatigue', text: `Результат снизился на ${fatigue.drop} очков за ${fatigue.minutes} мин — похоже на усталость мышц. Лучше закончить на сегодня.` };
+  if (overDailyCap(secondsToday, softCapMin)) return { reason: 'cap', text: capAdvice(softCapMin) };
+  return null;
+}
+
+/** The check-in is asked once a day: an answer or «пропущено» (skipped) counts. */
+export const needsCheckin = (profile, today) => !profile.days?.[today]?.checkin;
+

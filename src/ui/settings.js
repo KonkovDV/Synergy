@@ -53,7 +53,9 @@ export function settingsScreen(app) {
       : 'Bluetooth из браузера работает в Chrome на Android и ПК. В приложении APK и на iOS используйте мост (WebSocket) или нативный pushFrame().'),
     h('p', { class: 'note' }, 'Также принимаются кадры через window.postMessage({type:"synergy-frame", a, b}) и window.Synergy.feed(frame). Формат — docs/INTEGRATION.md.'));
 
-  const section = (title, ...children) => h('section', { class: 'card' }, h('h2', {}, title), ...children);
+  // Progressive disclosure (W3C COGA «help users focus»): everyday sections are open, the rest fold (native <details>).
+  const OPEN = ['Управление', 'Источник сигнала', 'Доступность'];
+  const section = (title, ...children) => h('details', { class: 'card fold', open: OPEN.includes(title) }, h('summary', {}, h('h2', {}, title)), ...children);
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); };
 
@@ -130,7 +132,9 @@ export function settingsScreen(app) {
           app.showcase
             ? h('button', { class: 'btn ghost', onclick: () => { app.exitShowcase(); app.go('settings'); } }, 'Выйти из демо-профиля')
             : h('button', { class: 'btn ghost', onclick: () => { app.enterShowcase(); app.go('progress'); } }, 'Демо-профиль для презентации')),
-        h('button', { class: 'btn danger', disabled: !!app.showcase, onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве?')) { app.store.reset(); app.applyPresentation(); app.go('onboarding'); } } }, 'Сбросить прогресс')),
+        !app.showcase && app.store.canUndoReset()
+          ? h('button', { class: 'btn ghost', onclick: () => { if (confirm('Вернуть данные, которые были до последнего сброса? Текущие данные заменятся.')) { app.store.undoReset(); app.applyPresentation(); toast('Данные до сброса возвращены', 'good'); app.go('home'); } } }, 'Вернуть данные до сброса') : null,
+        h('button', { class: 'btn danger', disabled: !!app.showcase, onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве? Копия останется до следующего сброса: вернуть — здесь же, в «Данных»; сбросить ещё раз — удалить без следа.')) { app.store.reset(); app.applyPresentation(); toast('Прогресс удалён. Вернуть: Настройки → Данные'); app.go('onboarding'); } } }, 'Сбросить прогресс')),
       section('О приложении',
         h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ (2 канала: пороговый и пропорциональный режимы; 7 жестов).`),
         h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),

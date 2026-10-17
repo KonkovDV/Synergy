@@ -118,7 +118,19 @@ export class Store {
     try { this.storage.setItem(APP.storageKey, JSON.stringify(this.state)); this.persisted = true; } catch { this.persisted = false; }
   }
 
-  reset() { this.state = emptyState(); this.save(); }
+  /** Reset keeps one copy of the previous state on this device: a destructive action must be undoable. */
+  reset() {
+    try { this.storage.setItem(`${APP.storageKey}.beforeReset`, JSON.stringify(this.state)); } catch { /* storage unavailable */ }
+    this.state = emptyState(); this.save();
+  }
+
+  canUndoReset() { try { return !!this.storage.getItem(`${APP.storageKey}.beforeReset`); } catch { return false; } }
+
+  undoReset() {
+    const key = `${APP.storageKey}.beforeReset`;
+    this.state = parseState(this.storage.getItem(key)); this.save();
+    try { this.storage.removeItem(key); } catch { /* keep going */ }
+  }
 
   replace(state) { this.state = state; this.save(); }
 }

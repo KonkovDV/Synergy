@@ -408,3 +408,12 @@ h2 { font-weight: 800; letter-spacing: -0.2px; }
 
 /* Headings focused on a screen change (for screen readers) need no ring: they are not controls. */
 [tabindex="-1"]:focus { outline: none; }
+
+/* Settings: foldable sections (5.6) — the whole summary row is the 48 px target */
+.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 48px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary h2 { margin: 0; }
+.fold > summary::after { content: '▾'; font-size: 1.25rem; color: var(--muted, #9fb0dd); transition: transform .2s; }
+.fold[open] > summary::after { transform: rotate(180deg); }
+.fold[open] > summary { margin-bottom: 8px; }
+:root.rm .fold > summary::after { transition: none; }

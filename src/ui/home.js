@@ -5,6 +5,7 @@ import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
 import { playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
+import { overDailyCap, capAdvice } from '../core/wellbeing.js';
 import { gestureIcon } from './controls.js';
 import { GESTURE_BY_ID, OPENING_GESTURE } from '../core/vocabulary.js';
 import { SESSION } from '../config.js';
@@ -23,7 +24,7 @@ export function homeScreen(app) {
   const resting = app.checkin()?.action === 'stop';
   const streak = streakAlive(p.streak, today, painRestDays(p)) ? p.streak.current : 0;
   const tip = DAILY_TIPS[Math.floor(Date.now() / 86400000) % DAILY_TIPS.length];
-  const overCap = secondsToday(p, today) / 60 >= app.rules.softCapMin;
+  const overCap = overDailyCap(secondsToday(p, today), app.rules.softCapMin);
   const check = assessmentStatus(app.state.runs, s.scheme, today);
 
   const head = h('section', { class: 'hero' },
@@ -50,7 +51,7 @@ export function homeScreen(app) {
         h('div', {}, h('b', {}, item.retention ? `${g.title}: без подсказки` : g.title),
           h('small', {}, item.retention ? 'Проверка: навык без живой подсказки' : `Уровень ${item.level} · ${g.skills.map(k => SKILL_NAME[k]).slice(0, 2).join(', ')}`)));
     })),
-    overCap ? h('p', { class: 'note warn' }, `Сегодня уже больше ${app.rules.softCapMin} минут. Мышцам нужен отдых — продолжим завтра.`) : null,
+    overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,
     resting ? h('p', { class: 'note warn' }, 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.') : null,
     h('button', { class: 'btn primary big', disabled: allDone || resting, onclick: () => app.startPlan() },
       resting ? 'Сегодня — отдых' : allDone ? 'План выполнен ✓' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
