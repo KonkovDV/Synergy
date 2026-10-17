@@ -38,6 +38,7 @@ await go('checkin'); await wait(300);
 await page.getByRole('radio', { name: /Умеренная/ }).click(); await page.getByRole('radio', { name: /Сил много/ }).click(); await wait(200);
 await shot('v5-04-checkin'); await audit('checkin');
 await go('settings'); await wait(300);
+await page.locator('summary', { hasText: 'Данные' }).click(); await wait(150); // folded section (progressive disclosure)
 await page.getByRole('button', { name: 'Демо-профиль для презентации' }).click(); await wait(600);
 await shot('v5-05-progress', true); await audit('progress');
 await go('home'); await wait(400); await shot('v5-06-home-showcase', true);

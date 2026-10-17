@@ -5,7 +5,7 @@ import { GAME_BY_ID } from '../games/registry.js';
 import { SKILL_NAME, COMMAND } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday } from '../core/progress.js';
 import { difficultyLabel } from '../core/adaptive.js';
-import { fatigueSigns, EFFORT_LEVELS } from '../core/wellbeing.js';
+import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { coachFeedback, coachMood } from './coach.js';
 import { CALIBRATION_ADAPT } from '../config.js';
 import { signalMeter, segmented, mioAvatar } from './widgets.js';
@@ -42,10 +42,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const ring = h('i', { class: 'confirm-ring' });
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
-  const fatigue = !demo && next ? fatigueSigns(app.runsToday()) : null;
-  const overCap = !demo && next && secondsToday(app.profile, today) / 60 >= app.rules.softCapMin;
-  const stopAdvice = fatigue ? `Результат снизился на ${fatigue.drop} очков за ${fatigue.minutes} мин — похоже на усталость мышц. Лучше закончить на сегодня.`
-    : overCap ? `Сегодня уже больше ${app.rules.softCapMin} минут. Мышцам нужен отдых — продолжим завтра.` : null;
+  const stopAdvice = !demo && next ? adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin)?.text ?? null : null;
   const primary = planDone ? { label: 'Готово на сегодня', go: () => app.go('home') }
     : stopAdvice ? { label: 'Закончить на сегодня', go: () => app.go('home') }
     : next ? { label: `Отдых ${app.rules.restS} с → ${GAME_BY_ID[next.game].title}`, go: () => app.go('rest', { next }) }

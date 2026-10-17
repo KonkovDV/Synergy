@@ -8,7 +8,7 @@ import { HAND } from './config.js';
 import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile } from './core/progress.js';
 import { guidanceFor } from './core/guidance.js';
 import { FpsGuard } from './core/fps.js';
-import { CHECKIN_ACTION } from './core/wellbeing.js';
+import { CHECKIN_ACTION, needsCheckin } from './core/wellbeing.js';
 import { exportState, importState } from './core/storage.js';
 import { buildShowcaseState } from './core/showcase.js';
 import { EmgEmulator } from './input/emulator.js';
@@ -179,7 +179,7 @@ export class App {
     const item = this.nextPlanItem();
     if (!item) return this.go('home');
     const answer = this.checkin();
-    if (!checked && !answer) return this.go('checkin');
+    if (!checked && needsCheckin(this.profile, dayKey())) return this.go('checkin');
     if (answer?.action === CHECKIN_ACTION.STOP) return this.go('home');
     this.go('play', { game: item.game, level: item.level, retention: item.retention, plan: true });
   }
