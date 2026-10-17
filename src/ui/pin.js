@@ -1,5 +1,6 @@
-// Parent gate for child mode: a 4-digit PIN in front of the settings. A gate against accidental
-// changes by a child, not a security boundary (data never leave the device anyway).
+// Parent gate for child mode: a 4–6-digit PIN in front of the settings. A gate against changes by a
+// child at the screen, not a security boundary: anyone with the device storage can reset the app anyway.
+// The brake that matters is the attempt lockout (nextPinLock); the hash only avoids storing the PIN in plain text.
 import { h } from './dom.js';
 import { bottomNav } from './widgets.js';
 
@@ -10,17 +11,39 @@ export function hashPin(pin) {
   return x.toString(16).padStart(8, '0');
 }
 
-export const validPin = pin => /^\d{4}$/.test(pin);
+export const validPin = pin => /^\d{4,6}$/.test(pin);
+
+/** Brute-force brake: 5 free tries, then 30 s doubling up to 15 min. The real control for a child at the screen. */
+export const PIN_LOCK = { freeTries: 5, baseS: 30, maxS: 900 };
+
+export function pinLockWait(lock, now = Date.now()) {
+  const until = Number.isFinite(lock?.until) ? lock.until : 0;
+  return Math.max(0, Math.ceil((until - now) / 1000));
+}
+
+export function nextPinLock(lock, ok, now = Date.now()) {
+  if (ok) return { fails: 0, until: 0 };
+  const fails = (Number.isFinite(lock?.fails) ? lock.fails : 0) + 1;
+  const over = fails - PIN_LOCK.freeTries;
+  const until = over >= 0 ? now + 1000 * Math.min(PIN_LOCK.maxS, PIN_LOCK.baseS * 2 ** over) : 0;
+  return { fails, until };
+}
 
 export function pinGateScreen(app, { next = 'settings' } = {}) {
-  const input = h('input', { type: 'password', inputmode: 'numeric', maxlength: 4, autocomplete: 'off', 'aria-label': 'PIN родителя', class: 'pin-input' });
+  const input = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'off', 'aria-label': 'PIN родителя', class: 'pin-input' });
   const error = h('p', { class: 'note warn', 'aria-live': 'polite' });
   const check = () => {
-    if (hashPin(input.value) === app.settings.parentPin) { app.pinOk = true; app.go(next); }
-    else { error.textContent = 'Неверный PIN'; input.value = ''; input.focus(); }
+    const wait = pinLockWait(app.settings.pinLock);
+    if (wait) { error.textContent = `Слишком много попыток. Подождите ${wait} с`; input.value = ''; return; }
+    const ok = hashPin(input.value) === app.settings.parentPin;
+    app.updateSettings({ pinLock: nextPinLock(app.settings.pinLock, ok) });
+    if (ok) { app.pinOk = true; app.go(next); return; }
+    const after = pinLockWait(app.settings.pinLock);
+    error.textContent = after ? `Неверный PIN. Следующая попытка через ${after} с` : 'Неверный PIN';
+    input.value = ''; input.focus();
   };
   input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
-  input.addEventListener('input', () => { if (input.value.length === 4) check(); });
+  input.addEventListener('keyup', e => { if (e.key === 'Enter') check(); });
   queueMicrotask(() => input.focus());
   return {
     node: h('div', { class: 'screen pin' },

@@ -57,13 +57,13 @@ export function settingsScreen(app) {
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); };
 
-  const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 4, autocomplete: 'off', placeholder: '4 цифры', 'aria-label': 'Новый PIN родителя' });
+  const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'off', placeholder: '4–6 цифр', 'aria-label': 'Новый PIN родителя' });
   const childBox = h('div', { hidden: s.audience !== 'child' },
     h('label', { class: 'row' }, h('span', {}, 'PIN родителя для настроек', h('small', {}, s.parentPin ? 'установлен' : 'не установлен')), pinInput),
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn ghost', onclick: () => {
-        if (!validPin(pinInput.value)) { toast('PIN — ровно 4 цифры', 'bad'); return; }
-        app.updateSettings({ parentPin: hashPin(pinInput.value) }); app.pinOk = true; pinInput.value = ''; toast('PIN установлен', 'good');
+        if (!validPin(pinInput.value)) { toast('PIN — от 4 до 6 цифр', 'bad'); return; }
+        app.updateSettings({ parentPin: hashPin(pinInput.value), pinLock: { fails: 0, until: 0 } }); app.pinOk = true; pinInput.value = ''; toast('PIN установлен', 'good');
       } }, 'Сохранить PIN'),
       s.parentPin ? h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ parentPin: '' }); toast('PIN снят'); app.go('settings'); } }, 'Снять PIN') : null));
 

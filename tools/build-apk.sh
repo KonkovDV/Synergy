@@ -4,7 +4,7 @@
 #   javac/keytool/jarsigner from the JDK. Requires: JDK 11+, Node 18+, curl, zip.
 # The APK is a WebView shell around the offline web build (dist/). Signed with a debug key (v1),
 # VERIFY_API=1 additionally checks the API stubs against the real framework (see below).
-# targetSdk 29 — fine for sideloading on Android 5–16; for Google Play/RuStore re-sign with your key.
+# targetSdk 29 — fine for sideloading on Android 5–16. Release key: see «Signing» below.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CACHE="$ROOT/tools/.cache"; OUT="$ROOT/android/build"
@@ -44,10 +44,17 @@ fi
 java -cp "$CACHE/dalvik-dx.jar" com.android.dx.command.Main --dex --min-sdk-version=21 --output="$OUT/classes.dex" "$OUT/classes"
 (cd "$OUT" && zip -q -j unsigned.apk classes.dex)
 
-KEY="$ROOT/android/debug.keystore"
-[ -f "$KEY" ] || keytool -genkeypair -keystore "$KEY" -storepass synergy -keypass synergy -alias synergy \
-  -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Synergy Debug, O=Synergy, C=RU" >/dev/null 2>&1
+# Signing: SYNERGY_KEYSTORE / SYNERGY_KEYSTORE_PASS / SYNERGY_KEY_ALIAS = your release key (CI secrets).
+# Without them a throwaway debug key is generated in tools/.cache (never committed) — NOT for submission.
+if [ -n "${SYNERGY_KEYSTORE:-}" ]; then
+  KEY="$SYNERGY_KEYSTORE"; PASS="${SYNERGY_KEYSTORE_PASS:?set SYNERGY_KEYSTORE_PASS}"; ALIAS="${SYNERGY_KEY_ALIAS:?set SYNERGY_KEY_ALIAS}"
+else
+  KEY="$CACHE/debug.keystore"; PASS=synergy-debug; ALIAS=debug
+  [ -f "$KEY" ] || keytool -genkeypair -keystore "$KEY" -storepass "$PASS" -keypass "$PASS" -alias "$ALIAS" \
+    -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Synergy Debug (local), O=Synergy, C=RU" >/dev/null 2>&1
+  echo "ВНИМАНИЕ: отладочная подпись (локальный ключ). Для сдачи задайте SYNERGY_KEYSTORE*."
+fi
 cp "$OUT/unsigned.apk" "$OUT/synergy.apk"
-jarsigner -keystore "$KEY" -storepass synergy -sigalg SHA256withRSA -digestalg SHA-256 "$OUT/synergy.apk" synergy >/dev/null
+jarsigner -keystore "$KEY" -storepass "$PASS" -sigalg SHA256withRSA -digestalg SHA-256 "$OUT/synergy.apk" "$ALIAS" >/dev/null
 jarsigner -verify "$OUT/synergy.apk" >/dev/null && echo "APK: $OUT/synergy.apk ($(du -k "$OUT/synergy.apk" | cut -f1) KB)"
 "$AAPT2" dump badging "$OUT/synergy.apk" 2>/dev/null | head -3 || true
