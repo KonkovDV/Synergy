@@ -1,13 +1,15 @@
 // Pre-submission gate: the documents must describe the product that is actually in the archive.
 // Usage: npm run check:submission            — strict (before upload to the platform)
 //        node tools/check-submission.mjs --draft — CI: AUTHORS.md may still be a draft (warning)
+//        --no-tests — skip running the suite (only for the gate's own test: tests/submission.test.mjs)
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const draft = process.argv.includes('--draft');
+const runTests = !process.argv.includes('--no-tests');
 const read = f => readFileSync(join(root, f), 'utf8');
 const errors = [], warnings = [];
 const fail = m => errors.push(m), warn = m => warnings.push(m);
@@ -25,13 +27,17 @@ const stale = readdirSync(join(root, 'release')).filter(f => f.endsWith('.apk') 
 if (stale.length) fail(`старые APK в release/: ${stale.join(', ')}`);
 
 // 2. Numbers quoted in the pitch documents match reality (no \b after Cyrillic: it is ASCII-only, PLAN C.1.1).
-const tap = execFileSync(process.execPath, ['--test', ...readdirSync(join(root, 'tests')).filter(f => f.endsWith('.test.mjs')).map(f => join(root, 'tests', f))], { encoding: 'utf8' });
-const tests = Number(tap.match(/^# tests (\d+)/m)?.[1]), failed = Number(tap.match(/^# fail (\d+)/m)?.[1]);
-if (failed) fail(`тесты падают: ${failed}`);
+let tests = null;
+if (runTests) {
+  const run = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...readdirSync(join(root, 'tests')).filter(f => f.endsWith('.test.mjs')).map(f => join(root, 'tests', f))], { cwd: root, encoding: 'utf8' });
+  tests = Number(run.stdout.match(/^# tests (\d+)/m)?.[1] ?? 0);
+  const failed = Number(run.stdout.match(/^# fail (\d+)/m)?.[1] ?? 0);
+  if (failed || run.status !== 0) fail(`тесты падают: ${failed || 'см. npm test'}`);
+}
 const apkKb = existsSync(apk) ? Math.round(statSync(apk).size / 1024) : null;
 for (const doc of ['README.md', 'docs/JURY_STRATEGY.md', 'MEMORY.md']) {
   const text = read(doc);
-  for (const m of text.matchAll(/(\d+)\s+(?:авто)?тест(?:а|ов)?(?![а-яёa-z])/gi)) if (Number(m[1]) !== tests) fail(`${doc}: «${m[0]}», а тестов ${tests}`);
+  if (tests !== null) for (const m of text.matchAll(/(\d+)\s+(?:авто)?тест(?:а|ов)?(?![а-яёa-z])/gi)) if (Number(m[1]) !== tests) fail(`${doc}: «${m[0]}», а тестов ${tests}`);
   for (const m of text.matchAll(/APK[^\n|]{0,24}?(\d+)\s*КБ/g)) if (apkKb !== null && Math.abs(Number(m[1]) - apkKb) > 2) fail(`${doc}: «${m[0]}», а APK ${apkKb} КБ`);
 }
 
@@ -59,6 +65,21 @@ for (const f of textFiles) {
   lines.forEach((line, i) => { for (const [re, why] of BANNED) if (re.test(line)) fail(`${f}:${i + 1}: ${why}`); });
 }
 
+// 3a. The gesture set: «состав — гипотеза» in the documents until the organizers publish their 7 gestures,
+// then the published set is recorded in MEMORY.md and must be exactly the set in vocabulary.js (PLAN C.3).
+const gestureLine = read('MEMORY.md').match(/^Набор жестов организатора:\s*(.+)$/m)?.[1]?.trim();
+const hypothesis = new RegExp(`состав${W}[^.\n]{0,120}гипотез`, 'i');
+const hypothesisDocs = ['docs/JURY_STRATEGY.md', 'docs/TASK.md'].filter(f => existsSync(join(root, f)) && hypothesis.test(read(f)));
+if (!gestureLine) warn('MEMORY.md: нет строки «Набор жестов организатора: …» (до 28.10 — «не опубликован»)');
+else if (/^не опубликован/i.test(gestureLine)) {
+  if (!hypothesisDocs.includes('docs/JURY_STRATEGY.md')) fail('набор жестов не опубликован, а docs/JURY_STRATEGY.md не называет состав гипотезой');
+} else {
+  for (const f of hypothesisDocs) fail(`${f}: состав 7 жестов назван гипотезой, а набор организатора уже записан в MEMORY.md`);
+  const { GESTURE_IDS } = await import(pathToFileURL(join(root, 'src/core/vocabulary.js')).href);
+  const published = gestureLine.split(/[\s,;]+/).filter(Boolean);
+  if ([...published].sort().join() !== [...GESTURE_IDS].sort().join()) fail(`vocabulary.js (${GESTURE_IDS.join(', ')}) ≠ набор организатора в MEMORY.md (${published.join(', ')})`);
+}
+
 // 4. Rights and submission hygiene (Правила, п. 5.5, 6.6).
 if (/_заполнить_/.test(read('AUTHORS.md'))) (draft ? warn : fail)('AUTHORS.md не заполнен (ФИО и вклад — п. 6.6)');
 if (/\b(MIT License|Apache License|GNU General Public|Creative Commons)\b/i.test(read('LICENSE'))) fail('LICENSE открытый — конфликт с отчуждением права (п. 6.6)');
@@ -70,6 +91,6 @@ if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} �
 for (const w of warnings) console.log(`⚠ ${w}`);
 for (const e of errors) console.log(`✗ ${e}`);
 console.log(errors.length ? `Не готово к сдаче: ${errors.length} ошибок`
-  : warnings.length ? `Черновик без ошибок, предупреждений: ${warnings.length} (тестов ${tests}, APK ${apkKb} КБ, версия ${version})`
-  : `Готово к сдаче (тестов ${tests}, APK ${apkKb} КБ, версия ${version})`);
+  : warnings.length ? `Черновик без ошибок, предупреждений: ${warnings.length} (тестов ${tests ?? '—'}, APK ${apkKb} КБ, версия ${version})`
+  : `Готово к сдаче (тестов ${tests ?? '—'}, APK ${apkKb} КБ, версия ${version})`);
 process.exit(errors.length ? 1 : 0);
