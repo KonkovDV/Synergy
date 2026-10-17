@@ -94,7 +94,7 @@ ${table(Object.values(SKILL_NAME), [Object.keys(SKILL_NAME).map(k => skills[k] ?
 <p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью. Игровая метрика: в исследовании Dupan et al., 2025 попытки без живой обратной связи были связаны с переносом на протез; клинической валидации у этой игры нет.</p>
 <h2>Проверка навыка (стандартный набор, по мотивам Motion Test / TAC)</h2>
 ${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 'Выполнение, мс', 'Точность, %', 'Перелёты', 'ПС, бит/с', 'Эфф. пути, %'],
-  checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots, c.throughputBps ?? '—', c.pathEfficiency ?? '—']))}
+  checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots, c.throughputBps?.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) ?? '—', c.pathEfficiency ?? '—']))}
 <p class="muted">ПС — пропускная способность по закону Фиттса (пропорциональная схема): log₂(D/W + 1) / время движения, среднее по попыткам; эффективность пути — расстояние до цели / пройденный путь сигнала. Сравнивайте с прошлыми неделями этого же человека: с цифрами из статей не сравнимо (другие задачи и устройства).</p>
 <h2>Ошибки распознавания жестов (с, последние ${conf.runs} упражнений)</h2>
 ${conf.top.length ? table(['Нужен жест', 'Распознан как', 'Секунд'], conf.top.map(t => [gname(t.wanted), gname(t.seen), t.seconds])) : '<p class="muted">нет данных в режиме жестов</p>'}
