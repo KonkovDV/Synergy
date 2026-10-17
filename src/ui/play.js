@@ -3,7 +3,7 @@
 // the sensors are on the other arm, so the player should not need to touch the screen to continue.
 import { h, toast } from './dom.js';
 import { signalMeter } from './widgets.js';
-import { createTwoChannelPads, createGesturePads } from '../input/controls.js';
+import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, COMMAND, gestureLegend } from '../core/vocabulary.js';
 import { COLORS } from '../render/draw.js';
 import { MusicPlayer } from '../core/music.js';

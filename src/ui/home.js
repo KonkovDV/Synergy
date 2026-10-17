@@ -5,7 +5,7 @@ import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
 import { playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
-import { gestureIcon } from '../input/controls.js';
+import { gestureIcon } from './controls.js';
 import { GESTURE_BY_ID, OPENING_GESTURE } from '../core/vocabulary.js';
 import { SESSION } from '../config.js';
 

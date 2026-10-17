@@ -8,7 +8,7 @@ import { defaultCalibration } from '../core/signal.js';
 import { download, reminderIcs } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
 import { bleSupported } from '../input/ble.js';
-import { createTwoChannelPads } from '../input/controls.js';
+import { createTwoChannelPads } from './controls.js';
 import { hashPin, validPin, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { APP, HANDS_FREE } from '../config.js';
