@@ -44,6 +44,15 @@ export function memoryStorage() {
 
 function isObject(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
 
+/** Same JSON shape as the default: object, array, finite number, string, boolean; a null default takes an object or null. */
+function sameShape(value, def) {
+  if (def === null) return value === null || isObject(value);
+  if (isObject(def)) return isObject(value);
+  if (Array.isArray(def)) return Array.isArray(value);
+  if (typeof def === 'number') return Number.isFinite(value);
+  return typeof value === typeof def;
+}
+
 function validRun(r) {
   return isObject(r) && typeof r.game === 'string' && Number.isInteger(r.level) && Number.isFinite(r.score)
     && r.score >= 0 && r.score <= 100 && Number.isInteger(r.stars) && r.stars >= 0 && r.stars <= 3;
@@ -59,9 +68,11 @@ export function parseState(raw) {
   const base = emptyState();
   const data = JSON.parse(raw);
   if (!isObject(data) || data.version !== 4) throw new Error('Unsupported state');
-  const profile = { ...base.profile, ...(isObject(data.profile) ? data.profile : {}) };
-  profile.totals = { ...base.profile.totals, ...(profile.totals ?? {}) };
-  profile.streak = { ...base.profile.streak, ...(profile.streak ?? {}) };
+  // Every profile field keeps the shape of its default (a backup is untrusted: `days: null` once broke home).
+  const storedProfile = isObject(data.profile) ? data.profile : {};
+  const profile = Object.fromEntries(Object.entries(base.profile).map(([k, v]) => [k, sameShape(storedProfile[k], v) ? storedProfile[k] : v]));
+  profile.totals = { ...base.profile.totals, ...profile.totals };
+  profile.streak = { ...base.profile.streak, ...profile.streak };
   // Only known settings with the expected type survive (a backup file is untrusted input).
   const stored = isObject(data.settings) ? data.settings : {};
   const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, typeof stored[k] === typeof v && (typeof v !== 'number' || Number.isFinite(stored[k])) ? stored[k] : v]));

@@ -9,11 +9,31 @@ Use it to plug ANY emulator or sensor into the game (Settings → Источни
                                                 the on-screen pads of the game choose what to synthesize
                                                 (needs numpy/scipy/scikit-learn: pip install -r lab/requirements.txt)
 Frames: {"a": 0..1, "b": 0..1, "gesture"?: id, "confidence"?: 0..1, "effort"?: 0..1} at 50 Hz.
+
+Security (EMG is health data): a web page from another site must not read the stream (cross-site WebSocket
+hijacking, OWASP WSTG). Native clients (no Origin) and pages served from this computer connect freely; any
+other page — the standalone HTML (Origin "null"), GitHub Pages, a phone in the LAN — needs the token printed
+at start (ws://host:port/?token=…) or an explicit --allow-origin.
 """
-import argparse, asyncio, base64, hashlib, json, math, struct, sys, threading, time
+import argparse, asyncio, base64, hashlib, json, math, secrets, struct, sys, threading, time
 from pathlib import Path
+from urllib.parse import urlsplit, parse_qs
 
 GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
+MAX_PAYLOAD = 4096        # a frame is ~50 bytes; anything larger is not a frame (same limit as the game's parser)
+MAX_CLIENTS = 8
+MAX_BUFFER = 1 << 20      # a client that stops reading is dropped before it eats the memory
+LOOPBACK = ('127.0.0.1', 'localhost', '::1')
+
+
+def origin_allowed(origin, token_given, token, allowed=()):
+    """CSWSH guard: no Origin (native client), an allowed origin or a page from this computer — free;
+    anything else (incl. "null" of file:// and sandboxed frames) must present the session token."""
+    if origin is None or origin in allowed:
+        return True
+    if origin != 'null' and urlsplit(origin).hostname in LOOPBACK:
+        return True
+    return bool(token) and secrets.compare_digest(token_given or '', token)
 GESTURES = ['rest', 'fist', 'open', 'pinch', 'point', 'key', 'thumb']
 
 
@@ -77,18 +97,31 @@ class LabSource:
 
 
 class Bridge:
-    def __init__(self, source, hz=50):
+    def __init__(self, source, hz=50, token='', allowed=()):
         self.source, self.hz, self.clients, self.intent = source, hz, set(), {}
+        self.token, self.allowed = token, tuple(allowed)
+
+    async def refuse(self, writer, status, why):
+        writer.write(f'HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'.encode())
+        await writer.drain(); writer.close()
+        print(f'отказано ({status}): {why}', flush=True)
 
     async def handle(self, reader, writer):
         try:
             head = await reader.readuntil(b'\r\n\r\n')
         except (asyncio.IncompleteReadError, asyncio.LimitOverrunError):
             writer.close(); return
-        headers = {k.strip().lower(): v.strip() for k, _, v in (l.partition(':') for l in head.decode('latin1').split('\r\n')[1:] if ':' in l)}
+        lines = head.decode('latin1').split('\r\n')
+        headers = {k.strip().lower(): v.strip() for k, _, v in (l.partition(':') for l in lines[1:] if ':' in l)}
         key = headers.get('sec-websocket-key')
         if not key:
-            writer.write(b'HTTP/1.1 400 Bad Request\r\n\r\nWebSocket only'); await writer.drain(); writer.close(); return
+            return await self.refuse(writer, '400 Bad Request', 'не WebSocket')
+        target = (lines[0].split(' ') + ['/', '/'])[1]
+        token_given = parse_qs(urlsplit(target).query).get('token', [''])[0]
+        if not origin_allowed(headers.get('origin'), token_given, self.token, self.allowed):
+            return await self.refuse(writer, '403 Forbidden', f"Origin {headers.get('origin')} без токена")
+        if len(self.clients) >= MAX_CLIENTS:
+            return await self.refuse(writer, '503 Service Unavailable', 'слишком много клиентов')
         accept = base64.b64encode(hashlib.sha1((key + GUID).encode()).digest()).decode()
         writer.write(f'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n\r\n'.encode())
         await writer.drain()
@@ -100,7 +133,9 @@ class Bridge:
                 op, n = b1 & 0x0F, b2 & 0x7F
                 if n == 126: n = struct.unpack('!H', await reader.readexactly(2))[0]
                 elif n == 127: n = struct.unpack('!Q', await reader.readexactly(8))[0]
-                mask = await reader.readexactly(4) if b2 & 0x80 else b'\0\0\0\0'
+                if n > MAX_PAYLOAD or not b2 & 0x80:  # too big (DoS) or unmasked (RFC 6455 §5.1): close 1009 / 1002
+                    writer.write(bytes([0x88, 2]) + struct.pack('!H', 1009 if n > MAX_PAYLOAD else 1002)); break
+                mask = await reader.readexactly(4)
                 data = bytes(c ^ mask[i % 4] for i, c in enumerate(await reader.readexactly(n)))
                 if op == 8: break
                 if op == 1:
@@ -129,8 +164,11 @@ class Bridge:
             if frame is not None and self.clients:
                 packet = self.encode(json.dumps(frame))
                 for w in list(self.clients):
-                    try: w.write(packet)
-                    except Exception: self.clients.discard(w)
+                    try:
+                        if w.transport.get_write_buffer_size() > MAX_BUFFER: raise ConnectionError('client stopped reading')
+                        w.write(packet)
+                    except Exception:
+                        self.clients.discard(w); w.close()
             await asyncio.sleep(1 / self.hz)
 
 
@@ -141,13 +179,16 @@ async def main():
     mode.add_argument('--stdin', action='store_true'); mode.add_argument('--lab', action='store_true')
     p.add_argument('--host', default='127.0.0.1', help='0.0.0.0 — доступ с телефона в той же сети')
     p.add_argument('--port', type=int, default=8765)
+    p.add_argument('--allow-origin', action='append', default=[], metavar='ORIGIN',
+                   help='страница, которой можно без токена, напр. https://team.github.io (можно несколько)')
     a = p.parse_args()
     if a.host not in ('127.0.0.1', 'localhost', '::1'):
         print('ВНИМАНИЕ: мост доступен всем устройствам сети. Только доверенная Wi-Fi, не публичная сеть; без авторизации и шифрования.', flush=True)
     source = DemoSource() if a.demo else GestureDemoSource() if a.demo_gestures else StdinSource() if a.stdin else LabSource()
-    bridge = Bridge(source)
+    bridge = Bridge(source, token=secrets.token_urlsafe(9), allowed=a.allow_origin)
     server = await asyncio.start_server(bridge.handle, a.host, a.port)
     print(f'Synergy bridge: ws://{a.host}:{a.port}  (Ctrl+C — стоп)', flush=True)
+    print(f'Для standalone HTML, телефона и других сайтов: ws://{a.host}:{a.port}/?token={bridge.token}', flush=True)
     async with server:
         await asyncio.gather(server.serve_forever(), bridge.pump())
 
