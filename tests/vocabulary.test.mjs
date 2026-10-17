@@ -10,6 +10,8 @@ import { PROMPTS, SafeGame } from '../src/games/safe.js';
 import { assessmentTrials } from '../src/games/assess.js';
 import { tutorialSteps } from '../src/core/tutorial.js';
 import { parseExternal, GESTURE_ALIASES, CLASS_ORDER } from '../src/input/bridge.js';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 
 const GRIPS = new Set(CLOSING_GESTURES.map(g => g.grip));
 
@@ -63,4 +65,17 @@ test('vocabulary: the bridge accepts every id, name and class index', () => {
 // Fails on purpose after a gesture is replaced: update GESTURE_ALIASES in src/input/bridge.js (checklist step 2).
 test('vocabulary: bridge synonyms point to existing gestures', () => {
   for (const [alias, id] of Object.entries(GESTURE_ALIASES)) assert.ok(GESTURE_BY_ID[id], `synonym ${alias} → ${id}`);
+});
+
+// Static guard: a gesture id in quotes may appear only where the set is defined or deliberately mapped.
+// ('rest' and 'open' are also command names, so they are not searched.)
+test('vocabulary: no other module names a gesture id', () => {
+  const ALLOWED = ['src/core/vocabulary.js', 'src/input/bridge.js', 'src/config.js', 'src/games/grip.js'];
+  const ids = GESTURES.map(g => g.id).filter(id => !Object.values(COMMAND).includes(id));
+  const files = readdirSync('src', { recursive: true }).filter(f => f.endsWith('.js')).map(f => join('src', f));
+  const offenders = [];
+  for (const f of files.filter(f => !ALLOWED.includes(relative('.', f).replaceAll('\\', '/')))) {
+    readFileSync(f, 'utf8').split('\n').forEach((line, i) => { for (const id of ids) if (line.includes(`'${id}'`)) offenders.push(`${f}:${i + 1} '${id}'`); });
+  }
+  assert.deepEqual(offenders, []);
 });
