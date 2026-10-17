@@ -1,0 +1,34 @@
+const {chromium}=require('playwright');
+const assert=require('assert/strict');
+const {chromiumPath}=require('./runtime.cjs');
+let checks=0;
+function ok(v,m){assert.ok(v,m);checks++;}
+(async()=>{
+ const browser=await chromium.launch({executablePath:chromiumPath()||chromium.executablePath(),headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage();
+ const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8765');
+ await page.selectOption('#source','synthetic_emg');
+ await page.waitForFunction(()=>!document.getElementById('start').disabled,{timeout:10000});
+ await page.click('#calibrate');
+ await page.waitForFunction(()=>document.getElementById('calPrompt').textContent.includes('1 / 10'));
+ await page.evaluate(()=>window.SynergyMVP.setSource('simulation'));
+ await page.waitForFunction(()=>!document.getElementById('calibrationDialog').open);
+ ok(await page.evaluate(()=>window.SynergyMVP.getState().source==='simulation'));
+ await page.evaluate(()=>window.SynergyMVP.setSource('synthetic_emg'));
+ await page.waitForFunction(()=>!document.getElementById('start').disabled,{timeout:10000});
+ let release,seen;
+ const held=new Promise(r=>{release=r;});
+ const hit=new Promise(r=>{seen=r;});
+ await page.route('**/api/frame',async route=>{seen();await held;await route.continue().catch(()=>{});});
+ await Promise.race([hit,new Promise((_,reject)=>setTimeout(()=>reject(Error('no frame request')),5000))]);
+ await page.evaluate(()=>{window.SynergyMVP.unmount();document.getElementById('connection').textContent='disposed';});
+ release();
+ await page.waitForTimeout(600);
+ ok(await page.locator('#connection').textContent()==='disposed','late lab response changed the page after unmount');
+ ok(!await page.locator('#calibrationDialog').evaluate(d=>d.open));
+ ok(errors.length===0,errors.join('\n'));
+ console.log(JSON.stringify({suite:'lifecycle',status:'PASS',assertions:checks}));
+ await browser.close();
+})().catch(e=>{console.error(e);process.exit(1);});

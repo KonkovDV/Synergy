@@ -1,0 +1,5 @@
+node_modules/
+tools/.cache/
+android/build/
+__pycache__/
+*.pyc

@@ -1,0 +1,14 @@
+// Maps game events to sound and vibration (one place, DRY).
+import { play } from './audio.js';
+
+const HAPTIC = { crush: [60, 40, 60], miss: 30, success: [20, 30, 20], perfect: 25, switch: 15, lift: 15, win: [30, 50, 30, 50, 60] };
+
+export function createFeedback(settings) {
+  return {
+    event(e) {
+      if (settings().sound) play(e.name, e);
+      const pattern = HAPTIC[e.name];
+      if (pattern && settings().haptics && navigator.vibrate) navigator.vibrate(pattern);
+    },
+  };
+}

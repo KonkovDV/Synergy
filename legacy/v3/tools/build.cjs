@@ -1,0 +1,1 @@
+const path=require('path');const root=path.resolve(__dirname,'..');require('esbuild').buildSync({entryPoints:[path.join(root,'src/app.mjs')],bundle:true,format:'iife',target:['chrome100','safari15','firefox100'],outfile:path.join(root,'assets/app.bundle.js'),minify:false,sourcemap:true});console.log('Offline bundle built');

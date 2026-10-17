@@ -1,0 +1,167 @@
+// Unit tests of the pure domain: signal pipeline, hand model, calibration, progress, storage, bridge parsing.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { SignalPipeline, readFrame, normalize } from '../src/core/signal.js';
+import { BionicHand } from '../src/core/hand.js';
+import { CalibrationRecorder } from '../src/core/calibration.js';
+import { createProfile, recordRun, updateStreak, buildDailyPlan, completePlanItem, playerLevel, recommendedLevel, starsFor, weeklyStatus } from '../src/core/progress.js';
+import { Store, memoryStorage, parseState } from '../src/core/storage.js';
+import { parseExternal } from '../src/input/bridge.js';
+import { PLAN_CATALOG } from '../src/games/registry.js';
+import { COMMAND } from '../src/core/vocabulary.js';
+
+/** Feeds a constant frame for `ms` milliseconds at 60 Hz, returns the last intent. */
+function hold(pipe, frame, ms, t0 = 0) {
+  let intent;
+  for (let t = t0; t <= t0 + ms; t += 16) intent = pipe.process({ ...frame, t }, t);
+  return intent;
+}
+
+test('frames: invalid values are rejected, gestures validated', () => {
+  assert.equal(readFrame({ t: 1, a: NaN, b: 0 }), null);
+  assert.equal(readFrame({ t: 1, a: -1, b: 0 }), null);
+  assert.equal(readFrame({ t: 1, a: 0.2, b: 0, gesture: 'spell' }), null);
+  assert.deepEqual(readFrame({ t: 1, a: 0.2, b: 0.1, gesture: 'pinch' }), { t: 1, a: 0.2, b: 0.1, gesture: 'pinch', confidence: 1 });
+});
+
+test('calibration normalizes raw units', () => {
+  const cal = { rest: [10, 20], max: [110, 220] };
+  assert.equal(normalize(60, 0, cal), 0.5);
+  assert.equal(normalize(5, 0, cal), 0);
+  assert.equal(normalize(500, 1, cal), 1);
+});
+
+test('two-channel commands with hysteresis', () => {
+  const p = new SignalPipeline({ scheme: 'proportional' });
+  assert.equal(hold(p, { a: 0.5, b: 0 }, 300).command, COMMAND.CLOSE);
+  assert.equal(hold(p, { a: 0, b: 0.5 }, 300, 400).command, COMMAND.OPEN);
+  assert.equal(hold(p, { a: 0, b: 0 }, 300, 800).command, COMMAND.REST);
+  // Between off- and on-threshold the state is kept (no chattering).
+  hold(p, { a: 0.3, b: 0 }, 300, 1200);
+  assert.equal(hold(p, { a: 0.18, b: 0 }, 300, 1600).command, COMMAND.CLOSE);
+});
+
+test('co-contraction requires near-simultaneous onsets (≤ 350 ms)', () => {
+  const p = new SignalPipeline({ scheme: 'threshold' });
+  assert.equal(hold(p, { a: 0.7, b: 0.7 }, 200).command, COMMAND.SWITCH);
+  const q = new SignalPipeline({ scheme: 'threshold' });
+  hold(q, { a: 0.7, b: 0 }, 800);
+  assert.notEqual(hold(q, { a: 0.7, b: 0.7 }, 300, 816).command, COMMAND.SWITCH, 'B added 0.8 s later is not a co-contraction');
+});
+
+test('threshold scheme has fixed intensity, proportional follows the signal', () => {
+  const t = new SignalPipeline({ scheme: 'threshold' });
+  assert.equal(hold(t, { a: 0.9, b: 0 }, 300).intensity, 0.6);
+  const p = new SignalPipeline({ scheme: 'proportional' });
+  assert.ok(Math.abs(hold(p, { a: 0.4, b: 0 }, 400).intensity - 0.4) < 0.02);
+});
+
+test('watchdog: stale source → invalid intent after 300 ms', () => {
+  const p = new SignalPipeline({ scheme: 'proportional' });
+  const f = { t: 0, a: 0.5, b: 0 };
+  p.process(f, 0);
+  assert.equal(p.process(f, 200).valid, true);
+  assert.equal(p.process(f, 400).valid, false);
+});
+
+test('gesture scheme: low confidence is rest, short glitches are debounced', () => {
+  const p = new SignalPipeline({ scheme: 'gesture' });
+  assert.equal(hold(p, { a: 0.6, b: 0, gesture: 'pinch', confidence: 0.4, effort: 0.6 }, 300).command, COMMAND.REST);
+  const i = hold(p, { a: 0.6, b: 0, gesture: 'pinch', confidence: 0.9, effort: 0.6 }, 300, 400);
+  assert.equal(i.gesture, 'pinch'); assert.equal(i.command, COMMAND.CLOSE);
+  const g = hold(p, { a: 0.6, b: 0, gesture: 'key', confidence: 0.9, effort: 0.6 }, 48, 800);
+  assert.equal(g.gesture, 'pinch', '48 ms glitch must not change the command');
+});
+
+test('hand: latches force on rest, B releases, switch needs re-arm', () => {
+  const hand = new BionicHand();
+  hand.setObject(0.4);
+  const close = { valid: true, scheme: 'proportional', command: 'close', intensity: 0.5, aOn: true, bOn: false, co: false };
+  for (let i = 0; i < 120; i++) hand.update(close, 1 / 60);
+  assert.ok(hand.inContact && Math.abs(hand.force - 0.5) < 1e-6);
+  const rest = { valid: true, scheme: 'proportional', command: 'rest', intensity: 0, aOn: false, bOn: false, co: false };
+  for (let i = 0; i < 60; i++) hand.update(rest, 1 / 60);
+  assert.ok(Math.abs(hand.force - 0.5) < 1e-6, 'relaxing keeps the grip');
+  const open = { ...rest, command: 'open', intensity: 0.6, bOn: true };
+  for (let i = 0; i < 120; i++) hand.update(open, 1 / 60);
+  assert.equal(hand.force, 0); assert.ok(hand.closure < 0.4);
+  hand.clearObject();
+  const sw = { ...rest, command: 'switch', intensity: 0.7, aOn: true, bOn: true, co: true };
+  hand.update(sw, 1 / 60); hand.update(sw, 1 / 60);
+  assert.equal(hand.grip, 'pinch'); assert.equal(hand.switches, 1, 'held co-contraction switches once');
+  hand.update(rest, 1 / 60); hand.update(sw, 1 / 60);
+  assert.equal(hand.grip, 'key');
+});
+
+test('hand: lost signal holds position', () => {
+  const hand = new BionicHand(); hand.closure = 0.6;
+  hand.update({ valid: false, command: 'open', intensity: 1 }, 1);
+  assert.equal(hand.closure, 0.6);
+});
+
+test('calibration recorder finds rest and comfortable max', () => {
+  const rec = new CalibrationRecorder();
+  const dt = 1 / 50;
+  while (!rec.done) {
+    const id = rec.step.id;
+    const frame = id === 'a' ? { a: 300, b: 25 } : id === 'b' ? { a: 20, b: 200 } : { a: 20, b: 20 };
+    rec.push(frame, dt);
+  }
+  const r = rec.result();
+  assert.deepEqual(r.calibration.rest, [20, 20]);
+  assert.deepEqual(r.calibration.max, [300, 200]);
+  assert.equal(r.issues.length, 0);
+});
+
+test('progress: stars, levels, unlocks, rest day keeps the series', () => {
+  assert.deepEqual([starsFor(49), starsFor(50), starsFor(70), starsFor(88)], [0, 1, 2, 3]);
+  assert.equal(playerLevel(0).level, 1); assert.equal(playerLevel(100).level, 2);
+  let s = { current: 0, best: 0, lastDay: null };
+  s = updateStreak(s, '2026-10-01'); s = updateStreak(s, '2026-10-02'); s = updateStreak(s, '2026-10-04');
+  assert.equal(s.current, 3, 'one rest day does not break the series');
+  s = updateStreak(s, '2026-10-08'); assert.equal(s.current, 1);
+  const p = createProfile();
+  const run = { game: 'grip', level: 1, levelCount: 8, score: 80, stars: 2, durationS: 60, skills: {}, details: { switches: 2 } };
+  const report = recordRun(p, run, { today: '2026-10-17' });
+  assert.equal(p.games.grip.unlocked, 2); assert.equal(report.unlockedLevel, 2);
+  assert.ok(report.achievements.includes('first_run'));
+  assert.equal(recordRun(p, { ...run, demo: true }, { today: '2026-10-17' }).xp, 0, 'demo never counts');
+  assert.equal(weeklyStatus(p, 4, '2026-10-17').done, 1);
+});
+
+test('challenge point: two failures step back one level', () => {
+  const p = createProfile();
+  p.games.flight = { unlocked: 4, stars: {}, best: {}, played: true, lastStars: { 4: [1, 0, 0] } };
+  assert.equal(recommendedLevel(p, 'flight'), 3);
+});
+
+test('daily plan: 3 exercises + retention probe, bonus when complete', () => {
+  const p = createProfile();
+  const plan = buildDailyPlan(p, [], PLAN_CATALOG, 'proportional', '2026-10-17');
+  assert.equal(plan.items.length, 4);
+  assert.equal(plan.items[3].retention, true);
+  assert.equal(plan.items[3].game, plan.items[0].game);
+  let bonus = 0;
+  for (const item of plan.items) bonus += completePlanItem(p, { game: item.game, retention: item.retention }, '2026-10-17');
+  assert.equal(bonus, 60); assert.equal(p.totals.plans, 1);
+});
+
+test('storage: corrupt data is backed up, not lost; migration keeps defaults', () => {
+  const mem = memoryStorage();
+  mem.setItem('synergy.v4', '{broken');
+  const store = new Store(mem);
+  assert.equal(mem.getItem('synergy.v4.corrupt'), '{broken');
+  assert.equal(store.state.version, 4);
+  const parsed = parseState(JSON.stringify({ version: 4, settings: { scheme: 'gesture' }, runs: [{ game: 'grip', level: 1, score: 500, stars: 9 }] }));
+  assert.equal(parsed.settings.scheme, 'gesture'); assert.equal(parsed.settings.sound, true);
+  assert.equal(parsed.runs.length, 0, 'invalid runs are dropped');
+});
+
+test('bridge: tolerant parsing of emulator formats', () => {
+  assert.deepEqual(parseExternal('{"a":0.4,"b":0.1}'), { a: 0.4, b: 0.1 });
+  assert.deepEqual(parseExternal('0.3 0.2'), { a: 0.3, b: 0.2 });
+  assert.deepEqual(parseExternal({ channels: [0.1, 0.9, 0.5] }, { channelA: 2, channelB: 0 }), { a: 0.5, b: 0.1 });
+  assert.deepEqual(parseExternal({ class: 'Щепоть', prob: 0.8 }), { a: 0, b: 0, gesture: 'pinch', confidence: 0.8 });
+  assert.deepEqual(parseExternal({ gesture: 3, a: 0.5, b: 0 }), { a: 0.5, b: 0, gesture: 'pinch', confidence: 1 });
+  assert.equal(parseExternal('garbage'), null);
+});
