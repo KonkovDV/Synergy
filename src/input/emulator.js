@@ -2,7 +2,7 @@
 // realistic EMG *envelope*: muscle rise/decay, band-limited noise, ~9 Hz tremor, channel crosstalk,
 // and, for gestures, recognition latency, confidence jitter and short misclassifications.
 // Same SignalFrame contract as the organizers' emulator or a real prosthesis.
-import { GESTURE_BY_ID, GESTURE_IDS, COMMAND } from '../core/vocabulary.js';
+import { GESTURE_BY_ID, ACTIVE_GESTURE_IDS, COMMAND } from '../core/vocabulary.js';
 import { createRng } from '../core/rng.js';
 
 const ATTACK_S = 0.055, DECAY_S = 0.11, NOISE_S = 0.04;
@@ -72,7 +72,7 @@ export class EmgEmulator {
     if (this.glitchUntil > t) return { gesture: this.glitchGesture, confidence: 0.62, effort: Math.max(...this.env) };
     // ≈ one confusion every 6 s at realism 0.5; most are shorter than the pipeline debounce.
     if (wanted !== 'rest' && this.rng() < 0.35 * r * dt) {
-      this.glitchGesture = this.rng.pick(GESTURE_IDS.filter(g => g !== wanted && g !== 'rest'));
+      this.glitchGesture = this.rng.pick(ACTIVE_GESTURE_IDS.filter(g => g !== wanted));
       this.glitchUntil = t + this.rng.range(60, 160);
     }
     const gesture = sinceChange < 110 ? this.shownGesture : wanted;

@@ -10,7 +10,8 @@
     "e2e": "node tests/e2e/smoke.mjs",
     "start": "python3 tools/serve.py",
     "check:submission": "node tools/check-submission.mjs",
-    "pack": "sh tools/pack.sh"
+    "pack": "sh tools/pack.sh",
+    "drill:gestures": "node tools/gesture-drill.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2"

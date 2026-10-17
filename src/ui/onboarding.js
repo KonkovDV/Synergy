@@ -1,7 +1,7 @@
 // First run: what this is, safety, and the two choices that matter (control scheme, prosthesis side).
 import { h } from './dom.js';
 import { segmented } from './widgets.js';
-import { SCHEME_INFO, GESTURE_BY_ID } from '../core/vocabulary.js';
+import { SCHEME_INFO, OPENING_GESTURE } from '../core/vocabulary.js';
 import { gestureIcon } from '../input/controls.js';
 
 export function onboardingScreen(app) {
@@ -12,7 +12,7 @@ export function onboardingScreen(app) {
   const s = app.settings;
 
   const pages = [
-    () => [h('div', { class: 'onb-art' }, gestureIcon(GESTURE_BY_ID.open, 'icon', 110)),
+    () => [h('div', { class: 'onb-art' }, gestureIcon(OPENING_GESTURE, 'icon', 110)),
       h('h1', {}, 'Синергия'),
       h('p', { class: 'lead' }, 'Игра-тренажёр управления бионическим протезом.'),
       h('p', {}, 'Четыре игры тренируют то, что нужно протезу каждый день: взять предмет с нужной силой, удержать, отпустить, сменить хват, включиться вовремя.'),

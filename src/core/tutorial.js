@@ -1,7 +1,7 @@
 // Interactive tutorial «Первые шаги»: each step waits for the asked command (or gesture) held for a
 // moment, with live feedback — a novice learns rest, A, B, graded force and co-contraction before
 // the first game. Pure step logic (UI in ui/tutorial.js), tested in tests/core.test.mjs.
-import { COMMAND, SCHEME } from './vocabulary.js';
+import { COMMAND, SCHEME, CLOSING_GESTURES, OPENING_GESTURE } from './vocabulary.js';
 
 const rest = { id: 'rest', title: 'Покой', text: 'Полностью расслабьте руку. Протез держит позицию сам — это и есть покой.', holdS: 1.2, check: i => i.command === COMMAND.REST };
 const relax = { ...rest, id: 'relax', title: 'Снова покой', text: 'Отпустите — расслабление так же важно, как напряжение.', holdS: 0.8 };
@@ -20,13 +20,15 @@ const LEVEL_STEP = { id: 'level', title: 'Сила — вполсилы', text: 
 const SWITCH_STEP = { id: 'switch', title: 'Коактивация · A+B', text: 'Напрягите обе мышцы одновременно и коротко — так протез меняет хват.', holdS: 0.15,
   check: i => i.command === COMMAND.SWITCH, tip: 'Начните оба напряжения в пределах трети секунды. На экране — кнопка «A+B».' };
 
+/** Gesture scheme: the power grip, the opening gesture, then a second grip — all taken from GESTURES. */
+const gestureStep = g => ({ id: g.id, title: `Жест «${g.name}»`, text: `${g.cue} и держите. ${g.use}.`, holdS: 1, check: i => i.gesture === g.id });
 const GESTURE_STEPS = [
   rest,
-  { id: 'fist', title: 'Жест «Кулак»', text: 'Покажите кулак и держите — силовой хват.', holdS: 1, check: i => i.gesture === 'fist', tip: 'Нет датчиков? Удерживайте кнопку жеста внизу экрана.' },
+  { ...gestureStep(CLOSING_GESTURES[0]), tip: 'Нет датчиков? Удерживайте кнопку жеста внизу экрана.' },
   relax,
-  { id: 'open', title: 'Жест «Ладонь»', text: 'Раскройте ладонь — так протез отпускает предмет.', holdS: 1, check: i => i.gesture === 'open' },
+  gestureStep(OPENING_GESTURE),
   { ...relax, id: 'relax2' },
-  { id: 'pinch', title: 'Жест «Щепоть»', text: 'Сведите большой и указательный пальцы — точный хват.', holdS: 1, check: i => i.gesture === 'pinch' },
+  gestureStep(CLOSING_GESTURES[1] ?? CLOSING_GESTURES[0]),
   { ...relax, id: 'relax3' },
 ];
 

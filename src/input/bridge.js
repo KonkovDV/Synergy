@@ -4,24 +4,32 @@
 //   2) window.postMessage({ type: 'synergy-frame', ... }) when the game is embedded in an iframe/WebView;
 //   3) window.Synergy.feed(frame) for a native host (Android WebView, test scripts).
 // All parsing lives in parseExternal(): the only place to touch when the emulator format is published.
-import { GESTURE_IDS } from '../core/vocabulary.js';
+import { GESTURES, GESTURE_BY_ID, GESTURE_IDS } from '../core/vocabulary.js';
 
-const GESTURE_ALIASES = {
-  rest: 'rest', relax: 'rest', none: 'rest', neutral: 'rest', idle: 'rest', 'покой': 'rest',
-  fist: 'fist', close: 'fist', grip: 'fist', power: 'fist', grasp: 'fist', 'кулак': 'fist',
-  open: 'open', palm: 'open', spread: 'open', 'ладонь': 'open',
-  pinch: 'pinch', tripod: 'pinch', precision: 'pinch', 'щепоть': 'pinch',
-  point: 'point', pointer: 'point', index: 'point', 'указательный': 'point',
-  key: 'key', lateral: 'key', 'ключ': 'key',
-  thumb: 'thumb', like: 'thumb', thumbs_up: 'thumb', 'класс': 'thumb',
+/** Class index → gesture id. Defaults to the order of GESTURES; set the emulator's order here if it differs. */
+export const CLASS_ORDER = GESTURE_IDS;
+
+/** Synonyms only: every gesture id and Russian name from GESTURES is accepted as is. */
+export const GESTURE_ALIASES = {
+  relax: 'rest', none: 'rest', neutral: 'rest', idle: 'rest',
+  close: 'fist', grip: 'fist', power: 'fist', grasp: 'fist',
+  palm: 'open', spread: 'open',
+  tripod: 'pinch', precision: 'pinch',
+  pointer: 'point', index: 'point',
+  lateral: 'key',
+  like: 'thumb', thumbs_up: 'thumb',
 };
+
+const BY_NAME = Object.fromEntries(GESTURES.flatMap(g => [[g.id, g.id], [g.name.toLowerCase(), g.id]]));
 
 const num = x => (typeof x === 'number' ? x : typeof x === 'string' && x.trim() !== '' ? Number(x) : NaN);
 
 function gestureOf(value) {
   if (value === undefined || value === null) return undefined;
-  if (typeof value === 'number' && Number.isInteger(value)) return GESTURE_IDS[value];
-  return GESTURE_ALIASES[String(value).trim().toLowerCase()];
+  if (typeof value === 'number' && Number.isInteger(value)) return CLASS_ORDER[value];
+  const key = String(value).trim().toLowerCase();
+  const alias = GESTURE_ALIASES[key];
+  return BY_NAME[key] ?? (GESTURE_BY_ID[alias] ? alias : undefined);
 }
 
 /**

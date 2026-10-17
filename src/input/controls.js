@@ -1,7 +1,7 @@
 // On-screen and keyboard controls of the EMG emulator (for testing without sensors).
 // Two-channel pads: hold = muscle activation, finger height inside the pad = strength,
 // both pads (two thumbs) or the «A+B» key = co-contraction. Gesture scheme: 7 gesture keys.
-import { GESTURES } from '../core/vocabulary.js';
+import { GESTURES, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { drawHand } from '../render/draw.js';
 import { h } from '../ui/dom.js';
 
@@ -53,7 +53,7 @@ export function gestureIcon(gesture, skin = 'icon', size = 44) {
 }
 
 export function createGesturePads(emulator, skin) {
-  const keys = GESTURES.filter(g => g.id !== 'rest').map(g => {
+  const keys = ACTIVE_GESTURES.map(g => {
     const el = h('div', { class: 'gkey', role: 'button', 'aria-label': `Жест ${g.name}` }, gestureIcon(g), h('span', {}, g.name));
     bindPad(el, v => { emulator.setTarget(v ? { gesture: g.id, effort: v } : { gesture: 'rest', effort: 0 }); });
     return el;
@@ -62,7 +62,7 @@ export function createGesturePads(emulator, skin) {
   return h('div', { class: 'pads gestures' }, ...keys, h('p', { class: 'pads-note' }, 'Удерживайте жест; выше палец — сильнее'));
 }
 
-/** Keyboard: F/← = A, J/→ = B, Space = A+B; hold longer = stronger; 1–7 = gestures. */
+/** Keyboard: F/← = A, J/→ = B, Space = A+B; hold longer = stronger; digits = gestures in GESTURES order (1 = rest). */
 export function bindKeyboard(emulator, getScheme) {
   const held = new Map();
   let raf = 0;
@@ -70,8 +70,8 @@ export function bindKeyboard(emulator, getScheme) {
     const now = performance.now();
     const level = key => (held.has(key) ? Math.min(1, 0.3 + (now - held.get(key)) / 1600) : 0);
     if (getScheme() === 'gesture') {
-      const g = [...held.keys()].find(k => /^Digit[1-7]$/.test(k));
-      const gesture = g ? GESTURES[Number(g.slice(5)) - 1].id : 'rest';
+      const g = [...held.keys()].find(k => /^Digit[1-9]$/.test(k));
+      const gesture = (g && GESTURES[Number(g.slice(5)) - 1]?.id) || 'rest';
       emulator.setTarget({ gesture, effort: g ? level(g) : 0 });
     } else {
       const co = level('Space') ? 0.75 : 0;
@@ -79,7 +79,7 @@ export function bindKeyboard(emulator, getScheme) {
     }
     raf = held.size ? requestAnimationFrame(tick) : 0;
   };
-  const relevant = code => /^(KeyF|KeyJ|ArrowLeft|ArrowRight|Space|Digit[1-7])$/.test(code);
+  const relevant = code => /^(KeyF|KeyJ|ArrowLeft|ArrowRight|Space|Digit[1-9])$/.test(code);
   const down = e => {
     if (!relevant(e.code) || e.repeat || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
     if (!document.querySelector('.play-screen')) return;

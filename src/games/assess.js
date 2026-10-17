@@ -5,21 +5,19 @@
 // accuracy (correct share of active time after selection), overshoots above the band.
 // Game metrics, not a clinically validated test.
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
-import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURE_IDS } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand, drawGauge } from '../render/draw.js';
 import { createRng } from '../core/rng.js';
 
 export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, bandHalf: 0.12, seed: 2026 };
 
-const POSE = { close: GESTURE_BY_ID.fist.pose, open: GESTURE_BY_ID.open.pose, switch: GESTURE_BY_ID.pinch.pose };
-const ACTIVE_GESTURES = ['fist', 'open', 'pinch', 'point', 'key', 'thumb'];
 
-/** The fixed trial set of each control scheme. */
+/** The fixed trial set of each control scheme (gestures: every active gesture twice, shuffled by the fixed seed). */
 export function assessmentTrials(scheme) {
   if (scheme === SCHEME.GESTURE) {
     const rng = createRng(ASSESS.seed), order = [];
     for (let round = 0; round < 2; round++) {
-      const bag = [...ACTIVE_GESTURES];
+      const bag = [...ACTIVE_GESTURE_IDS];
       while (bag.length) {
         let i = Math.floor(rng() * bag.length);
         if (bag.length > 1 && bag[i] === order[order.length - 1]) i = (i + 1) % bag.length;
@@ -29,12 +27,12 @@ export function assessmentTrials(scheme) {
     return order.map(g => ({ gesture: g, name: GESTURE_BY_ID[g].name, pose: GESTURE_BY_ID[g].pose }));
   }
   if (scheme === SCHEME.THRESHOLD) {
-    return ['close', 'open', 'switch', 'close', 'open', 'switch'].map(c => ({ command: c, name: COMMAND_NAME[c], pose: POSE[c] }));
+    return ['close', 'open', 'switch', 'close', 'open', 'switch'].map(c => ({ command: c, name: COMMAND_NAME[c], pose: COMMAND_POSE[c] }));
   }
   const levels = [0.3, 0.55, 0.8];
   const graded = levels.flatMap(l => ['close', 'open'].map(c => ({ command: c, level: l })));
   return [...graded, { command: 'switch' }, { command: 'switch' }].map(t => ({
-    ...t, name: t.level ? `${COMMAND_NAME[t.command]} · ${Math.round(t.level * 100)} %` : COMMAND_NAME[t.command], pose: POSE[t.command],
+    ...t, name: t.level ? `${COMMAND_NAME[t.command]} · ${Math.round(t.level * 100)} %` : COMMAND_NAME[t.command], pose: COMMAND_POSE[t.command],
     band: t.level ? [t.level - ASSESS.bandHalf, t.level + ASSESS.bandHalf] : null,
   }));
 }

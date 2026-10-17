@@ -1,8 +1,6 @@
 // Analytics for the progress screen and the specialist report: gesture confusions and the weekly
 // skill-check history. Pure functions over stored runs.
-import { GESTURES } from './vocabulary.js';
-
-const ACTIVE = GESTURES.filter(g => g.id !== 'rest').map(g => g.id);
+import { ACTIVE_GESTURE_IDS as ACTIVE } from './vocabulary.js';
 
 /**
  * Confusion matrix over recent gesture-scheme runs: wanted → seen → seconds of wrong recognition.

@@ -17,6 +17,7 @@ import { reportHtml, reportCsv, escapeHtml } from '../src/services/report.js';
 import { play } from './helpers.mjs';
 import { guidanceFor, showsFeedback } from '../src/core/guidance.js';
 import { createGame } from '../src/games/registry.js';
+import { ACTIVE_GESTURE_IDS, CLOSING_GESTURES } from '../src/core/vocabulary.js';
 
 test('adaptive: too easy → harder, too hard → easier, bounded; disabled = fixed', () => {
   const a = new AdaptiveDifficulty();
@@ -80,13 +81,13 @@ test('tutorial: steps complete only when the command is held', () => {
   assert.equal(run.index, 1, 'resting does not complete «close»');
   for (let i = 0; i < 25; i++) run.update({ valid: true, command: 'close', intensity: 0.5 }, 0.05);
   assert.equal(run.index, 2);
-  assert.ok(tutorialSteps('gesture').some(s => s.id === 'pinch'));
+  assert.ok(tutorialSteps('gesture').some(s => s.id === CLOSING_GESTURES[1].id), 'the second grip is taught');
   assert.ok(tutorialSteps('threshold').every(s => s.id !== 'level'), 'no graded force in the threshold scheme');
 });
 
 test('skill check: fixed protocol, Motion-Test metrics, passive = 0', () => {
   assert.deepEqual(assessmentTrials('gesture').map(t => t.gesture), assessmentTrials('gesture').map(t => t.gesture));
-  assert.equal(assessmentTrials('gesture').length, 12);
+  assert.equal(assessmentTrials('gesture').length, ACTIVE_GESTURE_IDS.length * 2, 'every active gesture twice');
   for (const scheme of ['threshold', 'proportional', 'gesture']) {
     const r = play('check', { scheme, levelNumber: 1 });
     assert.equal(r.details.completionRate, 100, scheme);

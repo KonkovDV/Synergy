@@ -1,7 +1,7 @@
 // Specialist report (JSON, CSV, printable HTML) and a calendar reminder (.ics) — no server, no account.
 // Every string that reaches the HTML report is escaped: names and stored data are untrusted input.
 import { APP } from '../config.js';
-import { SKILL_NAME, GESTURE_BY_ID, SCHEME_INFO } from '../core/vocabulary.js';
+import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabulary.js';
 import { skillProfile, playerLevel } from '../core/progress.js';
 import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS, EFFORT_LEVELS } from '../core/wellbeing.js';
@@ -77,7 +77,6 @@ export function reportHtml(state, gameTitle = id => id) {
   const conf = confusionMatrix(runs);
   const log = wellbeingLog(p, 14);
   const name = s.name ? escapeHtml(s.name) : 'пользователь';
-  const gname = id => GESTURE_BY_ID[id]?.name ?? id;
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
 <title>Синергия — отчёт для специалиста</title>

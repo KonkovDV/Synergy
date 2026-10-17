@@ -5,9 +5,9 @@
 //  • OPEN first releases force, then opens the fingers;
 //  • SWITCH (co-contraction) cycles the grip, re-armed only after full relaxation.
 import { HAND } from '../config.js';
-import { COMMAND, SCHEME, GESTURE_BY_ID } from './vocabulary.js';
+import { COMMAND, SCHEME, GESTURE_BY_ID, COMMAND_POSE } from './vocabulary.js';
 
-const OPEN_POSE = GESTURE_BY_ID.open.pose;
+const OPEN_POSE = COMMAND_POSE.open;
 const lerp = (a, b, k) => a + (b - a) * k;
 
 export class BionicHand {
@@ -85,7 +85,7 @@ export class BionicHand {
 
   /** Finger flexions for rendering: open pose blended toward the grip pose. */
   pose() {
-    const target = GESTURE_BY_ID[this.grip]?.pose ?? GESTURE_BY_ID.fist.pose;
+    const target = GESTURE_BY_ID[this.grip]?.pose ?? COMMAND_POSE.close;
     return OPEN_POSE.map((open, i) => lerp(open, target[i], this.closure));
   }
 }

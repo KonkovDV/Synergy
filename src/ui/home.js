@@ -6,7 +6,7 @@ import { playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, stre
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
 import { gestureIcon } from '../input/controls.js';
-import { GESTURE_BY_ID } from '../core/vocabulary.js';
+import { GESTURE_BY_ID, OPENING_GESTURE } from '../core/vocabulary.js';
 import { SESSION } from '../config.js';
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -28,7 +28,7 @@ export function homeScreen(app) {
 
   const head = h('section', { class: 'hero' },
     h('div', { class: 'hero-top' },
-      h('div', { class: 'avatar' }, gestureIcon(GESTURE_BY_ID.thumb, 'icon', 40)),
+      h('div', { class: 'avatar' }, gestureIcon(GESTURE_BY_ID.thumb ?? OPENING_GESTURE, 'icon', 40)),
       h('div', {},
         h('p', { class: 'eyebrow' }, SCHEME_INFO[s.scheme].short),
         h('h1', {}, s.name ? `Привет, ${s.name}!` : 'Привет!')),
