@@ -6,7 +6,11 @@ import { SKILL_NAME } from '../core/vocabulary.js';
 import { skillProfile, ACHIEVEMENTS, SKINS, skinUnlocked, playerLevel, dayKey } from '../core/progress.js';
 import { COLORS, drawHand } from '../render/draw.js';
 import { GESTURE_BY_ID } from '../core/vocabulary.js';
-import { buildReport, reportCsv, download } from '../services/report.js';
+import { buildReport, reportCsv, reportHtml, printHtml, download, wellbeingLog } from '../services/report.js';
+import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
+import { PAIN_LEVELS, FATIGUE_LEVELS } from '../core/wellbeing.js';
+import { GAME_BY_ID } from '../games/registry.js';
+import { SCHEME_INFO } from '../core/vocabulary.js';
 
 function hiDpiCanvas(w, hgt, cls) {
   const canvas = h('canvas', { class: cls, width: w * 2, height: hgt * 2, style: { width: `${w}px`, height: `${hgt}px` } });
@@ -35,6 +39,15 @@ function radar(profile) {
     ctx.fillText(SKILL_NAME[k], lx, ly);
   });
   return canvas;
+}
+
+/** Plain-language trend of the weekly checks: first vs last. */
+function trendText(checks) {
+  const a = checks[0], b = checks[checks.length - 1];
+  const parts = [];
+  if (Number.isFinite(a.completionRate) && Number.isFinite(b.completionRate)) parts.push(`выполнено ${a.completionRate} → ${b.completionRate} %`);
+  if (Number.isFinite(a.selectionMs) && Number.isFinite(b.selectionMs)) parts.push(`время выбора ${a.selectionMs} → ${b.selectionMs} мс`);
+  return parts.length ? `С первой проверки: ${parts.join(', ')}.` : '';
 }
 
 function sparkline(values) {
@@ -66,13 +79,33 @@ function calendar(profile) {
     ...['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => h('small', {}, d)), ...cells);
 }
 
+/** Accessible data table (numbers as text; shading only reinforces them). */
+function dataTable(caption, head, rows, cellClass = () => '') {
+  return h('table', { class: 'data' }, h('caption', {}, caption),
+    h('thead', {}, h('tr', {}, ...head.map(c => h('th', { scope: 'col' }, c)))),
+    h('tbody', {}, ...rows.map((r, ri) => h('tr', {}, ...r.map((c, ci) => (ci === 0 ? h('th', { scope: 'row' }, c) : h('td', { class: cellClass(ri, ci, c) }, c ?? '—')))))));
+}
+
+/** Gesture confusion matrix: rows = asked gesture, columns = recognized one; seconds of wrong recognition. */
+function confusionTable(conf) {
+  const name = id => GESTURE_BY_ID[id]?.name ?? id;
+  const max = Math.max(0.1, ...conf.rows.flatMap(r => conf.cols.map(c => conf.cells[r]?.[c] ?? 0)));
+  const rows = conf.rows.map(r => [name(r), ...conf.cols.map(c => (r === c ? '·' : conf.cells[r]?.[c] ? (Math.round(conf.cells[r][c] * 10) / 10).toFixed(1) : ''))]);
+  const heat = (ri, ci) => {
+    if (!ci) return '';
+    const v = conf.cells[conf.rows[ri]]?.[conf.cols[ci - 1]] ?? 0;
+    return v ? `heat h${Math.min(4, 1 + Math.floor(3.99 * v / max))}` : '';
+  };
+  return dataTable('Нужен жест (строка) → распознан как (столбец), секунды', ['', ...conf.cols.map(c => name(c).slice(0, 4))], rows, heat);
+}
+
 export function progressScreen(app) {
   const runs = app.state.runs.filter(r => !r.demo);
   const profile = skillProfile(runs);
   const p = app.profile;
   const lvl = playerLevel(p.xp);
   const trends = Object.keys(SKILL_NAME).map(k => {
-    const values = runs.map(r => r.skills?.[k]).filter(Number.isFinite).slice(-12);
+    const values = runs.filter(r => !r.details?.assessment).map(r => r.skills?.[k]).filter(Number.isFinite).slice(-12);
     return h('div', { class: 'trend' }, skillBar(SKILL_NAME[k], profile[k]), sparkline(values));
   });
   const skins = h('div', { class: 'skins' }, ...SKINS.map(sk => {
@@ -86,6 +119,22 @@ export function progressScreen(app) {
   const achievements = h('div', { class: 'badges' }, ...ACHIEVEMENTS.map(a => h('div', { class: `badge ${p.achievements[a.id] ? 'on' : ''}`, title: a.text },
     h('span', { 'aria-hidden': 'true' }, p.achievements[a.id] ? '🏅' : '○'), h('b', {}, a.name), h('small', {}, a.text))));
   const minutes = Math.round(p.totals.seconds / 60);
+  const checks = assessmentHistory(runs, null, 6);
+  const conf = confusionMatrix(runs);
+  const log = wellbeingLog(p, 7);
+  const ruDay = iso => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  const checkSection = h('section', { class: 'card' }, h('h2', {}, '📋 Проверка навыка'),
+    checks.length
+      ? dataTable('Последние проверки (стандартный набор)', ['Дата', 'Выполн., %', 'Выбор, мс', 'Выполн., мс', 'Точн., %'],
+        checks.map(c => [`${ruDay(c.at)} · ${SCHEME_INFO[c.scheme]?.name.slice(0, 5) ?? ''}`, c.completionRate, c.selectionMs, c.completionMs, c.accuracy]))
+      : h('p', { class: 'note' }, 'Пройдите проверку навыка на главной — раз в неделю, чтобы видеть рост в одних и тех же условиях.'),
+    checks.length >= 2 ? h('p', { class: 'note' }, trendText(checks)) : null);
+  const confSection = conf.runs ? h('section', { class: 'card' }, h('h2', {}, 'Ошибки распознавания жестов'),
+    confusionTable(conf),
+    h('p', { class: 'note' }, conf.top.length ? `Чаще всего: ${conf.top.map(t => `${GESTURE_BY_ID[t.wanted].name} → ${GESTURE_BY_ID[t.seen].name} (${t.seconds} с)`).join('; ')}. Тренируйте эти пары в «Сейфе»; если путаница не уходит — обсудите с протезистом переобучение распознавания.` : 'Ошибок нет — отличная разделимость жестов.')) : null;
+  const wellSection = log.length ? h('section', { class: 'card' }, h('h2', {}, 'Самочувствие'),
+    dataTable('Последние 7 записей', ['День', 'Боль', 'Усталость', 'Минут'],
+      log.map(l => [ruDay(`${l.day}T12:00:00`), PAIN_LEVELS.find(x => x.id === l.pain)?.label ?? '—', FATIGUE_LEVELS.find(x => x.id === l.fatigue)?.label ?? '—', l.minutes]))) : null;
   return {
     node: h('div', { class: 'screen progress' },
       h('main', { class: 'scroll' },
@@ -99,11 +148,13 @@ export function progressScreen(app) {
           runs.length ? radar(profile) : h('p', { class: 'note' }, 'Сыграйте первое упражнение — здесь появится профиль.'),
           h('p', { class: 'note' }, 'Среднее за последние 12 упражнений. «Без подсказки» — лучший признак переноса навыка на протез.')),
         h('section', { class: 'card' }, h('h2', {}, 'Динамика'), ...trends),
+        checkSection, confSection, wellSection,
         h('section', { class: 'card' }, h('h2', {}, 'Календарь'), calendar(p)),
         h('section', { class: 'card' }, h('h2', {}, 'Достижения'), achievements),
         h('section', { class: 'card' }, h('h2', {}, 'Облик протеза'), skins),
         h('section', { class: 'card' }, h('h2', {}, 'Для специалиста'),
           h('p', { class: 'note' }, 'Отчёт с метриками каждого упражнения: можно показать протезисту или реабилитологу. Данные хранятся только на этом устройстве.'),
+          h('button', { class: 'btn primary', onclick: () => printHtml(`Синергия — отчёт ${dayKey()}`, reportHtml(app.state, id => GAME_BY_ID[id]?.title ?? id)) }, 'Отчёт для специалиста (печать / PDF)'),
           h('div', { class: 'row-actions' },
             h('button', { class: 'btn ghost', onclick: () => download(`synergy-report-${dayKey()}.json`, JSON.stringify(buildReport(app.state), null, 2), 'application/json') }, 'Отчёт JSON'),
             h('button', { class: 'btn ghost', onclick: () => download(`synergy-runs-${dayKey()}.csv`, '﻿' + reportCsv(app.state), 'text/csv') }, 'Таблица CSV')))),

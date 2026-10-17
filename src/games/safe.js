@@ -2,7 +2,7 @@
 // Gesture scheme: the 6 active gestures (+ rest between them). Two-channel schemes: graded commands
 // and co-contraction. Repeating each pattern consistently trains separable EMG patterns
 // (Kristoffersen et al. 2020: +51 % separability after game training).
-import { Game, clamp01, pct } from './base.js';
+import { Game, ConfusionMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand } from '../render/draw.js';
 
@@ -56,10 +56,14 @@ export class SafeGame extends Game {
     }
     this.index = 0; this.phase = 'rest'; this.restFor = 0; this.holdFor = 0; this.cardTime = 0;
     this.reactions = []; this.wrongTime = 0; this.stats = {};
+    this.confusion = new ConfusionMeter();
     this.hint = 'Покажите команду с карточки и удерживайте, пока заполняется круг';
   }
 
   get card() { return this.code[this.index] ?? null; }
+
+  /** Time allowed per code digit (challenge point). */
+  get limit() { return this.adapt.widen(this.level.limit); }
 
   matches(prompt, intent) {
     if (!intent.valid) return false;
@@ -84,15 +88,18 @@ export class SafeGame extends Game {
     const ok = this.matches(card, intent);
     if (ok) { this.firstMatch ??= this.cardTime; this.holdFor += dt; }
     else { this.holdFor = Math.max(0, this.holdFor - dt * 2); if (!resting) this.wrongTime += dt; }
+    if (card.gesture) this.confusion.add(card.gesture, intent.gesture, dt);
     this.hint = ok ? 'Держите…' : `Нужно: ${card.name}`;
     const stat = this.stats[card.id] ??= { tries: 0, ok: 0, totalMs: 0 };
     if (this.holdFor >= this.level.hold) {
       card.state = 'ok'; card.time = this.cardTime;
       this.reactions.push(this.firstMatch);
       stat.tries++; stat.ok++; stat.totalMs += Math.round(1000 * this.cardTime);
+      this.adapt.record(true);
       this.emit('ring'); this.next();
-    } else if (this.cardTime >= this.level.limit) {
+    } else if (this.cardTime >= this.limit) {
       card.state = 'fail'; stat.tries++;
+      this.adapt.record(false);
       this.emit('miss'); this.next();
     }
   }
@@ -133,7 +140,7 @@ export class SafeGame extends Game {
   details() {
     const distinct = new Set(this.code.filter(c => c.state === 'ok' && c.gesture).map(c => c.gesture));
     return { solved: this.code.filter(c => c.state === 'ok').length, total: this.code.length, wrongMs: Math.round(this.wrongTime * 1000),
-      distinctGestures: distinct.size, perPrompt: this.stats,
+      distinctGestures: distinct.size, perPrompt: this.stats, confusion: this.confusion.toJSON(),
       meanReactionMs: this.reactions.length ? Math.round(1000 * this.reactions.reduce((s, v) => s + v, 0) / this.reactions.length) : null };
   }
 
@@ -179,7 +186,7 @@ export class SafeGame extends Game {
         if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {
           text(ctx, `${Math.round(card.band[0] * 100)}–${Math.min(100, Math.round(card.band[1] * 100))} %`, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
         }
-        const left = Math.max(0, this.level.limit - this.cardTime);
+        const left = Math.max(0, this.limit - this.cardTime);
         text(ctx, `${left.toFixed(1)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, color: left < 1.5 ? COLORS.bad : COLORS.muted });
         if (!this.retention) {
           ctx.strokeStyle = COLORS.good; ctx.lineWidth = 5; ctx.lineCap = 'round';

@@ -56,3 +56,20 @@
 ## Хранение
 
 `localStorage['synergy.v4']`: `{version, profile, settings, calibrations:{touch, bridge}, runs[]}`. Повреждённые данные сохраняются в `synergy.v4.corrupt`, не перезаписываются. Демо-прогоны не сохраняются. Никакой сети, аккаунтов и аналитики.
+
+## v5: новые модули (те же правила слоёв)
+
+| Модуль | Слой | Ответственность |
+|---|---|---|
+| `core/adaptive.js` | домен | challenge point: доля успехов за 4 попытки → `ease` ∈ [−1, 1], допуски ×(1 ± 0,3·ease); выключен в испытании без подсказки и в проверке (`static adaptive = false`) |
+| `core/wellbeing.js` | домен | опрос (NRS-категории, усталость) → go/light/stop; признаки усталости по падению результата |
+| `core/tutorial.js` | домен | шаги обучения: проверка намерения + удержание |
+| `core/analytics.js` | домен | матрица ошибок жестов, история проверок |
+| `core/showcase.js` | домен | синтетический профиль через `recordRun` (DRY: те же правила, что в игре) |
+| `games/assess.js` | игры | «Проверка навыка» — фиксированный протокол, метрики Motion Test/TAC |
+| `input/ble.js` | источники | Web Bluetooth NUS: сборка строк из уведомлений, переподключение 1/2/4 с → `BridgeSource.feed` |
+| `services/voice.js` | сервисы | Web Speech / нативный TTS, троттлинг |
+| `ui/checkin.js`, `ui/tutorial.js`, `ui/pin.js` | UI | экраны |
+| `App.startPlan()` | композиция | поток плана дня (опрос → пункт плана); экраны не импортируют друг друга |
+
+Темп игры: `GameRunner` передаёт игре `dt × speed`, кисть живёт в реальном времени. Нативный мост Android `window.SynergyNative`: `speak/stop/share/print`; сервисы используют его, если он есть (Liskov: тот же контракт, что у браузерных API).

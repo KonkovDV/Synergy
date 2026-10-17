@@ -27,7 +27,8 @@ export class GameRunner {
     this.signalLost = !this.intent.valid;
     this.hand.update(this.intent, dt);
     // No signal → the exercise freezes (not a failure of the user, cf. v3 watchdog).
-    if (!this.signalLost && !this.game.paused) this.game.update(dt, this.intent, this.hand);
+    // The hand follows real time (control law); only the game world runs at the chosen pace.
+    if (!this.signalLost && !this.game.paused) this.game.update(dt * this.game.speed, this.intent, this.hand);
     return this.intent;
   }
 }

@@ -1,5 +1,8 @@
 node_modules/
 tools/.cache/
 android/build/
+dist/
 __pycache__/
 *.pyc
+.DS_Store
+*.keystore.local

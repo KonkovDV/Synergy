@@ -4,6 +4,7 @@
 //   result() → { score 0..100, stars, skills, details } for progress and the specialist report.
 import { starsFor } from '../core/progress.js';
 import { createRng } from '../core/rng.js';
+import { AdaptiveDifficulty } from '../core/adaptive.js';
 
 export const clamp01 = x => Math.max(0, Math.min(1, x));
 export const pct = x => Math.round(100 * clamp01(x));
@@ -22,6 +23,8 @@ export class SeparationMeter {
 /** Stability: deviation of a controlled value from its local mean during holds. */
 export class StabilityMeter {
   constructor(tolerance = 0.12) { this.tolerance = tolerance; this.sum = 0; this.n = 0; this.mean = null; }
+  /** Starts a new hold (next object or stream): the target level may differ, only wobble counts. */
+  segment() { this.mean = null; }
   add(value) {
     this.mean = this.mean === null ? value : this.mean + (value - this.mean) * 0.08;
     const d = value - this.mean; this.sum += d * d; this.n++;
@@ -29,13 +32,35 @@ export class StabilityMeter {
   get score() { return this.n > 20 ? pct(1 - Math.sqrt(this.sum / this.n) / this.tolerance) : null; }
 }
 
+/** Gesture confusions: seconds a wrong *active* gesture was recognized while another was asked. */
+export class ConfusionMeter {
+  constructor() { this.cells = {}; }
+  add(wanted, seen, dt) {
+    if (!wanted || !seen || seen === wanted || seen === 'rest') return;
+    const row = this.cells[wanted] ??= {};
+    row[seen] = (row[seen] ?? 0) + dt;
+  }
+  /** Rounded copy for the run record (0.1 s). */
+  toJSON() {
+    return Object.fromEntries(Object.entries(this.cells).map(([w, row]) => [w, Object.fromEntries(Object.entries(row).map(([g, v]) => [g, Math.round(v * 10) / 10]))]));
+  }
+}
+
 export class Game {
   static id = 'game';
   static title = 'Игра';
   static skills = [];
 
-  constructor({ level, levelNumber = 1, scheme, seed = 1, retention = false, skin = 'graphite', mirror = false }) {
+  /** Fixed-difficulty games (the skill check) opt out of in-exercise adaptation. */
+  static adaptive = true;
+
+  constructor({ level, levelNumber = 1, scheme, seed = 1, retention = false, skin = 'graphite', mirror = false,
+    adaptive = true, speed = 1, reduceMotion = false }) {
     this.level = level;
+    this.speed = speed;              // темп игры: игровое время идёт медленнее (Game Accessibility Guidelines)
+    this.reduceMotion = reduceMotion; // без частиц и вспышек
+    // Retention probe = fixed difficulty: it measures the skill, it does not train it.
+    this.adapt = new AdaptiveDifficulty({ enabled: adaptive && !retention && this.constructor.adaptive });
     this.skin = skin;
     this.mirror = mirror;            // левый протез — кисть рисуется зеркально
     this.levelNumber = levelNumber;
@@ -62,6 +87,7 @@ export class Game {
   }
 
   burst(x, y, color, count = 14, speed = 160, g = 300) {
+    if (this.reduceMotion) return;
     for (let i = 0; i < count; i++) {
       const a = this.rng() * Math.PI * 2, v = speed * (0.4 + this.rng());
       this.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * 0.4, g, life: 0.5 + this.rng() * 0.5, max: 1, color, r: 2 + this.rng() * 3 });
@@ -93,6 +119,7 @@ export class Game {
     const score = Math.round(Math.max(0, Math.min(100, this.scoreValue())));
     const skills = Object.fromEntries(Object.entries(this.skillScores()).filter(([, v]) => Number.isFinite(v)));
     if (this.retention) skills.retention = score;
-    return { score, stars: starsFor(score), skills, details: this.details(), durationS: Math.round(this.time) };
+    const details = { ...this.details(), difficulty: Math.round(this.adapt.meanEase * 100) / 100 };
+    return { score, stars: starsFor(score), skills, details, durationS: Math.round(this.time / this.speed) };
   }
 }

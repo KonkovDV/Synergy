@@ -1,42 +1,83 @@
-// Settings (control scheme, signal source, sensitivity, training habits, data) and the calibration wizard.
+// Settings (control, signal source, sensitivity, training, accessibility, habit, data) and the calibration wizard.
+// Child mode: the screen sits behind the parent PIN gate (ui/pin.js).
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
 import { CalibrationRecorder } from '../core/calibration.js';
 import { defaultCalibration } from '../core/signal.js';
 import { download, reminderIcs } from '../services/report.js';
+import { voiceAvailable } from '../services/voice.js';
+import { bleSupported } from '../input/ble.js';
 import { createTwoChannelPads } from '../input/controls.js';
-import { APP } from '../config.js';
+import { hashPin, validPin, pinGateScreen } from './pin.js';
+import { dayKey } from '../core/progress.js';
+import { APP, HANDS_FREE } from '../config.js';
 
 const pct = v => `${Math.round(v * 100)}%`;
+const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
+
+/** Reads a user-picked file as text (backup restore). */
+function pickTextFile(accept, onText) {
+  const input = h('input', { type: 'file', accept, hidden: true });
+  input.addEventListener('change', () => {
+    const file = input.files?.[0];
+    input.remove();
+    if (file) file.text().then(onText, () => toast('Не удалось прочитать файл', 'bad'));
+  });
+  document.body.append(input);
+  input.click();
+}
 
 export function settingsScreen(app) {
   const s = app.settings;
+  if (s.audience === 'child' && s.parentPin && !app.pinOk) return pinGateScreen(app);
   const meter = signalMeter(app);
-  const status = h('small', { class: 'bridge-status' }, app.bridge ? `Статус: ${app.bridge.status}` : '');
+  const status = h('small', { class: 'bridge-status' }, app.bridge ? `Статус: ${BRIDGE_STATUS[app.bridge.status] ?? app.bridge.status}` : '');
+  const bleStatus = h('small', { class: 'bridge-status' }, app.ble ? `Bluetooth: ${app.ble.name}` : '');
   const urlInput = h('input', { type: 'url', value: s.wsUrl, placeholder: 'ws://192.168.0.10:8765', 'aria-label': 'Адрес WebSocket' });
+  const connectBle = async () => {
+    try { const name = await app.connectBle(); toast(`Подключено: ${name}`, 'good'); bleStatus.textContent = `Bluetooth: ${name}`; }
+    catch (e) { toast(e?.name === 'NotFoundError' ? 'Устройство не выбрано' : e.message, 'bad'); }
+  };
   const bridgeBox = h('div', { class: 'bridge-box', hidden: s.source !== 'bridge' },
     h('label', { class: 'row' }, h('span', {}, 'WebSocket эмулятора'), urlInput),
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ wsUrl: urlInput.value.trim() }); toast('Подключаемся…'); } }, 'Подключить'),
       h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка')),
     status,
+    h('div', { class: 'row-actions' },
+      h('button', { class: 'btn ghost', disabled: !bleSupported(), onclick: connectBle }, 'Bluetooth-датчик (BLE UART)')),
+    bleStatus,
+    h('p', { class: 'note' }, bleSupported()
+      ? 'Датчики ESP32/nRF с сервисом Nordic UART (например, MyoWare 2.0 + беспроводной модуль) — прошивка-пример в bridge/firmware. После подключения выполните калибровку.'
+      : 'Bluetooth из браузера работает в Chrome на Android и ПК. В приложении APK и на iOS используйте мост (WebSocket) или нативный pushFrame().'),
     h('p', { class: 'note' }, 'Также принимаются кадры через window.postMessage({type:"synergy-frame", a, b}) и window.Synergy.feed(frame). Формат — docs/INTEGRATION.md.'));
 
   const section = (title, ...children) => h('section', { class: 'card' }, h('h2', {}, title), ...children);
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); };
 
+  const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 4, autocomplete: 'off', placeholder: '4 цифры', 'aria-label': 'Новый PIN родителя' });
+  const childBox = h('div', { hidden: s.audience !== 'child' },
+    h('label', { class: 'row' }, h('span', {}, 'PIN родителя для настроек', h('small', {}, s.parentPin ? 'установлен' : 'не установлен')), pinInput),
+    h('div', { class: 'row-actions' },
+      h('button', { class: 'btn ghost', onclick: () => {
+        if (!validPin(pinInput.value)) { toast('PIN — ровно 4 цифры', 'bad'); return; }
+        app.updateSettings({ parentPin: hashPin(pinInput.value) }); app.pinOk = true; pinInput.value = ''; toast('PIN установлен', 'good');
+      } }, 'Сохранить PIN'),
+      s.parentPin ? h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ parentPin: '' }); toast('PIN снят'); app.go('settings'); } }, 'Снять PIN') : null));
+
   const node = h('div', { class: 'screen settings' },
     h('main', { class: 'scroll' },
       h('h1', {}, 'Настройки'),
+      app.showcase ? h('p', { class: 'note warn' }, 'Открыт демо-профиль для презентации: изменения не сохраняются.') : null,
       section('Управление',
         segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { app.updateSettings({ scheme: v }); refreshPreview(); app.go('settings'); }),
         h('p', { class: 'note' }, SCHEME_INFO[s.scheme].text),
         h('label', { class: 'row' }, h('span', {}, 'Протез'),
           segmented([{ value: 'right', label: 'Правая рука' }, { value: 'left', label: 'Левая рука' }], s.side, v => app.updateSettings({ side: v })))),
       section('Источник сигнала',
-        segmented([{ value: 'touch', label: 'Эмулятор на экране', sub: 'без датчиков' }, { value: 'bridge', label: 'Внешний', sub: 'эмулятор / протез' }], s.source, v => {
+        segmented([{ value: 'touch', label: 'Эмулятор на экране', sub: 'без датчиков' }, { value: 'bridge', label: 'Внешний', sub: 'эмулятор / датчики / протез' }], s.source, v => {
           app.updateSettings({ source: v }); bridgeBox.hidden = v !== 'bridge'; refreshPreview();
         }),
         bridgeBox,
@@ -47,7 +88,24 @@ export function settingsScreen(app) {
         h('p', { class: 'note' }, 'Проверка вживую — напрягите мышцы или используйте площадки ниже:'),
         meter.node,
         s.source === 'touch' && s.scheme !== 'gesture' ? createTwoChannelPads(app.emulator) : null,
-        h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка датчиков')),
+        h('div', { class: 'row-actions' },
+          h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка датчиков'),
+          h('button', { class: 'btn ghost', onclick: () => app.go('tutorial', { from: 'settings' }) }, 'Первые шаги (обучение)'))),
+      section('Тренировка',
+        toggleRow('Адаптивная сложность', s.adaptive, v => app.updateSettings({ adaptive: v }), 'допуски подстраиваются, чтобы удавалось ~75 % попыток; испытание без подсказки и проверка — без подстройки'),
+        h('label', { class: 'row' }, h('span', {}, 'Кто занимается'),
+          segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { app.updateSettings({ audience: v }); childBox.hidden = v !== 'child'; })),
+        h('p', { class: 'note' }, 'Детский режим: план из 2 упражнений, отдых 15 с, дневной лимит 20 мин; настройки можно закрыть PIN-кодом.'),
+        childBox),
+      section('Доступность',
+        toggleRow('Озвучивание подсказок', s.voice, v => { app.updateSettings({ voice: v }); if (v) app.say('Озвучивание включено', { interrupt: true }); }, voiceAvailable() ? 'игра без взгляда на экран; при слабом зрении' : 'синтез речи недоступен на этом устройстве'),
+        h('label', { class: 'row' }, h('span', {}, 'Размер текста'),
+          segmented([{ value: 1, label: '100 %' }, { value: 1.15, label: '115 %' }, { value: 1.3, label: '130 %' }], s.textScale, v => app.updateSettings({ textScale: v }))),
+        toggleRow('Высокий контраст', s.contrast, v => app.updateSettings({ contrast: v }), 'чёрный фон, белые рамки, жёлтые главные кнопки'),
+        toggleRow('Меньше движения', s.reduceMotion, v => app.updateSettings({ reduceMotion: v }), 'без частиц, вспышек и анимаций'),
+        toggleRow('Вибро-метроном в «Ритме»', s.hapticBeat, v => app.updateSettings({ hapticBeat: v }), 'такт ощущается рукой — для слабослышащих'),
+        sliderRow('Темп игр', { min: 0.6, max: 1, step: 0.05, value: s.gameSpeed, format: pct, onInput: v => app.updateSettings({ gameSpeed: v }) }),
+        sliderRow('Удержание A для «без касания»', { min: HANDS_FREE.minS, max: HANDS_FREE.maxS, step: 0.1, value: s.dwellS, format: v => `${v.toFixed(1)} с`, onInput: v => app.updateSettings({ dwellS: v }) })),
       section('Привычка',
         sliderRow('Цель: дней в неделю', { min: 2, max: 7, step: 1, value: s.weeklyGoal, format: v => String(v), onInput: v => app.updateSettings({ weeklyGoal: v }) }),
         h('label', { class: 'row' }, h('span', {}, 'Напоминание'),
@@ -58,18 +116,29 @@ export function settingsScreen(app) {
         toggleRow('Вибрация', s.haptics, v => app.updateSettings({ haptics: v })),
         toggleRow('Полоски сигнала в игре', s.showMeters, v => app.updateSettings({ showMeters: v }), 'мышечная обратная связь рядом с игровой')),
       section('Данные',
-        h('p', { class: 'note' }, app.store.persisted ? 'Всё хранится только на этом устройстве. Без аккаунта и аналитики.' : 'Хранилище недоступно: результаты не сохранятся после закрытия.'),
-        h('button', { class: 'btn danger', onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве?')) { app.store.reset(); app.go('onboarding'); } } }, 'Сбросить прогресс')),
+        h('p', { class: 'note' }, app.store.persisted ? 'Всё хранится только на этом устройстве. Без аккаунта, сети и аналитики.' : 'Хранилище недоступно: результаты не сохранятся после закрытия.'),
+        h('div', { class: 'row-actions' },
+          h('button', { class: 'btn ghost', disabled: !!app.showcase, onclick: () => download(`synergy-backup-${dayKey()}.json`, app.exportBackup(), 'application/json') }, 'Сохранить копию'),
+          h('button', { class: 'btn ghost', disabled: !!app.showcase, onclick: () => pickTextFile('application/json,.json', raw => {
+            if (!confirm('Заменить все данные на этом устройстве данными из копии?')) return;
+            try { app.importBackup(raw); toast('Данные восстановлены', 'good'); app.go('home'); } catch (e) { toast(e.message, 'bad'); }
+          }) }, 'Восстановить')),
+        h('div', { class: 'row-actions' },
+          app.showcase
+            ? h('button', { class: 'btn ghost', onclick: () => { app.exitShowcase(); app.go('settings'); } }, 'Выйти из демо-профиля')
+            : h('button', { class: 'btn ghost', onclick: () => { app.enterShowcase(); app.go('progress'); } }, 'Демо-профиль для презентации')),
+        h('button', { class: 'btn danger', disabled: !!app.showcase, onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве?')) { app.store.reset(); app.applyPresentation(); app.go('onboarding'); } } }, 'Сбросить прогресс')),
       section('О приложении',
         h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ (2 канала: пороговый и пропорциональный режимы; 7 жестов).`),
-        h('p', { class: 'note warn' }, 'Не медицинское изделие. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
+        h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
         h('p', { class: 'note' }, 'Код создан командой с помощью ИИ-ассистента; что именно и как проверено — docs/AI_USAGE.md.'))),
     bottomNav(app, 'settings'));
 
   return {
     node,
     tick(now) { meter.update(preview.pipeline.process(preview.source?.sample(now) ?? null, now)); },
-    onBridgeStatus(st) { status.textContent = `Статус: ${st}`; },
+    onBridgeStatus(st) { status.textContent = `Статус: ${BRIDGE_STATUS[st] ?? st}`; },
+    onBleStatus(st) { bleStatus.textContent = st === 'disconnected' ? 'Bluetooth: связь потеряна — переподключаемся…' : st === 'failed' ? 'Bluetooth: не удалось переподключиться' : `Bluetooth: ${st}`; },
   };
 }
 

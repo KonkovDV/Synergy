@@ -31,18 +31,23 @@ export function onboardingScreen(app) {
       h('p', { class: 'note' }, 'Не уверены — выберите «Пропорциональный». Режим можно сменить в настройках.'),
       h('p', {}, 'На какой руке протез?'),
       segmented([{ value: 'right', label: 'Правая' }, { value: 'left', label: 'Левая' }], s.side, v => { s.side = v; }),
+      h('p', {}, 'Кто будет заниматься?'),
+      segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { s.audience = v; }),
       h('label', { class: 'row' }, h('span', {}, 'Как к вам обращаться (необязательно)'), h('input', { type: 'text', maxlength: 24, value: s.name, oninput: e => { s.name = e.target.value.trim(); } }))],
   ];
 
   const render = () => {
     body.replaceChildren(...pages[step]());
     dots.replaceChildren(...pages.map((_, i) => h('i', { class: i === step ? 'on' : '' })));
-    next.textContent = step < pages.length - 1 ? 'Дальше' : 'Начать тренировку';
+    next.textContent = step < pages.length - 1 ? 'Дальше' : 'Первые шаги · 2 мин';
+    skip.hidden = step < pages.length - 1;
   };
+  const done = target => { app.profile.onboarded = true; app.updateSettings({}); app.go(target, { from: 'home' }); };
   next.onclick = () => {
     if (step < pages.length - 1) { step++; render(); return; }
-    app.profile.onboarded = true; app.save(); app.go('home');
+    done('tutorial');
   };
+  const skip = h('button', { class: 'btn ghost', onclick: () => done('home') }, 'Пропустить обучение');
   render();
-  return { node: h('div', { class: 'screen onboarding' }, h('main', { class: 'scroll center' }, body), h('div', { class: 'sticky-actions' }, dots, next)) };
+  return { node: h('div', { class: 'screen onboarding' }, h('main', { class: 'scroll center' }, body), h('div', { class: 'sticky-actions' }, dots, next, skip)) };
 }

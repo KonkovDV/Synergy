@@ -17,10 +17,13 @@ const result = await build({
 const js = result.outputFiles[0].text;
 const css = readFileSync(join(root, 'styles/app.css'), 'utf8');
 
-const page = ({ head, body }) => `<!doctype html>
+// Content-Security-Policy: no network except WebSocket bridges, no foreign scripts, no plugins.
+const csp = inline => `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'${inline ? " 'unsafe-inline'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">`;
+const page = ({ head, body, inline = false }) => `<!doctype html>
 <html lang="ru" data-build="dist">
 <head>
 <meta charset="utf-8">
+${csp(inline)}
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0d1530">
 <meta name="description" content="Синергия — мобильная игра-тренажёр управления бионическим протезом по ЭМГ">
@@ -58,6 +61,7 @@ const icon = readFileSync(join(root, 'public/icons/icon.svg'), 'utf8');
 const standalone = page({
   head: `<link rel="icon" href="data:image/svg+xml;base64,${Buffer.from(icon).toString('base64')}">\n<style>${css}</style>`,
   body: `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`,
+  inline: true,
 });
 writeFileSync(join(dist, 'synergy-standalone.html'), standalone);
 console.log(`Built v${pkg.version}: dist/ (${(js.length / 1024).toFixed(0)} KB JS) + synergy-standalone.html (${(standalone.length / 1024).toFixed(0)} KB)`);

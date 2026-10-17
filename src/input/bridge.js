@@ -32,9 +32,12 @@ function gestureOf(value) {
  * @param {{channelA:number, channelB:number}} map which indexes are A and B in multi-channel arrays
  * @returns {object|null} SignalFrame without `t` (stamped on arrival)
  */
+export const MAX_MESSAGE_CHARS = 4096; // a frame is ~50 bytes; anything larger is not a frame (DoS guard)
+
 export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   let data = msg;
   if (typeof data === 'string') {
+    if (data.length > MAX_MESSAGE_CHARS) return null;
     const text = data.trim();
     if (text.startsWith('{') || text.startsWith('[')) {
       try { data = JSON.parse(text); } catch { return null; }

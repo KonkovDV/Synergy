@@ -1,7 +1,17 @@
 // Meta-game: XP, levels, training-day series, weekly goal, achievements, skins, daily plan.
 // Pure functions over plain data (easy to test and to persist).
-import { STARS, XP, SESSION } from '../config.js';
+import { STARS, XP, SESSION, CHILD } from '../config.js';
 import { SKILL } from './vocabulary.js';
+
+/** Session rules for the audience: a child trains with a parent — shorter plan, rest and daily cap. */
+export function sessionRules(audience = 'adult') {
+  const child = audience === 'child';
+  return {
+    planExercises: child ? CHILD.planExercises : SESSION.planExercises,
+    restS: child ? CHILD.restBetweenExercisesS : SESSION.restBetweenExercisesS,
+    softCapMin: child ? CHILD.dailySoftCapMin : SESSION.dailySoftCapMin,
+  };
+}
 
 export const dayKey = (date = new Date()) => {
   const d = new Date(date);
@@ -41,7 +51,9 @@ export const ACHIEVEMENTS = [
   { id: 'streak7', name: 'Неделя', text: 'Серия из 7 тренировочных дней', test: (p) => p.streak.current >= 7 },
   { id: 'week_goal', name: 'Цель недели', text: 'Выполните недельную цель', test: (p, run, ctx) => ctx?.weekly?.done >= ctx?.weekly?.goal },
   { id: 'retention', name: 'Без подсказки', text: 'Пройдите испытание без подсказки на 2★', test: (p, run) => run?.retention && run.stars >= 2 },
-  { id: 'all_games', name: 'Универсал', text: 'Сыграйте во все четыре игры', test: (p) => Object.keys(p.games).filter(g => p.games[g].played).length >= 4 },
+  { id: 'all_games', name: 'Универсал', text: 'Сыграйте во все четыре игры', test: (p) => Object.values(p.games).filter(g => g.played && !g.assessment).length >= 4 },
+  { id: 'tutorial', name: 'Первые шаги', text: 'Пройдите обучение: покой, A, B, сила, коактивация', test: (p) => !!p.tutorialDone },
+  { id: 'check', name: 'Самопроверка', text: 'Пройдите проверку навыка', test: (p, run) => !!run?.details?.assessment },
 ];
 
 export function createProfile() {
@@ -55,6 +67,7 @@ export function createProfile() {
     skin: 'graphite',
     plan: null,
     onboarded: false,
+    tutorialDone: false,
   };
 }
 
@@ -62,16 +75,28 @@ export function gameProgress(profile, gameId) {
   return profile.games[gameId] ?? { unlocked: 1, stars: {}, best: {}, played: false, lastStars: {} };
 }
 
+/** Days the user declared «rest because of pain»: neutral for the series (never punish resting). */
+export function painRestDays(profile) {
+  return Object.keys(profile.days).filter(d => profile.days[d]?.checkin?.action === 'stop');
+}
+
+/** Calendar gap between two days, not counting declared pain-rest days in between. */
+function trainingGap(from, to, restDays = []) {
+  const a = dayIndex(from), b = dayIndex(to);
+  return b - a - restDays.filter(d => { const i = dayIndex(d); return i > a && i < b; }).length;
+}
+
 /** Training-day series: one rest day between sessions keeps the series (muscles need recovery). */
-export function updateStreak(streak, today) {
+export function updateStreak(streak, today, restDays = []) {
   if (streak.lastDay === today) return streak;
-  const gap = streak.lastDay ? dayIndex(today) - dayIndex(streak.lastDay) : Infinity;
+  const gap = streak.lastDay ? trainingGap(streak.lastDay, today, restDays) : Infinity;
   const current = gap <= 2 ? streak.current + 1 : 1;
   return { current, best: Math.max(streak.best, current), lastDay: today };
 }
 
-export function streakAlive(streak, today) {
-  return !!streak.lastDay && dayIndex(today) - dayIndex(streak.lastDay) <= 2;
+export function streakAlive(streak, today, restDays = []) {
+  // Today itself may be a declared rest day: it does not count against the series either.
+  return !!streak.lastDay && trainingGap(streak.lastDay, today, restDays) - (restDays.includes(today) ? 1 : 0) <= 2;
 }
 
 export function weeklyStatus(profile, goal, today) {
@@ -94,6 +119,7 @@ export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION
   gp.best = { ...gp.best, [run.level]: Math.max(gp.best[run.level] ?? 0, run.score) };
   gp.lastStars = { ...(gp.lastStars ?? {}), [run.level]: [...(gp.lastStars?.[run.level] ?? []), run.stars].slice(-3) };
   gp.played = true;
+  gp.assessment = !!run.details?.assessment;
   let unlockedLevel = null;
   if (run.stars >= 1 && run.level >= gp.unlocked && run.level < run.levelCount) { gp.unlocked = run.level + 1; unlockedLevel = gp.unlocked; }
   profile.games = { ...profile.games, [run.game]: gp };
@@ -101,8 +127,8 @@ export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION
   const xp = Math.round(run.score * XP.perScorePoint + run.stars * XP.perStar + (run.retention ? XP.retentionBonus : 0));
   profile.xp += xp;
   const day = profile.days[today] ?? { seconds: 0, runs: 0 };
-  profile.days = { ...profile.days, [today]: { seconds: day.seconds + run.durationS, runs: day.runs + 1 } };
-  profile.streak = updateStreak(profile.streak, today);
+  profile.days = { ...profile.days, [today]: { ...day, seconds: day.seconds + run.durationS, runs: day.runs + 1 } };
+  profile.streak = updateStreak(profile.streak, today, painRestDays(profile));
   profile.totals = {
     ...profile.totals,
     runs: profile.totals.runs + 1,
@@ -137,7 +163,8 @@ export function recommendedLevel(profile, gameId) {
 
 /** Mean skill scores over the last runs (for the progress screen and for planning). */
 export function skillProfile(runs, last = 12) {
-  const recent = runs.filter(r => !r.demo).slice(-last);
+  // Training runs only: the weekly skill check has its own fixed-protocol table.
+  const recent = runs.filter(r => !r.demo && !r.details?.assessment).slice(-last);
   const result = {};
   for (const skill of Object.values(SKILL)) {
     const values = recent.map(r => r.skills?.[skill]).filter(v => Number.isFinite(v));
@@ -151,7 +178,7 @@ export function skillProfile(runs, last = 12) {
  * (the first exercise again, without live feedback — predicts transfer: Dupan et al. 2025).
  * @param catalog [{ id, schemes, skills, levelCount }]
  */
-export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey()) {
+export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(), { exercises = SESSION.planExercises } = {}) {
   if (profile.plan?.day === today && profile.plan.scheme === scheme) return profile.plan;
   const games = catalog.filter(g => g.schemes.includes(scheme));
   const skills = skillProfile(runs);
@@ -161,11 +188,34 @@ export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey())
   };
   const seed = dayIndex(today);
   const ordered = [...games].sort((x, y) => weakness(x) - weakness(y) || ((seed + x.id.length) % 3) - ((seed + y.id.length) % 3));
-  const picked = ordered.slice(0, Math.min(3, ordered.length));
+  const picked = ordered.slice(0, Math.min(exercises, ordered.length));
   const items = picked.map(g => ({ game: g.id, level: recommendedLevel(profile, g.id), done: false, retention: false }));
   if (items.length) items.push({ ...items[0], retention: true });
   profile.plan = { day: today, scheme, items, rewarded: false };
   return profile.plan;
+}
+
+/** Light session (moderate pain or strong fatigue): finished items + one exercise + the retention probe. */
+export function lightenPlan(plan) {
+  const done = plan.items.filter(i => i.done && !i.retention);
+  const next = done.length ? [] : plan.items.filter(i => !i.done && !i.retention).slice(0, 1);
+  const probe = plan.items.find(i => i.retention);
+  plan.items = [...done, ...next, ...(probe ? [probe] : [])];
+  plan.light = true;
+  return plan;
+}
+
+/** Day record helpers: wellbeing check-in before the plan, perceived effort after it. */
+export function recordDayNote(profile, today, patch) {
+  const day = profile.days[today] ?? { seconds: 0, runs: 0 };
+  profile.days = { ...profile.days, [today]: { ...day, ...patch } };
+}
+
+/** Last skill check in this scheme and whether a new one is due (once a week). */
+export function assessmentStatus(runs, scheme, today = dayKey()) {
+  const last = [...runs].reverse().find(r => !r.demo && r.details?.assessment && r.scheme === scheme) ?? null;
+  const days = last ? dayIndex(today) - dayIndex(dayKey(new Date(last.at))) : Infinity;
+  return { last, days, due: days >= SESSION.assessmentEveryDays };
 }
 
 /** Marks the matching plan item done; returns bonus XP when the whole plan is complete. */

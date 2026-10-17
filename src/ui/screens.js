@@ -5,6 +5,9 @@ import { resultsScreen, restScreen } from './results.js';
 import { progressScreen } from './progress.js';
 import { settingsScreen, calibrationScreen } from './settings.js';
 import { onboardingScreen } from './onboarding.js';
+import { checkinScreen } from './checkin.js';
+import { tutorialScreen } from './tutorial.js';
+import { pinGateScreen } from './pin.js';
 
 export const SCREENS = {
   home: homeScreen,
@@ -16,4 +19,7 @@ export const SCREENS = {
   settings: settingsScreen,
   calibration: calibrationScreen,
   onboarding: onboardingScreen,
+  checkin: checkinScreen,
+  tutorial: tutorialScreen,
+  pin: pinGateScreen,
 };

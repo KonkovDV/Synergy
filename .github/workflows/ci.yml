@@ -1,0 +1,31 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+permissions: { contents: read }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: e2e (mobile smoke, Playwright)
+        run: |
+          npm i --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+          python3 tools/serve.py --dist --port 8091 &
+          sleep 1
+          node tests/e2e/v5.mjs http://127.0.0.1:8091/index.html /tmp/shots
+      - uses: actions/upload-artifact@v5
+        with: { name: web-build, path: dist/ }
+  lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: '3.12' }
+      - run: pip install -r lab/requirements.txt && python -m unittest lab/test_lab7.py

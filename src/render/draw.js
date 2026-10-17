@@ -6,6 +6,15 @@ export const COLORS = {
   good: '#3fe0a0', warn: '#ffcc4d', bad: '#ff6b6b', violet: '#9b7bff',
 };
 
+const BASE_MUTED = COLORS.muted;
+let textScale = 1;
+
+/** Presentation options from the accessibility settings (canvas text size, high contrast). */
+export function setRenderOptions({ scale = 1, highContrast = false } = {}) {
+  textScale = Math.min(1.25, Math.max(1, scale)); // canvas layouts are tuned up to +25 %
+  COLORS.muted = highContrast ? '#e8ecff' : BASE_MUTED;
+}
+
 export const SKIN_COLORS = {
   graphite: { base: '#46506a', dark: '#2b3245', light: '#6b7898', glow: '#5ad1ff' },
   sky: { base: '#4f8ff7', dark: '#2f62c9', light: '#8fb8ff', glow: '#d6ecff' },
@@ -31,7 +40,7 @@ export function roundRect(ctx, x, y, w, h, r) {
 export function fillRound(ctx, x, y, w, h, r, color) { roundRect(ctx, x, y, w, h, r); ctx.fillStyle = color; ctx.fill(); }
 
 export function text(ctx, str, x, y, { size = 16, weight = 600, color = COLORS.text, align = 'center', baseline = 'middle', font = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif' } = {}) {
-  ctx.font = `${weight} ${size}px ${font}`;
+  ctx.font = `${weight} ${Math.round(size * textScale)}px ${font}`;
   ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = baseline;
   ctx.fillText(str, x, y);
 }

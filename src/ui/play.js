@@ -7,13 +7,13 @@ import { createTwoChannelPads, createGesturePads } from '../input/controls.js';
 import { SCHEME, SCHEME_INFO, COMMAND } from '../core/vocabulary.js';
 import { COLORS } from '../render/draw.js';
 
-const CONFIRM_S = 1.0;
 const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
 
 export function playScreen(app, { game, level, retention = false, plan = false, demo = false }) {
   const s = app.settings;
   let session = app.createSession({ game, level, retention, demo });
-  let phase = 'intro', countdown = 0, confirm = 0, doneAt = 0, lastScore = -1;
+  let phase = 'intro', countdown = 0, confirm = 0, doneAt = 0, lastScore = -1, lastSpoken = '', lastCount = 0;
+  const confirmS = s.dwellS;
   const entry = session.entry;
   const bridgeMode = s.source === 'bridge' && !demo;
 
@@ -74,18 +74,20 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       h('ul', { class: 'how' }, ...entry.how.map(x => h('li', {}, x))),
       h('p', { class: 'legend' }, legend),
       retention ? h('p', { class: 'note' }, 'Живые подсказки скрыты. Так проверяется, сохраняется ли навык без экрана — именно это лучше всего предсказывает управление реальным протезом.') : null,
-      h('div', { class: 'confirm' }, h('i', { class: 'confirm-ring' }), h('span', {}, 'Удерживайте сжатие (A) 1 с — старт без касания')),
+      h('div', { class: 'confirm' }, h('i', { class: 'confirm-ring' }), h('span', {}, `Удерживайте сжатие (A) ${confirmS.toFixed(1).replace('.0', '')} с — старт без касания`)),
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn primary big', onclick: () => begin() }, 'Старт'),
         !demo ? h('button', { class: 'btn ghost', onclick: () => restart(true) }, 'Смотреть демо') : null)));
     overlay.hidden = false;
+    app.say(`${entry.title}. ${entry.how[0]}. Чтобы начать, удерживайте сжатие.`, { interrupt: true });
   }
 
-  function begin() { phase = 'countdown'; countdown = 3; confirm = 0; overlay.hidden = true; }
+  function begin() { phase = 'countdown'; countdown = 3; lastCount = 0; confirm = 0; overlay.hidden = true; }
 
   function pause() {
     if (phase !== 'running') return;
     phase = 'paused'; session.game.paused = true;
+    app.say('Пауза', { interrupt: true });
     overlay.replaceChildren(h('div', { class: 'sheet small' }, h('h2', {}, 'Пауза'),
       h('p', {}, 'Расслабьте руку. Если устали — закончите на сегодня, это тоже правильно.'),
       h('div', { class: 'row-actions col' },
@@ -122,10 +124,12 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     if (bridgeMode) updateBridge(app.bridge?.status ?? 'idle');
     if (phase === 'intro') {
       confirm = intent.valid && intent.command === COMMAND.CLOSE ? confirm + dt : Math.max(0, confirm - dt * 2);
-      overlay.querySelector('.confirm-ring')?.style.setProperty('--p', String(Math.min(1, confirm / CONFIRM_S)));
-      if (confirm >= CONFIRM_S) begin();
+      overlay.querySelector('.confirm-ring')?.style.setProperty('--p', String(Math.min(1, confirm / confirmS)));
+      if (confirm >= confirmS) begin();
     } else if (phase === 'countdown') {
       countdown -= dt;
+      const shown = Math.ceil(countdown);
+      if (shown !== lastCount && shown > 0) { lastCount = shown; app.say(String(shown), { interrupt: true }); }
       if (countdown <= 0) { session.hand.reset(); session.game.paused = false; phase = 'running'; }
     }
     for (const e of session.game.drainEvents()) app.feedback.event(e);
@@ -133,8 +137,11 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     if (phase === 'countdown') drawCountdown();
     const lost = bridgeMode && session.runner.signalLost && phase === 'running';
     node.classList.toggle('lost', lost);
-    hint.textContent = lost ? 'Нет сигнала от источника — упражнение на паузе, прогресс сохранён'
+    const hintText = lost ? 'Нет сигнала от источника — упражнение на паузе, прогресс сохранён'
       : retention && phase === 'running' ? 'Без подсказки: доверьтесь ощущениям' : session.game.hint;
+    if (hint.textContent !== hintText) hint.textContent = hintText;
+    // Voice: game hints while running (eyes-free play); repeats are throttled by the voice service.
+    if (phase === 'running' && hintText !== lastSpoken) { lastSpoken = hintText; app.say(hintText, { interrupt: lost }); }
     const hud = session.game.hud();
     bar.style.width = `${Math.round(hud.progress * 100)}%`;
     if (hud.score !== lastScore) { scoreEl.textContent = retention && !session.game.done ? '—' : String(hud.score); lastScore = hud.score; }

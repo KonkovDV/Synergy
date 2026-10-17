@@ -1,0 +1,21 @@
+name: Release
+on:
+  push: { tags: ['v*'] }
+permissions: { contents: write }
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '17' }
+      - run: npm ci && npm test
+      - run: VERIFY_API=1 sh tools/build-apk.sh
+      - name: Publish release assets
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          cp android/build/synergy.apk "Synergy-${GITHUB_REF_NAME#v}.apk"
+          gh release create "$GITHUB_REF_NAME" "Synergy-${GITHUB_REF_NAME#v}.apk" dist/synergy-standalone.html \
+            --title "Синергия ${GITHUB_REF_NAME}" --notes-file CHANGELOG.md

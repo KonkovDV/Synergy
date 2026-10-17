@@ -35,6 +35,7 @@ export class FlightGame extends Game {
     this.separation = new SeparationMeter();
     this.stability = new StabilityMeter(0.1);
     this.hits = 0; this.perfect = 0; this.ringsSeen = 0; this.streak = 0;
+    this.skillHits = 0; this.skillPerfect = 0; // against the level's original tolerance (not the adapted one)
     this.trail = [];
     this.hint = this.scheme === SCHEME.THRESHOLD
       ? 'A — набрать высоту, B — снизиться, покой — держать высоту'
@@ -48,7 +49,9 @@ export class FlightGame extends Game {
     for (let i = 0; i < L.rings; i++) {
       // Alternate sides so both channels work; every 4th ring is a relaxation ring at the centre.
       const side = i % 4 === 3 ? 0 : (i % 2 ? -1 : 1);
-      const alt = 0.5 + side * this.rng.range(0.35, 1) * L.spread;
+      // A side ring must need activation even at the widest adaptive tolerance (resting must not hit it).
+      const offset = Math.max(1.7 * L.tol, this.rng.range(0.35, 1) * L.spread);
+      const alt = Math.min(0.96, Math.max(0.04, 0.5 + side * offset));
       items.push({ kind: 'ring', at: t, end: t, alt, side, done: false });
       t += L.gap;
       if (streamsLeft > 0 && (i + 1) % streamEvery === 0) {
@@ -60,6 +63,9 @@ export class FlightGame extends Game {
     }
     return items;
   }
+
+  /** Current tolerance (challenge point). */
+  get tol() { return this.adapt.widen(this.level.tol); }
 
   nextTarget() { return this.track.find(x => !x.done && x.end >= this.time - 0.05) ?? null; }
 
@@ -77,8 +83,9 @@ export class FlightGame extends Game {
       if (item.done) continue;
       if (item.kind === 'ring' && this.time >= item.at) this.passRing(item);
       if (item.kind === 'stream' && this.time >= item.at) {
-        const inside = Math.abs(this.alt - item.alt) <= this.level.tol;
+        const inside = Math.abs(this.alt - item.alt) <= this.tol;
         if (this.time <= item.end) {
+          if (!item.started) { item.started = true; this.stability.segment(); }
           if (inside) item.inside += dt;
           this.stability.add(this.alt);
           if (inside && this.rng() < dt * 8) this.emit('tick');
@@ -86,6 +93,7 @@ export class FlightGame extends Game {
           item.done = true;
           const share = item.inside / (item.end - item.at);
           this.points += 3 * share; this.maxPoints += 3;
+          this.adapt.record(share > 0.6);
           this.emit(share > 0.7 ? 'success' : 'soft');
         }
       }
@@ -98,7 +106,10 @@ export class FlightGame extends Game {
   passRing(ring) {
     ring.done = true; this.ringsSeen++;
     const err = Math.abs(this.alt - ring.alt);
-    const tol = this.level.tol;
+    const tol = this.tol;
+    this.adapt.record(err <= tol);
+    if (err <= this.level.tol) this.skillHits++;
+    if (err <= this.level.tol * 0.45) this.skillPerfect++;
     this.maxPoints += 1;
     if (err <= tol) {
       const perfect = err <= tol * 0.45;
@@ -137,7 +148,7 @@ export class FlightGame extends Game {
 
   skillScores() {
     return {
-      precision: this.ringsSeen ? pct((this.hits + this.perfect) / (2 * this.ringsSeen)) : null,
+      precision: this.ringsSeen ? pct((this.skillHits + this.skillPerfect) / (2 * this.ringsSeen)) : null,
       separation: this.separation.score,
       stability: this.stability.score,
     };
@@ -167,7 +178,7 @@ export class FlightGame extends Game {
     ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y(0.5)); ctx.lineTo(w, y(0.5)); ctx.stroke(); ctx.setLineDash([]);
     text(ctx, 'покой', 8, y(0.5) - 9, { size: 11, color: 'rgba(255,255,255,0.4)', align: 'left' });
-    const tolPx = this.level.tol * span;
+    const tolPx = this.tol * span;
     // Streams.
     for (const s of this.track.filter(x => x.kind === 'stream')) {
       const x1 = gx + (s.at - this.time) * pps, x2 = gx + (s.end - this.time) * pps;

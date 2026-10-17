@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.apk binary
+*.png binary
+*.pdf binary
+*.keystore binary
+*.bat text eol=crlf
