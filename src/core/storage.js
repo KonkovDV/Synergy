@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS = {
   name: '',
   // Training
   adaptive: true,           // адаптивная сложность внутри упражнения
+  fadedFeedback: true,      // затухающие подсказки: опытный игрок видит шкалу не в каждой попытке
   audience: 'adult',        // adult | child (короче план, ниже дневной лимит)
   parentPin: '',            // хэш PIN родителя (детский режим): ворота, а не защита данных
   pinLock: { fails: 0, until: 0 }, // тормоз перебора PIN

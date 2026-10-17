@@ -229,7 +229,7 @@ export class GripGame extends Game {
     drawHand(ctx, { x: handX, y: oy - fingerReach - s * 0.1, size: s, pose: hand.pose(), skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
     // Force gauge (hidden in the retention probe).
     const gx = 18, gy = h * 0.14, gh = h * 0.5;
-    if (!this.retention && o) {
+    if (o && this.liveFeedback(this.results.length)) {
       drawGauge(ctx, { x: gx, y: gy, w: 22, h: gh, value: hand.force, min: o.min, max: o.max, danger: Math.min(1, o.breakAt), color: hand.force > o.max ? COLORS.bad : COLORS.accent, label: 'сила' });
     } else if (o) {
       fillRound(ctx, gx, gy, 22, gh, 11, 'rgba(255,255,255,0.06)');

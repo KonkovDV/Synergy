@@ -188,7 +188,7 @@ export class SafeGame extends Game {
         }
         const left = Math.max(0, this.limit - this.cardTime);
         text(ctx, `${left.toFixed(1)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, color: left < 1.5 ? COLORS.bad : COLORS.muted });
-        if (!this.retention) {
+        if (this.liveFeedback(this.index)) {
           ctx.strokeStyle = COLORS.good; ctx.lineWidth = 5; ctx.lineCap = 'round';
           ctx.beginPath(); ctx.arc(w / 2 - cw * 0.22, y0 + ch * 0.5, ch * 0.42, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(this.holdFor / this.level.hold)); ctx.stroke();
         }

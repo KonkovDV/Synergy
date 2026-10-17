@@ -5,6 +5,7 @@
 import { starsFor } from '../core/progress.js';
 import { createRng } from '../core/rng.js';
 import { AdaptiveDifficulty } from '../core/adaptive.js';
+import { showsFeedback } from '../core/guidance.js';
 
 export const clamp01 = x => Math.max(0, Math.min(1, x));
 export const pct = x => Math.round(100 * clamp01(x));
@@ -55,8 +56,9 @@ export class Game {
   static adaptive = true;
 
   constructor({ level, levelNumber = 1, scheme, seed = 1, retention = false, skin = 'graphite', mirror = false,
-    adaptive = true, speed = 1, reduceMotion = false }) {
+    adaptive = true, speed = 1, reduceMotion = false, guidance = 1 }) {
     this.level = level;
+    this.guidance = retention ? 0 : guidance; // share of trials with live feedback (faded feedback)
     this.speed = speed;              // темп игры: игровое время идёт медленнее (Game Accessibility Guidelines)
     this.reduceMotion = reduceMotion; // без частиц и вспышек
     // Retention probe = fixed difficulty: it measures the skill, it does not train it.
@@ -74,6 +76,9 @@ export class Game {
     this.particles = [];
     this.hint = '';
   }
+
+  /** Live feedback for trial #i: hidden in the retention probe and on faded-feedback trials. */
+  liveFeedback(trial) { return !this.retention && showsFeedback(this.guidance, trial); }
 
   emit(name, extra = {}) { this.events.push({ name, ...extra }); }
   drainEvents() { const e = this.events; this.events = []; return e; }

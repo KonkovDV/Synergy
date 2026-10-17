@@ -15,6 +15,8 @@ import { LineAssembler } from '../src/input/ble.js';
 import { hashPin, validPin } from '../src/ui/pin.js';
 import { reportHtml, reportCsv, escapeHtml } from '../src/services/report.js';
 import { play } from './helpers.mjs';
+import { guidanceFor, showsFeedback } from '../src/core/guidance.js';
+import { createGame } from '../src/games/registry.js';
 
 test('adaptive: too easy → harder, too hard → easier, bounded; disabled = fixed', () => {
   const a = new AdaptiveDifficulty();
@@ -157,4 +159,25 @@ test('report: HTML escaping and CSV formula guard', () => {
 
 test('catalog: 4 training games + the skill check, every game runs in every scheme', () => {
   assert.equal(GAMES.length, 5); assert.equal(PLAN_CATALOG.length, 4);
+});
+
+test('faded feedback: novice sees every trial, skilled players fewer; retention sees none', () => {
+  assert.equal(guidanceFor(NaN), 1); assert.equal(guidanceFor(40), 1);
+  assert.equal(guidanceFor(70), 2 / 3); assert.equal(guidanceFor(95), 1 / 2);
+  const shown = g => [0, 1, 2, 3, 4, 5].filter(i => showsFeedback(g, i)).length;
+  assert.equal(shown(1), 6); assert.equal(shown(2 / 3), 4); assert.equal(shown(1 / 2), 3);
+  const game = createGame('grip', { levelNumber: 1, scheme: 'proportional', seed: 1, guidance: 1 / 2 });
+  assert.deepEqual([0, 1, 2, 3].map(i => game.liveFeedback(i)), [true, false, true, false]);
+  const probe = createGame('grip', { levelNumber: 1, scheme: 'proportional', seed: 1, retention: true, guidance: 1 });
+  assert.ok(![0, 1, 2].some(i => probe.liveFeedback(i)));
+  const faded = play('grip', { scheme: 'proportional', levelNumber: 3 });
+  assert.ok(faded.stars >= 2, 'faded feedback does not change the rules');
+});
+
+test('spaced plan: a game idle for a week returns even if it is not the weakest', () => {
+  const at = d => `${d}T10:00:00`;
+  const recent = ['grip', 'flight', 'rhythm'].flatMap(game => [1, 2].map(i => ({ game, at: at('2026-10-16'), level: 1, score: 60, stars: 1, skills: { precision: 40, timing: 40, switching: 40, separation: 40, stability: 40 } })));
+  const old = { game: 'safe', at: at('2026-10-05'), level: 1, score: 90, stars: 3, skills: { switching: 70, timing: 70, precision: 70 } };
+  const plan = buildDailyPlan(createProfile(), [old, ...recent], PLAN_CATALOG, 'proportional', '2026-10-17');
+  assert.ok(plan.items.some(i => i.game === 'safe' && !i.retention), JSON.stringify(plan.items.map(i => i.game)));
 });
