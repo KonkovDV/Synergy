@@ -142,6 +142,8 @@ async def main():
     p.add_argument('--host', default='127.0.0.1', help='0.0.0.0 — доступ с телефона в той же сети')
     p.add_argument('--port', type=int, default=8765)
     a = p.parse_args()
+    if a.host not in ('127.0.0.1', 'localhost', '::1'):
+        print('ВНИМАНИЕ: мост доступен всем устройствам сети. Только доверенная Wi-Fi, не публичная сеть; без авторизации и шифрования.', flush=True)
     source = DemoSource() if a.demo else GestureDemoSource() if a.demo_gestures else StdinSource() if a.stdin else LabSource()
     bridge = Bridge(source)
     server = await asyncio.start_server(bridge.handle, a.host, a.port)

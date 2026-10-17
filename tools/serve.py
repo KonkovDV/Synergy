@@ -20,6 +20,7 @@ def main():
     a = p.parse_args()
     root = ROOT / 'dist' if a.dist else ROOT
     host = '0.0.0.0' if a.lan else '127.0.0.1'
+    if a.lan: print('ВНИМАНИЕ: сервер доступен всем устройствам сети — только доверенная Wi-Fi.', flush=True)
     server = http.server.ThreadingHTTPServer((host, a.port), functools.partial(Handler, directory=str(root)))
     ip = socket.gethostbyname(socket.gethostname()) if a.lan else '127.0.0.1'
     print(f'Синергия: http://{ip}:{a.port}/  (Ctrl+C — стоп)', flush=True)

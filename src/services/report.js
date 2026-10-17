@@ -92,7 +92,7 @@ ${table(['Схема управления', 'Сторона', 'Упражнен�
   [[SCHEME_INFO[s.scheme]?.name ?? s.scheme, s.side === 'left' ? 'левая' : 'правая', runs.length, Math.round(p.totals.seconds / 60), playerLevel(p.xp).level, `${p.streak.current} (${p.streak.best})`]])}
 <h2>Профиль навыков (последние 30 упражнений, 0–100)</h2>
 ${table(Object.values(SKILL_NAME), [Object.keys(SKILL_NAME).map(k => skills[k] ?? '—')])}
-<p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью; в исследованиях именно такие попытки лучше предсказывали управление реальным протезом (Dupan et al., 2025).</p>
+<p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью. Игровая метрика: в исследовании Dupan et al., 2025 попытки без живой обратной связи были связаны с переносом на протез; клинической валидации у этой игры нет.</p>
 <h2>Проверка навыка (стандартный набор, по мотивам Motion Test / TAC)</h2>
 ${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 'Выполнение, мс', 'Точность, %', 'Перелёты'],
   checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots]))}

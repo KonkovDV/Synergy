@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS = {
   adaptive: true,           // адаптивная сложность внутри упражнения
   audience: 'adult',        // adult | child (короче план, ниже дневной лимит)
   parentPin: '',            // хэш PIN родителя (детский режим): ворота, а не защита данных
+  pinLock: { fails: 0, until: 0 }, // тормоз перебора PIN
   // Accessibility (Game Accessibility Guidelines, WCAG 2.2 / ГОСТ Р 52872-2019)
   voice: false,             // озвучивание подсказок
   textScale: 1,             // 1 · 1.15 · 1.3

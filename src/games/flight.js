@@ -17,7 +17,8 @@ const LEVELS = [
   { rings: 16, gap: 1.7, tol: 0.08, spread: 0.45, streams: 3, streamLen: 4 },
 ];
 
-const CLIMB_RATE = 0.5; // altitude / s in the threshold scheme
+// Altitude / s in the threshold scheme, rising with the level: at L1 a 250 ms reaction overshoots ≈ 0.08 < tolerance.
+const climbRate = levelNumber => 0.32 + 0.03 * (levelNumber - 1);
 const LEAD_S = 2.2;     // seconds of track visible ahead of the glider
 
 export class FlightGame extends Game {
@@ -72,7 +73,7 @@ export class FlightGame extends Game {
   step(dt, intent) {
     if (this.scheme === SCHEME.THRESHOLD) {
       const dir = intent.command === COMMAND.CLOSE ? 1 : intent.command === COMMAND.OPEN ? -1 : 0;
-      this.alt = clamp01(this.alt + dir * CLIMB_RATE * dt);
+      this.alt = clamp01(this.alt + dir * climbRate(this.levelNumber) * dt);
     } else {
       const goal = 0.5 + intent.level * 0.47;
       this.alt += (goal - this.alt) * (1 - Math.exp(-dt / 0.12));

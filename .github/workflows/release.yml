@@ -12,7 +12,15 @@ jobs:
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '17' }
       - run: npm ci && npm test
-      - run: VERIFY_API=1 sh tools/build-apk.sh
+      - name: Build and sign APK with the team key (repository secrets)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          SYNERGY_KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          SYNERGY_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "Нет секрета KEYSTORE_BASE64: релиз без своего ключа запрещён"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          SYNERGY_KEYSTORE="$RUNNER_TEMP/release.keystore" VERIFY_API=1 sh tools/build-apk.sh
       - name: Publish release assets
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |

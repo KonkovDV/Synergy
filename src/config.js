@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.0.0',
+  version: '5.1.0',
   storageKey: 'synergy.v4',
 };
 
@@ -12,7 +12,7 @@ export const SIGNAL = {
   smoothingMs: 35,          // EMA time constant applied to normalized activation
   onThreshold: 0.22,        // channel becomes active (fraction of calibrated comfortable max)
   hysteresis: 0.07,         // channel turns off below onThreshold - hysteresis
-  coThreshold: 0.40,        // co-contraction: both channels ≥ 40 % (Maas et al., 2024)
+  coThreshold: 0.40,        // co-contraction counted as in Maas et al., 2024 (a scoring rule, not evidence of training effect)
   coOnsetWindowMs: 350,     // ...and both onsets within 350 ms of each other
   gestureMinConfidence: 0.6,
   gestureStableMs: 90,      // a gesture must persist this long before it becomes a command
@@ -24,7 +24,7 @@ export const HAND = {
   openSpeed: 2.6,
   forceRiseRate: 1.4,       // max force growth / s (motor limit)
   forceDropRate: 1.8,       // force release / s at intensity 1 when opening
-  thresholdForceRate: 0.55, // force growth / s in the threshold scheme (timing skill)
+  thresholdForceRate: 0.35, // force growth / s in the threshold scheme: a 250 ms human reaction overshoots ≤ 0.09
   twoChannelGrips: ['fist', 'pinch', 'key'], // cycled by co-contraction
 };
 
