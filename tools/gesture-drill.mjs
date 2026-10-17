@@ -2,7 +2,7 @@
 // replace the gesture «Класс» (thumb) with «Трипод» (tripod) in src/core/vocabulary.js ONLY, run the suite.
 // Passes when the only failures are the expected reminders (EXPECTED below) — everything else derives
 // from vocabulary.js. Usage: node tools/gesture-drill.mjs
-import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, readdirSync, symlinkSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -17,6 +17,7 @@ const tmp = mkdtempSync(join(tmpdir(), 'synergy-drill-'));
 try {
   for (const dir of ['src', 'tests']) cpSync(join(root, dir), join(tmp, dir), { recursive: true });
   cpSync(join(root, 'package.json'), join(tmp, 'package.json'));
+  if (existsSync(join(root, 'node_modules'))) symlinkSync(join(root, 'node_modules'), join(tmp, 'node_modules'), 'dir'); // esbuild for the bundle test
   const file = join(tmp, 'src/core/vocabulary.js');
   const before = readFileSync(file, 'utf8');
   const after = before.replace(/^\s*\{ id: 'thumb'.*$/m, m => m.match(/^\s*/)[0] + TRIPOD);

@@ -2,7 +2,8 @@
 // realistic EMG *envelope*: muscle rise/decay, band-limited noise, ~9 Hz tremor, channel crosstalk,
 // and, for gestures, recognition latency, confidence jitter and short misclassifications.
 // Same SignalFrame contract as the organizers' emulator or a real prosthesis.
-import { GESTURE_BY_ID, ACTIVE_GESTURE_IDS, COMMAND } from '../core/vocabulary.js';
+import { GESTURE_BY_ID, COMMAND } from '../core/vocabulary.js';
+import { confusionRow, pickWeighted } from '../core/confusion.js';
 import { createRng } from '../core/rng.js';
 
 const ATTACK_S = 0.055, DECAY_S = 0.11, NOISE_S = 0.04;
@@ -64,15 +65,17 @@ export class EmgEmulator {
     return frame;
   }
 
-  /** Simulated gesture classifier: latency, confidence jitter, rare short confusions. */
+  /** Simulated gesture classifier: latency, confidence jitter, rare short confusions of similar gestures. */
   recognize(t, dt) {
     const wanted = this.target.gesture;
     const r = this.realism;
     const sinceChange = t - this.gestureSince;
     if (this.glitchUntil > t) return { gesture: this.glitchGesture, confidence: 0.62, effort: Math.max(...this.env) };
-    // ≈ one confusion every 6 s at realism 0.5; most are shorter than the pipeline debounce.
-    if (wanted !== 'rest' && this.rng() < 0.35 * r * dt) {
-      this.glitchGesture = this.rng.pick(ACTIVE_GESTURE_IDS.filter(g => g !== wanted));
+    // ≈ one confusion every 6 s at realism 0.5 and medium effort, more when the effort is weak;
+    // most are shorter than the pipeline debounce. Similar gestures are picked more often.
+    const weak = 1.5 - Math.max(0, Math.min(1, this.target.effort ?? 0.6));
+    if (wanted !== 'rest' && this.rng() < 0.35 * r * weak * dt) {
+      this.glitchGesture = pickWeighted(confusionRow(wanted), this.rng());
       this.glitchUntil = t + this.rng.range(60, 160);
     }
     const gesture = sinceChange < 110 ? this.shownGesture : wanted;
