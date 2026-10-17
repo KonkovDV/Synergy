@@ -7,6 +7,7 @@ import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday } from '../cor
 import { difficultyLabel } from '../core/adaptive.js';
 import { fatigueSigns, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { coachFeedback } from './coach.js';
+import { CALIBRATION_ADAPT } from '../config.js';
 import { signalMeter, segmented } from './widgets.js';
 
 const plural = (n, [one, few, many]) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many; };
@@ -27,7 +28,7 @@ function muscleConfirm(app, ring, action) {
   };
 }
 
-export function resultsScreen(app, { run, report, planBonus = 0, plan = false, demo = false }) {
+export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote = null, plan = false, demo = false }) {
   const g = GAME_BY_ID[run.game];
   const advice = coachFeedback(run.game, run, app.state.runs);
   const next = plan ? app.nextPlanItem() : null;
@@ -37,6 +38,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, plan = false, d
     report.skins.forEach(id => toast(`🎨 Новый облик: ${SKINS.find(sk => sk.id === id).name}`, 'good'));
     if (report.levelUp) toast(`⬆ Уровень ${report.level}!`, 'good');
   }
+  if (calibrationNote?.recalibrate) toast('Пора перекалибровать датчики', 'bad');
   const ring = h('i', { class: 'confirm-ring' });
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
@@ -57,6 +59,13 @@ export function resultsScreen(app, { run, report, planBonus = 0, plan = false, d
     h('div', { class: 'stats' },
       metric('выполнено', `${d.completionRate}%`), metric('выбор, мс', d.selectionMs), metric('выполнение, мс', d.completionMs), metric('точность', d.accuracy === null ? '—' : `${d.accuracy}%`)),
     h('p', { class: 'note' }, 'Время выбора — до первого верного сигнала; выполнение — до удержания 1 с. Сравнивайте с прошлой неделей на экране «Прогресс». Метрики игровые, не клинический тест.')) : null;
+  const calibrationCard = calibrationNote?.recalibrate
+    ? h('div', { class: 'card warn-card', role: 'status' }, h('b', {}, '⚠ Пора перекалибровать'),
+      h('p', {}, calibrationNote.stuckChannel !== null
+        ? `Канал ${calibrationNote.stuckChannel ? 'B' : 'A'} был включён больше ${CALIBRATION_ADAPT.stuckS} с подряд. Если рука была расслаблена — датчик сместился или контакт изменился.`
+        : 'Сигнал покоя заметно ушёл от калибровки — так бывает от пота или смещения датчика.'),
+      h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка датчиков'))
+    : calibrationNote ? h('p', { class: 'note' }, `Калибровка подстроилась под датчик: покой сдвинут на ${calibrationNote.shiftPct} % диапазона.`) : null;
   const difficulty = !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
   const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', {}, 'Насколько тяжело было?'),
@@ -71,6 +80,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, plan = false, d
       report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel}` : ''}`)
         : h('p', { class: 'note' }, 'Демо не влияет на прогресс.'),
       difficulty,
+      calibrationCard,
       planDone ? h('div', { class: 'card celebrate' }, h('b', {}, '🎉 Тренировка дня выполнена'), h('p', {}, 'Отличная работа. Короткие ежедневные занятия — лучший путь к уверенному управлению.')) : null,
       stopAdvice ? h('div', { class: 'card warn-card' }, h('b', {}, '⏸ Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
       effortCard,
