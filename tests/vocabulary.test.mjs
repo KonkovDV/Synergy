@@ -3,7 +3,7 @@
 // prompts — must point to an existing id. tools/gesture-drill.mjs swaps a gesture and reruns the suite.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GESTURES, GESTURE_BY_ID, ACTIVE_GESTURES, ACTIVE_GESTURE_IDS, CLOSING_GESTURES, OPENING_GESTURE, COMMAND, COMMAND_POSE, GRIP_NAME, gestureLegend } from '../src/core/vocabulary.js';
+import { SCHEME_INFO, GESTURES, GESTURE_BY_ID, ACTIVE_GESTURES, ACTIVE_GESTURE_IDS, CLOSING_GESTURES, OPENING_GESTURE, COMMAND, COMMAND_POSE, GRIP_NAME, gestureLegend } from '../src/core/vocabulary.js';
 import { HAND } from '../src/config.js';
 import { OBJECTS } from '../src/games/grip.js';
 import { PROMPTS, SafeGame } from '../src/games/safe.js';
@@ -32,6 +32,10 @@ test('vocabulary: 7 gestures = rest + 6 active, well-formed', () => {
   }
   for (const g of ACTIVE_GESTURES) assert.ok(Number.isInteger(g.introducedAt) && g.introducedAt >= 1 && g.introducedAt <= SafeGame.levels.length, `${g.id}: introducedAt is a «Сейф» level`);
   assert.ok(ACTIVE_GESTURES.filter(g => g.introducedAt === 1).length >= 2, '«Сейф» level 1 needs two prompts');
+});
+
+test('vocabulary: every scheme has a name, a short label and an abbreviation for tables', () => {
+  for (const [id, info] of Object.entries(SCHEME_INFO)) assert.ok(info.name && info.short && info.abbr && info.abbr.length <= 9, id);
 });
 
 test('vocabulary: derived views cover the set', () => {
