@@ -1,6 +1,6 @@
 # Синергия — игра-тренажёр управления бионическим протезом
 
-[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) ![версия](https://img.shields.io/badge/версия-5.4.0-5ad1ff) ![офлайн](https://img.shields.io/badge/офлайн-PWA·HTML·APK-3fe0a0) ![лицензия](https://img.shields.io/badge/лицензия-все_права_защищены-lightgrey)
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml) ![версия](https://img.shields.io/badge/версия-5.5.0-5ad1ff) ![офлайн](https://img.shields.io/badge/офлайн-PWA·HTML·APK-3fe0a0) ![лицензия](https://img.shields.io/badge/лицензия-все_права_защищены-lightgrey)
 
 Мобильная игра для людей с миоэлектрическими протезами кисти — и для тех, кто протез ещё ждёт. Короткие игры тренируют то, что протезу нужно каждый день: **взять предмет с нужной силой, удержать, отпустить, сменить хват, включиться вовремя** — во всех схемах задачи геймджема «Моторика: Код движения»: **две ЭМГ-кнопки (пороговый и пропорциональный режим)** и **7 жестов**.
 
@@ -15,7 +15,7 @@
 
 | Вариант | Как |
 |---|---|
-| **Android** | `release/Synergy-5.4.0.apk` (разрешить установку из неизвестных источников) |
+| **Android** | `release/Synergy-5.5.0.apk` (разрешить установку из неизвестных источников) |
 | **Любой браузер** | открыть `release/synergy-standalone.html` — один файл, без интернета |
 | **PWA (GitHub Pages)** | включить Pages → Source: GitHub Actions; workflow `pages.yml` публикует `dist/` |
 | **Разработка** | `python3 tools/serve.py` → http://127.0.0.1:8080 |
@@ -54,6 +54,7 @@ CI (`.github/workflows`, actions закреплены по SHA): тесты + у
 | `docs/RESEARCH.md` | заказчик (в т. ч. VR-платформа Attilan), конкуренты, наука, интерфейсы 2026 |
 | `docs/JURY_STRATEGY.md` · `docs/PITCH.md` | критерии, Murder Board, чек-лист сдачи · 10 слайдов, видео 90 с, демо 3 мин |
 | `docs/GAME_DESIGN.md` · `docs/ARCHITECTURE.md` · `docs/INTEGRATION.md` | механики · слои и принципы · форматы и транспорты |
+| `docs/AUDIT.md` | аудит 5.5: триаж, Red Team, фактчекинг, конкуренты и SOTA, Murder Board |
 | `docs/LEGAL.md` · `SECURITY.md` · `docs/ACCESSIBILITY.md` | право (п. 6.6, 152-ФЗ, 323-ФЗ) · модель угроз · доступность |
 | `docs/AI_USAGE.md` · `AUTHORS.md` · `THIRD_PARTY.md` | раскрытие ИИ · авторы и РИД · компоненты третьих лиц |
 | `MEMORY.md` · `PLAN.md` | состояние и план для новой сессии ИИ |
