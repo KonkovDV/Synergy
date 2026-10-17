@@ -1,7 +1,7 @@
 // Play screen: canvas game + live signal meter + emulator controls (or external-source status).
 // Hands-free flow: the intro can be confirmed by holding A for 1 s — the phone is in the sound hand,
 // the sensors are on the other arm, so the player should not need to touch the screen to continue.
-import { h } from './dom.js';
+import { h, toast } from './dom.js';
 import { signalMeter } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from '../input/controls.js';
 import { SCHEME, SCHEME_INFO, COMMAND, gestureLegend } from '../core/vocabulary.js';
@@ -12,7 +12,7 @@ const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подкл
 export function playScreen(app, { game, level, retention = false, plan = false, demo = false }) {
   const s = app.settings;
   let session = app.createSession({ game, level, retention, demo });
-  let phase = 'intro', countdown = 0, confirm = 0, doneAt = 0, lastScore = -1, lastSpoken = '', lastCount = 0;
+  let phase = 'intro', countdown = 0, confirm = 0, doneAt = 0, lastScore = -1, lastSpoken = '', lastCount = 0, lastNow = null;
   const confirmS = s.dwellS;
   const entry = session.entry;
   const bridgeMode = s.source === 'bridge' && !demo;
@@ -55,7 +55,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   let view = { w: 300, h: 300 };
   const resize = () => {
     const r = canvas.getBoundingClientRect();
-    const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    const dpr = Math.min(app.fps.degraded ? 1.5 : 2.5, window.devicePixelRatio || 1); // fewer pixels on a slow phone
     view = { w: Math.max(100, r.width), h: Math.max(100, r.height) };
     canvas.width = Math.round(view.w * dpr); canvas.height = Math.round(view.h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -148,6 +148,10 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     if (hud.score !== lastScore) { scoreEl.textContent = retention && !session.game.done ? '—' : String(hud.score); lastScore = hud.score; }
     if (session.game.done && phase === 'running') { phase = 'done'; doneAt = now; }
     if (phase === 'done' && now - doneAt > 900) { phase = 'leaving'; finish(); }
+    const frameS = lastNow === null ? dt : (now - lastNow) / 1000; // real frame time: the loop's dt is clamped
+    lastNow = now;
+    if (phase === 'running' && app.fps.update(frameS)) { toast('Упростили графику для плавности'); resize(); }
+    if (app.fps.degraded) session.game.reduceMotion = true;
   }
 
   showIntro();

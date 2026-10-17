@@ -80,6 +80,9 @@ export const GUIDANCE = { partialFrom: 60, sparseFrom: 80 }; // skill 0..100 →
 /** Spaced practice in the daily plan: a game not played for d days gains min(d, maxDays) × pointsPerDay of priority. */
 export const SPACING = { pointsPerDay: 3, maxDays: 7 };
 
+/** Frame-rate guard: below minFps (EMA of the frame time) for degradeAfterS → simpler graphics for the rest of the visit. */
+export const PERF = { minFps: 45, degradeAfterS: 3, smoothing: 0.1, pauseS: 0.5 }; // a frame longer than pauseS is a pause (tab hidden), not slowness
+
 /** Hands-free confirmation (hold A) — the phone is in the sound hand, sensors on the other arm. */
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5 };
 

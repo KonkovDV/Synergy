@@ -7,6 +7,7 @@ import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
 import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile } from './core/progress.js';
 import { guidanceFor } from './core/guidance.js';
+import { FpsGuard } from './core/fps.js';
 import { CHECKIN_ACTION } from './core/wellbeing.js';
 import { exportState, importState } from './core/storage.js';
 import { buildShowcaseState } from './core/showcase.js';
@@ -39,6 +40,7 @@ export class App {
     this.screen = null;
     this.lastTime = performance.now();
     this.ble = null;
+    this.fps = new FpsGuard(); // one per visit: a weak phone stays in simple graphics for every game
     this.applyPresentation();
     bindKeyboard(this.emulator, () => this.settings.scheme);
     window.addEventListener('pointerdown', unlockAudio, { once: true });
