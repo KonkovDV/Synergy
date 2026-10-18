@@ -99,7 +99,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, r))) : null,
       difficulty,
       calibrationCard,
-      planDone ? h('div', { class: 'card celebrate' }, h('b', {}, '🎉 Тренировка дня выполнена'), h('p', {}, 'Отличная работа. Короткие ежедневные занятия — лучший путь к уверенному управлению.')) : null,
+      planDone ? h('div', { class: 'card celebrate' }, h('b', {}, '🎉 Тренировка дня выполнена'), h('p', {}, 'Отличная работа! День отдыха серию не прерывает.')) : null,
       stopAdvice ? h('div', { class: 'card warn-card' }, h('b', {}, '⏸ Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
       effortCard,
       assessmentCard,
@@ -110,7 +110,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
         handsFree ? h('div', { class: 'confirm' }, ring, h('span', {}, `или ${handsFreeText(app.settings.scheme, app.settings.dwellS + HANDS_FREE.leaveExtraS, 'дальше').replace(/^Р/, 'р')}`)) : null,
         h('div', { class: 'row-actions' },
           stopAdvice && next ? h('button', { class: 'btn ghost', onclick: () => app.go('rest', { next }) }, 'Всё равно продолжить') : null,
-          action.label === 'Ещё раз' || demo ? null : h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: run.game, level: run.level, retention: run.retention, plan }) }, 'Повторить'),
+          action.label === 'Ещё раз' || demo ? null : h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: run.game, level: run.level, retention: run.retention, plan, pose: run.pose }) }, 'Повторить'),
           h('button', { class: 'btn ghost', onclick: () => app.go('home') }, 'Домой')))));
   const confirm = handsFree ? muscleConfirm(app, ring, primary.go) : null;
   app.say(`${count(run.stars, FORMS.stars)} из трёх. ${count(run.score, FORMS.points)}. ${rewards.length ? `${rewards.map(r => r.replace(/^\S+ /, '')).join('. ')}. ` : ''}${stopAdvice ?? advice[0] ?? ''} Дальше: ${primary.label}.`, { interrupt: true });

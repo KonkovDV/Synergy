@@ -174,3 +174,12 @@ test('Russian formatting: plural forms, decimal comma, percent with a non-breaki
   assert.equal(fmtNum(1.5), '1,5'); assert.equal(fmtNum(1), '1'); assert.equal(fmtNum(13.456, 2), '13,46');
   assert.equal(fmtPct(22), '22 %'); assert.equal(fmtSec(1.2), '1,2 с'); assert.equal(fmtNum(NaN), '—');
 });
+
+test('progress: days with exercises are counted for ever — a running total next to the series (5.11)', async () => {
+  const { trainingDays, createProfile } = await import('../src/core/progress.js');
+  const p = createProfile();
+  assert.equal(trainingDays(p), 0);
+  p.days = { '2026-10-01': { seconds: 120, runs: 1 }, '2026-10-02': { checkin: { action: 'stop' } }, '2026-10-09': { seconds: 300, runs: 2 } };
+  assert.equal(trainingDays(p), 2, 'a rest day with only a check-in is not a training day; a gap does not reset the total');
+  assert.equal(trainingDays({}), 0, 'damaged profile');
+});

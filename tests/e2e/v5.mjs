@@ -38,7 +38,9 @@ await page.getByRole('button', { name: 'Пропустить обучение' }
 await shot('v5-02-home'); await audit('home');
 await go('tutorial'); await wait(800); await shot('v5-03-tutorial'); await audit('tutorial');
 await go('checkin'); await wait(300);
-await page.getByRole('radio', { name: /Умеренная/ }).click(); await page.getByRole('radio', { name: /Сил много/ }).click(); await wait(200);
+await page.getByRole('radio', { name: /Умеренная/ }).click();
+if (await page.getByRole('button', { name: 'Пропустить', exact: true }).isVisible()) errors.push('checkin: «Пропустить» after an answer (5.11 P0: severe pain could be skipped into the full plan)');
+await page.getByRole('radio', { name: /Сил много/ }).click(); await wait(200);
 await shot('v5-04-checkin'); await audit('checkin');
 await go('settings'); await wait(300);
 await page.locator('summary', { hasText: 'Данные' }).click(); await wait(150); // folded section (progressive disclosure)
@@ -53,6 +55,7 @@ await go('play', { game: 'check', level: 1, demo: true }); await wait(300); awai
 await page.waitForSelector('.results', { timeout: 60000 }); await wait(600); await shot('v5-09-check-results', true); await audit('results');
 await go('settings'); await wait(300); await shot('v5-10-settings', true); await audit('settings');
 await go('calibration'); await wait(300); await audit('calibration');
+await go('audiosync'); await wait(500); await shot('v5-13-audiosync'); await audit('audiosync');
 await go('levels', { game: 'grip' }); await wait(300); await audit('levels');
 await go('rest', { next: { game: 'flight', level: 1, retention: false } }); await wait(300); await audit('rest');
 await go('pin'); await wait(300); await audit('pin');

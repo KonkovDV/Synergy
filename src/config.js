@@ -105,6 +105,19 @@ export const MUSIC = {
 /** Frame-rate guard: below minFps (EMA of the frame time) for degradeAfterS → simpler graphics for the rest of the visit. */
 export const PERF = { minFps: 45, degradeAfterS: 3, smoothing: 0.1, pauseS: 0.5 }; // a frame longer than pauseS is a pause (tab hidden), not slowness
 
+/**
+ * Arm pose of the no-hint probe with real sensors (5.11). Recognition degrades in arm positions it was not trained in
+ * (limb position effect: Campbell, Phinyomark & Scheme 2020, Sensors; training in several positions helps — Overton
+ * et al., preprint bioRxiv 2025); delayed-feedback training made muscle activity more consistent in untrained
+ * positions (Stuttaford et al. 2024, IEEE TNSRE). Low, safe poses only; the cue says «если удобно». A game metric,
+ * not a test of the prosthesis.
+ */
+export const ARM_POSES = [
+  { id: 'side', name: 'рука вдоль тела' },
+  { id: 'elbow', name: 'локоть согнут под прямым углом' },
+  { id: 'forward', name: 'рука вперёд на уровне груди' },
+];
+
 /** Hands-free confirmation (hold A) — the phone is in the sound hand, sensors on the other arm. */
 /**
  * Ranges of the settings sliders — one source for the settings screen and for the check of stored/imported
@@ -116,6 +129,7 @@ export const SETTINGS_RANGES = {
   coThreshold: { min: 0.25, max: 0.7, step: 0.01 },
   gameSpeed: { min: 0.6, max: 1, step: 0.05 },
   weeklyGoal: { min: 2, max: 7, step: 1 },
+  audioOffsetMs: { min: -100, max: 300, step: 10 }, // «Синхронизация звука»: Bluetooth adds 100–300 ms that outputLatency may not report
 };
 export const TEXT_SCALES = [1, 1.15, 1.3];
 

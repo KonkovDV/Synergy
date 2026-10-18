@@ -1,5 +1,5 @@
 // Composition root: state, signal sources, routing, the frame loop and training sessions.
-import { APP } from './config.js';
+import { APP, ARM_POSES } from './config.js';
 import { Store, memoryStorage } from './core/storage.js';
 import { SignalPipeline } from './core/signal.js';
 import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
@@ -270,21 +270,23 @@ export class App {
     const answer = this.checkin();
     if (!checked && needsCheckin(this.profile, dayKey())) return this.go('checkin');
     if (answer?.action === CHECKIN_ACTION.STOP) return this.go('home');
-    this.go('play', { game: item.game, level: item.level, retention: item.retention, plan: true });
+    this.go('play', { game: item.game, level: item.level, retention: item.retention, plan: true, pose: item.pose });
   }
 
   /** Today's runs (for fatigue signs and the soft daily cap). */
   runsToday() { const today = dayKey(); return this.state.runs.filter(r => !r.demo && dayKey(new Date(r.at)) === today); }
 
   /** Builds a runnable session for the play screen. */
-  createSession({ game, level, retention = false, demo = false, plan = false }) {
+  createSession({ game, level, retention = false, demo = false, plan = false, pose = null }) {
     const s = this.settings;
     const instance = createGame(game, { levelNumber: level, scheme: s.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
       mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: s.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: s.sensitivity });
     const hand = this.createHand();
     const adaptRest = restAdaptationAllowed({ source: this.sourceKind(), enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
     const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });
-    return { id: game, level, retention, demo, plan, game: instance, hand, runner, entry: GAME_BY_ID[game] };
+    // The arm pose matters only for real sensors: with the on-screen emulator it is neither asked nor recorded (5.11).
+    const armPose = pose && !demo && this.sourceKind() === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
+    return { id: game, level, retention, demo, plan, pose: armPose, game: instance, hand, runner, entry: GAME_BY_ID[game] };
   }
 
   /** Faded feedback: share of trials with live feedback from this game's recent skill (all trials when off). */
@@ -302,7 +304,7 @@ export class App {
       id: crypto.randomUUID?.() ?? String(Date.now()), at: new Date().toISOString(),
       game: session.id, level: session.level, levelCount: session.entry.Game.levels.length,
       scheme: this.settings.scheme, source: session.demo ? 'demo' : this.sourceKind(),
-      retention: session.retention, demo: session.demo, plan: !!session.plan, ...r,
+      retention: session.retention, demo: session.demo, plan: !!session.plan, ...(session.pose ? { pose: session.pose.id } : {}), ...r,
     };
     if (session.demo) return { run, report: null, planBonus: 0 };
     this.state.runs.push(run);

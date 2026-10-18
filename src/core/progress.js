@@ -1,6 +1,6 @@
 // Meta-game: XP, levels, training-day series, weekly goal, achievements, skins, daily plan.
 // Pure functions over plain data (easy to test and to persist).
-import { STARS, XP, SESSION, CHILD, SPACING } from '../config.js';
+import { STARS, XP, SESSION, CHILD, SPACING, ARM_POSES } from '../config.js';
 import { SKILL, ACTIVE_GESTURE_IDS } from './vocabulary.js';
 
 /** Session rules for the audience: a child trains with a parent — shorter plan, rest and daily cap. */
@@ -198,7 +198,8 @@ export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(),
   const ordered = [...games].sort((x, y) => priority(x) - priority(y) || ((seed + x.id.length) % 3) - ((seed + y.id.length) % 3));
   const picked = ordered.slice(0, Math.min(exercises, ordered.length));
   const items = picked.map(g => ({ game: g.id, level: recommendedLevel(profile, g.id), done: false, retention: false }));
-  if (items.length) items.push({ ...items[0], retention: true });
+  // The probe rotates the arm pose day by day (shown and recorded only with real sensors — the screen does not care).
+  if (items.length) items.push({ ...items[0], retention: true, pose: ARM_POSES[((seed % ARM_POSES.length) + ARM_POSES.length) % ARM_POSES.length].id });
   // Rebuilt the same day (scheme switched): finished exercises stay finished (5.10 — the plan went back to 0/4 and a
   // light day offered one more exercise), and the plan bonus of today is not paid twice.
   const before = profile.plan?.day === today ? profile.plan : null;
@@ -251,3 +252,9 @@ export function completePlanItem(profile, run, today = dayKey()) {
 }
 
 export function secondsToday(profile, today = dayKey()) { return profile.days[today]?.seconds ?? 0; }
+
+/**
+ * Days with at least one exercise, ever (5.11). A running total never resets — unlike a series it does not punish
+ * a missed week (ethical gamification; streak vs tally is an open question, so the series stays, second).
+ */
+export const trainingDays = profile => Object.values(profile.days ?? {}).filter(d => (d?.runs ?? 0) > 0).length;

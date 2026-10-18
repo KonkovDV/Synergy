@@ -41,6 +41,23 @@ export function musicPattern({ bpm, beats, countIn = 4, seed = 1, level = 1 }) {
 }
 
 /**
+ * The device's audio clock with the player's correction (Настройки → «Синхронизация звука», 5.11). `outputLatency`
+ * is often missing or optimistic for Bluetooth headphones; rhythm games let the player nudge the sound until it
+ * matches the picture. Positive offset = the sound is heard later than the device reports, so it is started earlier.
+ */
+export function offsetClock(clock, offsetMs = 0) {
+  return () => {
+    const c = clock();
+    return c && { now: c.now, latency: c.latency + (Number.isFinite(offsetMs) ? offsetMs : 0) / 1000 };
+  };
+}
+
+/** A click on every beat for the sync screen: what is heard is compared with a dot reaching the line. */
+export function clickTrack(periodS, count, gain = MUSIC.gain.stick * 2) {
+  return Array.from({ length: count }, (_, k) => ({ t: (k + 1) * periodS, voice: 'stick', gain }));
+}
+
+/**
  * MusicPlayer — schedules pattern events on the audio clock so that each one is HEARD when the game time
  * reaches it: start = now + (event.t − gameTime) / speed − outputLatency, a lookahead window at a time.
  * Dependencies are injected (clock, play), so the scheduling is tested without WebAudio.

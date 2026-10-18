@@ -6,7 +6,8 @@ import { signalMeter, icon, handsFreeText } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
 import { COLORS } from '../render/draw.js';
-import { MusicPlayer } from '../core/music.js';
+import { LiveAnnouncer } from '../core/announce.js';
+import { MusicPlayer, offsetClock } from '../core/music.js';
 import { audioClock, playMusic } from '../services/audio.js';
 import { freePlayCaution } from '../core/wellbeing.js';
 import { secondsToday, dayKey } from '../core/progress.js';
@@ -14,20 +15,23 @@ import { HoldConfirm } from '../core/handsfree.js';
 
 const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
 
-export function playScreen(app, { game, level, retention = false, plan = false, demo = false }) {
+export function playScreen(app, { game, level, retention = false, plan = false, demo = false, pose = null }) {
   const s = app.settings;
-  let session = app.createSession({ game, level, retention, demo, plan });
+  let session = app.createSession({ game, level, retention, demo, plan, pose });
   // Procedural music (only «Ритм» has a song): scheduled on the audio clock, heard when the note reaches the line.
-  const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: audioClock, play: playMusic }) : null; };
+  const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: offsetClock(audioClock, s.audioOffsetMs), play: playMusic }) : null; };
   let music = musicFor(session);
-  let phase = 'intro', countdown = 0, confirm = new HoldConfirm(s.dwellS), doneAt = 0, lastScore = -1, lastSpoken = '', lastCount = 0, lastNow = null, outcome = null;
+  let phase = 'intro', countdown = 0, confirm = new HoldConfirm(s.dwellS), doneAt = 0, lastScore = -1, lastCount = 0, lastNow = null, outcome = null;
   const confirmS = s.dwellS;
   const entry = session.entry;
   const bridgeMode = s.source === 'bridge' && !demo;
 
   const canvas = h('canvas', { class: 'stage-canvas', 'aria-label': `Игровое поле: ${entry.title}` });
   const ctx = canvas.getContext('2d');
-  const hint = h('p', { class: 'stage-hint', 'aria-live': 'polite' });
+  // The hint on screen follows the game every frame; screen readers and the voice get it through LiveAnnouncer (5.11).
+  const hint = h('p', { class: 'stage-hint', 'aria-hidden': 'true' });
+  const liveHint = h('p', { class: 'sr-only', role: 'status' });
+  const announcer = new LiveAnnouncer();
   const overlay = h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'play-dialog-title' });
   const scoreEl = h('b', { class: 'score' }, '0');
   const bar = h('i');
@@ -58,6 +62,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     h('div', { class: 'play-progress', 'aria-hidden': 'true' }, bar),
     h('main', { class: 'stage', 'aria-label': 'Игровое поле' }, canvas),
     hint, // under the field, not over it: never covers the header or what a game draws at the bottom
+    liveHint,
     // Signal and pads: one column on the right in landscape (styles/app.css), in the flow in portrait.
     h('div', { class: 'play-side' }, s.showMeters ? meter.node : null, controls),
     // The intro and pause dialogs cover everything under the header (5.10): over the field alone the sheet was
@@ -92,6 +97,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       h('p', { class: 'legend' }, legend),
       !retention && session.game.guidance < 1 ? h('p', { class: 'note' }, `Навык растёт: шкала будет скрыта в ${session.game.guidance > 0.6 ? 'каждой третьей' : 'каждой второй'} попытке — результат вы увидите сразу после неё.`) : null,
       retention ? h('p', { class: 'note' }, 'Живые подсказки скрыты: так проверяется, держится ли навык без экрана. Это игровая метрика удержания навыка, а не прогноз управления протезом.') : null,
+      session.pose ? h('p', { class: 'note pose' }, h('b', {}, `Поза руки: ${session.pose.name}.`), ' Распознавание зависит от положения руки, поэтому проверка каждый день — в другой позе. Если так неудобно или тяжело держать руку — выполняйте как обычно.') : null,
       caution ? h('p', { class: 'note warn', role: 'status' }, caution) : null,
       // Sticky at the bottom of the sheet (5.10): the description scrolls, «Старт» and the hands-free hint stay visible.
       h('div', { class: 'sheet-actions' },
@@ -127,8 +133,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
 
   function restart(asDemo) {
     music?.update(0, 1, false);
-    if (asDemo !== demo) { app.go('play', { game, level, retention, plan, demo: asDemo }); return; }
-    session = app.createSession({ game, level, retention, demo, plan });
+    if (asDemo !== demo) { app.go('play', { game, level, retention, plan, demo: asDemo, pose }); return; }
+    session = app.createSession({ game, level, retention, demo, plan, pose });
     music = musicFor(session);
     lastScore = -1; showIntro();
   }
@@ -178,8 +184,12 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       : phase === 'countdown' ? `Старт через ${Math.max(1, Math.ceil(countdown))}… расслабьтесь`
       : retention && phase === 'running' ? 'Без подсказки: доверьтесь ощущениям' : session.game.hint;
     if (hint.textContent !== hintText) hint.textContent = hintText;
-    // Voice: game hints while running (eyes-free play); repeats are throttled by the voice service.
-    if (phase === 'running' && hintText !== lastSpoken) { lastSpoken = hintText; app.say(hintText, { interrupt: lost }); }
+    // Screen reader and voice: the latest hint once it holds, not every flip (the voice says the countdown itself).
+    const spoken = announcer.update(hintText, now / 1000, { urgent: lost || phase === 'countdown' });
+    if (spoken !== null) {
+      liveHint.textContent = spoken;
+      if (phase === 'running') app.say(spoken, { interrupt: lost, minGapMs: 0 }); // the announcer already spaces them
+    }
     const hud = session.game.hud();
     bar.style.width = `${Math.round(hud.progress * 100)}%`;
     if (hud.score !== lastScore) { scoreEl.textContent = retention && !session.game.done ? '—' : String(hud.score); lastScore = hud.score; }

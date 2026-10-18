@@ -9,6 +9,7 @@ import { checkinScreen } from './checkin.js';
 import { tutorialScreen } from './tutorial.js';
 import { pinGateScreen } from './pin.js';
 import { recoveryScreen } from './recovery.js';
+import { audioSyncScreen } from './audiosync.js';
 
 export const SCREENS = {
   home: homeScreen,
@@ -24,4 +25,5 @@ export const SCREENS = {
   tutorial: tutorialScreen,
   pin: pinGateScreen,
   recovery: recoveryScreen,
+  audiosync: audioSyncScreen,
 };

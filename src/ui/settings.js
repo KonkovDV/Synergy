@@ -10,6 +10,7 @@ import { download, reminderIcs } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
 import { bleSupported } from '../input/ble.js';
 import { createTwoChannelPads } from './controls.js';
+import { fmtOffset } from './audiosync.js';
 import { hashPin, validPin, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD } from '../config.js';
@@ -116,10 +117,11 @@ export function settingsScreen(app) {
         sliderRow('Цель: дней в неделю', { ...R.weeklyGoal, value: s.weeklyGoal, format: v => String(v), onInput: v => app.updateSettings({ weeklyGoal: v }) }),
         h('label', { class: 'row' }, h('span', {}, 'Напоминание'),
           h('input', { type: 'time', value: s.reminder, onchange: e => app.updateSettings({ reminder: e.target.value }) })),
-        h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder), 'text/calendar') }, 'Добавить в календарь (.ics)'),
+        h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder, new Date(), s.weeklyGoal), 'text/calendar') }, 'Добавить в календарь (.ics)'),
         h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) })),
         toggleRow('Звук', s.sound, v => app.updateSettings({ sound: v })),
         toggleRow('Музыка в «Ритме»', s.music, v => app.updateSettings({ music: v }), 'барабаны, бас и аккорды в темпе уровня: такт слышен, когда нота доходит до линии'),
+        h('button', { class: 'btn ghost', onclick: () => app.go('audiosync') }, `Синхронизация звука: ${fmtOffset(s.audioOffsetMs ?? 0)}`),
         toggleRow('Вибрация', s.haptics, v => app.updateSettings({ haptics: v })),
         toggleRow('Полоски сигнала в игре', s.showMeters, v => app.updateSettings({ showMeters: v }), 'мышечная обратная связь рядом с игровой')),
       section('Данные',

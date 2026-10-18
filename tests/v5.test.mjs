@@ -182,6 +182,10 @@ test('reminder .ics follows RFC 5545: UID and DTSTAMP in the event, lines ≤ 75
   assert.ok(lines.some(l => /^DTSTART:\d{8}T070500$/.test(l)), 'local start time');
   for (const l of lines) assert.ok(new TextEncoder().encode(l).length <= 75, `${new TextEncoder().encode(l).length} octets: ${l}`);
   assert.ok(!/[^\r]\n/.test(ics), 'every line break is CRLF');
+  // 5.11: the days follow the weekly goal (it used to be Mon–Fri for any goal).
+  assert.ok(ics.includes('BYDAY=MO,TU,TH,FR'), 'default goal 4');
+  assert.ok(reminderIcs('07:05', new Date(), 3).includes('BYDAY=MO,WE,FR'));
+  for (let g = 2; g <= 7; g++) assert.equal(/BYDAY=([A-Z,]+)/.exec(reminderIcs('07:05', new Date(), g))[1].split(',').length, g, `goal ${g}`);
 });
 
 test('catalog: 4 training games + the skill check, every game runs in every scheme', () => {
@@ -215,4 +219,44 @@ test('coach mood: stop advice → rest, success → joy, otherwise support', asy
   assert.equal(coachMood({ stars: 2 }), 'joy');
   assert.equal(coachMood({ stars: 1 }), 'support');
   assert.equal(coachMood(), 'support');
+});
+
+test('announcer: the latest hint once it holds, not every flip; urgent at once; nothing is lost (5.11)', async () => {
+  const { LiveAnnouncer } = await import('../src/core/announce.js');
+  const a = new LiveAnnouncer({ minGapS: 1.5, stableS: 0.4 });
+  const said = [];
+  // Safe at 60 fps: «Нужно: Кулак» and «Держите…» flip every 0.2 s for 2 s, then «Нужно: Ладонь» holds.
+  for (let t = 0; t < 2; t += 1 / 60) { const s = a.update(Math.floor(t / 0.2) % 2 ? 'Держите…' : 'Нужно: Кулак', t); if (s) said.push([t, s]); }
+  for (let t = 2; t < 5; t += 1 / 60) { const s = a.update('Нужно: Ладонь', t); if (s) said.push([t, s]); }
+  assert.ok(said.length <= 3, `${said.length} announcements in 5 s: ${JSON.stringify(said)}`);
+  for (let i = 1; i < said.length; i++) assert.ok(said[i][0] - said[i - 1][0] >= 1.5 - 1e-9, 'spaced');
+  assert.equal(said.at(-1)[1], 'Нужно: Ладонь', 'the hint that stays on screen is always said (the voice used to drop it for good)');
+  assert.equal(a.update('Старт через 3… расслабьтесь', 5.01, { urgent: true }), 'Старт через 3… расслабьтесь', 'urgent at once');
+  assert.equal(a.update('', 6), null, 'an empty hint is not announced');
+});
+
+test('arm pose (5.11): the plan probe rotates it, a backup cannot plant an unknown one, the report groups by it', async () => {
+  const { ARM_POSES } = await import('../src/config.js');
+  const { buildDailyPlan: plan, createProfile: profile } = await import('../src/core/progress.js');
+  const { parseState, emptyState } = await import('../src/core/storage.js');
+  const { poseSummary, reportHtml, reportCsv } = await import('../src/services/report.js');
+  const ids = ARM_POSES.map(p => p.id);
+  const seen = new Set();
+  for (const day of ['2026-10-18', '2026-10-19', '2026-10-20']) {
+    const items = plan(profile(), [], PLAN_CATALOG, 'proportional', day).items;
+    const probe = items.find(i => i.retention);
+    assert.ok(ids.includes(probe.pose), day); seen.add(probe.pose);
+    assert.ok(items.filter(i => !i.retention).every(i => i.pose === undefined), 'only the probe has a pose');
+  }
+  assert.equal(seen.size, 3, 'three days — three poses');
+  const state = emptyState();
+  const run = (pose, score) => ({ id: `${pose}${score}`, at: '2026-10-18T10:00:00Z', game: 'grip', level: 1, levelCount: 8, scheme: 'gesture', score, stars: 1, skills: {}, details: {}, durationS: 60, retention: true, pose });
+  state.runs = [run('elbow', 80), run('elbow', 60), run('forward', 40), run('<img src=x>', 99)];
+  const clean = parseState(JSON.stringify(state));
+  assert.equal(clean.runs.find(r => r.score === 99).pose, undefined, 'unknown pose dropped');
+  assert.deepEqual(poseSummary(clean.runs).map(p => [p.pose, p.runs, p.score]), [['elbow', 2, 70], ['forward', 1, 40]]);
+  const html = reportHtml(clean);
+  assert.match(html, /локоть согнут под прямым углом/);
+  assert.ok(!html.includes('<img src=x>'));
+  assert.match(reportCsv(clean).split('\n')[0], /arm_pose$/);
 });

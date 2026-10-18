@@ -1,13 +1,13 @@
 // Specialist report (JSON, CSV, printable HTML) and a calendar reminder (.ics) — no server, no account.
 // Every string that reaches the HTML report is escaped: names and stored data are untrusted input.
 import { count, fmtNum, FORMS } from '../core/format.js';
-import { APP } from '../config.js';
+import { APP, ARM_POSES } from '../config.js';
 import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabulary.js';
 import { skillProfile, playerLevel } from '../core/progress.js';
 import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS } from '../core/wellbeing.js';
 
-export const DISCLAIMER = 'Тренажёр, не медицинское изделие. Игровая статистика без клинической валидации: не для оценки состояния, подбора нагрузки или решений о лечении.';
+export const DISCLAIMER = 'Тренажёр, не медицинское изделие. Игровая статистика без клинической валидации: не для оценки состояния, подбора нагрузки или решений о лечении. Не медицинская документация и не согласие на обработку персональных данных.';
 
 const native = () => globalThis.SynergyNative;
 
@@ -40,11 +40,21 @@ export function buildReport(state) {
     assessments: assessmentHistory(runs, null, 52),
     gestureConfusions: confusionMatrix(runs),
     wellbeing: wellbeingLog(state.profile, 90),
+    armPoses: poseSummary(runs),
     runs,
   };
 }
 
 const CSV_SKILLS = Object.keys(SKILL_NAME);
+
+/** No-hint results by arm pose (real sensors only, 5.11): the last 10 probes per pose. */
+export function poseSummary(runs) {
+  const posed = runs.filter(r => !r.demo && r.retention && r.pose);
+  return ARM_POSES.map(p => {
+    const rs = posed.filter(r => r.pose === p.id).slice(-10);
+    return { pose: p.id, name: p.name, runs: rs.length, score: rs.length ? Math.round(rs.reduce((s, r) => s + r.score, 0) / rs.length) : null };
+  }).filter(p => p.runs);
+}
 const csvCell = v => {
   const text = v === null || v === undefined ? '' : String(v);
   // Formula injection guard for spreadsheet apps (OWASP: =, +, -, @, tab, CR at the start); only a whole
@@ -54,9 +64,9 @@ const csvCell = v => {
 };
 
 export function reportCsv(state) {
-  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency'];
+  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'arm_pose'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
-    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '']);
+    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.pose ?? '']);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
 
@@ -78,6 +88,7 @@ export function reportHtml(state, gameTitle = id => id) {
   const checks = assessmentHistory(runs, null, 8);
   const conf = confusionMatrix(runs);
   const log = wellbeingLog(p, 14);
+  const poses = poseSummary(runs);
   const name = s.name ? escapeHtml(s.name) : 'пользователь';
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
@@ -94,18 +105,24 @@ ${table(['Схема управления', 'Сторона', 'Упражнен�
 <h2>Профиль навыков (последние 30 упражнений, 0–100)</h2>
 ${table(Object.values(SKILL_NAME), [Object.keys(SKILL_NAME).map(k => skills[k] ?? '—')])}
 <p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью. Игровая метрика удержания навыка (по мотивам тренировки с отсроченной обратной связью, Dupan et al., 2025); клинической валидации у этой игры нет.</p>
-<h2>Проверка навыка (стандартный набор, по мотивам Motion Test / TAC)</h2>
+${poses.length ? `<h2>Без подсказки по позам руки (с датчиками, последние 10 на позу)</h2>
+${table(['Поза руки', 'Попыток', 'Средний результат'], poses.map(p => [p.name, p.runs, p.score]))}
+<p class="muted">Распознавание зависит от положения руки (эффект положения конечности). Заметно более низкий результат в одной позе подсказывает, где стоит проверить настройку протеза. Игровая метрика.</p>` : ''}
+<h2>Проверка навыка (фиксированный набор заданий, по мотивам Motion Test / TAC)</h2>
 ${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 'Выполнение, мс', 'Точность, %', 'Перелёты', 'ПС, бит/с', 'Эфф. пути, %'],
   checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots, fmtNum(c.throughputBps) ?? '—', c.pathEfficiency ?? '—']))}
 <p class="muted">ПС — игровая пропускная способность по мотивам теста Фиттса (пропорциональная схема; аналогия наведения, не классический эксперимент Фиттса): log₂(D/W + 1) / время движения, среднее по попыткам; эффективность пути — расстояние до цели / пройденный путь сигнала. Сравнивайте с прошлыми неделями этого же человека: с цифрами из статей не сравнимо (другие задачи и устройства).</p>
 <h2>Ошибки распознавания жестов (с, последние ${count(conf.runs, FORMS.exercises)})</h2>
-${conf.top.length ? table(['Нужен жест', 'Распознан как', 'Секунд'], conf.top.map(t => [gname(t.wanted), gname(t.seen), t.seconds])) : '<p class="muted">нет данных в режиме жестов</p>'}
+${conf.top.length ? table(['Нужен жест', 'Распознан как', 'Секунд'], conf.top.map(t => [gname(t.wanted), gname(t.seen), t.seconds]))
+  + `<p class="muted">Чаще всего: ${escapeHtml(gname(conf.top[0].wanted))} → ${escapeHtml(gname(conf.top[0].seen))}. Если пара повторяется неделями, её стоит проверить при настройке распознавания протеза (запись жеста заново, положение датчиков).</p>` : '<p class="muted">нет данных в режиме жестов</p>'}
 <h2>Самочувствие (14 последних записей)</h2>
 ${table(['День', 'Боль', 'Усталость', 'Кожа под датчиками', 'Решение', 'Нагрузка', 'Минут'],
-  log.map(l => [ruDate(`${l.day}T12:00:00`), label(PAIN_LEVELS, l.pain), label(FATIGUE_LEVELS, l.fatigue), label(SKIN_LEVELS, l.skin), { go: 'обычная', light: 'лёгкая', stop: 'отдых', skipped: 'пропущено' }[l.action] ?? '—', label(EFFORT_LEVELS, l.effort), l.minutes]))}
+  log.map(l => [ruDate(`${l.day}T12:00:00`), label(PAIN_LEVELS, l.pain), label(FATIGUE_LEVELS, l.fatigue), label(SKIN_LEVELS, l.skin), { go: 'обычный план', light: 'короткий план', stop: 'отдых', skipped: 'пропущено' }[l.action] ?? '—', label(EFFORT_LEVELS, l.effort), l.minutes]))}
 <h2>Последние упражнения</h2>
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '']))}
+<h2>Чем это проверяют в клинике</h2>
+<p class="muted">Игровые метрики — данные между визитами, а не замена теста: с клиническими тестами игра не сверена. Ближайшие по смыслу тесты, которые проводит специалист: «Мастерская» (взять — перенести — отпустить) — Box and Block Test, SHAP; «Проверка навыка» (выбор и выполнение движения) — Motion Test / TAC (виртуальный тест, по данным Hargrove et al. 2018 связан с SHAP, Box and Block и ACMC у 9 пользователей); управление протезом в повседневных задачах — ACMC, AM-ULA.</p>
 <p class="muted">Файл сформирован на устройстве пользователя и передан им самим. Содержит сведения о самочувствии.</p>
 </body></html>`;
 }
@@ -138,15 +155,21 @@ function foldIcsLine(line) {
   return parts.join('\r\n ');
 }
 
-export function reminderIcs(time = '19:00', now = new Date()) {
+/**
+ * Reminder days spread over the week by the weekly goal (5.11: the reminder rang Mon–Fri whatever the goal,
+ * i.e. five days for a default goal of four — a dose the app does not prescribe).
+ */
+export const REMINDER_DAYS = { 2: 'TU,FR', 3: 'MO,WE,FR', 4: 'MO,TU,TH,FR', 5: 'MO,TU,WE,TH,FR', 6: 'MO,TU,WE,TH,FR,SA', 7: 'MO,TU,WE,TH,FR,SA,SU' };
+
+export function reminderIcs(time = '19:00', now = new Date(), weeklyGoal = 4) {
   const [hh, mm] = /^\d\d:\d\d$/.test(time) ? time.split(':').map(Number) : [19, 0];
   const pad = n => String(n).padStart(2, '0');
   const day = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
   const utc = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''); // DTSTAMP is UTC: 20261018T061000Z
   return [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Synergy//Trainer//RU', 'BEGIN:VEVENT',
-    `UID:synergy-${now.getTime()}@local`, `DTSTAMP:${utc}`, `DTSTART:${day}T${pad(hh)}${pad(mm)}00`, 'DURATION:PT15M', 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
-    'SUMMARY:Синергия: тренировка 10–15 минут', 'DESCRIPTION:Тренировка дня ждёт. Мышцам — короткие регулярные занятия.',
+    `UID:synergy-${now.getTime()}@local`, `DTSTAMP:${utc}`, `DTSTART:${day}T${pad(hh)}${pad(mm)}00`, 'DURATION:PT15M', `RRULE:FREQ=WEEKLY;BYDAY=${REMINDER_DAYS[weeklyGoal] ?? REMINDER_DAYS[4]}`,
+    'SUMMARY:Синергия: тренировка 10–15 минут', 'DESCRIPTION:Тренировка дня ждёт. Устали или болит — сегодня отдых.',
     'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Пора на тренировку', 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR',
   ].map(foldIcsLine).join('\r\n');

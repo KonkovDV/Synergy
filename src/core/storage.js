@@ -1,5 +1,7 @@
 // Versioned local persistence. Never throws to the UI; corrupt data is backed up, not overwritten.
-import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES } from '../config.js';
+import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES, ARM_POSES } from '../config.js';
+
+const POSE_IDS = ARM_POSES.map(p => p.id);
 import { createProfile, SKINS } from './progress.js';
 import { defaultCalibration } from './signal.js';
 import { SCHEME, GESTURE_BY_ID } from './vocabulary.js';
@@ -13,6 +15,7 @@ export const DEFAULT_SETTINGS = {
   realism: 0.5,             // шум и перекрёстные помехи эмулятора
   sound: true,
   music: true,              // процедурная музыка в «Ритме» (вместе со звуком)
+  audioOffsetMs: 0,         // поправка задержки звука, мс (Настройки → «Синхронизация звука»)
   haptics: true,
   showMeters: true,
   weeklyGoal: SESSION.weeklyGoalDefault,
@@ -55,6 +58,7 @@ export const SETTINGS_RULES = {
   weeklyGoal: v => Number.isInteger(v) && v >= SETTINGS_RANGES.weeklyGoal.min && v <= SETTINGS_RANGES.weeklyGoal.max,
   textScale: oneOf(...TEXT_SCALES),
   gameSpeed: range(SETTINGS_RANGES.gameSpeed.min, SETTINGS_RANGES.gameSpeed.max),
+  audioOffsetMs: v => Number.isInteger(v) && v >= SETTINGS_RANGES.audioOffsetMs.min && v <= SETTINGS_RANGES.audioOffsetMs.max,
   dwellS: range(HANDS_FREE.minS, HANDS_FREE.maxS),
   wsUrl: v => v.length <= 200 && (v === '' || /^(wss?|https?):\/\//i.test(v)),
   reminder: v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
@@ -86,7 +90,7 @@ export function sanitizeProgress(state, catalog) {
       played: !!g.played, assessment: !!g.assessment, lastStars }];
   }));
   if (p.plan) {
-    p.plan.items = p.plan.items.filter(i => catalog[i.game]).map(i => ({ ...i, level: Math.max(1, Math.min(catalog[i.game], i.level)), done: !!i.done, retention: !!i.retention }));
+    p.plan.items = p.plan.items.filter(i => catalog[i.game]).map(i => ({ ...i, level: Math.max(1, Math.min(catalog[i.game], i.level)), done: !!i.done, retention: !!i.retention, pose: POSE_IDS.includes(i.pose) ? i.pose : undefined }));
     if (!p.plan.items.length) p.plan = null;
   }
   return state; // runs of an unknown game stay: history is never deleted silently, and no screen needs their game
@@ -176,6 +180,7 @@ export function parseState(raw, catalog = null) {
     ...(typeof c.adaptedAt === 'string' ? { adaptedAt: c.adaptedAt } : {}) });
   const calibrations = Object.fromEntries(Object.keys(base.calibrations).map(k => [k, validCal(data.calibrations?.[k]) ? cleanCal(data.calibrations[k]) : base.calibrations[k]]));
   const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS).map(r => {
+    if (r.pose !== undefined && !POSE_IDS.includes(r.pose)) { const { pose, ...rest } = r; r = rest; } // the report prints it
     if (!isObject(r.details) || r.details.confusion === undefined) return r;
     return { ...r, details: { ...r.details, confusion: cleanConfusion(r.details.confusion) } };
   }) : [];
