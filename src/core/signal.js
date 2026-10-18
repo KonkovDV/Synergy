@@ -32,6 +32,9 @@ export function readFrame(f) {
  * map linearly onto [threshold, 1] (order and proportions kept; ≥ 1 means «no upper bound»). At the default
  * threshold the map is the identity, so results stay comparable with earlier weeks.
  */
+/** Switch-off level of a channel for a switch-on threshold: hysteresis, but never below 65 % of the threshold. */
+export function offThreshold(on, params = SIGNAL) { return Math.max(on - params.hysteresis, on * params.hysteresisMinRatio); }
+
 export function reachableBand([lo, hi], onThreshold = SIGNAL.onThreshold, ref = SIGNAL.onThreshold) {
   const map = x => (x >= 1 ? x : onThreshold + Math.max(0, x - ref) * (1 - onThreshold) / (1 - ref));
   return [map(lo), map(hi)];
@@ -113,11 +116,14 @@ export class SignalPipeline {
 
   updateChannels(t) {
     const { onThreshold, hysteresis, hysteresisMinRatio, coThreshold, coHysteresis } = this.params;
-    const off = Math.max(onThreshold - hysteresis, onThreshold * hysteresisMinRatio);
+    const off = offThreshold(onThreshold, { hysteresis, hysteresisMinRatio });
     this.aOn = this.aOn ? this.a >= off : this.a >= onThreshold;
     this.bOn = this.bOn ? this.b >= off : this.b >= onThreshold;
     // Onset of the «high» zone used to recognise a deliberate co-contraction; kept through small dips.
-    const high = (x, since) => (x >= coThreshold ? (since ?? t) : since !== null && x >= coThreshold - coHysteresis ? since : null);
+    // Never below the switch-on threshold (5.11): at sensitivity 0.45 with co-contraction 0.25 two muscles that did
+    // not even switch on changed the grip, while «покой» checks read them as relaxed.
+    const coT = Math.max(coThreshold, onThreshold);
+    const high = (x, since) => (x >= coT ? (since ?? t) : since !== null && x >= coT - coHysteresis ? since : null);
     this.aHighSince = high(this.a, this.aHighSince);
     this.bHighSince = high(this.b, this.bHighSince);
   }
@@ -140,7 +146,7 @@ export class SignalPipeline {
     // co-contraction are REST for the prosthesis (it holds), but they are not relaxation (5.10).
     const base = {
       valid: true, scheme: this.scheme, t: now,
-      a: this.a, b: this.b, aOn: this.aOn, bOn: this.bOn, co: this.isCoContraction(), relaxed: !this.aOn && !this.bOn,
+      a: this.a, b: this.b, aOn: this.aOn, bOn: this.bOn, co: this.isCoContraction(), relaxed: !this.aOn && !this.bOn && !this.isCoContraction(),
       gesture: null, confidence: 1, uncertain: false,
     };
     if (this.scheme === SCHEME.GESTURE && this.lastFrame?.gesture) return { ...base, ...this.fromGesture() };

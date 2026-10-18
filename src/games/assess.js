@@ -74,6 +74,10 @@ export class AssessmentGame extends Game {
 
   constructor(opts) {
     super(opts);
+    // A fixed protocol runs in real time (5.11): at the «Темп игр» 60 % setting the times read 1.67× faster, and the
+    // loop's 50 ms cap on dt made a 15 fps phone look faster too. The trial clock below reads the frame timestamps.
+    this.speed = 1;
+    this.lastT = null;
     this.trials = assessmentTrials(this.scheme, this.onThreshold).map(t => ({ ...t, state: 'wait' }));
     this.index = 0; this.phase = 'rest'; this.restFor = 0;
     this.confusion = new ConfusionMeter();
@@ -94,7 +98,15 @@ export class AssessmentGame extends Game {
     return intent.intensity >= t.band[0] && intent.intensity <= t.band[1];
   }
 
-  step(dt, intent) {
+  /** Real seconds since the previous step from the frame timestamps; a pause (no steps) or no timestamp → dt. */
+  realDt(dt, intent) {
+    const now = intent.t, r = Number.isFinite(now) && Number.isFinite(this.lastT) ? (now - this.lastT) / 1000 : dt;
+    this.lastT = now;
+    return r > 0 && r <= 0.25 ? r : dt;
+  }
+
+  step(gameDt, intent) {
+    const dt = this.realDt(gameDt, intent);
     const t = this.trial;
     if (!t) return;
     if (this.phase === 'rest') {

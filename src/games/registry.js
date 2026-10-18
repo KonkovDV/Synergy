@@ -48,7 +48,7 @@ export const GAMES = [
 export const TRAINING_GAMES = GAMES.filter(g => !g.assessment);
 export const ASSESSMENT = GAMES.find(g => g.assessment);
 
-export const GAME_BY_ID = Object.fromEntries(GAMES.map(g => [g.id, g]));
+export const GAME_BY_ID = Object.assign(Object.create(null), Object.fromEntries(GAMES.map(g => [g.id, g]))); // no prototype: ids come from backups too
 
 /** Catalog view used by the pure planning code (core/progress.js). */
 export const PLAN_CATALOG = TRAINING_GAMES.map(g => ({ id: g.id, schemes: g.schemes, skills: g.skills, levelCount: g.Game.levels.length }));

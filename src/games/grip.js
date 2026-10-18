@@ -3,6 +3,8 @@
 // B lowers excess force, wrong grip must be switched by co-contraction (or a gesture).
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GRIP_NAME } from '../core/vocabulary.js';
+import { reachableBand, offThreshold } from '../core/signal.js';
+import { SIGNAL } from '../config.js';
 import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge } from '../render/draw.js';
 
 /** Object catalog: force window [min,max], breakAt, grip, contact closure. Conditional units, not newtons. */
@@ -56,10 +58,16 @@ export class GripGame extends Game {
     const kind = this.queue.shift();
     if (!kind) { this.current = null; this.finish(); return; }
     const base = OBJECTS[kind];
+    // Proportional force follows the squeeze, and a squeeze holds the channel on only above its switch-off level:
+    // windows are placed above it (5.11 — at sensitivity 0.45 the egg [0.15, 0.36] lay under the 0.38 switch-off and
+    // only split-second timing could land in it). Anchored on the default switch-off level, ≥ 1 kept («unbreakable»).
+    const reach = this.scheme === SCHEME.PROPORTIONAL
+      ? band => reachableBand(band, offThreshold(this.onThreshold), offThreshold(SIGNAL.onThreshold)) : band => band;
+    const [bmin, bmax] = reach([base.min, base.max]), [breakAt] = reach([base.breakAt, base.breakAt]);
     // Challenge point: the green window widens or narrows around its centre; breaking stays above it.
-    const center = (base.min + base.max) / 2, half = this.adapt.widen((base.max - base.min) / 2);
+    const center = (bmin + bmax) / 2, half = this.adapt.widen((bmax - bmin) / 2);
     const min = Math.max(0.05, center - half), max = Math.min(0.97, center + half);
-    this.current = { kind, ...base, min, max, breakAt: Math.max(base.breakAt, max + 0.06), limit: this.adapt.widen(this.level.limit),
+    this.current = { kind, ...base, min, max, breakAt: Math.max(breakAt, max + 0.06), limit: this.adapt.widen(this.level.limit),
       phase: 'arrive', t: 0, restFor: 0, liftForce: 0, x: -0.4, needSwitchAt: null };
     this.hint = `${this.current.name}: хват «${GRIP_NAME[this.current.grip]}», сила в зелёной зоне`;
   }

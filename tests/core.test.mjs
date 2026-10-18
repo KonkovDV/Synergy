@@ -183,3 +183,39 @@ test('progress: days with exercises are counted for ever — a running total nex
   assert.equal(trainingDays(p), 2, 'a rest day with only a check-in is not a training day; a gap does not reset the total');
   assert.equal(trainingDays({}), 0, 'damaged profile');
 });
+
+test('days (5.11): a DST change in a UTC±0 zone does not break the series (London: 24.10 train, 25.10 rest, 26.10 train)', async () => {
+  const { execFileSync } = await import('node:child_process');
+  const code = `import { createProfile, recordRun } from ${JSON.stringify(new URL('../src/core/progress.js', import.meta.url).href)};
+const p = createProfile();
+const run = at => ({ id: at, at, game: 'grip', level: 1, levelCount: 8, scheme: 'proportional', score: 80, stars: 2, skills: {}, details: {}, durationS: 120 });
+recordRun(p, run('2026-10-24T10:00:00'), { today: '2026-10-24' });
+recordRun(p, run('2026-10-26T10:00:00'), { today: '2026-10-26' });
+console.log(p.streak.current);`;
+  for (const TZ of ['Europe/London', 'Europe/Lisbon', 'Europe/Moscow', 'America/New_York']) {
+    const out = execFileSync(process.execPath, ['--input-type=module', '-e', code], { env: { ...process.env, TZ } }).toString().trim();
+    assert.equal(out, '2', `${TZ}: one rest day keeps the series`);
+  }
+});
+
+test('bridge text (5.11): a blank line is no frame — it used to zero the signal between records', async () => {
+  const { parseExternal } = await import('../src/input/bridge.js');
+  assert.equal(parseExternal(''), null);
+  assert.equal(parseExternal('\r'), null);
+  assert.equal(parseExternal(' ; , '), null);
+  assert.equal(parseExternal('0.4 0.2').a, 0.4);
+});
+
+test('reminder (5.11): the first event falls on a reminder day for every weekday and every weekly goal', async () => {
+  const { reminderIcs, REMINDER_DAYS } = await import('../src/services/report.js');
+  const NAMES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+  for (let d = 0; d < 7; d++) {
+    const now = new Date(2026, 9, 19 + d, 9, 0); // Mon 19.10 … Sun 25.10
+    for (let goal = 2; goal <= 7; goal++) {
+      const [, y, m, day] = /DTSTART:(\d{4})(\d\d)(\d\d)/.exec(reminderIcs('19:00', now, goal));
+      const start = new Date(+y, +m - 1, +day);
+      assert.ok(REMINDER_DAYS[goal].split(',').includes(NAMES[start.getDay()]), `goal ${goal}, created ${now.toDateString()}: starts ${start.toDateString()}`);
+      assert.ok(start >= new Date(2026, 9, 19 + d) && start - now < 7 * 86400000, 'within the coming week');
+    }
+  }
+});

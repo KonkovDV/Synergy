@@ -81,7 +81,9 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
         ? `Канал ${calibrationNote.stuckChannel ? 'B' : 'A'} был включён больше ${CALIBRATION_ADAPT.stuckS} с подряд. Если рука была расслаблена — датчик сместился или контакт изменился.`
         : 'Сигнал покоя заметно ушёл от калибровки — так бывает от пота или смещения датчика.'),
       h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка датчиков'))
-    : calibrationNote ? h('p', { class: 'note' }, `Калибровка подстроилась под датчик: покой сдвинут на ${fmtPct(calibrationNote.shiftPct)} диапазона.`) : null;
+    : calibrationNote ? h('p', { class: 'note' }, calibrationNote.shiftPct >= 1
+      ? `Калибровка подстроилась под датчик: покой сдвинут на ${fmtPct(calibrationNote.shiftPct)} диапазона.`
+      : 'Калибровка подстроилась под датчик: покой вернулся к уровню калибровки.') : null;
   const difficulty = !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
   const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', {}, 'Насколько тяжело было?'),

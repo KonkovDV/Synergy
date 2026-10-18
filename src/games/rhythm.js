@@ -104,7 +104,8 @@ export class RhythmGame extends Game {
         n.held += dt;
         n.peak = Math.max(n.peak, intent.intensity);
         if (n.lane !== 'both') this.separation.add(intent, n.lane === 'a', dt);
-        if (n.dur > 0 && now >= n.at + n.dur + this.good) this.settleHold(n, n.at + n.dur);
+        // Still held past the release window: a late release (5.11 — it was settled as an on-time one, full marks).
+        if (n.dur > 0 && now >= n.at + n.dur + this.good) this.settleHold(n, Infinity);
         if (n.dur === 0 && now > n.at + 0.3) this.settleTap(n);
       }
       if (n.state === 'wait' && now > n.at + this.good) { n.state = 'miss'; this.miss(n); }

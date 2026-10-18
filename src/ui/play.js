@@ -173,7 +173,10 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       if (shown !== lastCount && shown > 0) { lastCount = shown; app.say(String(shown), { interrupt: true }); }
       if (countdown <= 0) { session.hand.reset(); session.game.paused = false; phase = 'running'; }
     }
-    music?.update(session.game.time, session.game.speed, phase === 'running' && !session.game.done);
+    // The count-in is scheduled during the 3-2-1 as well (5.11): with output latency plus the sync offset the click at
+    // game time 0 was already late when the game started, and skipped.
+    const musicTime = session.game.time - (phase === 'countdown' ? Math.max(0, countdown) * session.game.speed : 0);
+    music?.update(musicTime, session.game.speed, (phase === 'running' || phase === 'countdown') && !session.game.done);
     for (const e of session.game.drainEvents()) app.feedback.event(music && e.name === 'beat' ? { ...e, silent: true } : e);
     session.game.render(ctx, view, session.hand, intent);
     if (phase === 'countdown') drawCountdown();

@@ -17,7 +17,9 @@ export const dayKey = (date = new Date()) => {
   const d = new Date(date);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-const dayIndex = key => Math.round(new Date(`${key}T12:00:00`).getTime() / 86400000);
+// Calendar arithmetic in UTC (5.11): local noon is x.5 days in UTC±0 zones, and Math.round flipped at a DST change —
+// London: train 24.10, rest 25.10, train 26.10 gave a series of 1.
+const dayIndex = key => { const [y, m, d] = key.split('-').map(Number); return Date.UTC(y, m - 1, d) / 86400000; };
 const weekStart = key => { const d = new Date(`${key}T12:00:00`); const shift = (d.getDay() + 6) % 7; d.setDate(d.getDate() - shift); return dayKey(d); };
 
 export function starsFor(score) { return STARS.filter(s => score >= s).length; }
@@ -198,8 +200,10 @@ export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(),
   const ordered = [...games].sort((x, y) => priority(x) - priority(y) || ((seed + x.id.length) % 3) - ((seed + y.id.length) % 3));
   const picked = ordered.slice(0, Math.min(exercises, ordered.length));
   const items = picked.map(g => ({ game: g.id, level: recommendedLevel(profile, g.id), done: false, retention: false }));
-  // The probe rotates the arm pose day by day (shown and recorded only with real sensors — the screen does not care).
-  if (items.length) items.push({ ...items[0], retention: true, pose: ARM_POSES[((seed % ARM_POSES.length) + ARM_POSES.length) % ARM_POSES.length].id });
+  // The probe rotates the arm pose (shown and recorded only with real sensors — the screen does not care). By the
+  // count of posed probes so far, not by the day: the day also picks the probe game, so each pose kept one game.
+  const posed = runs.filter(r => !r.demo && r.retention && r.pose).length;
+  if (items.length) items.push({ ...items[0], retention: true, pose: ARM_POSES[posed % ARM_POSES.length].id });
   // Rebuilt the same day (scheme switched): finished exercises stay finished (5.10 — the plan went back to 0/4 and a
   // light day offered one more exercise), and the plan bonus of today is not paid twice.
   const before = profile.plan?.day === today ? profile.plan : null;

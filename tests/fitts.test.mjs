@@ -75,3 +75,23 @@ test('path efficiency: a straight movement is 100 %, a detour is charged by its 
   const detour = efficiency([...ramp(0, target + 0.25), ...ramp(target + 0.25, target)]);
   assert.ok(detour < 0.75, `overshoot and back is charged: ${detour.toFixed(2)} (until 5.10 such paths could read 100 %)`);
 });
+
+test('skill check runs in real time: the «Темп игр» setting and a slow phone do not change its numbers (5.11)', async () => {
+  const { createGame } = await import('../src/games/registry.js');
+  const { GameRunner } = await import('../src/games/runner.js');
+  const { EmgEmulator } = await import('../src/input/emulator.js');
+  const { SignalPipeline } = await import('../src/core/signal.js');
+  const { BionicHand } = await import('../src/core/hand.js');
+  const run = ({ speed = 1, fps = 60, capDt = Infinity }) => {
+    const game = createGame('check', { levelNumber: 1, scheme: 'proportional', seed: 3, speed });
+    const emulator = new EmgEmulator({ realism: 0.5, seed: 3 });
+    const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme: 'proportional' }), hand: new BionicHand(), source: emulator, emulator, autopilot: true });
+    const step = 1 / fps;
+    for (let t = 0; !game.done && t < 600000; t += step * 1000) runner.step(t, Math.min(capDt, step));
+    return game.result().details;
+  };
+  const base = run({}), slow = run({ speed: 0.6 }), lowFps = run({ fps: 15, capDt: 0.05 });
+  const near = (a, b, why) => assert.ok(Math.abs(a - b) <= 0.06 * b + 20, `${why}: ${a} vs ${b}`);
+  near(slow.selectionMs, base.selectionMs, 'game speed 60 %'); near(slow.throughputBps * 100, base.throughputBps * 100, 'throughput at 60 %');
+  near(lowFps.completionMs, base.completionMs, '15 fps with the 50 ms dt cap');
+});
