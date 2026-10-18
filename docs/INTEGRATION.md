@@ -41,7 +41,7 @@
 ## Транспорты
 
 1. **WebSocket** — Настройки → Источник → «Внешний» → адрес `ws://IP:порт` → «Подключить».
-2. **postMessage** (игра в iframe/WebView): `iframe.contentWindow.postMessage({type:'synergy-frame', a, b}, '*')`.
+2. **postMessage** (игра в iframe/WebView): `iframe.contentWindow.postMessage({type:'synergy-frame', a, b}, '*')`. С 5.7 кадры принимаются только от встраивающей страницы (`window.parent`), самой страницы или нативного хоста (`WebMessage` без окна-источника): открывшая вкладка или дочернее окно подменить сигнал не могут (`trustedMessageSource`, RT-7).
 3. **JS API**: `window.Synergy.feed({a, b, gesture})`; `window.Synergy.useBridge('ws://…')`; `window.Synergy.state()`.
 4. **Android**: в `MainActivity.pushFrame(a, b, gesture)` — вызвать из колбэка SDK/BLE протеза.
 
