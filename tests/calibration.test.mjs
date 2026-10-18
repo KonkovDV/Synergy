@@ -96,3 +96,29 @@ test('rest adaptation: only real sensors, never the skill check, the emulator or
   assert.equal(restAdaptationAllowed({ ...base, demo: true }), false);
   assert.equal(restAdaptationAllowed({ ...base, enabled: false }), false);
 });
+
+test('calibration wizard: a flat channel (electrode off the skin) is reported and not saved', () => {
+  const rec = new CalibrationRecorder();
+  for (let i = 0; i < 700; i++) {
+    const step = rec.step?.id;
+    rec.push({ t: i * 16, a: 0.5 + 0.0005 * Math.sin(i), b: step === 'b' ? 0.7 : 0.05 }, 1 / 60); // A never moves
+  }
+  const r = rec.result();
+  assert.equal(r.usable, false, 'until 5.10 «Сохранить» was offered and the span collapsed to 0.001');
+  assert.ok(r.issues.some(i => /Канал A/.test(i)), r.issues.join(' | '));
+});
+
+test('rest adaptation: a slow creep does not add up across sessions — the bound and the warning keep the wizard reference', () => {
+  let cal = { rest: [0, 0], max: [1, 1], ref: [0, 0], at: null };
+  let flagged = false;
+  for (let session = 0; session < 6 && !flagged; session++) {
+    const tracker = new RestTracker(cal), pipeline = new SignalPipeline({ calibration: cal, restTracker: tracker });
+    const level = 0.08 * (session + 1); // the quiet level creeps up by 8 % of the span every session
+    drive(pipeline, t => [level + wobble(t), 0.02], 400);
+    const s = tracker.summary();
+    assert.ok(Math.abs(s.calibration.rest[0] - cal.ref[0]) <= CALIBRATION_ADAPT.maxShift + 1e-9, `session ${session + 1}: shift from the wizard ≤ maxShift`);
+    flagged = s.recalibrate;
+    if (s.keep) cal = { ...cal, ...s.calibration };
+  }
+  assert.ok(flagged, 'the accumulated drift asks to recalibrate (until 5.10 it never did: 46 % after six sessions)');
+});

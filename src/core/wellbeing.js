@@ -1,6 +1,7 @@
 // Wellbeing: a 2-question check-in before the daily plan (pain on the numeric rating scale categories,
 // fatigue), a perceived-exertion answer after it, and performance-based signs of fatigue inside a session.
 // Safety rules, not a diagnosis: the advice always points to rest or to a specialist.
+import { count, FORMS } from './format.js';
 import { WELLBEING } from '../config.js';
 
 /** Pain categories of the 0–10 numeric rating scale (NRS). */
@@ -54,13 +55,20 @@ export function checkInAdvice({ pain = 0, fatigue = 0, skin = 0 } = {}) {
  * first exercises after several active minutes. EMG-amplitude rules are avoided on purpose: at a
  * submaximal effort the surface-EMG amplitude *rises* with fatigue, so it is not a safe signal alone.
  */
-export function fatigueSigns(runsToday) {
+export function fatigueSigns(runsToday, history = []) {
   const runs = runsToday.filter(r => !r.demo && !r.details?.assessment);
   if (runs.length < 3) return null;
   const minutes = runs.reduce((s, r) => s + (r.durationS ?? 0), 0) / 60;
   if (minutes < WELLBEING.fatigueMinMinutes) return null;
-  const first = (runs[0].score + runs[1].score) / 2;
-  const last = runs[runs.length - 1].score;
+  // Each run against the person's usual result in the same game and level (earlier runs): a harder game later in
+  // the plan is not mistaken for fatigue (5.10 — «Полёт» level 8 after level-1 games read as a 45-point drop).
+  // Without such a history the raw scores are compared: an unneeded rest is cheaper than a missed fatigue.
+  const earlier = history.filter(h => !h.demo && !runs.includes(h));
+  const usual = r => { const same = earlier.filter(h => h.game === r.game && h.level === r.level).slice(-5); return same.length ? same.reduce((s, h) => s + h.score, 0) / same.length : null; };
+  const baselines = runs.map(usual);
+  const values = baselines.every(b => b !== null) ? runs.map((r, i) => r.score - baselines[i]) : runs.map(r => r.score);
+  const first = (values[0] + values[1]) / 2;
+  const last = values[values.length - 1];
   const drop = Math.round(first - last);
   return drop >= WELLBEING.scoreDropPoints ? { drop, minutes: Math.round(minutes) } : null;
 }
@@ -70,9 +78,9 @@ export const overDailyCap = (secondsToday, softCapMin) => secondsToday / 60 >= s
 export const capAdvice = softCapMin => `Сегодня уже больше ${softCapMin} минут. Мышцам нужен отдых — продолжим завтра.`;
 
 /** Safety after an exercise: signs of fatigue first, then the daily cap; null — the plan may go on. */
-export function adviseStop(runsToday, secondsToday, softCapMin) {
-  const fatigue = fatigueSigns(runsToday);
-  if (fatigue) return { reason: 'fatigue', text: `Результат снизился на ${fatigue.drop} очков за ${fatigue.minutes} мин — похоже на усталость мышц. Лучше закончить на сегодня.` };
+export function adviseStop(runsToday, secondsToday, softCapMin, history = []) {
+  const fatigue = fatigueSigns(runsToday, history);
+  if (fatigue) return { reason: 'fatigue', text: `Результат снизился на ${count(fatigue.drop, FORMS.points)} за ${fatigue.minutes} мин — похоже на усталость мышц. Лучше закончить на сегодня.` };
   if (overDailyCap(secondsToday, softCapMin)) return { reason: 'cap', text: capAdvice(softCapMin) };
   return null;
 }

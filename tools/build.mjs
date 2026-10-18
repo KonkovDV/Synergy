@@ -49,13 +49,16 @@ const shell = ['./', './index.html', './app.js', './app.css', './manifest.webman
 writeFileSync(join(dist, 'sw.js'), `// App-shell cache: the game works offline after the first visit.
 const CACHE = 'synergy-${pkg.version}';
 const SHELL = ${JSON.stringify(shell)};
-self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
+// 'reload': a new version is fetched from the network, not from the HTTP cache (5.10 — GitHub Pages sends
+// max-age=600, and the cache of a hotfix stored the old app.js).
+self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('synergy-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // Only the app's own files, from the app's own cache (5.10): on a shared origin (user.github.io/…) another site's
+  // cache must not answer, and requests outside the app's scope are not cached.
+  if (e.request.method !== 'GET' || !e.request.url.startsWith(self.registration.scope)) return;
   // Cache-first; only successful responses are cached (an error page must not stick until the next version).
-  e.respondWith(caches.match(e.request).then(hit => hit || fetch(e.request).then(r => { if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); } return r; })));
+  e.respondWith(caches.open(CACHE).then(c => c.match(e.request).then(hit => hit || fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }))));
 });
 `);
 const icon = readFileSync(join(root, 'public/icons/icon.svg'), 'utf8');

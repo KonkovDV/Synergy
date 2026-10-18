@@ -110,3 +110,60 @@ test('red team: postMessage frames only from the embedding parent or a native ho
   assert.ok(trustedMessageSource({ source: parent }, framed), 'the embedding page');
   assert.ok(!trustedMessageSource({ source: {} }, framed));
 });
+
+test('RT-12 (5.10): a crafted backup cannot freeze or blank the app — nested progress is checked against the game catalog', async () => {
+  const { importState, emptyState } = await import('../src/core/storage.js');
+  const { playerLevel } = await import('../src/core/progress.js');
+  const { confusionMatrix } = await import('../src/core/analytics.js');
+  const catalog = { grip: 8, flight: 8, rhythm: 8, safe: 8, check: 1 };
+  const base = emptyState();
+  const evil = JSON.parse(JSON.stringify(base));
+  evil.profile.xp = 1e308;
+  evil.profile.games = { grip: { stars: 5, best: null, unlocked: 99, lastStars: { 1: [3, 'x'] } }, nope: { unlocked: 1 } };
+  evil.profile.plan = { day: '2026-10-18', scheme: 'proportional', items: [{ game: 'nope', level: 1 }, { game: 'grip', level: 42 }] };
+  evil.profile.streak = { current: 'x', best: -3, lastDay: 'yesterday' };
+  evil.runs = [{ id: 'r', game: 'safe', level: 1, score: 50, stars: 1, scheme: 'gesture', details: { confusion: JSON.parse('{"__proto__": {"assessment": 1}, "fist": {"pinch": 2, "__proto__": 5}}') } }];
+  const s = importState(JSON.stringify(evil), catalog);
+  const t0 = Date.now(); playerLevel(s.profile.xp); playerLevel(1e308);
+  assert.ok(Date.now() - t0 < 50, 'level of a huge XP is computed at once (the loop froze the tab on every launch)');
+  assert.ok(s.profile.xp <= 1e9);
+  assert.deepEqual(Object.keys(s.profile.games), ['grip'], 'unknown game dropped');
+  assert.equal(s.profile.games.grip.unlocked, 8, 'unlocked clamped to the game');
+  assert.deepEqual(s.profile.games.grip.stars, {});
+  assert.deepEqual(s.profile.plan.items.map(i => [i.game, i.level]), [['grip', 8]], 'plan item of an unknown game dropped, level clamped');
+  assert.deepEqual(s.profile.streak, { current: 0, best: 0, lastDay: null });
+  confusionMatrix(s.runs);
+  assert.equal(({}).assessment, undefined, 'no prototype pollution from an own __proto__ key');
+  assert.deepEqual(s.runs[0].details.confusion, { fist: { pinch: 2 } });
+});
+
+test('RT-12b: the confusion table itself ignores unknown keys (defence in depth, without the storage check)', async () => {
+  const { confusionMatrix } = await import('../src/core/analytics.js');
+  const m = confusionMatrix([{ scheme: 'gesture', details: { confusion: JSON.parse('{"__proto__": {"polluted": 1}, "constructor": {"fist": 3}}') } }]);
+  assert.equal(({}).polluted, undefined);
+  assert.equal(m.total, 0);
+});
+
+test('RT-13 (5.10): the local server never serves dotfiles or the tool cache (the debug keystore lives there)', async () => {
+  const { startServer } = await import('../tools/static-server.mjs');
+  const { fileURLToPath } = await import('node:url');
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const { url, close } = await startServer({ root });
+  try {
+    const base = url.replace('/index.html', '');
+    assert.equal((await fetch(`${base}/.git/config`)).status, 404);
+    assert.equal((await fetch(`${base}/tools/.cache/debug.keystore`)).status, 404);
+    assert.equal((await fetch(`${base}/%2e%2e/etc/passwd`)).status === 200, false, 'no traversal');
+    assert.equal((await fetch(`${base}/index.html`)).status, 200);
+  } finally { await close(); }
+});
+
+test('settings ranges have one source: every slider value the screen offers is accepted from a backup, nothing outside', async () => {
+  const { SETTINGS_RANGES, TEXT_SCALES } = await import('../src/config.js');
+  const { SETTINGS_RULES } = await import('../src/core/storage.js');
+  for (const [key, { min, max, step }] of Object.entries(SETTINGS_RANGES)) {
+    for (let v = min; v <= max + 1e-9; v += step) assert.ok(SETTINGS_RULES[key](Math.round(v / step) * step), `${key} ${v}`);
+    assert.ok(!SETTINGS_RULES[key](max + step * 1.5) && !SETTINGS_RULES[key](min - step * 1.5), `${key} outside`);
+  }
+  for (const v of TEXT_SCALES) assert.ok(SETTINGS_RULES.textScale(v));
+});

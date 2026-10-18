@@ -36,3 +36,42 @@ test('fitts: throughput — bot above novice, idle has none; other schemes do no
   for (const scheme of ['threshold', 'gesture']) assert.ok(!('throughputBps' in play('check', { scheme, levelNumber: 1 }).details), scheme);
   for (const t of bot.trials.filter(x => x.mtMs !== undefined)) assert.ok(t.mtMs < t.doneMs, 'MT excludes the dwell');
 });
+
+test('force bands sit above the switch-on threshold: at the highest sensitivity setting a perfect player can still do every trial', async () => {
+  const { play } = await import('./helpers.mjs');
+  const { SETTINGS_RULES } = await import('../src/core/storage.js');
+  assert.ok(SETTINGS_RULES.sensitivity(0.45) && !SETTINGS_RULES.sensitivity(0.46), 'the slider tops out at 0.45');
+  // Until 5.10 the 30 % Fitts targets were below a 0.45 threshold: 75 % done at best; «слабо» prompts in «Сейф» always failed.
+  const check = play('check', { scheme: 'proportional', levelNumber: 1, realism: 0.2, onThreshold: 0.45 });
+  assert.equal(check.details.completionRate, 100, JSON.stringify(check.details.trials.filter(t => !t.ok)));
+  assert.equal(check.details.onThreshold, 0.45, 'the run records the threshold its targets were placed for');
+  for (const level of [4, 6]) {
+    const safe = play('safe', { scheme: 'proportional', levelNumber: level, realism: 0.2, onThreshold: 0.45 });
+    assert.ok(safe.stars >= 2, `«Сейф» L${level} at 0.45: ${safe.score}`);
+  }
+  const rhythm = play('rhythm', { scheme: 'proportional', levelNumber: 3, realism: 0.2, onThreshold: 0.45 });
+  assert.ok(rhythm.skills.precision >= 80, `«Ритм» bands hit at 0.45: ${rhythm.skills.precision}`);
+  // At the default threshold the placement is the identity: the protocol of earlier weeks is unchanged.
+  for (const t of assessmentTrials('proportional').filter(t => t.fitts)) assert.ok(Math.abs(t.fitts.d - Math.round(t.fitts.d * 100) / 100) < 1e-9);
+});
+
+test('path efficiency: a straight movement is 100 %, a detour is charged by its real path (from onset level to entry)', async () => {
+  const { createGame } = await import('../src/games/registry.js');
+  const { BionicHand } = await import('../src/core/hand.js');
+  const efficiency = path => {
+    const game = createGame('check', { levelNumber: 1, scheme: 'proportional', seed: 1 });
+    const hand = new BionicHand(), t = game.trial, ch = t.command === 'open' ? 'b' : 'a';
+    const intent = x => ({ valid: true, scheme: 'proportional', command: x >= 0.22 ? t.command : 'rest', relaxed: x < 0.22, intensity: x >= 0.22 ? x : 0,
+      a: ch === 'a' ? x : 0, b: ch === 'b' ? x : 0, aOn: ch === 'a' && x >= 0.22, bOn: ch === 'b' && x >= 0.22, co: false });
+    for (let i = 0; i < 60 && game.phase === 'rest'; i++) game.update(1 / 60, intent(0), hand);
+    for (const x of path) game.update(1 / 60, intent(x), hand);
+    for (let i = 0; i < 60; i++) game.update(1 / 60, intent(path[path.length - 1]), hand); // hold in the band
+    return game.metrics().pathEfficiency;
+  };
+  const game = createGame('check', { levelNumber: 1, scheme: 'proportional', seed: 1 });
+  const target = game.trial.fitts.d;
+  const ramp = (from, to, n = 12) => Array.from({ length: n }, (_, i) => from + (to - from) * (i + 1) / n);
+  assert.equal(efficiency(ramp(0, target)), 1, 'straight to the band');
+  const detour = efficiency([...ramp(0, target + 0.25), ...ramp(target + 0.25, target)]);
+  assert.ok(detour < 0.75, `overshoot and back is charged: ${detour.toFixed(2)} (until 5.10 such paths could read 100 %)`);
+});

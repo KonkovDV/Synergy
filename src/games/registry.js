@@ -7,39 +7,37 @@ import { AssessmentGame } from './assess.js';
 import { SCHEME } from '../core/vocabulary.js';
 
 const ALL = [SCHEME.THRESHOLD, SCHEME.PROPORTIONAL, SCHEME.GESTURE];
+/** id, title and skills come from the game class only (5.10: three copies had drifted — «Мастерская» measured
+ *  «Разделение», but the plan never knew). */
+const meta = Game => ({ Game, id: Game.id, title: Game.title, skills: Game.skills });
 
 export const GAMES = [
   {
-    Game: GripGame, id: 'grip', title: 'Мастерская', icon: '✋', schemes: ALL,
-    skills: ['precision', 'switching', 'stability'],
+    ...meta(GripGame), icon: '✋', schemes: ALL,
     tagline: 'Взять, перенести, отпустить — и не раздавить яйцо',
     teaches: 'Дозирование силы хвата, удержание без напряжения, смена хвата коактивацией. Самая близкая к протезу задача.',
     how: ['Сожмите (A) до зелёной зоны и расслабьтесь — протез держит сам', 'Слишком сильно? Коротко B ослабит хват', 'Над корзиной раскройте кисть (B)', 'Нужен другой хват — раскройте кисть, A+B разом, покой'],
   },
   {
-    Game: FlightGame, id: 'flight', title: 'Полёт', icon: '🕊️', schemes: ALL,
-    skills: ['precision', 'separation', 'stability'],
+    ...meta(FlightGame), icon: '🕊️', schemes: ALL,
     tagline: 'Высота = сила сигнала. Пролетите сквозь кольца',
     teaches: 'Плавное пропорциональное управление, работа каждого канала отдельно, ровное удержание уровня.',
     how: ['A поднимает птицу, B опускает, покой — середина', 'Жёлтые кольца — канал A, голубые — канал B, белые — расслабление', 'В «потоке» держите высоту ровно до конца'],
   },
   {
-    Game: RhythmGame, id: 'rhythm', title: 'Ритм', icon: '🥁', schemes: ALL,
-    skills: ['timing', 'precision', 'separation'],
+    ...meta(RhythmGame), icon: '🥁', schemes: ALL,
     tagline: 'Сжимайте и раскрывайте в такт музыке',
     teaches: 'Быстрое включение и расслабление, длительность удержания, заданная интенсивность.',
     how: ['Левая дорожка — A (сжатие), правая — B (раскрытие)', 'Включайте канал, когда нота на линии; длинные — держите', 'Точки на ноте — сила: • слабо, •• средне, ••• сильно', 'Широкая нота A+B — коактивация'],
   },
   {
-    Game: SafeGame, id: 'safe', title: 'Сейф', icon: '🔐', schemes: ALL,
-    skills: ['switching', 'timing', 'precision'],
+    ...meta(SafeGame), icon: '🔐', schemes: ALL,
     tagline: 'Код движения: откройте сейф серией жестов',
     teaches: 'Выбор нужного жеста или команды, чистые переходы через покой, повторяемость паттернов.',
     how: ['Покажите команду с карточки и держите, пока заполняется круг', 'Между цифрами кода — полный покой', 'Неверная команда отнимает очки — лучше точнее, чем быстрее'],
   },
   {
-    Game: AssessmentGame, id: 'check', title: 'Проверка навыка', icon: '📋', schemes: ALL, assessment: true,
-    skills: ['precision', 'timing', 'switching'],
+    ...meta(AssessmentGame), icon: '📋', schemes: ALL, assessment: true,
     tagline: 'Раз в неделю: стандартный тест — сравнивайте себя с собой',
     teaches: 'Один и тот же набор попыток каждую неделю (по мотивам Motion Test и TAC-теста): время выбора команды, время выполнения, доля выполненных, точность. Сложность не подстраивается.',
     how: ['Покажите команду с карточки и удерживайте 1 секунду', 'В пропорциональном режиме держите силу в зелёной зоне', 'Между попытками — покой', 'Метрики игровые, не клинический тест'],
@@ -55,8 +53,8 @@ export const GAME_BY_ID = Object.fromEntries(GAMES.map(g => [g.id, g]));
 /** Catalog view used by the pure planning code (core/progress.js). */
 export const PLAN_CATALOG = TRAINING_GAMES.map(g => ({ id: g.id, schemes: g.schemes, skills: g.skills, levelCount: g.Game.levels.length }));
 
-export function createGame(id, { levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion, guidance }) {
+export function createGame(id, { levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion, guidance, onThreshold }) {
   const entry = GAME_BY_ID[id];
   const level = entry.Game.levels[levelNumber - 1];
-  return new entry.Game({ level, levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion, guidance });
+  return new entry.Game({ level, levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion, guidance, onThreshold });
 }

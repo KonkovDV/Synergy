@@ -33,13 +33,8 @@ export class AdaptiveDifficulty {
   /** Scales a tolerance (window width, time limit): easier → larger. */
   widen(value) { return value * (1 + this.ease * this.p.span); }
 
-  /** Scales a requirement (hold time): easier → smaller. */
-  shrink(value) { return value / (1 + this.ease * this.p.span); }
-
   /** Mean ease over the run, for the results screen and the specialist report. */
   get meanEase() { return this.trials ? this.easeSum / this.trials : 0; }
-
-  get label() { return difficultyLabel(this.meanEase); }
 }
 
 export function difficultyLabel(ease) {

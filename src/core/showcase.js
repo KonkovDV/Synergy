@@ -7,12 +7,7 @@ import { DEFAULT_SETTINGS } from './storage.js';
 import { defaultCalibration } from './signal.js';
 import { confusionPairs } from './confusion.js';
 
-const GAMES = [
-  { id: 'grip', levels: 8, skills: ['precision', 'switching', 'stability', 'separation'] },
-  { id: 'flight', levels: 8, skills: ['precision', 'separation', 'stability'] },
-  { id: 'rhythm', levels: 8, skills: ['timing', 'precision', 'separation'] },
-  { id: 'safe', levels: 8, skills: ['switching', 'timing', 'precision'] },
-];
+
 
 export const SHOWCASE_DAYS = 21;
 
@@ -20,7 +15,9 @@ export const SHOWCASE_DAYS = 21;
  * @param {object} settings current settings (presentation preferences are kept)
  * @param {string} today dayKey
  */
-export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey()) {
+export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey(), catalog = []) {
+  // Training games from the registry (PLAN_CATALOG: id, skills, levelCount) — core does not import games.
+  const GAMES = catalog.map(g => ({ id: g.id, levels: g.levelCount, skills: g.skills }));
   const rng = createRng(42);
   const profile = createProfile();
   profile.onboarded = true; profile.tutorialDone = true; profile.tutorialPassed = true;

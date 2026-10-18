@@ -22,6 +22,8 @@ export function startServer({ root = join(ROOT, 'dist'), port = 0, host = '127.0
       const path = decodeURIComponent(new URL(req.url, 'http://local').pathname);
       let file = resolve(base, `.${path}`);
       if (file !== base && !file.startsWith(base + sep)) { res.writeHead(403).end(); return; }
+      // No dotfiles (.git) and no tool caches (tools/.cache holds the debug keystore), even on 127.0.0.1 (5.10).
+      if (path.split('/').some(p => p.startsWith('.') && p !== '.') || path.startsWith('/tools/.cache')) { res.writeHead(404).end(); return; }
       if ((await stat(file)).isDirectory()) file = join(file, 'index.html');
       const body = await readFile(file);
       res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });

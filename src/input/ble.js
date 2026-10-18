@@ -57,7 +57,15 @@ export async function connectBle({ onLine, onStatus = () => {} }) {
   };
   const onGone = () => { tx?.removeEventListener('characteristicvaluechanged', onValue); onStatus('disconnected'); retry(); };
   device.addEventListener('gattserverdisconnected', onGone);
-  await subscribe();
+  // A failed first connection leaves nothing behind (5.10): the listener stayed and a later disconnect started
+  // a reconnect loop that nothing could stop.
+  try { await subscribe(); } catch (e) {
+    closed = true; clearTimeout(timer);
+    tx?.removeEventListener('characteristicvaluechanged', onValue);
+    device.removeEventListener('gattserverdisconnected', onGone);
+    if (device.gatt.connected) device.gatt.disconnect();
+    throw e;
+  }
   return {
     name: device.name || 'BLE-датчик',
     disconnect() {

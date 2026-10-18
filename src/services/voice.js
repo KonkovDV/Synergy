@@ -7,6 +7,13 @@ const native = () => (globalThis.SynergyNative?.speak ? globalThis.SynergyNative
 
 export function voiceAvailable() { return !!native() || !!globalThis.speechSynthesis; }
 
+/** Stops the current phrase (a screen change: the old screen's summary must not run over the new one). */
+export function stopVoice() {
+  if (!enabled) return;
+  globalThis.speechSynthesis?.cancel?.(); native()?.stop?.();
+  last = { text: '', at: -Infinity };
+}
+
 export function setVoiceEnabled(on) {
   enabled = !!on;
   if (!enabled) { globalThis.speechSynthesis?.cancel?.(); native()?.stop?.(); }

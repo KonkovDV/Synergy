@@ -9,7 +9,9 @@
 //   focus       — a focused control hidden under a fixed/sticky bar (WCAG 2.2, 2.4.11);
 //   tiny        — visible text smaller than 12 px;
 //   broken      — a word split mid-word across lines at the default text size, phones ≥ 360 px (5.9: «Пропорциональны / й»);
-//   fold        — the day's «Начать» is below the fold of the home screen (portrait phones).
+//   fold        — the day's «Начать» is below the fold of the home screen (portrait phones);
+//   action      — the main button of an open dialog is out of sight (5.10);
+//   reach       — a pad of a game, tutorial or calibration screen is off screen at the default text size (5.10).
 // Usage: npm run build && npm run audit:layout [-- baseUrl] [-- --quick]   (no URL — serves dist/ itself)
 import { createRequire } from 'node:module';
 import { baseUrl } from '../../tools/static-server.mjs';
@@ -28,7 +30,7 @@ function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
   const out = [];
   // The device width, not innerWidth: a mobile browser zooms out a page that is too wide and innerWidth grows with it.
   const vw = width;
-  const LAYERS = '.overlay, #toasts, .bottom-nav, .sticky-actions, .top-bar, .showcase-banner';
+  const LAYERS = '.overlay, #toasts, .bottom-nav, .sticky-actions, .sheet-actions, .top-bar, .showcase-banner';
   const visible = el => {
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
       const cs = getComputedStyle(n);
@@ -108,7 +110,20 @@ function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
   }
 
   // 3. Overlaps in the same layer (text–text, text–control, control–control), ancestors excluded.
-  const items = [...texts.flatMap(t => t.rects.map(r => ({ el: t.el, r, text: true }))), ...controls.map(el => ({ el, r: el.getBoundingClientRect(), text: false }))];
+  // A rect is clipped to its scrolling ancestors first (5.10): text scrolled out of a scrolling body is not drawn over
+  // the dock below it.
+  const clipToScrollers = (el, r) => {
+    let { left, top, right, bottom } = r;
+    for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+      const c = n.getBoundingClientRect();
+      left = Math.max(left, c.left); top = Math.max(top, c.top); right = Math.min(right, c.right); bottom = Math.min(bottom, c.bottom);
+    }
+    return right - left > 1 && bottom - top > 1 ? { left, top, right, bottom } : null;
+  };
+  const items = [...texts.flatMap(t => t.rects.map(r => ({ el: t.el, r, text: true }))), ...controls.map(el => ({ el, r: el.getBoundingClientRect(), text: false }))]
+    .map(i => ({ ...i, r: clipToScrollers(i.el, i.r) })).filter(i => i.r);
   const seen = new Set();
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
@@ -123,6 +138,33 @@ function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
       const key = [name(a.el), name(b.el)].sort().join(' × ');
       if (seen.has(key)) continue; seen.add(key);
       out.push({ kind: 'overlap', what: `${key} (${Math.round(area)} px²)` });
+    }
+  }
+  return out;
+}
+
+/**
+ * 5.10 — what a player must be able to press without scrolling (default text size):
+ *   action — the main button of an open dialog sheet is inside the sheet's visible part and the screen
+ *            (the intro sheet scrolled «Старт» out of sight on 390×844 — the linter skipped scroll containers);
+ *   reach  — on screens driven by the pads (game, «Первые шаги», calibration) every pad is on screen at once
+ *            (the tutorial put the pads below the fold: the hand and the instruction scrolled away to press them).
+ */
+function reachable() {
+  const out = [], vh = innerHeight, vw = document.documentElement.clientWidth;
+  const label = el => (el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30);
+  for (const sheet of document.querySelectorAll('.overlay:not([hidden]) .sheet')) {
+    const s = sheet.getBoundingClientRect();
+    const btn = sheet.querySelector('.btn.primary');
+    if (!btn) continue;
+    const b = btn.getBoundingClientRect();
+    if (b.top < Math.max(0, s.top) - 1 || b.bottom > Math.min(vh, s.bottom) + 1) out.push({ kind: 'action', what: `«${label(btn)}» out of sight in the dialog (${Math.round(b.top)}…${Math.round(b.bottom)} of ${Math.round(Math.min(vh, s.bottom))})` });
+  }
+  if (document.querySelector('.play-screen, .tutorial, .calibration')) {
+    for (const pad of document.querySelectorAll('.pad, .gkey, .pad-co')) {
+      const r = pad.getBoundingClientRect();
+      if (!r.width) continue;
+      if (r.top < -1 || r.bottom > vh + 1 || r.right > vw + 1) { out.push({ kind: 'reach', what: `pad «${label(pad)}» off screen (${Math.round(r.top)}…${Math.round(r.bottom)} of ${vh})` }); break; }
     }
   }
   return out;
@@ -181,8 +223,8 @@ const check = { ...run, id: 'r2', game: 'check', level: 1, levelCount: 1, score:
 /** The journey: [name, setup(page)] — each setup leaves the screen to audit. */
 const STATES = [
   ['onboarding-1', async p => {}],
-  ['onboarding-2', async p => { await p.getByRole('button', { name: 'Дальше' }).click(); }],
-  ['onboarding-3', async p => { await p.getByRole('button', { name: 'Дальше' }).click(); }],
+  ['onboarding-2', async p => { await p.waitForTimeout(350); await p.getByRole('button', { name: 'Дальше' }).click(); }],
+  ['onboarding-3', async p => { await p.waitForTimeout(350); await p.getByRole('button', { name: 'Дальше' }).click(); }],
   ['home-new', async p => { await p.getByRole('button', { name: 'Пропустить обучение' }).click(); }],
   ['tutorial', async p => go(p, 'tutorial')],
   ['checkin', async p => { await go(p, 'checkin'); await p.getByRole('radio', { name: /Умеренная/ }).click(); await p.getByRole('radio', { name: /Есть усталость/ }).click(); }],
@@ -226,7 +268,7 @@ for (const [w, h] of VIEWPORTS) {
       await page.waitForTimeout(state.startsWith('play') || state.startsWith('gesture') ? 350 : 150);
       // Whole words at the default text size on phones from 360 px; at 320 px (the WCAG reflow width) and at 130–200 %
       // text a split is the lesser evil than text past the edge.
-      const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...await page.evaluate(coveredAtEnd)];
+      const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...(scale === 1 ? await page.evaluate(reachable) : []), ...await page.evaluate(coveredAtEnd)];
       if (scale === 1 && w < 700) found.push(...await focusWalk(page));
       // The day's main action is visible on the home screen without scrolling (portrait phones, default text).
       if (/home/.test(state) && scale === 1 && h > w && w < 700) {

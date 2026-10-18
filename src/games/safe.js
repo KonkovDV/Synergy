@@ -3,9 +3,11 @@
 // and co-contraction. Repeating each pattern consistently trains separable EMG patterns
 // (Kristoffersen et al. 2020, 25 able-bodied participants: about 51 % more separated patterns after game training;
 // the 2021 study with limb-absent users found no consistent gain, so this is a design idea, not a promise).
+import { fmtFixed } from '../core/format.js';
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand } from '../render/draw.js';
+import { reachableBand } from '../core/signal.js';
 
 /** Prompt pools per scheme; `from` = level where the prompt is introduced (gestures: GESTURES[].introducedAt). */
 export const PROMPTS = {
@@ -46,7 +48,9 @@ export class SafeGame extends Game {
 
   constructor(opts) {
     super(opts);
-    const pool = PROMPTS[this.scheme].filter(p => p.from <= this.levelNumber);
+    // Graded prompts sit above the user's switch-on threshold (5.10: «слабо» was unreachable at sensitivity 0.45).
+    const pool = PROMPTS[this.scheme].filter(p => p.from <= this.levelNumber)
+      .map(p => (this.scheme === SCHEME.PROPORTIONAL && p.command !== COMMAND.SWITCH ? { ...p, band: reachableBand(p.band, this.onThreshold) } : p));
     this.code = [];
     for (let i = 0; i < this.level.code; i++) {
       let p; do { p = this.rng.pick(pool); } while (pool.length > 1 && p.id === this.code[i - 1]?.id);
@@ -74,7 +78,7 @@ export class SafeGame extends Game {
   step(dt, intent) {
     const card = this.card;
     if (!card) return;
-    const resting = intent.command === COMMAND.REST;
+    const resting = intent.relaxed; // both channels off: two tense muscles are not a rest (5.10)
     if (this.phase === 'rest') {
       // A clean transition: every code digit starts from rest.
       this.restFor = resting ? this.restFor + dt : 0;
@@ -185,10 +189,10 @@ export class SafeGame extends Game {
         drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
         text(ctx, card.name, w / 2 + cw * 0.14, y0 + ch * 0.4, { size: 18, weight: 800, maxWidth: cw * 0.6 });
         if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {
-          text(ctx, `${Math.round(card.band[0] * 100)}–${Math.min(100, Math.round(card.band[1] * 100))} %`, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
+          text(ctx, `${Math.round(card.band[0] * 100)}–${Math.min(100, Math.round(card.band[1] * 100))}\u00a0%`, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
         }
         const left = Math.max(0, this.limit - this.cardTime);
-        text(ctx, `${left.toFixed(1)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, color: left < 1.5 ? COLORS.bad : COLORS.muted });
+        text(ctx, `${fmtFixed(left)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, color: left < 1.5 ? COLORS.bad : COLORS.muted });
         if (this.liveFeedback(this.index)) {
           ctx.strokeStyle = COLORS.good; ctx.lineWidth = 5; ctx.lineCap = 'round';
           ctx.beginPath(); ctx.arc(w / 2 - cw * 0.22, y0 + ch * 0.5, ch * 0.42, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(this.holdFor / this.level.hold)); ctx.stroke();

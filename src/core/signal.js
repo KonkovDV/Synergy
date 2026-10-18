@@ -25,6 +25,18 @@ export function readFrame(f) {
   return frame;
 }
 
+/**
+ * Force band in the range the user can reach (5.10). A command only starts above the switch-on threshold, so a
+ * band below it cannot be shown: at sensitivity 0.45 every «слабо» prompt failed and the skill check lost two of
+ * eight trials even for a perfect player. Nominal bands are defined for the default threshold; values from it up
+ * map linearly onto [threshold, 1] (order and proportions kept; ≥ 1 means «no upper bound»). At the default
+ * threshold the map is the identity, so results stay comparable with earlier weeks.
+ */
+export function reachableBand([lo, hi], onThreshold = SIGNAL.onThreshold, ref = SIGNAL.onThreshold) {
+  const map = x => (x >= 1 ? x : onThreshold + Math.max(0, x - ref) * (1 - onThreshold) / (1 - ref));
+  return [map(lo), map(hi)];
+}
+
 /** Calibration — rest baseline and comfortable maximum per channel, in source units. */
 export function defaultCalibration() {
   return { rest: [0, 0], max: [1, 1], at: null };
@@ -40,7 +52,7 @@ export function normalize(value, channel, calibration) {
 export function restIntent(scheme, valid, t = 0) {
   return {
     valid, scheme, t, command: COMMAND.REST, intensity: 0, level: 0,
-    a: 0, b: 0, aOn: false, bOn: false, co: false,
+    a: 0, b: 0, aOn: false, bOn: false, co: false, relaxed: valid,
     gesture: scheme === SCHEME.GESTURE ? 'rest' : null, confidence: 0, uncertain: false,
   };
 }
@@ -100,13 +112,14 @@ export class SignalPipeline {
   }
 
   updateChannels(t) {
-    const { onThreshold, hysteresis, coThreshold } = this.params;
-    const off = onThreshold - hysteresis;
+    const { onThreshold, hysteresis, hysteresisMinRatio, coThreshold, coHysteresis } = this.params;
+    const off = Math.max(onThreshold - hysteresis, onThreshold * hysteresisMinRatio);
     this.aOn = this.aOn ? this.a >= off : this.a >= onThreshold;
     this.bOn = this.bOn ? this.b >= off : this.b >= onThreshold;
-    // Onset of the «high» zone used to recognise a deliberate co-contraction.
-    this.aHighSince = this.a >= coThreshold ? (this.aHighSince ?? t) : null;
-    this.bHighSince = this.b >= coThreshold ? (this.bHighSince ?? t) : null;
+    // Onset of the «high» zone used to recognise a deliberate co-contraction; kept through small dips.
+    const high = (x, since) => (x >= coThreshold ? (since ?? t) : since !== null && x >= coThreshold - coHysteresis ? since : null);
+    this.aHighSince = high(this.a, this.aHighSince);
+    this.bHighSince = high(this.b, this.bHighSince);
   }
 
   updateGesture(frame, t) {
@@ -123,9 +136,11 @@ export class SignalPipeline {
   }
 
   interpret(now) {
+    // `relaxed` — both channels off. «Покой» checks use it, not the REST command: two tense muscles without a
+    // co-contraction are REST for the prosthesis (it holds), but they are not relaxation (5.10).
     const base = {
       valid: true, scheme: this.scheme, t: now,
-      a: this.a, b: this.b, aOn: this.aOn, bOn: this.bOn, co: this.isCoContraction(),
+      a: this.a, b: this.b, aOn: this.aOn, bOn: this.bOn, co: this.isCoContraction(), relaxed: !this.aOn && !this.bOn,
       gesture: null, confidence: 1, uncertain: false,
     };
     if (this.scheme === SCHEME.GESTURE && this.lastFrame?.gesture) return { ...base, ...this.fromGesture() };
@@ -159,6 +174,6 @@ export class SignalPipeline {
     const command = gesture.command;
     const intensity = command === COMMAND.REST ? 0 : clamp(effort);
     const level = command === COMMAND.CLOSE ? intensity : command === COMMAND.OPEN ? -intensity : 0;
-    return { command, intensity, level, gesture: gesture.id, confidence: this.confidence ?? 1, uncertain: !!this.uncertain };
+    return { command, intensity, level, gesture: gesture.id, confidence: this.confidence ?? 1, uncertain: !!this.uncertain, relaxed: command === COMMAND.REST };
   }
 }

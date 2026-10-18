@@ -1,5 +1,6 @@
 // Reusable UI pieces (DRY): bottom navigation, live signal meter, form rows.
 import { h, longestWord } from './dom.js';
+import { fmtSec } from '../core/format.js';
 import { COMMAND_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { drawMio } from '../render/draw.js';
 
@@ -118,3 +119,13 @@ export function mioAvatar(mood = 'support', size = 48) {
   return canvas;
 }
 
+
+/**
+ * The hands-free hint (start, «дальше»): what to hold depends on the scheme — there is no «A» in the gesture scheme,
+ * where any closing grip counts (5.10). `spoken` — the voice version.
+ */
+export function handsFreeText(scheme, seconds, action, { spoken = false } = {}) {
+  const what = scheme === 'gesture' ? 'любой хват' : 'сжатие (A)';
+  return spoken ? `Чтобы ${action === 'старт' ? 'начать' : 'продолжить'} без касания, расслабьтесь, затем удерживайте ${scheme === 'gesture' ? 'любой хват' : 'сжатие'}.`
+    : `Расслабьтесь, затем удерживайте ${what} ${fmtSec(seconds)} — ${action} без касания`;
+}

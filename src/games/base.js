@@ -6,6 +6,7 @@ import { starsFor } from '../core/progress.js';
 import { createRng } from '../core/rng.js';
 import { AdaptiveDifficulty } from '../core/adaptive.js';
 import { showsFeedback } from '../core/guidance.js';
+import { SIGNAL } from '../config.js';
 
 export const clamp01 = x => Math.max(0, Math.min(1, x));
 export const pct = x => Math.round(100 * clamp01(x));
@@ -21,16 +22,20 @@ export class SeparationMeter {
   get score() { return this.active > 0.05 ? pct(1 - this.leak / this.active) : null; }
 }
 
-/** Stability: deviation of a controlled value from its local mean during holds. */
+/**
+ * Stability: deviation of a controlled value from its local mean during holds. Time-based (5.10): the local mean
+ * follows with τ = 0.2 s and the variance is weighted by time — per frame, the same hold scored 72/82/89 at
+ * 30/60/120 fps in the specialist report.
+ */
 export class StabilityMeter {
-  constructor(tolerance = 0.12) { this.tolerance = tolerance; this.sum = 0; this.n = 0; this.mean = null; }
+  constructor(tolerance = 0.12, tauS = 0.2) { this.tolerance = tolerance; this.tauS = tauS; this.sum = 0; this.time = 0; this.mean = null; }
   /** Starts a new hold (next object or stream): the target level may differ, only wobble counts. */
   segment() { this.mean = null; }
-  add(value) {
-    this.mean = this.mean === null ? value : this.mean + (value - this.mean) * 0.08;
-    const d = value - this.mean; this.sum += d * d; this.n++;
+  add(value, dt = 1 / 60) {
+    this.mean = this.mean === null ? value : this.mean + (value - this.mean) * (1 - Math.exp(-dt / this.tauS));
+    const d = value - this.mean; this.sum += d * d * dt; this.time += dt;
   }
-  get score() { return this.n > 20 ? pct(1 - Math.sqrt(this.sum / this.n) / this.tolerance) : null; }
+  get score() { return this.time > 0.35 ? pct(1 - Math.sqrt(this.sum / this.time) / this.tolerance) : null; }
 }
 
 /** Gesture confusions: seconds a wrong *active* gesture was recognized while another was asked. */
@@ -56,8 +61,9 @@ export class Game {
   static adaptive = true;
 
   constructor({ level, levelNumber = 1, scheme, seed = 1, retention = false, skin = 'graphite', mirror = false,
-    adaptive = true, speed = 1, reduceMotion = false, guidance = 1 }) {
+    adaptive = true, speed = 1, reduceMotion = false, guidance = 1, onThreshold = SIGNAL.onThreshold }) {
     this.level = level;
+    this.onThreshold = onThreshold; // the user's switch-on threshold: force bands are placed above it (reachableBand)
     this.guidance = retention ? 0 : guidance; // share of trials with live feedback (faded feedback)
     this.speed = speed;              // темп игры: игровое время идёт медленнее (Game Accessibility Guidelines)
     this.reduceMotion = reduceMotion; // без частиц и вспышек
@@ -121,7 +127,7 @@ export class Game {
   details() { return {}; }
   /** Procedural music of the game (core/music.js events) or null — only «Ритм» has a song. */
   music() { return null; }
-  hud() { return { progress: this.progress(), score: Math.round(this.scoreValue()), hint: this.hint }; }
+  hud() { return { progress: this.progress(), score: Math.round(this.scoreValue()) }; }
 
   result() {
     const score = Math.round(Math.max(0, Math.min(100, this.scoreValue())));

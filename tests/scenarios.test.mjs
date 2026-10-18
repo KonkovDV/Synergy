@@ -107,3 +107,13 @@ test('scenario 5.6: a reset can be undone once (the previous state is kept on th
   store.reset(); store.reset(); store.undoReset();
   assert.equal(store.state.runs.length, 0, 'a second reset erases the copy: health data can be removed for good');
 });
+
+test('scenario 1.7a: a harder game later in the plan is not fatigue — each run is compared with the usual result in that game and level', () => {
+  const at = '2026-10-10T10:00:00';
+  const past = [run('grip', 86), run('safe', 97), run('flight', 48)].map((r, i) => ({ ...r, level: [1, 1, 8][i], at }));
+  const today = [{ ...run('grip', 85), level: 1 }, { ...run('safe', 99), level: 1 }, { ...run('flight', 47), level: 8 }];
+  assert.equal(adviseStop(today, 450, 30, [...past, ...today]), null, 'until 5.10: «снизился на 45 очков» after level-1 games');
+  const tired = [{ ...run('grip', 85), level: 1 }, { ...run('safe', 99), level: 1 }, { ...run('flight', 20), level: 8 }];
+  assert.equal(adviseStop(tired, 450, 30, [...past, ...tired])?.reason, 'fatigue', 'a real drop against the usual result still stops');
+  assert.equal(adviseStop([run('grip', 90), run('flight', 88), run('rhythm', 60)], 450, 30)?.reason, 'fatigue', 'no history: raw scores (safety first)');
+});

@@ -8,6 +8,7 @@ import { onboardingScreen } from './onboarding.js';
 import { checkinScreen } from './checkin.js';
 import { tutorialScreen } from './tutorial.js';
 import { pinGateScreen } from './pin.js';
+import { recoveryScreen } from './recovery.js';
 
 export const SCREENS = {
   home: homeScreen,
@@ -22,4 +23,5 @@ export const SCREENS = {
   checkin: checkinScreen,
   tutorial: tutorialScreen,
   pin: pinGateScreen,
+  recovery: recoveryScreen,
 };

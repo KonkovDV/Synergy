@@ -5,6 +5,7 @@ import { Game, SeparationMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound } from '../render/draw.js';
 import { musicPattern } from '../core/music.js';
+import { reachableBand } from '../core/signal.js';
 
 const LEVELS = [
   { bpm: 72, beats: 28, every: 2, holdChance: 0, bands: [2], both: false },
@@ -17,6 +18,7 @@ const LEVELS = [
   { bpm: 108, beats: 48, every: 1, holdChance: 0.45, bands: [1, 2, 3], both: true },
 ];
 
+/** Nominal force bands (default threshold); a game uses them mapped above the user's threshold (`this.bands`). */
 export const BANDS = { 1: [0.18, 0.45], 2: [0.45, 0.7], 3: [0.7, 1.01] };
 const PERFECT_S = 0.1, GOOD_S = 0.22;
 // Input-chain delay compensated in judging: envelope rise + smoothing (two channels),
@@ -42,6 +44,7 @@ export class RhythmGame extends Game {
     this.beat = 60 / this.level.bpm;
     this.latency = LATENCY_S[this.scheme] * this.speed; // real input delay expressed in (slowed) game time
     this.graded = this.scheme !== SCHEME.THRESHOLD;
+    this.bands = Object.fromEntries(Object.entries(BANDS).map(([k, b]) => [k, reachableBand(b, this.onThreshold)]));
     this.notes = this.buildChart();
     this.total = (COUNT_IN_BEATS + this.level.beats + 2) * this.beat;
     this.lane = { a: false, b: false, both: false };
@@ -133,7 +136,7 @@ export class RhythmGame extends Game {
 
   bandOk(note) {
     if (!note.band) return true;
-    const [lo, hi] = BANDS[note.band];
+    const [lo, hi] = this.bands[note.band];
     this.bandChecks++;
     const ok = note.peak >= lo && note.peak < hi;
     if (ok) this.bandHits++;
@@ -163,7 +166,7 @@ export class RhythmGame extends Game {
   scored(note, band, issue = null) {
     this.adapt.record(note.score >= 0.6);
     this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
-    const label = issue ?? (!band ? (note.peak < BANDS[note.band][0] ? 'Слабее нужного' : 'Сильнее нужного') : note.grade === 'perfect' ? 'Отлично' : 'Хорошо');
+    const label = issue ?? (!band ? (note.peak < this.bands[note.band][0] ? 'Слабее нужного' : 'Сильнее нужного') : note.grade === 'perfect' ? 'Отлично' : 'Хорошо');
     this.popup(note.lane, label, !band || issue ? COLORS.warn : note.grade === 'perfect' ? COLORS.good : COLORS.accent);
     if (this.combo > 0 && this.combo % 8 === 0) this.emit('perfect');
   }
@@ -176,7 +179,7 @@ export class RhythmGame extends Game {
     const lead = this.scheme === SCHEME.GESTURE ? 0.19 : 0.06; // anticipate envelope rise / classifier delay
     const note = this.notes.find(n => (n.state === 'wait' || n.state === 'active') && now >= n.at - lead - 0.02 && now <= n.at + Math.max(n.dur, 0.14));
     if (!note || (note.state === 'active' && now > note.at + Math.max(note.dur, 0.14) - 0.05)) return this.scheme === SCHEME.GESTURE ? { gesture: 'rest', effort: 0 } : { a: 0, b: 0 };
-    const level = note.band ? (BANDS[note.band][0] + Math.min(1, BANDS[note.band][1]) ) / 2 : 0.6;
+    const level = note.band ? (this.bands[note.band][0] + Math.min(1, this.bands[note.band][1])) / 2 : 0.6;
     if (note.lane === 'both') return { a: 0.75, b: 0.75 };
     if (this.scheme === SCHEME.GESTURE) return { gesture: note.lane === 'a' ? CLOSING_GESTURES[0].id : OPENING_GESTURE.id, effort: level };
     return note.lane === 'a' ? { a: level, b: 0 } : { a: 0, b: level };
@@ -225,8 +228,11 @@ export class RhythmGame extends Game {
     if (this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, hitY * 0.5, { size: Math.min(54, h * 0.2), weight: 800, color: 'rgba(255,255,255,0.35)' });
     if (this.combo >= 4) text(ctx, `${this.combo} подряд`, w / 2, Math.max(16, hitY * 0.12), { size: 15, weight: 800, color: 'rgba(255,204,77,0.75)', maxWidth: w * 0.3 });
     // Notes are the task, not feedback: the retention probe shows them too (it hides the lane light and the force meter).
+    // A note is on the line exactly at its beat — when the music and the vibration mark it. The input delay is
+    // compensated once, in judging (`time − latency`); until 5.10 it was also added here, so a player who acted on
+    // the picture was judged 80 ms late (200 ms with gestures).
     for (const n of this.notes) {
-      const ny = y(n.at + this.latency), endY = y(n.at + n.dur + this.latency);
+      const ny = y(n.at), endY = y(n.at + n.dur);
       if (ny < -60 || endY > h + 40 || n.state === 'done' || n.state === 'miss') continue;
       if (n.lane === 'both') {
         fillRound(ctx, laneX.a - noteR - 10, ny - noteR * 0.6, laneX.b - laneX.a + noteR * 2 + 20, noteR * 1.2, noteR * 0.6, '#ffffff');
@@ -243,7 +249,7 @@ export class RhythmGame extends Game {
     if (this.graded && intent && this.liveFeedback(Math.floor(this.time / (this.beat * 8)))) {
       const mx = w - 26, my = h * 0.12, mh = hitY - h * 0.12 - 18;
       fillRound(ctx, mx, my, 12, mh, 6, 'rgba(255,255,255,0.08)');
-      for (const b of [1, 2, 3]) { const [lo] = BANDS[b]; ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(mx - 4, my + mh * (1 - lo), 20, 2); }
+      for (const b of [1, 2, 3]) { const [lo] = this.bands[b]; ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(mx - 4, my + mh * (1 - lo), 20, 2); }
       fillRound(ctx, mx + 2, my + mh * (1 - intent.intensity), 8, Math.max(4, mh * intent.intensity), 4, COLORS.good);
       text(ctx, 'сила', mx + 6, my + mh + 10, { size: 12, color: COLORS.muted });
     }

@@ -7,6 +7,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { NUMBER_DOCS } from './number-docs.mjs';
+import { apkSigner } from './apk-signer.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const draft = process.argv.includes('--draft');
@@ -24,6 +25,13 @@ for (const [name, v] of [['src/config.js', appVersion], ['AndroidManifest.xml', 
 const apk = join(root, 'release', `Synergy-${version}.apk`);
 if (!existsSync(apk)) fail(`нет release/Synergy-${version}.apk`);
 if (!existsSync(join(root, 'release/synergy-standalone.html'))) fail('нет release/synergy-standalone.html');
+// The APK users install must carry the team's key: the debug key's password is in tools/build-apk.sh, so anyone
+// could sign an «update» that inherits the app's data (5.10, Red Team C-1). A draft may still carry it.
+if (existsSync(apk)) {
+  const sig = apkSigner(apk);
+  if (!sig.signed) fail(`release/Synergy-${version}.apk не подписан`);
+  else if (sig.debug) (draft ? warn : fail)(`APK подписан отладочным ключом — для раздачи соберите релиз с ключом команды (release.yml, секреты KEYSTORE_*)`);
+}
 const stale = readdirSync(join(root, 'release')).filter(f => f.endsWith('.apk') && f !== `Synergy-${version}.apk`);
 if (stale.length) fail(`старые APK в release/: ${stale.join(', ')}`);
 

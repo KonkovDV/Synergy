@@ -7,6 +7,7 @@ import { confusionRow, pickWeighted } from '../core/confusion.js';
 import { createRng } from '../core/rng.js';
 
 const ATTACK_S = 0.055, DECAY_S = 0.11, NOISE_S = 0.04;
+const K60 = 1 - Math.exp(-1 / 60 / NOISE_S), NOISE_K60 = K60 / (2 - K60); // stationary variance of the 60 fps noise
 
 export class EmgEmulator {
   constructor({ realism = 0.5, seed = 7 } = {}) {
@@ -47,7 +48,10 @@ export class EmgEmulator {
     const out = [0, 1].map(ch => {
       const tau = targets[ch] > this.env[ch] ? ATTACK_S : DECAY_S;
       this.env[ch] += (targets[ch] - this.env[ch]) * (1 - Math.exp(-dt / tau));
-      this.noise[ch] += (this.rng.gauss() - this.noise[ch]) * (1 - Math.exp(-dt / NOISE_S));
+      // Discrete Ornstein–Uhlenbeck step; the innovation is scaled so the noise level is the 60 fps one at any
+      // frame rate (5.10: it was 0.031/0.024/0.019 at 30/60/120 fps).
+      const k = 1 - Math.exp(-dt / NOISE_S);
+      this.noise[ch] += (this.rng.gauss() * Math.sqrt(((2 - k) / k) * NOISE_K60) - this.noise[ch]) * k;
       return this.env[ch];
     });
     const tremor = Math.sin(2 * Math.PI * 9 * t / 1000);

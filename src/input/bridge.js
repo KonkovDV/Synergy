@@ -83,12 +83,18 @@ export class EnvelopeFilter {
     this.samples = [];
   }
 
+  /** Standard deviation over the window (RMS of the signal minus its mean): an amplifier's DC offset is removed
+   *  (5.10 — with plain RMS an offset of 0.3 turned half effort 0.50 into 0.34). */
   push(t, a, b) {
-    this.samples.push([t, a * a, b * b]);
+    this.samples.push([t, a, b]);
     while (this.samples.length > this.maxSamples || this.samples[0][0] < t - this.windowMs) this.samples.shift();
-    let sa = 0, sb = 0;
-    for (const [, qa, qb] of this.samples) { sa += qa; sb += qb; }
-    return [Math.sqrt(sa / this.samples.length), Math.sqrt(sb / this.samples.length)];
+    const n = this.samples.length;
+    let ma = 0, mb = 0;
+    for (const [, x, y] of this.samples) { ma += x; mb += y; }
+    ma /= n; mb /= n;
+    let va = 0, vb = 0;
+    for (const [, x, y] of this.samples) { va += (x - ma) ** 2; vb += (y - mb) ** 2; }
+    return [Math.sqrt(va / n), Math.sqrt(vb / n)];
   }
 }
 

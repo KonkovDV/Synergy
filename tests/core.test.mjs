@@ -165,3 +165,12 @@ test('bridge: tolerant parsing of emulator formats', () => {
   assert.deepEqual(parseExternal({ gesture: 3, a: 0.5, b: 0 }), { a: 0.5, b: 0, gesture: 'pinch', confidence: 1 });
   assert.equal(parseExternal('garbage'), null);
 });
+
+test('Russian formatting: plural forms, decimal comma, percent with a non-breaking space', async () => {
+  const { plural, count, fmtNum, fmtPct, fmtSec, FORMS } = await import('../src/core/format.js');
+  const forms = [1, 2, 5, 11, 12, 14, 21, 22, 25, 101, 111, 0].map(n => `${n} ${plural(n, FORMS.points)}`);
+  assert.deepEqual(forms, ['1 очко', '2 очка', '5 очков', '11 очков', '12 очков', '14 очков', '21 очко', '22 очка', '25 очков', '101 очко', '111 очков', '0 очков']);
+  assert.equal(count(1, FORMS.exercises), '1 упражнение', 'not «1 упражнений»');
+  assert.equal(fmtNum(1.5), '1,5'); assert.equal(fmtNum(1), '1'); assert.equal(fmtNum(13.456, 2), '13,46');
+  assert.equal(fmtPct(22), '22 %'); assert.equal(fmtSec(1.2), '1,2 с'); assert.equal(fmtNum(NaN), '—');
+});

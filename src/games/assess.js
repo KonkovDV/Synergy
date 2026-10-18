@@ -9,10 +9,12 @@
 // target onset to the entry that led to a completed dwell (the dwell itself excluded), throughput
 // TP = mean(ID/MT) over completed trials («mean of means»), bits/s; plus path efficiency D / path.
 // Game metrics, not a clinically validated test; compare a person with themselves week to week.
+import { fmtFixed } from '../core/format.js';
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURE_IDS } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand, drawGauge } from '../render/draw.js';
 import { createRng } from '../core/rng.js';
+import { reachableBand } from '../core/signal.js';
 
 export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, seed: 2026 };
 /** Fitts block of the proportional scheme: every distance × width once, in a fixed shuffled order. */
@@ -32,8 +34,12 @@ function fittsBlock() {
 }
 
 
-/** The fixed trial set of each control scheme (gestures: every active gesture twice, shuffled by the fixed seed). */
-export function assessmentTrials(scheme) {
+/**
+ * The fixed trial set of each control scheme (gestures: every active gesture twice, shuffled by the fixed seed).
+ * Fitts targets are placed above the user's switch-on threshold (reachableBand — the identity at the default one);
+ * D, W and ID are those of the placed band, so throughput stays honest when the threshold differs (5.10).
+ */
+export function assessmentTrials(scheme, onThreshold) {
   if (scheme === SCHEME.GESTURE) {
     const rng = createRng(ASSESS.seed), order = [];
     for (let round = 0; round < 2; round++) {
@@ -49,7 +55,11 @@ export function assessmentTrials(scheme) {
   if (scheme === SCHEME.THRESHOLD) {
     return ['close', 'open', 'switch', 'close', 'open', 'switch'].map(c => ({ command: c, name: COMMAND_NAME[c], pose: COMMAND_POSE[c] }));
   }
-  return [...fittsBlock(), { command: COMMAND.SWITCH, band: null }, { command: COMMAND.SWITCH, band: null }].map(t => ({
+  const placed = fittsBlock().map(t => {
+    const band = reachableBand(t.band, onThreshold), d = (band[0] + band[1]) / 2, w = band[1] - band[0];
+    return { ...t, level: d, band, fitts: { d, w, id: fittsId(d, w) } };
+  });
+  return [...placed, { command: COMMAND.SWITCH, band: null }, { command: COMMAND.SWITCH, band: null }].map(t => ({
     ...t, pose: COMMAND_POSE[t.command],
     name: t.fitts ? `${COMMAND_NAME[t.command]} · ${Math.round(t.level * 100)} % · ${t.fitts.w < 0.2 ? 'узко' : 'широко'}` : COMMAND_NAME[t.command],
   }));
@@ -64,7 +74,7 @@ export class AssessmentGame extends Game {
 
   constructor(opts) {
     super(opts);
-    this.trials = assessmentTrials(this.scheme).map(t => ({ ...t, state: 'wait' }));
+    this.trials = assessmentTrials(this.scheme, this.onThreshold).map(t => ({ ...t, state: 'wait' }));
     this.index = 0; this.phase = 'rest'; this.restFor = 0;
     this.confusion = new ConfusionMeter();
     this.hint = 'Стандартная проверка: покажите команду и держите 1 секунду';
@@ -88,11 +98,14 @@ export class AssessmentGame extends Game {
     const t = this.trial;
     if (!t) return;
     if (this.phase === 'rest') {
-      this.restFor = intent.command === COMMAND.REST ? this.restFor + dt : 0;
+      this.restFor = intent.relaxed ? this.restFor + dt : 0; // both channels off (5.10: tension in both passed as rest)
       this.hint = 'Покой перед следующей попыткой';
       if (this.restFor >= ASSESS.restS) {
         this.phase = 'trial';
-        Object.assign(t, { t: 0, hold: 0, selectedAt: null, correct: 0, active: 0, overshoots: 0, above: false, enteredAt: null, path: 0, pathAtEntry: 0, lastX: null });
+        // Path efficiency (5.10): straight-line distance from the level at target onset to the level at entry,
+        // over the path between them — until then the band centre was divided by the path to the band edge.
+        const x0 = t.command === COMMAND.OPEN ? intent.b : intent.a;
+        Object.assign(t, { t: 0, hold: 0, selectedAt: null, correct: 0, active: 0, overshoots: 0, above: false, enteredAt: null, path: 0, pathAtEntry: 0, lastX: x0, startX: x0, entryX: null });
       }
       return;
     }
@@ -111,7 +124,7 @@ export class AssessmentGame extends Game {
       const x = t.command === COMMAND.CLOSE ? intent.a : intent.b;
       if (t.lastX !== null) t.path += Math.abs(x - t.lastX);
       t.lastX = x;
-      if (on && t.hold === 0) { t.enteredAt = t.t; t.pathAtEntry = t.path; }
+      if (on && t.hold === 0) { t.enteredAt = t.t; t.pathAtEntry = t.path; t.entryX = x; }
     }
     // Tolerant dwell: brief slips cost twice their duration instead of a full restart.
     t.hold = on ? t.hold + dt : Math.max(0, t.hold - 2 * dt);
@@ -152,7 +165,7 @@ export class AssessmentGame extends Game {
       accuracy: active > 0 ? done.reduce((s, t) => s + (t.correct ?? 0), 0) / active : null,
       overshoots: done.reduce((s, t) => s + (t.overshoots ?? 0), 0),
       throughput: mean(fitts.map(t => t.fitts.id / Math.max(FITTS.minMtS, t.enteredAt))),
-      pathEfficiency: mean(fitts.map(t => clamp01(t.fitts.d / Math.max(1e-6, t.pathAtEntry)))),
+      pathEfficiency: mean(fitts.map(t => (t.pathAtEntry > 1e-6 ? clamp01(Math.abs(t.entryX - t.startX) / t.pathAtEntry) : 1))),
       fittsTrials: fitts.length,
     };
   }
@@ -179,7 +192,7 @@ export class AssessmentGame extends Game {
     const m = this.metrics();
     const ms = v => (v === null ? null : Math.round(1000 * v));
     return {
-      assessment: true, trialsTotal: this.trials.length,
+      assessment: true, trialsTotal: this.trials.length, onThreshold: this.onThreshold,
       completionRate: Math.round(100 * m.completionRate), selectionMs: ms(m.selectionS), completionMs: ms(m.completionS),
       accuracy: m.accuracy === null ? null : Math.round(100 * m.accuracy), overshoots: m.overshoots,
       ...(this.trials.some(t => t.fitts) ? {
@@ -223,7 +236,7 @@ export class AssessmentGame extends Game {
     const [main, ...detail] = t.name.split(' · ');
     text(ctx, main, tx, y0 + ch * 0.3, { size: 18, weight: 800, maxWidth });
     if (detail.length) text(ctx, detail.join(' · '), tx, y0 + ch * 0.46, { size: 14, weight: 700, maxWidth });
-    text(ctx, `${Math.max(0, ASSESS.timeoutS - t.t).toFixed(1)} с`, tx, y0 + ch * (detail.length ? 0.62 : 0.5), { size: 13, color: COLORS.muted, maxWidth });
+    text(ctx, `${fmtFixed(Math.max(0, ASSESS.timeoutS - t.t))} с`, tx, y0 + ch * (detail.length ? 0.62 : 0.5), { size: 13, color: COLORS.muted, maxWidth });
     if (showGauge && intent) {
       drawGauge(ctx, { x: x0 + cw - 34, y: y0 + 16, w: 18, h: ch - 44, value: intent.intensity, min: t.band[0], max: t.band[1], color: COLORS.accent, label: 'сила' });
     }

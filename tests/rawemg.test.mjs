@@ -41,3 +41,11 @@ test('raw mode: samples older than the window leave it — the envelope falls wh
   for (let i = 200; i < 500; i++) { at(i); src.feed({ a: i % 2 ? 0.01 : -0.01, b: 0 }); }
   assert.ok(src.latest.a < 0.02, `after relaxing: ${src.latest.a}`);
 });
+
+test('raw mode: an amplifier DC offset does not change the envelope (standard deviation, not plain RMS)', () => {
+  for (const offset of [0, 0.3, 1]) {
+    const { src, at } = source();
+    for (let i = 0; i < 400; i++) { at(i); src.feed({ a: offset + 0.5 * Math.SQRT2 * Math.sin(2 * Math.PI * 70 * i / 1000) - (i === 0 ? 2 : 0), b: 0 }); }
+    assert.ok(Math.abs(src.latest.a - 0.5) < 0.03, `offset ${offset}: ${src.latest.a.toFixed(3)} (plain RMS read 0.34 at offset 0.3)`);
+  }
+});

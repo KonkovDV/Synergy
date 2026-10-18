@@ -123,16 +123,6 @@ export function drawGauge(ctx, { x, y, w, h, value, min = null, max = null, dang
   if (label) text(ctx, label, x + w / 2, y + h + 14, { size: 12, color: COLORS.muted });
 }
 
-export function drawStar(ctx, x, y, r, filled, color = COLORS.warn) {
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r;
-    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-  }
-  ctx.closePath();
-  ctx.fillStyle = filled ? color : 'rgba(255,255,255,0.15)'; ctx.fill();
-}
-
 /**
  * «Мио» — the coach: a round bionic buddy with a two-sensor antenna (channels A and B) and a visor face.
  * Moods: joy (success), support (keep going), rest (stop for today). Procedural, no assets.

@@ -36,7 +36,7 @@ const HEAVY_SLIP = 0.05;    // force lost per second while carrying heavy object
 export class GripGame extends Game {
   static id = 'grip';
   static title = 'Мастерская';
-  static skills = ['precision', 'switching', 'stability'];
+  static skills = ['precision', 'switching', 'stability', 'separation']; // what skillScores() measures
   static levels = LEVELS;
 
   constructor(opts) {
@@ -99,7 +99,7 @@ export class GripGame extends Game {
     } else {
       if (o.needSwitchAt !== null && o.switchedAt === undefined) { o.switchedAt = this.time; this.switchTimes.push(this.time - o.needSwitchAt); this.emit('switch'); }
       const inWindow = hand.force >= o.min && hand.force <= o.max;
-      const resting = intent.command === COMMAND.REST;
+      const resting = intent.relaxed;
       o.restFor = resting && hand.inContact ? o.restFor + dt : 0;
       if (!hand.inContact) this.hint = 'Сожмите (A), чтобы взять предмет';
       else if (hand.force < o.min) this.hint = 'Слабо — добавьте силы (A)';
@@ -114,7 +114,7 @@ export class GripGame extends Game {
 
   stepCarry(dt, intent, hand, o) {
     if (o.heavy) hand.force = Math.max(0, hand.force - HEAVY_SLIP * dt);
-    this.stability.add(hand.force);
+    this.stability.add(hand.force, dt);
     o.x = clamp01(o.t / this.level.carry);
     this.hint = o.heavy ? 'Тяжело! Подхватывайте (A) коротко, не выходя из зоны' : 'Несите спокойно: не напрягайте мышцы';
     if (hand.force < o.min * 0.8) return this.fail('drop', hand);
