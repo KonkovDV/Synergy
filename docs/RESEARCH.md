@@ -89,3 +89,15 @@
 ## 6. Обновление 17.10.2026 (5.5): конкуренты, SOTA, фактчекинг
 
 Сводная таблица конкурентов и SOTA (Coapt Control Companion, Ottobock MyoPlus, Myo-Hand XP, MyoTrainXR, Meta Nature 2025, поведенческие техники) и сверка чисел — `docs/AUDIT.md` §2–3. Исправлено по фактчекингу: Dupan 2025 (отсроченная обратная связь, 12 здоровых участников), Salminger (44 % в выборке из 25), Kristoffersen 2020 (здоровые участники).
+
+## 7. Обновление 18.10.2026 (5.8): интерфейс «от и до»
+
+| Источник / практика | Что значит для «Синергии» |
+|---|---|
+| Chromium `AwSettings`: WebView по умолчанию умножает размер текста на системный масштаб шрифта ([исходник](https://crrev.com/f311a84728272e30979432e8474089b3db3c67df/android_webview/java/src/org/chromium/android_webview/AwSettings.java)); Android 14+ — масштаб до 200 % | раскладка APK обязана держать 200 % (и 260 % вместе с «130 %» приложения): rem, сжимаемые дорожки, перенос слов; проверяет `tests/e2e/layout.mjs` |
+| Material: минимальная цель касания 48 dp ([Compose `minimumInteractiveComponentSize`](https://developer.android.com/reference/kotlin/androidx/compose/material/minimumInteractiveComponentSize.modifier)); Apple HIG — 44 pt | все цели ≥ 44 px, строки-переключатели 48 px |
+| Container queries (`@container`, единицы `cqi`) — поддержаны всеми актуальными движками | площадки эмулятора подстраивают подписи под свою ширину, а не под экран |
+| WCAG 2.2: 2.4.11 «Фокус не скрыт», 1.3.4 «Ориентация», 1.4.10 «Перекомпоновка» | фокус под плавающими панелями прокручивается в видимую часть; любая ориентация; таблицы прокручиваются в своей области |
+| SPA/PWA и «Назад»: без записей истории жест «Назад» закрывает приложение | одна запись истории «внутри приложения», в игре «Назад» = пауза |
+| Конкуренты: Coapt Control Companion (живая ЭМГ, калибровка, игры, ИИ-коуч — [Google Play](https://play.google.com/store/apps/details?id=com.CoaptLLC.ControlCompanion)), Ottobock Myo Plus (паттерны), Motorica Start (настройка) | «Синергия» — не настройка, а ежедневная тренировка навыка с проверкой и отчётом; язык настроек совпадает с Motorica Start |
+
