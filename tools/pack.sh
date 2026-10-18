@@ -10,7 +10,7 @@ NAME="${1:-SYNERGY_v$VERSION}"; OUTDIR="${2:-$PARENT}"
 rm -f "$OUTDIR/$NAME.zip"
 # Tracked files and the git history only (5.10): zipping the working tree also took gitignored files —
 # a release keystore, tools/.cache — and the gate, which looks at tracked files, did not notice.
-(cd "$ROOT" && { git ls-files --cached | while IFS= read -r f; do [ -e "$f" ] && printf '%s\n' "$f"; done; find .git -type f; }) \
+(cd "$ROOT" && { git ls-files --cached | while IFS= read -r f; do [ -e "$f" ] && printf '%s\n' "$f"; done; find .git; }) \
   | sed "s|^|$BASE/|" | (cd "$PARENT" && zip -q "$OUTDIR/$NAME.zip" -@)
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
