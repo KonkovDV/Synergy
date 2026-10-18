@@ -45,7 +45,9 @@ export const GESTURES = [
   { id: 'thumb', name: 'Класс',        command: 'close', grip: 'thumb', pose: [0, 1, 1, 1, 1],             introducedAt: 5, cue: 'Поднимите большой палец, остальные согните', use: 'Жест «Класс», нажатие большим пальцем' },
 ];
 
-export const GESTURE_BY_ID = Object.fromEntries(GESTURES.map(g => [g.id, g]));
+// Lookup maps keyed by ids that also arrive from outside (frames, backups) have no prototype (5.11): `constructor`
+// or `__proto__` is not «a known id».
+export const GESTURE_BY_ID = Object.assign(Object.create(null), Object.fromEntries(GESTURES.map(g => [g.id, g])));
 export const GESTURE_IDS = GESTURES.map(g => g.id);
 /** Display name; unknown ids (e.g. from runs stored before a gesture set change) show as is. */
 export const gestureName = id => GESTURE_BY_ID[id]?.name ?? id;

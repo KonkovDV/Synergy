@@ -122,3 +122,45 @@ test('rest adaptation: a slow creep does not add up across sessions — the boun
   }
   assert.ok(flagged, 'the accumulated drift asks to recalibrate (until 5.10 it never did: 46 % after six sessions)');
 });
+
+test('rest adaptation (5.11): a sensor back at its calibrated level is saved too; a calibration without `ref` gets one', async () => {
+  const { RestTracker } = await import('../src/core/calibration.js');
+  // Yesterday's session stored +0.15; today the sensor is quiet at the calibrated level (ref 0.1).
+  const stored = { rest: [0.25, 0.1], max: [1.25, 1.1], ref: [0.1, 0.1] };
+  const t = new RestTracker(stored);
+  for (let s = 0; s < 300; s += 0.05) t.update([0.1, 0.1], [false, false], 0.05);
+  const out = t.summary();
+  assert.equal(out.keep, true, 'the return is kept');
+  assert.ok(Math.abs(out.calibration.rest[0] - 0.1) < 0.02, `rest back near ref: ${out.calibration.rest[0]}`);
+  assert.deepEqual(out.calibration.ref, [0.1, 0.1]);
+  // Saved before 5.10: no ref. The first adapted session pins it at the starting rest, so creep stays bounded.
+  const legacy = new RestTracker({ rest: [0.2, 0.2], max: [1.2, 1.2] });
+  for (let s = 0; s < 300; s += 0.05) legacy.update([0.3, 0.2], [false, false], 0.05);
+  assert.deepEqual(legacy.summary().calibration.ref, [0.2, 0.2]);
+});
+
+test('calibration (5.11): any source units — a source in volts reads like the same source in 0..1', () => {
+  const record = scale => {
+    const rec = new CalibrationRecorder();
+    for (let i = 0; i < 700; i++) {
+      const step = rec.step?.id;
+      rec.push({ t: i * 16, a: (step === 'a' ? 0.8 : 0.05) * scale, b: (step === 'b' ? 0.7 : 0.05) * scale }, 1 / 60);
+    }
+    return rec.result();
+  };
+  const unit = record(1), volts = record(1e-3);
+  assert.ok(unit.usable && volts.usable);
+  const level = (cal, a) => new SignalPipeline({ calibration: cal }).process({ t: 0, a, b: cal.rest[1] }, 0).a;
+  assert.ok(Math.abs(level(volts.calibration, 0.8e-3) - level(unit.calibration, 0.8)) < 0.02, `volts ${level(volts.calibration, 0.8e-3)} vs ${level(unit.calibration, 0.8)}`);
+});
+
+test('co-contraction (5.11): never below the switch-on threshold — two muscles that did not switch on are not a grip change', () => {
+  const p = new SignalPipeline({ scheme: 'proportional', params: { onThreshold: 0.45, coThreshold: 0.25 } });
+  let i;
+  for (let t = 0; t < 1000; t += 20) i = p.process({ t, a: 0.33, b: 0.33 }, t);
+  assert.equal(i.command, COMMAND.REST);
+  assert.equal(i.co, false);
+  for (let t = 1000; t < 2000; t += 20) i = p.process({ t, a: 0.6, b: 0.6 }, t);
+  assert.equal(i.command, COMMAND.SWITCH, 'above both thresholds it still switches');
+  assert.equal(i.relaxed, false, 'a co-contraction is never «покой»');
+});

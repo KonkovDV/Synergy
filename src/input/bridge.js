@@ -50,7 +50,8 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
     if (text.startsWith('{') || text.startsWith('[')) {
       try { data = JSON.parse(text); } catch { return null; }
     } else {
-      data = text.split(/[\s,;]+/).map(Number);
+      data = text.split(/[\s,;]+/).filter(Boolean).map(Number);
+      if (!data.length) return null; // a blank line between records is not a rest frame (5.11)
     }
   }
   if (Array.isArray(data)) data = { channels: data };

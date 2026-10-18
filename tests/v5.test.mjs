@@ -235,26 +235,32 @@ test('announcer: the latest hint once it holds, not every flip; urgent at once; 
   assert.equal(a.update('', 6), null, 'an empty hint is not announced');
 });
 
-test('arm pose (5.11): the plan probe rotates it, a backup cannot plant an unknown one, the report groups by it', async () => {
+test('arm pose (5.11): rotates by posed probes (not by day — that tied each pose to one game), a backup cannot plant one, the report compares like with like', async () => {
   const { ARM_POSES } = await import('../src/config.js');
   const { buildDailyPlan: plan, createProfile: profile } = await import('../src/core/progress.js');
   const { parseState, emptyState } = await import('../src/core/storage.js');
   const { poseSummary, reportHtml, reportCsv } = await import('../src/services/report.js');
   const ids = ARM_POSES.map(p => p.id);
-  const seen = new Set();
-  for (const day of ['2026-10-18', '2026-10-19', '2026-10-20']) {
-    const items = plan(profile(), [], PLAN_CATALOG, 'proportional', day).items;
-    const probe = items.find(i => i.retention);
-    assert.ok(ids.includes(probe.pose), day); seen.add(probe.pose);
-    assert.ok(items.filter(i => !i.retention).every(i => i.pose === undefined), 'only the probe has a pose');
+  const at = '2026-10-18T10:00:00Z';
+  const run = (game, score, extra = {}) => ({ id: `${game}${score}${Math.random()}`, at, game, level: 1, levelCount: 8, scheme: 'gesture', score, stars: 1, skills: {}, details: {}, durationS: 60, ...extra });
+  const probeOf = runs => plan(profile(), runs, PLAN_CATALOG, 'proportional', '2026-10-18').items.find(i => i.retention);
+  assert.equal(probeOf([]).pose, ids[0]);
+  assert.equal(probeOf([run('grip', 70, { retention: true, pose: ids[0] })]).pose, ids[1], 'the next pose after one posed probe');
+  assert.equal(probeOf([run('grip', 70, { retention: true })]).pose, ids[0], 'a probe without sensors does not advance the rotation');
+  assert.ok(plan(profile(), [], PLAN_CATALOG, 'proportional', '2026-10-18').items.filter(i => !i.retention).every(i => i.pose === undefined), 'only the probe has a pose');
+  // The pose has no effect, but games differ: a raw average would rank poses by game; against the usual result it is flat.
+  const runs = [];
+  for (const [game, usual] of [['grip', 90], ['rhythm', 50], ['safe', 70]]) {
+    for (let i = 0; i < 4; i++) runs.push(run(game, usual));
+    for (const pose of ids) runs.push(run(game, usual - 10, { retention: true, pose }));
   }
-  assert.equal(seen.size, 3, 'three days — three poses');
+  const summary = poseSummary(runs);
+  assert.deepEqual(summary.map(p => [p.pose, p.runs, p.games, p.diff]), ids.map(id => [id, 3, 3, -10]));
+  assert.equal(poseSummary(runs.filter(r => r.game === 'grip'))[0].diff, null, 'one game is not enough to compare');
   const state = emptyState();
-  const run = (pose, score) => ({ id: `${pose}${score}`, at: '2026-10-18T10:00:00Z', game: 'grip', level: 1, levelCount: 8, scheme: 'gesture', score, stars: 1, skills: {}, details: {}, durationS: 60, retention: true, pose });
-  state.runs = [run('elbow', 80), run('elbow', 60), run('forward', 40), run('<img src=x>', 99)];
+  state.runs = [...runs, run('grip', 99, { retention: true, pose: '<img src=x>' })];
   const clean = parseState(JSON.stringify(state));
   assert.equal(clean.runs.find(r => r.score === 99).pose, undefined, 'unknown pose dropped');
-  assert.deepEqual(poseSummary(clean.runs).map(p => [p.pose, p.runs, p.score]), [['elbow', 2, 70], ['forward', 1, 40]]);
   const html = reportHtml(clean);
   assert.match(html, /локоть согнут под прямым углом/);
   assert.ok(!html.includes('<img src=x>'));

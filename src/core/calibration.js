@@ -60,7 +60,9 @@ export class CalibrationRecorder {
       1 - Math.max(0, crossB - rest[0]) / Math.max(1e-6, max[0] - rest[0]),
     ].map(v => Math.max(0, Math.min(1, v)));
     if (signal && Math.min(...separation) < 0.5) issues.push('Каналы сильно влияют друг на друга. Попробуйте сместить датчики — «Разделение» потренируйте в «Полёте».');
-    const safeMax = max.map((m, ch) => Math.max(m, rest[ch] + 1e-3));
+    // Any source units work after calibration (INTEGRATION.md): an absolute floor of 1e-3 turned a source in volts into
+    // «max = rest + 1 mV» (5.11). A usable calibration already has max well above rest; this only guards a zero span.
+    const safeMax = max.map((m, ch) => Math.max(m, rest[ch] + 1e-6));
     // `ref` — the wizard's rest level: rest adaptation is bounded around it across sessions, not around yesterday's.
     return { calibration: { rest, max: safeMax, ref: [...rest], at: new Date().toISOString() }, issues, separation, usable };
   }
@@ -81,6 +83,7 @@ export class RestTracker {
     this.rest0 = [...(calibration.ref ?? calibration.rest)];
     this.span = [0, 1].map(ch => Math.max(1e-6, calibration.max[ch] - calibration.rest[ch]));
     this.observed = [...calibration.rest];
+    this.start = [...calibration.rest]; // where this session began: a return to `ref` is a change worth saving too
     this.calibration = { ...calibration, rest: [...calibration.rest], max: [...calibration.max] };
     this.quietFor = 0; this.onFor = [0, 0]; this.stuckChannel = null;
   }
@@ -119,13 +122,19 @@ export class RestTracker {
 
   get needsRecalibration() { return this.stuckChannel !== null || this.drift() > this.params.driftWarn; }
 
-  /** Session outcome: the adapted calibration is worth keeping only when it moved and stayed in bounds. */
+  /**
+   * Session outcome: the adapted calibration is worth keeping when it moved during this session and stayed in bounds.
+   * «Moved» is against the session start, not `ref` (5.11): a sensor back at its calibrated level left yesterday's
+   * +15 % offset stored for good, and every session began with a squeeze read 15 % too weak.
+   */
   summary() {
     const shift = this.shift();
+    const moved = Math.max(...[0, 1].map(ch => Math.abs(this.calibration.rest[ch] - this.start[ch]) / this.span[ch]));
     return {
       shift, drift: this.drift(), stuckChannel: this.stuckChannel, recalibrate: this.needsRecalibration,
-      keep: !this.needsRecalibration && shift >= this.params.reportShift,
-      calibration: { rest: [...this.calibration.rest], max: [...this.calibration.max] },
+      keep: !this.needsRecalibration && moved >= this.params.reportShift,
+      // `ref` travels with it: a calibration saved before 5.10 has none, and without it every session re-anchors.
+      calibration: { rest: [...this.calibration.rest], max: [...this.calibration.max], ref: [...this.rest0] },
     };
   }
 }

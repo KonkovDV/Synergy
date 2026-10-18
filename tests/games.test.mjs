@@ -131,3 +131,57 @@ test('game metadata has one source: the registry and the plan see exactly what e
   }
   assert.ok(PLAN_CATALOG.find(g => g.id === 'grip').skills.includes('separation'));
 });
+
+test('«Ритм»: a hold note released too late is not an on-time release (5.11 — it scored as perfect)', async () => {
+  const { createGame: make } = await import('../src/games/registry.js');
+  const drive = lateS => {
+    const game = make('rhythm', { levelNumber: 2, scheme: 'threshold', seed: 3 });
+    const note = game.notes.find(n => n.dur > 0 && n.lane !== 'both');
+    const command = note.lane === 'a' ? 'close' : 'open';
+    const dt = 1 / 60, on = note.at + game.latency, off = note.at + note.dur + lateS + game.latency;
+    for (let t = 0; note.state !== 'done' && t < note.at + note.dur + 2; t += dt) {
+      const pressed = game.time >= on && game.time < off;
+      game.update(dt, { valid: true, command: pressed ? command : 'rest', intensity: pressed ? 0.6 : 0, level: 0, relaxed: !pressed, a: 0, b: 0 });
+    }
+    return { score: note.score, label: game.popups.at(-1)?.label };
+  };
+  const onTime = drive(0), late = drive(0.35), early = drive(-0.35);
+  assert.ok(onTime.score > 0.85, `on time ${onTime.score}`);
+  assert.ok(late.score < onTime.score - 0.1, `late ${late.score} vs on time ${onTime.score}`);
+  assert.equal(late.label, 'Отпустите вовремя');
+  assert.equal(early.label, 'Отпустили рано');
+});
+
+test('«Мастерская» at sensitivity 0.45: force windows lie above the switch-off level — a steady squeeze lands in them (5.11)', async () => {
+  const { createGame: make } = await import('../src/games/registry.js');
+  const { GameRunner, toEmulatorTarget } = await import('../src/games/runner.js');
+  const { EmgEmulator } = await import('../src/input/emulator.js');
+  const { SignalPipeline } = await import('../src/core/signal.js');
+  const { BionicHand } = await import('../src/core/hand.js');
+  // A human-like grader: squeezes at ≥ the switch-on level + 0.03, reacts to the gauge 200 ms late.
+  const run = on => {
+    const game = make('grip', { levelNumber: 5, scheme: 'proportional', seed: 3, onThreshold: on, adaptive: false });
+    const emulator = new EmgEmulator({ realism: 0.2, seed: 3 });
+    const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme: 'proportional', params: { onThreshold: on } }), hand: new BionicHand(), source: emulator, emulator });
+    const dt = 1 / 60, queue = [];
+    for (let t = 0; !game.done && t < 400; t += dt) {
+      const o = game.current, hand = runner.hand;
+      let target = { a: 0, b: 0 };
+      if (o && runner.intent) {
+        const bot = game.autopilot(runner.intent, hand);
+        if (o.phase === 'grasp' && hand.grip === o.grip && !o.overClosed) {
+          const level = Math.max((o.min + o.max) / 2, on + 0.03);
+          target = hand.force > o.max ? { a: 0, b: on + 0.03 } : hand.force < o.min + 0.02 ? { a: level, b: 0 } : { a: 0, b: 0 };
+        } else target = bot;
+      }
+      queue.push({ t, target });
+      while (queue.length > 1 && queue[1].t <= t - 0.2) queue.shift();
+      emulator.setTarget(toEmulatorTarget(queue[0].target));
+      runner.step(t * 1000, dt);
+    }
+    return game.result().details;
+  };
+  const r = run(0.45);
+  assert.equal(r.crushed, 0, 'nothing crushed');
+  assert.ok(r.delivered >= r.total - 1, `${r.delivered}/${r.total} delivered`);
+});

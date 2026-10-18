@@ -98,3 +98,11 @@ test('music: the player\'s sync offset moves when a click is started, not when i
   assert.equal(offsetClock(() => null, 100)(), null, 'no audio — no clock');
   assert.equal(offsetClock(on.clock, NaN)().latency, on.latency, 'a damaged offset is ignored');
 });
+
+test('music: the count-in click at game time 0 is heard with latency + sync offset when scheduled during the 3-2-1 (5.11)', () => {
+  const a = fakeAudio(0.05);
+  const player = new MusicPlayer(musicPattern(args), { clock: offsetClock(a.clock, 250), play: a.play });
+  // play.js passes game time − remaining countdown while the 3-2-1 runs, then the game time.
+  for (let rt = 0; rt < 4; rt += 1 / 60) { a.now = 10 + rt; player.update(rt - 3, 1, true); }
+  assert.ok(a.played.some(h => h.e.t === 0 && h.e.voice === 'stick'), 'the accented first stick is played, not skipped');
+});

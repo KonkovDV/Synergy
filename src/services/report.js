@@ -47,12 +47,23 @@ export function buildReport(state) {
 
 const CSV_SKILLS = Object.keys(SKILL_NAME);
 
-/** No-hint results by arm pose (real sensors only, 5.11): the last 10 probes per pose. */
+/**
+ * No-hint results by arm pose (real sensors only, 5.11): each probe against the person's usual result in the same
+ * game and level (last 10 ordinary runs), so a pose is not judged by which game happened to be the probe. A pose is
+ * compared only with ≥ 3 such probes in ≥ 2 games.
+ */
+export const POSE_MIN = { runs: 3, games: 2 };
 export function poseSummary(runs) {
-  const posed = runs.filter(r => !r.demo && r.retention && r.pose);
+  const real = runs.filter(r => !r.demo);
+  const usual = r => {
+    const same = real.filter(x => !x.retention && x.game === r.game && x.level === r.level).slice(-10);
+    return same.length ? same.reduce((s, x) => s + x.score, 0) / same.length : null;
+  };
   return ARM_POSES.map(p => {
-    const rs = posed.filter(r => r.pose === p.id).slice(-10);
-    return { pose: p.id, name: p.name, runs: rs.length, score: rs.length ? Math.round(rs.reduce((s, r) => s + r.score, 0) / rs.length) : null };
+    const rs = real.filter(r => r.retention && r.pose === p.id).slice(-10).map(r => ({ r, base: usual(r) })).filter(x => x.base !== null);
+    const games = new Set(rs.map(x => x.r.game)).size;
+    const enough = rs.length >= POSE_MIN.runs && games >= POSE_MIN.games;
+    return { pose: p.id, name: p.name, runs: rs.length, games, diff: enough ? Math.round(rs.reduce((s, x) => s + x.r.score - x.base, 0) / rs.length) : null };
   }).filter(p => p.runs);
 }
 const csvCell = v => {
@@ -106,8 +117,8 @@ ${table(['Схема управления', 'Сторона', 'Упражнен�
 ${table(Object.values(SKILL_NAME), [Object.keys(SKILL_NAME).map(k => skills[k] ?? '—')])}
 <p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью. Игровая метрика удержания навыка (по мотивам тренировки с отсроченной обратной связью, Dupan et al., 2025); клинической валидации у этой игры нет.</p>
 ${poses.length ? `<h2>Без подсказки по позам руки (с датчиками, последние 10 на позу)</h2>
-${table(['Поза руки', 'Попыток', 'Средний результат'], poses.map(p => [p.name, p.runs, p.score]))}
-<p class="muted">Распознавание зависит от положения руки (эффект положения конечности). Заметно более низкий результат в одной позе подсказывает, где стоит проверить настройку протеза. Игровая метрика.</p>` : ''}
+${table(['Поза руки', 'Попыток', 'Игр', 'Разница с обычным результатом, очков'], poses.map(p => [p.name, p.runs, p.games, p.diff === null ? 'мало данных' : (p.diff > 0 ? '+' : '') + p.diff]))}
+<p class="muted">Каждое испытание сравнивается с обычным результатом человека в той же игре и на том же уровне; позу сравниваем, когда в ней ≥ ${POSE_MIN.runs} испытаний в ≥ ${POSE_MIN.games} играх. Распознавание зависит от положения руки (эффект положения конечности): заметно худшая разница в одной позе подсказывает, где стоит проверить настройку протеза. Игровая метрика.</p>` : ''}
 <h2>Проверка навыка (фиксированный набор заданий, по мотивам Motion Test / TAC)</h2>
 ${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 'Выполнение, мс', 'Точность, %', 'Перелёты', 'ПС, бит/с', 'Эфф. пути, %'],
   checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots, fmtNum(c.throughputBps) ?? '—', c.pathEfficiency ?? '—']))}
@@ -164,7 +175,11 @@ export const REMINDER_DAYS = { 2: 'TU,FR', 3: 'MO,WE,FR', 4: 'MO,TU,TH,FR', 5: '
 export function reminderIcs(time = '19:00', now = new Date(), weeklyGoal = 4) {
   const [hh, mm] = /^\d\d:\d\d$/.test(time) ? time.split(':').map(Number) : [19, 0];
   const pad = n => String(n).padStart(2, '0');
-  const day = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  // DTSTART is the first occurrence (RFC 5545 §3.8.5.3): the first reminder day of the rule on or after today (5.11).
+  const days = (REMINDER_DAYS[weeklyGoal] ?? REMINDER_DAYS[4]).split(',');
+  const first = new Date(now);
+  while (!days.includes(['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][first.getDay()])) first.setDate(first.getDate() + 1);
+  const day = `${first.getFullYear()}${pad(first.getMonth() + 1)}${pad(first.getDate())}`;
   const utc = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''); // DTSTAMP is UTC: 20261018T061000Z
   return [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Synergy//Trainer//RU', 'BEGIN:VEVENT',

@@ -82,7 +82,9 @@ const levelMap = (m, levelCount, max) => Object.fromEntries(Object.entries(isObj
 export function sanitizeProgress(state, catalog) {
   if (!catalog) return state;
   const p = state.profile;
-  p.games = Object.fromEntries(Object.entries(p.games).filter(([id, g]) => catalog[id] && isObject(g)).map(([id, g]) => {
+  // Own keys only (5.11): `constructor`, `toString`, `__proto__` are «in» every object and passed `catalog[id]`.
+  const known = id => Object.hasOwn(catalog, id);
+  p.games = Object.fromEntries(Object.entries(p.games).filter(([id, g]) => known(id) && isObject(g)).map(([id, g]) => {
     const n = catalog[id];
     const lastStars = Object.fromEntries(Object.entries(isObject(g.lastStars) ? g.lastStars : {})
       .filter(([k, v]) => /^\d+$/.test(k) && +k >= 1 && +k <= n && Array.isArray(v)).map(([k, v]) => [k, v.filter(Number.isInteger).slice(-3)]));
@@ -90,7 +92,7 @@ export function sanitizeProgress(state, catalog) {
       played: !!g.played, assessment: !!g.assessment, lastStars }];
   }));
   if (p.plan) {
-    p.plan.items = p.plan.items.filter(i => catalog[i.game]).map(i => ({ ...i, level: Math.max(1, Math.min(catalog[i.game], i.level)), done: !!i.done, retention: !!i.retention, pose: POSE_IDS.includes(i.pose) ? i.pose : undefined }));
+    p.plan.items = p.plan.items.filter(i => known(i.game)).map(i => ({ ...i, level: Math.max(1, Math.min(catalog[i.game], i.level)), done: !!i.done, retention: !!i.retention, pose: POSE_IDS.includes(i.pose) ? i.pose : undefined }));
     if (!p.plan.items.length) p.plan = null;
   }
   return state; // runs of an unknown game stay: history is never deleted silently, and no screen needs their game
