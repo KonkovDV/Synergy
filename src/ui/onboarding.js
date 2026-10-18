@@ -49,7 +49,8 @@ export function onboardingScreen(app) {
   next.onclick = () => {
     // A double tap must not skip «Безопасно» (5.10): the second tap of the same gesture is ignored.
     if (performance.now() - shownAt < 300) return;
-    if (step < pages.length - 1) { step++; render(); return; }
+    // The new page is announced by its heading (5.11: focus stayed on «Дальше» and «Безопасно» passed unheard).
+    if (step < pages.length - 1) { step++; render(); const h1 = body.querySelector('h1'); h1?.setAttribute('tabindex', '-1'); h1?.focus({ preventScroll: true }); return; }
     done('tutorial');
   };
   const skip = h('button', { class: 'btn ghost', onclick: () => done('home') }, 'Пропустить обучение');

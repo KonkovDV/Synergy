@@ -192,7 +192,7 @@ export class SafeGame extends Game {
           text(ctx, `${Math.round(card.band[0] * 100)}–${Math.min(100, Math.round(card.band[1] * 100))}\u00a0%`, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
         }
         const left = Math.max(0, this.limit - this.cardTime);
-        text(ctx, `${fmtFixed(left)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, color: left < 1.5 ? COLORS.bad : COLORS.muted });
+        text(ctx, `${fmtFixed(left)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, color: left < 1.5 ? COLORS.warn : COLORS.muted }); // amber: red #ff6b6b was 4.3:1 on the card
         if (this.liveFeedback(this.index)) {
           ctx.strokeStyle = COLORS.good; ctx.lineWidth = 5; ctx.lineCap = 'round';
           ctx.beginPath(); ctx.arc(w / 2 - cw * 0.22, y0 + ch * 0.5, ch * 0.42, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(this.holdFor / this.level.hold)); ctx.stroke();

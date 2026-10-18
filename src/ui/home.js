@@ -1,5 +1,5 @@
 // Home: who I am today (level, series, weekly goal) → today's plan → free play.
-import { fmtPct } from '../core/format.js';
+import { fmtPct, count, FORMS } from '../core/format.js';
 import { h, starsText } from './dom.js';
 import { bottomNav, topBar, mioAvatar } from './widgets.js';
 import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
@@ -34,13 +34,14 @@ export function homeScreen(app) {
       h('div', {},
         h('p', { class: 'eyebrow' }, SCHEME_INFO[s.scheme].short),
         h('h1', {}, s.name ? `Привет, ${s.name}!` : 'Привет!')),
-      h('div', { class: 'streak', title: 'Серия тренировочных дней (день отдыха не прерывает)' }, h('span', { 'aria-hidden': 'true' }, '🔥'), h('b', {}, streak))),
+      h('div', { class: 'streak', title: 'Серия тренировочных дней (день отдыха не прерывает)' }, h('span', { 'aria-hidden': 'true' }, '🔥'), h('b', { 'aria-hidden': 'true' }, streak), h('span', { class: 'sr-only' }, `Серия: ${count(streak, FORMS.days)}`))),
     h('div', { class: 'xp' },
       h('span', {}, `Уровень ${lvl.level}`),
       h('div', { class: 'xp-track', role: 'progressbar', 'aria-label': `Опыт до уровня ${lvl.level + 1}`, 'aria-valuenow': Math.round(lvl.progress * 100), 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: { width: `${Math.round(lvl.progress * 100)}%` } })),
       h('small', {}, `ещё ${lvl.toNext} XP`)),
     h('div', { class: 'week' },
-      ...week.days.map((d, i) => h('div', { class: `day ${week.trained[i] ? 'done' : ''} ${i === week.todayIndex ? 'today' : ''}` }, h('i'), h('small', {}, WEEKDAYS[i]))),
+      ...week.days.map((d, i) => h('div', { class: `day ${week.trained[i] ? 'done' : ''} ${i === week.todayIndex ? 'today' : ''}` }, h('i'), h('small', {}, WEEKDAYS[i]),
+        h('span', { class: 'sr-only' }, week.trained[i] ? ': занимались' : i === week.todayIndex ? ': сегодня' : ''))),
       h('p', { class: 'week-note' }, `${week.done} из ${week.goal} дней в неделю`)));
 
   // The day's main action comes right under the title (5.8): at the end of the card it sat under the bottom bar
@@ -52,7 +53,8 @@ export function homeScreen(app) {
     h('div', { class: 'card-head' }, h('h2', {}, plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
     overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,
     resting ? h('p', { class: 'note warn' }, restText) : null,
-    h('button', { class: 'btn primary big plan-start', disabled: allDone || resting, onclick: () => app.startPlan() },
+    // Before the tutorial its card is the one primary action (5.11: three equal glowing buttons on the first run).
+    h('button', { class: `btn ${p.tutorialDone ? 'primary' : 'ghost'} big plan-start`, disabled: allDone || resting, onclick: () => app.startPlan() },
       resting ? 'Сегодня — отдых' : allDone ? 'План выполнен ✓' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
     resting ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null,
     h('ol', { class: 'plan-list', 'aria-label': 'Упражнения плана' }, ...plan.items.map(item => {
@@ -67,10 +69,11 @@ export function homeScreen(app) {
   const tutorialCard = !p.tutorialDone ? h('section', { class: 'card tutorial-card' },
     h('b', {}, '👋 Первые шаги · 2 минуты'), h('p', {}, 'Покой, сжатие, раскрытие, сила и коактивация — с живой подсказкой, до первой игры.'),
     h('button', { class: 'btn primary', onclick: () => app.go('tutorial') }, 'Пройти обучение')) : null;
-  const checkCard = h('section', { class: `card g-check ${check.due ? 'due' : ''}` },
+  // The weekly check appears after the first exercise, and is primary only when a week has really passed (5.11).
+  const checkCard = !app.state.runs.some(r => !r.demo) ? null : h('section', { class: `card g-check ${check.due ? 'due' : ''}` },
     h('div', { class: 'card-head' }, h('b', {}, `${ASSESSMENT.icon} ${ASSESSMENT.title}`), h('span', { class: 'pill' }, check.last ? fmtPct(check.last.details.completionRate) : 'новое')),
     h('p', { class: 'note' }, check.last ? (check.due ? `Прошло ${check.days} дн. — пора сравнить себя с собой.` : `Последняя: ${check.days ? `${check.days} дн. назад` : 'сегодня'}. Следующая — через ${SESSION.assessmentEveryDays - check.days} дн.`) : ASSESSMENT.tagline),
-    h('button', { class: `btn ${check.due ? 'primary' : 'ghost'}`, onclick: () => app.go('play', { game: ASSESSMENT.id, level: 1 }) }, check.due ? 'Пройти проверку · ≈ 2 мин' : 'Пройти ещё раз'));
+    h('button', { class: `btn ${check.due && check.last ? 'primary' : 'ghost'}`, onclick: () => app.go('play', { game: ASSESSMENT.id, level: 1 }) }, check.due ? 'Пройти проверку · ≈ 2 мин' : 'Пройти ещё раз'));
 
   const games = h('section', { class: 'games' }, h('h2', {}, 'Игры'),
     h('div', { class: 'game-grid' }, ...TRAINING_GAMES.map(g => {
@@ -82,7 +85,7 @@ export function homeScreen(app) {
         h('span', { class: 'game-meta' }, `★ ${stars}/${g.Game.levels.length * 3} · ур. ${gp.unlocked}`));
     })));
 
-  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, planCard, tutorialCard, checkCard, tipCard, games), bottomNav(app, 'home')) };
+  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, checkCard, tipCard, games), bottomNav(app, 'home')) };
 }
 
 export function levelsScreen(app, { game }) {

@@ -2,9 +2,9 @@
 // Child mode: the screen sits behind the parent PIN gate (ui/pin.js).
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
-import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter } from './widgets.js';
+import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, BRIDGE_STATUS } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
-import { CalibrationRecorder } from '../core/calibration.js';
+import { CalibrationRecorder, CALIBRATION_STEPS } from '../core/calibration.js';
 import { defaultCalibration } from '../core/signal.js';
 import { download, reminderIcs } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
@@ -16,7 +16,6 @@ import { dayKey } from '../core/progress.js';
 import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
-const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
 
 /** Reads a user-picked file as text (backup restore). */
 function pickTextFile(accept, onText) {
@@ -164,12 +163,24 @@ export function calibrationScreen(app) {
   // (the results screen links here directly).
   if (app.settings.audience === 'child' && app.settings.parentPin && !app.pinOk) return pinGateScreen(app, { next: 'calibration' });
   const kind = app.sourceKind();
-  let recorder = new CalibrationRecorder();
-  const title = h('h2', {}), text = h('p', {}), ring = h('div', { class: 'cal-ring' });
+  // Paced by «Темп игр» and started on demand (5.11, accessibility review: it ran by itself, silently, in 11 s —
+  // a blind or slow user with real sensors could not follow it and saved a wrong calibration).
+  const pace = Math.max(0.6, app.settings.gameSpeed || 1);
+  const steps = () => CALIBRATION_STEPS.map(st => ({ ...st, seconds: st.seconds / pace }));
+  let recorder = new CalibrationRecorder(steps()), started = false, finished = false, lastStep = null;
+  const title = h('h2', {}, 'Готовы?'), text = h('p', {}, 'Четыре шага: покой, сжатие, отдых, раскрытие. Каждый шаг будет назван и озвучен.'), ring = h('div', { class: 'cal-ring' });
+  const live = h('p', { class: 'sr-only', role: 'status' });
   const meter = signalMeter(app);
   const result = h('div', { class: 'cal-result' });
   const pipeline = app.createPipeline();
   const source = app.signalSource();
+  const announce = (words, interrupt = true) => { live.textContent = words; app.say(words, { interrupt }); };
+  const startButton = h('button', { class: 'btn primary big', onclick: () => begin() }, 'Начать калибровку');
+  const again = h('button', { class: 'btn ghost', hidden: true, onclick: () => begin() }, 'Заново');
+  const begin = () => {
+    recorder = new CalibrationRecorder(steps()); started = true; finished = false; lastStep = null;
+    result.replaceChildren(); startButton.hidden = true; again.hidden = false;
+  };
   // Same frame as «Первые шаги» (5.10): the steps scroll, the signal and the pads stay on screen.
   const node = h('div', { class: 'screen calibration frame' },
     topBar('Калибровка', () => app.go('settings', { back: 'calibration' })),
@@ -177,35 +188,42 @@ export function calibrationScreen(app) {
       h('p', { class: 'note' }, kind === 'touch'
         ? 'Сейчас источник — эмулятор на экране: калибровка покажет процесс, а результат для эмулятора не нужен. Подключите внешний источник для настоящей калибровки.'
         : 'Как «чувствительность датчиков» в приложении протеза: определяем покой и комфортное напряжение каждого канала.'),
-      ring, title, text, result,
+      ring, title, text, live, startButton, result,
       h('div', { class: 'row-actions' },
-        h('button', { class: 'btn ghost', onclick: () => { recorder = new CalibrationRecorder(); result.replaceChildren(); } }, 'Заново'),
+        again,
         h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Сбросить калибровку этого источника к значениям по умолчанию? Сохранённую калибровку вернуть нельзя.')) return; app.state.calibrations[kind] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))),
     h('div', { class: 'frame-dock' }, meter.node,
       kind === 'touch' ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, createTwoChannelPads(app.emulator)) : null));
-  let finished = false;
   return {
     node,
+    focus: startButton,
     tick(now, dt) {
       const frame = source?.sample(now) ?? null;
       meter.update(pipeline.process(frame, now));
-      if (finished && recorder.done) return;
+      if (!started || (finished && recorder.done)) return;
       recorder.push(frame, dt);
       const step = recorder.step;
       if (step) {
         finished = false;
-        if (title.textContent !== step.title) { title.textContent = step.title; text.textContent = step.text; }
+        if (lastStep !== step.id) {
+          lastStep = step.id;
+          title.textContent = step.title; text.textContent = step.text;
+          announce(`${step.title}. ${step.text}`);
+          app.feedback.event({ name: 'tick' }); // a sound and a buzz at every step change
+        }
         ring.style.setProperty('--p', String(recorder.stepProgress));
         ring.dataset.step = step.id;
       } else if (!finished) {
         finished = true;
         const r = recorder.result();
         title.textContent = r.issues.length ? 'Есть замечания' : 'Готово';
-        text.textContent = `Разделение каналов: A ${Math.round(r.separation[0] * 100)}%, B ${Math.round(r.separation[1] * 100)}%.`;
+        text.textContent = `Разделение каналов: A ${fmtPct(Math.round(r.separation[0] * 100))}, B ${fmtPct(Math.round(r.separation[1] * 100))}.`;
+        announce(`${title.textContent}. ${r.issues.join(' ')}`);
         // Without signal there is nothing to save: the previous calibration stays.
         const save = r.usable && kind !== 'touch';
-        result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)),
-          h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[kind] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings', { back: 'calibration' }); } }, save ? 'Сохранить' : 'Понятно'));
+        const done = h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[kind] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings', { back: 'calibration' }); } }, save ? 'Сохранить' : 'Понятно');
+        result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)), done);
+        done.focus({ preventScroll: true });
       }
     },
   };

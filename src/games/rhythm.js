@@ -53,7 +53,7 @@ export class RhythmGame extends Game {
     this.separation = new SeparationMeter();
     this.popups = [];
     this.nextBeat = 0;
-    this.hint = this.graded ? 'Точки на ноте — сила: • слабо, •• средне, ••• сильно' : 'Включайте канал точно на линии, держите длинные ноты';
+    this.hint = this.graded ? 'Точки на ноте — сила: • слабо, •• средне, ••• сильно' : 'Включайте канал, когда нота накрывает круг; длинные — держите';
   }
 
   buildChart() {
@@ -223,10 +223,11 @@ export class RhythmGame extends Game {
       circle(ctx, x, hitY, R, active ? col : 'rgba(255,255,255,0.08)');
       circle(ctx, x, hitY, R * 0.76, '#120d2e');
       text(ctx, lane === 'a' ? 'A' : 'B', x, hitY, { size: Math.min(18, R * 0.6), weight: 800, color: col });
-      if (labels) text(ctx, lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, color: COLORS.muted, maxWidth: laneW * 2 + 16 });
+      if (labels) text(ctx, this.scheme === SCHEME.GESTURE ? (lane === 'a' ? 'жест хвата' : OPENING_GESTURE.name) : lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, color: COLORS.muted, maxWidth: laneW * 2 + 16 });
     }
     // Behind the notes: the count-in and the combo.
-    if (this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, hitY * 0.5, { size: Math.min(54, h * 0.2), weight: 800, color: 'rgba(255,255,255,0.35)' });
+    // The game's count-in only while it runs: not drawn under the app's own 3-2-1 (5.11).
+    if (!this.paused && this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, hitY * 0.5, { size: Math.min(54, h * 0.2), weight: 800, color: 'rgba(255,255,255,0.35)' });
     if (this.combo >= 4) text(ctx, `${this.combo} подряд`, w / 2, Math.max(16, hitY * 0.12), { size: 15, weight: 800, color: 'rgba(255,204,77,0.75)', maxWidth: w * 0.3 });
     // Notes are the task, not feedback: the retention probe shows them too (it hides the lane light and the force meter).
     // A note is on the line exactly at its beat — when the music and the vibration mark it. The input delay is

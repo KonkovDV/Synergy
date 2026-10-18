@@ -15,7 +15,9 @@ export class FpsGuard {
   update(dt) {
     if (!(dt > 0) || dt > this.pauseS) return false;
     this.frameS = this.frameS === null ? dt : this.frameS + (dt - this.frameS) * this.smoothing;
-    this.slowFor = this.fps < this.minFps ? this.slowFor + dt : 0;
+    // A slow streak decays instead of resetting (5.11): replayed 37 fps from a throttled phone recovered for a frame
+    // now and then, reset the streak 7–11 times in 6 s and degraded after 8 s instead of 3 (or never at 40–48 fps).
+    this.slowFor = this.fps < this.minFps ? this.slowFor + dt : Math.max(0, this.slowFor - dt);
     if (this.degraded || this.slowFor < this.degradeAfterS) return false;
     this.degraded = true;
     return true;

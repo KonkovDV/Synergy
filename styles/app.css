@@ -668,3 +668,30 @@ table.data th { font-size: 0.75rem; }
   .play-screen .pads.gestures, .frame .pads.gestures { gap: 4px; }
   .frame .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+/* 5.11 — design review. Warning cards look like warnings (the later `.card` border used to win). */
+.card.warn-card { border-color: var(--warn); background: linear-gradient(180deg, rgba(255,204,77,.12), var(--card)); }
+.warn-card > b { color: var(--warn); }
+:root.hc .card.warn-card { border-color: #ffe14d; background: #000; }
+/* Home hero on 320–380 px: the greeting keeps whole words, the series goes under it instead of squeezing it. */
+.hero h1, .hero .eyebrow { overflow-wrap: normal; }
+.hero h1 { font-size: clamp(1.375rem, 7.5vw, 1.875rem); }
+@media (max-width: 380px) {
+  .hero-top { grid-template-columns: 3.5rem minmax(0, 1fr); }
+  .hero-top .streak { grid-column: 2; justify-self: start; }
+}
+/* 5.11 — landscape phone (a wheelchair holder): a navigation rail on the left (Material 3) instead of a bar over a
+   third of a 390 px high screen, and every screen's main action stays on screen in one compact sticky row (it was
+   static there — «Дальше», «Играть», «Начать» were below the edge). */
+@media (orientation: landscape) and (max-height: 540px) {
+  .bottom-nav { top: 0; bottom: 0; left: 0; transform: none; width: calc(84px + env(safe-area-inset-left)); max-width: none; grid-template-columns: 1fr; grid-auto-rows: min-content; align-content: center; gap: 4px;
+    border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  .nav-item { flex-direction: column; min-height: 64px; gap: 2px; }
+  .screen:has(> .bottom-nav) { padding-left: calc(88px + env(safe-area-inset-left)); }
+  :root { --nav-space: 0px; }
+  .sticky-actions { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 25%); }
+  .sticky-actions > .btn { flex: 1 1 12rem; margin: 0; }
+  .sticky-actions .btn.big { min-height: 52px; }
+}
+:root.hc .bottom-nav { border-radius: 0; }
+/* 5.11 — two lines of the game hint fit the reserve exactly (border included): a 1 px jump resized the canvas. */
+.stage-hint { min-height: calc(2.9em + 14px); line-height: 1.45; }

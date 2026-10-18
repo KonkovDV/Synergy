@@ -1,6 +1,6 @@
 // Progress: skill profile (radar + numbers), per-skill trends, training calendar, achievements,
 // collection, and the report for a prosthetist / rehabilitation specialist.
-import { fmtNum, fmtPct, fmtDay, plural, FORMS } from '../core/format.js';
+import { fmtNum, fmtPct, fmtDay, plural, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { bottomNav, skillBar } from './widgets.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
@@ -109,7 +109,8 @@ function calendar(profile) {
     const level = min === 0 ? 0 : min < 5 ? 1 : min < 10 ? 2 : min < 15 ? 3 : 4;
     cells.push(h('i', { class: `cal l${level} ${d > today ? 'future' : ''}`, title: `${d.toLocaleDateString('ru-RU')}: ${min} мин` }));
   }
-  return h('div', { class: 'calendar', role: 'img', 'aria-label': 'Календарь тренировок за 5 недель' },
+  const trained = cells.filter(c => !/\bl0\b/.test(c.className)).length;
+  return h('div', { class: 'calendar', role: 'img', 'aria-label': `Календарь тренировок за 5 недель: занимались ${count(trained, FORMS.days)}` },
     ...['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(d => h('small', {}, d)), ...cells);
 }
 
@@ -151,7 +152,7 @@ export function progressScreen(app) {
       canvas, h('small', {}, open ? sk.name : sk.level ? `ур. ${sk.level}` : '7 дней'));
   }));
   const achievements = h('div', { class: 'badges' }, ...ACHIEVEMENTS.map(a => h('div', { class: `badge ${p.achievements[a.id] ? 'on' : ''}`, title: a.text },
-    h('span', { 'aria-hidden': 'true' }, p.achievements[a.id] ? '🏅' : '○'), h('b', {}, a.name), h('small', {}, a.text))));
+    h('span', { 'aria-hidden': 'true' }, p.achievements[a.id] ? '🏅' : '○'), h('b', {}, a.name), h('span', { class: 'sr-only' }, p.achievements[a.id] ? ' — получено.' : ' — пока нет.'), h('small', {}, a.text))));
   const minutes = Math.round(p.totals.seconds / 60);
   const checks = assessmentHistory(runs, null, 6);
   const sameScheme = assessmentHistory(runs, app.settings.scheme, 6); // the trend: one scheme — a switch is not a change of skill (5.10)

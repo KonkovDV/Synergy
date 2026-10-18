@@ -6,17 +6,19 @@ export const COLORS = {
   good: '#3fe0a0', warn: '#ffcc4d', bad: '#ff6b6b', violet: '#9b7bff',
 };
 
-const BASE_MUTED = COLORS.muted;
+const BASE = { ...COLORS };
+// High contrast reaches the game field too (5.11: only the muted text changed): black surfaces, white lines.
+const HIGH_CONTRAST = { bg: '#000000', bg2: '#000000', panel: '#101010', line: '#ffffff', muted: '#e8ecff', bad: '#ff8a8a' };
 let textScale = 1;
 
 /** Presentation options from the accessibility settings (canvas text size, high contrast). */
 export function setRenderOptions({ scale = 1, highContrast = false } = {}) {
   textScale = Math.min(1.25, Math.max(1, scale)); // canvas layouts are tuned up to +25 %
-  COLORS.muted = highContrast ? '#e8ecff' : BASE_MUTED;
+  Object.assign(COLORS, BASE, highContrast ? HIGH_CONTRAST : {});
 }
 
 export const SKIN_COLORS = {
-  graphite: { base: '#46506a', dark: '#2b3245', light: '#6b7898', glow: '#5ad1ff' },
+  graphite: { base: '#7d8bb0', dark: '#56627f', light: '#a9b6d8', glow: '#5ad1ff' }, // ≥ 3:1 on the game field (WCAG 1.4.11; 5.11 — it was 1.9:1)
   sky: { base: '#4f8ff7', dark: '#2f62c9', light: '#8fb8ff', glow: '#d6ecff' },
   coral: { base: '#ff7a6b', dark: '#d9534a', light: '#ffab9f', glow: '#fff1ee' },
   mint: { base: '#36c9a3', dark: '#1f9a7c', light: '#7fe6cb', glow: '#e6fff8' },

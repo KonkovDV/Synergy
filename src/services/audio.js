@@ -33,11 +33,18 @@ function tone(freq, dur, { type = 'sine', gain = 0.15, slide = 0, delay = 0, att
   return osc;
 }
 
+// One decaying noise buffer per length (5.11): a new buffer filled with Math.random on every drum hit was the largest
+// per-frame garbage in «Ритм».
+const noiseBuffers = new Map();
 function noise(dur, gain = 0.2, filter = 1200, { type = 'lowpass', at, out } = {}) {
   const ac = audio(); if (!ac) return null;
-  const buffer = ac.createBuffer(1, Math.max(1, Math.floor(ac.sampleRate * dur)), ac.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  let buffer = noiseBuffers.get(dur);
+  if (!buffer || buffer.sampleRate !== ac.sampleRate) {
+    buffer = ac.createBuffer(1, Math.max(1, Math.floor(ac.sampleRate * dur)), ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    noiseBuffers.set(dur, buffer);
+  }
   const src = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
   f.type = type; f.frequency.value = filter;
   src.buffer = buffer; g.gain.value = gain;

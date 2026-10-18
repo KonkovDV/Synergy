@@ -13,6 +13,9 @@ mkdirSync(join(dist, 'icons'), { recursive: true });
 const result = await build({
   entryPoints: [join(root, 'src/main.js')], bundle: true, format: 'iife', minify: true, write: false,
   target: ['chrome90', 'safari15', 'firefox90'], legalComments: 'none', sourcemap: false,
+  // Cyrillic as UTF-8, not \uXXXX escapes (5.11): 289 → 208 KB of script to parse on a weak phone; every page
+  // declares UTF-8 and the servers send it.
+  charset: 'utf8',
 });
 const js = result.outputFiles[0].text;
 const css = readFileSync(join(root, 'styles/app.css'), 'utf8');
@@ -32,6 +35,7 @@ ${head}
 </head>
 <body>
 <div id="app" class="app"></div>
+<div id="toasts" aria-live="polite"></div>
 ${body}
 </body>
 </html>
@@ -68,4 +72,5 @@ const standalone = page({
   inline: true,
 });
 writeFileSync(join(dist, 'synergy-standalone.html'), standalone);
-console.log(`Built v${pkg.version}: dist/ (${(js.length / 1024).toFixed(0)} KB JS) + synergy-standalone.html (${(standalone.length / 1024).toFixed(0)} KB)`);
+const kb = text => (Buffer.byteLength(text) / 1024).toFixed(0);
+console.log(`Built v${pkg.version}: dist/ (${kb(js)} KB JS) + synergy-standalone.html (${kb(standalone)} KB)`);

@@ -2,7 +2,7 @@
 // Force is dosed by how strongly you squeeze; the hand then holds on its own (relax!),
 // B lowers excess force, wrong grip must be switched by co-contraction (or a gesture).
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
-import { SCHEME, COMMAND, GRIP_NAME } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL } from '../config.js';
 import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge } from '../render/draw.js';
@@ -54,6 +54,9 @@ export class GripGame extends Game {
 
   get total() { return this.level.items.length; }
 
+  /** The hint in the words of the scheme: channels A/B or gestures (5.11). */
+  say(channels, gestures) { return this.scheme === SCHEME.GESTURE ? gestures : channels; }
+
   nextObject() {
     const kind = this.queue.shift();
     if (!kind) { this.current = null; this.finish(); return; }
@@ -103,15 +106,15 @@ export class GripGame extends Game {
         ? `Покажите жест «${GRIP_NAME[o.grip]}» при раскрытой кисти`
         : `Нужен хват «${GRIP_NAME[o.grip]}»: раскройте кисть, затем коактивация (A+B разом), затем покой`;
     } else if (o.overClosed) {
-      this.hint = 'Кисть уже сжата — сначала раскройте её (B)';
+      this.hint = this.say('Кисть уже сжата — сначала раскройте её (B)', `Кисть уже сжата — сначала «${OPENING_GESTURE.name}»`);
     } else {
       if (o.needSwitchAt !== null && o.switchedAt === undefined) { o.switchedAt = this.time; this.switchTimes.push(this.time - o.needSwitchAt); this.emit('switch'); }
       const inWindow = hand.force >= o.min && hand.force <= o.max;
       const resting = intent.relaxed;
       o.restFor = resting && hand.inContact ? o.restFor + dt : 0;
-      if (!hand.inContact) this.hint = 'Сожмите (A), чтобы взять предмет';
-      else if (hand.force < o.min) this.hint = 'Слабо — добавьте силы (A)';
-      else if (hand.force > o.max) this.hint = 'Сильно! Ослабьте раскрытием (B) — коротко';
+      if (!hand.inContact) this.hint = this.say('Сожмите (A), чтобы взять предмет', `Покажите «${GRIP_NAME[o.grip]}», чтобы взять предмет`);
+      else if (hand.force < o.min) this.hint = this.say('Слабо — добавьте силы (A)', 'Слабо — жест сильнее');
+      else if (hand.force > o.max) this.hint = this.say('Сильно! Ослабьте раскрытием (B) — коротко', `Сильно! Ослабьте: коротко «${OPENING_GESTURE.name}»`);
       else this.hint = 'Отлично — расслабьтесь, протез удержит сам';
       if (inWindow && o.restFor >= LIFT_REST_S) {
         o.phase = 'carry'; o.t = 0; o.liftForce = hand.force; this.stability.segment(); this.emit('lift');
@@ -124,13 +127,13 @@ export class GripGame extends Game {
     if (o.heavy) hand.force = Math.max(0, hand.force - HEAVY_SLIP * dt);
     this.stability.add(hand.force, dt);
     o.x = clamp01(o.t / this.level.carry);
-    this.hint = o.heavy ? 'Тяжело! Подхватывайте (A) коротко, не выходя из зоны' : 'Несите спокойно: не напрягайте мышцы';
+    this.hint = o.heavy ? this.say('Тяжело! Подхватывайте (A) коротко, не выходя из зоны', 'Тяжело! Подхватывайте жестом коротко, не выходя из зоны') : 'Несите спокойно: не напрягайте мышцы';
     if (hand.force < o.min * 0.8) return this.fail('drop', hand);
     if (o.t >= this.level.carry) { o.phase = 'release'; o.t = 0; this.emit('tick'); }
   }
 
   stepRelease(dt, intent, hand, o) {
-    this.hint = 'Над корзиной — раскройте кисть (B)';
+    this.hint = this.say('Над корзиной — раскройте кисть (B)', `Над корзиной — «${OPENING_GESTURE.name}»`);
     if (hand.force === 0 && hand.closure < o.contact - 0.08) {
       // Skill against the level's original window: adaptive easing must not inflate «Точность».
       const base = OBJECTS[o.kind], center = (base.min + base.max) / 2, half = (base.max - base.min) / 2;
@@ -210,7 +213,7 @@ export class GripGame extends Game {
     // Conveyor belt.
     fillRound(ctx, 0, beltY, w, s * 0.36, 8, '#2a3770');
     ctx.fillStyle = '#3a4a8a';
-    const off = (this.time * 60) % 28;
+    const off = this.reduceMotion ? 0 : (this.time * 60) % 28; // a still belt with «Меньше движения» (5.11)
     for (let x = -28 + off; x < w; x += 28) ctx.fillRect(x, beltY + 4, 12, s * 0.36 - 8);
     // Basket.
     const bx = w * 0.82, by = beltY - s * 0.2;

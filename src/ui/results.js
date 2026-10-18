@@ -138,7 +138,8 @@ export function restScreen(app, { next }) {
       h('p', { class: 'note' }, 'Проверка покоя: обе полоски должны быть почти пустыми.'),
       meter.node,
       h('section', { class: 'card' }, h('b', {}, `Дальше: ${g.icon} ${g.title}${next.retention ? ' — без подсказки' : ''}`), h('p', {}, g.tagline)),
-      h('div', { class: 'sticky-actions' }, h('button', { class: 'btn primary big', onclick: go }, 'Пропустить отдых'))));
+      // The pause is the safety rule, not an obstacle (5.11): skipping it is a quiet option, the timer moves on itself.
+      h('div', { class: 'sticky-actions' }, h('button', { class: 'btn ghost', onclick: go }, 'Дальше без отдыха'))));
   const pipeline = app.createPipeline(), source = app.signalSource();
   app.say(`Отдых ${count(left, FORMS.seconds)}. Полностью расслабьте руку. Дальше: ${g.title}.`, { interrupt: true });
   return {

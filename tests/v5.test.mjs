@@ -266,3 +266,13 @@ test('arm pose (5.11): rotates by posed probes (not by day — that tied each po
   assert.ok(!html.includes('<img src=x>'));
   assert.match(reportCsv(clean).split('\n')[0], /arm_pose$/);
 });
+
+test('announcer: a new task is said promptly after «Покой», only flipping feedback waits out the gap (5.11)', async () => {
+  const { LiveAnnouncer } = await import('../src/core/announce.js');
+  const a = new LiveAnnouncer({ minGapS: 1.5, stableS: 0.4 });
+  let said = null;
+  for (let t = 0; t < 0.6; t += 1 / 60) a.update('Покой — расслабьте мышцы', t, { task: true });
+  for (let t = 0.6; t < 1.2 && !said; t += 1 / 60) { const s = a.update('Нужно: Кулак', t, { task: true }); if (s) said = t; }
+  assert.ok(said !== null && said <= 1.01, `«Нужно» said at ${said}`);
+  for (let t = 1.2; t < 1.8; t += 1 / 60) assert.equal(a.update('Держите…', t), null, 'feedback within the gap waits');
+});
