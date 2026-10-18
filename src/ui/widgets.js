@@ -1,5 +1,5 @@
 // Reusable UI pieces (DRY): bottom navigation, live signal meter, form rows.
-import { h } from './dom.js';
+import { h, longestWord } from './dom.js';
 import { COMMAND_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { drawMio } from '../render/draw.js';
 
@@ -73,7 +73,7 @@ export function signalMeter(app) {
  * Screen-reader and switch users hear the question, not just «radio group».
  */
 export function segmented(options, value, onChange, label = null) {
-  const node = h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': label });
+  const node = h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': label, style: { '--word': longestWord(options.map(o => o.label)) } });
   const pick = (o, focus = false) => { render(o.value); onChange(o.value); if (focus) node.querySelector('[aria-checked="true"]')?.focus(); };
   const render = current => {
     const tabStop = options.some(o => o.value === current) ? current : options[0].value;

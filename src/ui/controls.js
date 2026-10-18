@@ -3,7 +3,7 @@
 // both pads (two thumbs) or the «A+B» key = co-contraction. Gesture scheme: 7 gesture keys.
 import { GESTURES, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { drawHand } from '../render/draw.js';
-import { h } from './dom.js';
+import { h, longestWord } from './dom.js';
 
 const MIN_LEVEL = 0.12;
 
@@ -12,13 +12,31 @@ function levelFromPointer(el, e) {
   return Math.max(MIN_LEVEL, Math.min(1, (r.bottom - e.clientY) / r.height));
 }
 
-/** Makes `el` behave like a muscle: pointerdown/move set level, release relaxes. */
-function bindPad(el, onLevel) {
+/**
+ * Pads without holding (5.9, Settings → Доступность; Game Accessibility Guidelines: avoid required holds):
+ * a tap latches the pad at the level of the touch, a second tap releases it — for tremor or weakness.
+ */
+let sticky = false;
+export function setPadMode({ sticky: on = false } = {}) { sticky = !!on; }
+
+/** Makes `el` behave like a muscle: pointerdown/move set level, release relaxes (or a second tap, when latched). */
+function bindPad(el, onLevel, group = null) {
   const active = new Set();
+  let latched = false;
   const update = e => { onLevel(levelFromPointer(el, e)); };
-  el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture?.(e.pointerId); active.add(e.pointerId); el.classList.add('on'); update(e); });
-  el.addEventListener('pointermove', e => { if (active.has(e.pointerId)) update(e); });
-  const end = e => { if (!active.delete(e.pointerId)) return; if (!active.size) { el.classList.remove('on'); onLevel(0); } };
+  const release = () => { latched = false; el.classList.remove('on'); onLevel(0); };
+  el.padRelease = release;
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault(); el.setPointerCapture?.(e.pointerId); active.add(e.pointerId);
+    if (sticky) {
+      if (latched) { release(); return; }
+      if (group?.current && group.current !== el) group.current.padRelease();
+      latched = true; if (group) group.current = el;
+    }
+    el.classList.add('on'); update(e);
+  });
+  el.addEventListener('pointermove', e => { if (active.has(e.pointerId) && (!sticky || latched)) update(e); });
+  const end = e => { if (!active.delete(e.pointerId)) return; if (!active.size && !latched) { el.classList.remove('on'); onLevel(0); } };
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => el.addEventListener(t, end));
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
@@ -55,7 +73,7 @@ export function createTwoChannelPads(emulator) {
   const apply = () => emulator.setTarget({ gesture: null, a: Math.max(state.a, state.co), b: Math.max(state.b, state.co) });
   const A = padView('A', 'сжатие', 'pad-a', 'F ArrowLeft');
   const B = padView('B', 'раскрытие', 'pad-b', 'J ArrowRight');
-  const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'Коактивация: оба канала сразу' }, 'A+B');
+  const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'Коактивация: оба канала сразу' }, h('span', {}, 'A+B'));
   const onA = v => { state.a = v; A.show(v); apply(); }, onB = v => { state.b = v; B.show(v); apply(); }, onCo = v => { state.co = v ? 0.75 : 0; apply(); };
   bindPad(A.el, onA); bindPadKeys(A.el, onA);
   bindPad(B.el, onB); bindPadKeys(B.el, onB);
@@ -72,15 +90,16 @@ export function gestureIcon(gesture, skin = 'icon', size = 44) {
 }
 
 export function createGesturePads(emulator, skin) {
+  const group = { current: null }; // one latched gesture at a time
   const keys = ACTIVE_GESTURES.map(g => {
     const digit = String(GESTURES.indexOf(g) + 1);
     const el = h('div', { class: 'gkey', role: 'button', tabindex: '0', 'aria-keyshortcuts': digit, 'aria-label': `Жест ${g.name}` }, gestureIcon(g), h('span', {}, g.name));
     const onLevel = v => { emulator.setTarget(v ? { gesture: g.id, effort: v } : { gesture: 'rest', effort: 0 }); };
-    bindPad(el, onLevel); bindPadKeys(el, onLevel);
+    bindPad(el, onLevel, group); bindPadKeys(el, onLevel);
     return el;
   });
   emulator.setTarget({ gesture: 'rest', effort: 0 });
-  return h('div', { class: 'pads gestures' }, ...keys, h('p', { class: 'pads-note' }, 'Удерживайте жест; выше палец — сильнее'));
+  return h('div', { class: 'pads gestures', style: { '--word': longestWord(ACTIVE_GESTURES.map(g => g.name)) } }, ...keys, h('p', { class: 'pads-note' }, 'Удерживайте жест; выше палец — сильнее'));
 }
 
 /** Keyboard: F/← = A, J/→ = B, Space = A+B; hold longer = stronger; digits = gestures in GESTURES order (1 = rest). */

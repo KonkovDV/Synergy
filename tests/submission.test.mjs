@@ -25,6 +25,8 @@ function copyRepo() {
 const OVERSTATED = ['Перенос', 'на протез', 'доказан.'].join(' ');
 const UNVERIFIED = ['Попытки без живой', 'подсказки были', 'связаны с протезом.'].join(' ');
 const UP_TO_44 = ['Отказов', 'до', '44 %.'].join(' ');
+const FITTS_LAW = ['Пропускная способность', 'по закону', 'Фиттса.'].join(' ');
+const WCAG_CLAIM = ['Приложение', 'соответствует', 'WCAG 2.2.'].join(' ');
 const gate = dir => spawnSync(process.execPath, ['tools/check-submission.mjs', '--draft', '--no-tests'], { cwd: dir, encoding: 'utf8' });
 const edit = (dir, f, fn) => writeFileSync(join(dir, f), fn(readFileSync(join(dir, f), 'utf8')));
 
@@ -39,6 +41,8 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
       ['unverified claim (fact-check)', () => edit(dir, 'README.md', s => `${s}\n${UNVERIFIED}\n`), 'README.md:'],
       ['«up to 44 %»', () => edit(dir, 'README.md', s => `${s}\n${UP_TO_44}\n`), 'README.md:'],
+      ['«Fitts\' law measured»', () => edit(dir, 'README.md', s => `${s}\n${FITTS_LAW}\n`), 'по мотивам теста Фиттса'],
+      ['«complies with WCAG»', () => edit(dir, 'README.md', s => `${s}\n${WCAG_CLAIM}\n`), 'соответствует WCAG'],
       ['stale APK name in README', () => edit(dir, 'README.md', s => `${s}\nrelease/Synergy-0.0.1.apk\n`), 'Synergy-0.0.1.apk'],
       ['overstated claim', () => edit(dir, 'README.md', s => `${s}\n${OVERSTATED}\n`), 'README.md:'], // the wording lint names the file and line
       ['manifest declares a medical app', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"games",', '"games", "medical",')), 'категория «medical»'],

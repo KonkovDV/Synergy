@@ -61,6 +61,9 @@ const BANNED = [
   // Fact-check 17.10.2026: the abstracts do not say this (Dupan 2025 — delayed feedback, transfer after training).
   [new RegExp(`без живой (обратной связи|подсказки) был${W} связан${W}`, 'i'), '«попытки без подсказки были связаны с протезом» — не подтверждено: «метрика удержания»'],
   [/до 44\s*%/i, '«до 44 %» — у Salminger ровно 44 % в выборке из 25 ответивших'],
+  // External audit 18.10.2026: a game metric is not «Fitts' law measured»; automated checks are not «compliance».
+  [new RegExp(`(пропускн${W} способност${W} по закону Фиттса|измерил${W} закон${W} Фиттса)`, 'i'), '«по закону Фиттса» — говорить «игровая пропускная способность по мотивам теста Фиттса»'],
+  [new RegExp(`(приложени${W}|игра|продукт|Синерги${W})»? (полностью )?соответству${W} WCAG`, 'i'), '«соответствует WCAG» — без ручной проверки со скринридером говорить «ориентир WCAG 2.2, автоматические проверки»'],
 ];
 // Everything the jury or a user may read, except the frozen v3 snapshot and this file (it quotes the patterns).
 const textFiles = tracked.filter(f => /\.(md|js|mjs|html|py)$/.test(f) && !/^legacy\//.test(f) && f !== 'tools/check-submission.mjs' && existsSync(join(root, f)));

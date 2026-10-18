@@ -44,7 +44,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     }
   };
   renderControls();
-  const updateBridge = status => { bridgeInfo.textContent = `Статус: ${BRIDGE_STATUS[status] ?? status} · кадров: ${app.bridge?.received ?? 0}`; };
+  const updateBridge = status => { bridgeInfo.textContent = `Статус: ${BRIDGE_STATUS[status] ?? status} · кадров: ${app.bridge?.received ?? 0}${app.bridge?.raw ? ' · сырая ЭМГ → огибающая 150 мс' : ''}`; };
 
   const badge = retention ? 'Без подсказки' : demo ? 'Демо' : plan ? 'План дня' : '';
   const node = h('div', { class: 'screen play-screen' },

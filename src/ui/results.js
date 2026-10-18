@@ -56,7 +56,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     h('div', { class: 'stats' },
       metric('выполнено', `${d.completionRate}%`), metric('выбор, мс', d.selectionMs), metric('выполнение, мс', d.completionMs), metric('точность', d.accuracy === null ? '—' : `${d.accuracy}%`),
       'throughputBps' in d ? metric('ПС, бит/с', d.throughputBps?.toLocaleString('ru-RU', { maximumFractionDigits: 1 })) : null),
-    h('p', { class: 'note' }, `Время выбора — до первого верного сигнала; выполнение — до удержания 1 с${'throughputBps' in d ? ' (уровни силы — 0,5 с). ПС — пропускная способность по закону Фиттса: чем быстрее и точнее выход на уровень силы, тем она выше' : ''}. Сравнивайте с прошлой неделей на экране «Прогресс». Метрики игровые, не клинический тест.`)) : null;
+    h('p', { class: 'note' }, `Время выбора — до первого верного сигнала; выполнение — до удержания 1 с${'throughputBps' in d ? ' (уровни силы — 0,5 с). ПС — игровая пропускная способность по мотивам теста Фиттса: чем быстрее и точнее выход на уровень силы, тем она выше' : ''}. Сравнивайте с прошлой неделей на экране «Прогресс». Метрики игровые, не клинический тест.`)) : null;
   const calibrationCard = calibrationNote?.recalibrate
     ? h('div', { class: 'card warn-card', role: 'status' }, h('b', {}, '⚠ Пора перекалибровать'),
       h('p', {}, calibrationNote.stuckChannel !== null

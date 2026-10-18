@@ -571,3 +571,44 @@ html { scroll-padding-top: calc(3rem + 24px); } /* sticky top bar / showcase ban
 :root .showcase-banner small, :root.hc .showcase-banner small { color: inherit; }
 .plan .plan-start { margin: 4px 0 12px; }
 .plan .plan-list { margin-bottom: 0; }
+
+/* Windows high contrast (forced colors, 5.9): backgrounds are replaced by system colours — state must not rely on them. */
+@media (forced-colors: active) {
+  .seg.active, .nav-item.active, .level.rec, .skin.active, .pad.on, .gkey.on, .pad-co.on { outline: 3px solid Highlight; outline-offset: -3px; }
+  .meter-bar .fill, .pad-fill, .xp-track i, .skill-track i, .play-progress i, .day.done i, .confirm-ring, .cal-ring { forced-color-adjust: none; }
+  .btn, .seg, .card, .pad, .gkey { border: 1px solid CanvasText; }
+}
+
+/* ===== 5.9 — words are never split mid-word at the default text size on a phone ≥ 360 px (layout linter «broken»;
+   the screenshot showed «Пропорциональны / й»). `overflow-wrap: anywhere` stays as the last resort for 200 % text. */
+/* The longest word of a group (`--word`, letters; segmented() and createGesturePads() set it) sets the narrowest
+   column: «Пропорциональный» stacks the options on a phone, «Правая рука / Левая рука» stay side by side.
+   Measured: bold 14 px Cyrillic ≈ 0.56 rem per letter; + padding. */
+.segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8.5rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)); }
+.checkin .segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)); }
+/* Gesture pads: icon + name; never fewer than two columns (seven pads in one column would push the field away).
+   bold 13 px ≈ 0.52 rem per letter + icon 36 px + gaps and padding. */
+.pads.gestures { grid-template-columns: repeat(auto-fit, minmax(min(calc(50% - 4px), max(6rem, calc(var(--word, 0) * 0.52rem + 3.75rem))), 1fr)); }
+.gkey { min-height: 3.5rem; overflow-wrap: normal; }
+.gkey span { overflow-wrap: anywhere; } /* last resort at 320 px or 200 % text */
+/* Number tiles: 2 × 2 on a phone — «упражнений», «выполнение, мс» and «2310» do not fit a quarter of 360 px. */
+.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 480px) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* Achievements: «Переключатель» is 129 px in bold 16 px, half of a 360 px card gives 121. */
+.badge b { font-size: 0.875rem; }
+/* Tables: columns take whole words; a table wider than the card scrolls in its own named region (WCAG 1.4.10 lets
+   data tables scroll in two dimensions) instead of breaking «Усталость» into «Устало / сть». */
+table.data { table-layout: auto; }
+table.data th, table.data td { overflow-wrap: normal; hyphens: manual; padding: 4px; }
+table.data th { font-size: 0.75rem; }
+/* «A+B» is one symbol for the player: it shrinks with the pad, never wraps. */
+.pad-co { container-type: inline-size; }
+.pad-co span { white-space: nowrap; font-size: max(12px, min(1rem, 30cqi)); }
+/* A gesture pad narrower than icon + name (landscape column, 320 px): the icon goes above the name. */
+.gkey { container-type: inline-size; }
+@container (max-width: 8.5rem) { /* content box: icon 36 + gap 4 + «Указательный» 94 px */
+  .gkey > * { grid-column: 1 / -1; justify-self: center; text-align: center; }
+}
+@media (max-width: 479px) { .stats > :last-child:nth-child(odd) { grid-column: 1 / -1; } } /* 5 tiles: 2 + 2 + 1 wide */
+/* The radar spans the card including its padding: the side labels need the room more than a margin (5.9). */
+.radar { margin: 0 -16px; max-width: calc(100% + 32px); }
