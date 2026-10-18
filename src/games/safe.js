@@ -147,8 +147,13 @@ export class SafeGame extends Game {
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, '#101a3a'); g.addColorStop(1, '#1d1240');
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-    // Safe door.
-    const cx = w / 2, cy = h * 0.57, R = Math.min(w * 0.32, h * 0.21);
+    // Layout top-down (5.8): card → code lamps → door in the room that is left → «Протез видит». Positioned from the
+    // door centre, the lamps used to overlap the card on short fields (landscape, small phones).
+    const n = this.code.length, lw = Math.min(34, (w - 40) / n), lampR = lw * 0.32;
+    const cw = Math.min(w * 0.6, 240), ch = Math.max(84, Math.min(h * 0.24, 112)), x0 = w / 2 - cw / 2, y0 = 10;
+    const lampY = y0 + ch + lampR + 8, footer = 24;
+    const R = Math.max(16, Math.min(w * 0.32, (h - lampY - lampR - 12 - footer) / 2.3));
+    const cx = w / 2, cy = lampY + lampR + 10 + R * 1.15;
     const open = this.openedAt !== undefined ? Math.min(1, (this.time - this.openedAt) * 2) : 0;
     fillRound(ctx, cx - R * 1.15, cy - R * 1.15, R * 2.3, R * 2.3, 22, '#2b3a6e');
     if (open > 0) {
@@ -164,23 +169,21 @@ export class SafeGame extends Game {
     circle(ctx, 0, 0, R * 0.3, '#7f93d6');
     ctx.restore();
     // Code lamps.
-    const n = this.code.length, lw = Math.min(34, (w - 40) / n);
     this.code.forEach((c, i) => {
-      const x = w / 2 - (n - 1) * lw / 2 + i * lw, y = cy - R * 1.32;
-      circle(ctx, x, y, lw * 0.32, c.state === 'ok' ? COLORS.good : c.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : 'rgba(255,255,255,0.15)');
+      const x = w / 2 - (n - 1) * lw / 2 + i * lw, y = lampY;
+      circle(ctx, x, y, lampR, c.state === 'ok' ? COLORS.good : c.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : 'rgba(255,255,255,0.15)');
     });
     // Target card.
     const card = this.card;
     if (card) {
-      const cw = Math.min(w * 0.6, 240), ch = h * 0.24, x0 = w / 2 - cw / 2, y0 = 14;
       fillRound(ctx, x0, y0, cw, ch, 16, this.phase === 'rest' ? 'rgba(255,255,255,0.06)' : '#24336b');
       if (this.phase === 'rest') {
         text(ctx, 'Покой', w / 2, y0 + ch * 0.42, { size: 26, weight: 800, color: COLORS.muted });
-        text(ctx, 'расслабьтесь перед следующей цифрой', w / 2, y0 + ch * 0.7, { size: 12, color: COLORS.muted });
+        text(ctx, 'расслабьтесь перед следующей цифрой', w / 2, y0 + ch * 0.7, { size: 12, color: COLORS.muted, maxWidth: cw - 16 });
       } else {
         const size = ch * 0.27;
         drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
-        text(ctx, card.name, w / 2 + cw * 0.14, y0 + ch * 0.4, { size: 18, weight: 800 });
+        text(ctx, card.name, w / 2 + cw * 0.14, y0 + ch * 0.4, { size: 18, weight: 800, maxWidth: cw * 0.6 });
         if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {
           text(ctx, `${Math.round(card.band[0] * 100)}–${Math.min(100, Math.round(card.band[1] * 100))} %`, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
         }
@@ -194,7 +197,7 @@ export class SafeGame extends Game {
     }
     if (intent && !this.retention) {
       const seen = intent.gesture ? GESTURE_BY_ID[intent.gesture]?.name : COMMAND_NAME[intent.command];
-      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''}`, w / 2, cy + R * 1.32, { size: 13, color: COLORS.muted });
+      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''}`, w / 2, Math.min(h - 10, cy + R * 1.15 + 14), { size: 13, color: COLORS.muted, maxWidth: w - 16 });
     }
   }
 }

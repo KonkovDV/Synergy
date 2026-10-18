@@ -23,7 +23,7 @@ export const SHOWCASE_DAYS = 21;
 export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey()) {
   const rng = createRng(42);
   const profile = createProfile();
-  profile.onboarded = true; profile.tutorialDone = true;
+  profile.onboarded = true; profile.tutorialDone = true; profile.tutorialPassed = true;
   const runs = [];
   const end = new Date(`${today}T18:30:00`);
   const level = { grip: 1, flight: 1, rhythm: 1, safe: 1 };

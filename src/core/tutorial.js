@@ -44,11 +44,14 @@ export class TutorialRun {
   constructor(scheme) {
     this.steps = tutorialSteps(scheme);
     this.index = 0; this.hold = 0; this.elapsed = 0;
+    this.completed = 0; // steps done by the player, not skipped
   }
 
   get step() { return this.steps[this.index] ?? null; }
   get done() { return this.index >= this.steps.length; }
   get stepProgress() { return this.step ? Math.min(1, this.hold / this.step.holdS) : 1; }
+  /** Every step was done (none skipped) — the «Первые шаги» achievement is for this, not for pressing «Завершить». */
+  get passed() { return this.completed === this.steps.length; }
   /** The extra tip appears when a step takes long — help, not a penalty. */
   get showTip() { return !!this.step?.tip && this.elapsed >= TIP_AFTER_S; }
 
@@ -59,7 +62,7 @@ export class TutorialRun {
     this.elapsed += dt;
     this.hold = step.check(intent) ? this.hold + dt : Math.max(0, this.hold - dt);
     if (this.hold < step.holdS) return false;
-    this.index++; this.hold = 0; this.elapsed = 0;
+    this.index++; this.hold = 0; this.elapsed = 0; this.completed++;
     return true;
   }
 

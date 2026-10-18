@@ -30,6 +30,23 @@ function safeStorage() {
   try { const k = '__synergy_probe'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return localStorage; } catch { return memoryStorage(); }
 }
 
+/**
+ * Keyboard focus never hides under the floating bottom bar, the sticky actions or a sticky top bar (WCAG 2.2, 2.4.11): a browser
+ * does not scroll an element that is already partly on screen, even with scroll-padding. Pointer focus is left alone.
+ */
+function keepFocusVisible(el) {
+  if (!(el instanceof Element) || !el.matches(':focus-visible') || el.closest('.bottom-nav, .sticky-actions, .top-bar, .play-top')) return;
+  const bars = [...document.querySelectorAll('.bottom-nav, .sticky-actions')]
+    .filter(b => /fixed|sticky/.test(getComputedStyle(b).position)).map(b => b.getBoundingClientRect().top).filter(top => top > 0);
+  const limit = Math.min(innerHeight, ...bars);
+  const top = Math.max(0, ...[...document.querySelectorAll('.top-bar, .showcase-banner')].map(t => t.getBoundingClientRect().bottom));
+  const r = el.getBoundingClientRect();
+  if (r.top + Math.min(r.height, 40) <= limit - 8 && r.top >= top) return;
+  // Fits between the bars → centre it; taller (a long table) → its top goes right under the top bar.
+  const shift = r.height < limit - top - 16 ? r.top - (top + limit - r.height) / 2 : r.top - top - 8;
+  window.scrollBy(0, shift);
+}
+
 export class App {
   constructor(root) {
     this.root = root;
@@ -45,6 +62,15 @@ export class App {
     bindKeyboard(this.emulator, () => this.settings.scheme);
     window.addEventListener('pointerdown', unlockAudio, { once: true });
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.screen?.onHidden?.(); });
+    document.addEventListener('focusin', e => keepFocusVisible(e.target));
+    // Back in a browser or an installed PWA: one history entry stands for «inside the app», so the back gesture
+    // comes here instead of closing the app (an SPA without history entries is left by the first back).
+    window.addEventListener('popstate', () => {
+      if (this.ignorePop) { this.ignorePop = false; return; }
+      this.handleBack();
+      if (this.screen?.name !== 'home') history.pushState({ synergy: 1 }, '');
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.target.closest?.('input, textarea, select')) { e.preventDefault(); this.handleBack(); } });
     this.exposeApi();
     this.applySource();
     requestAnimationFrame(t => this.frame(t));
@@ -90,7 +116,7 @@ export class App {
       state: () => JSON.parse(JSON.stringify({ settings: this.settings, profile: this.profile, runs: this.state.runs.length, screen: this.screen?.name, bridge: this.bridge?.status ?? null })),
       go: (name, params) => this.go(name, params),
       /** Android back button: returns false when already home (the host may close the app). */
-      back: () => { if (this.screen?.name === 'home') return false; this.go('home'); return true; },
+      back: () => this.handleBack(),
     };
   }
 
@@ -143,9 +169,10 @@ export class App {
     this.applySource();
   }
 
-  /** Marks the tutorial done and unlocks its achievement; returns new achievement ids. */
-  completeTutorial() {
+  /** Marks the tutorial done (its card leaves home); the achievement needs every step done, not skipped. */
+  completeTutorial(passed = false) {
     this.profile.tutorialDone = true;
+    if (passed) this.profile.tutorialPassed = true;
     const fresh = unlockAchievements(this.profile, null, {}, dayKey());
     this.save();
     return fresh;
@@ -244,6 +271,28 @@ export class App {
     mount(this.root, ...(this.showcase ? [this.showcaseBanner()] : []), screen.node);
     this.root.scrollTop = 0; window.scrollTo(0, 0);
     this.announce(screen.node);
+    this.syncHistory(name);
+  }
+
+  /** One history entry while away from home; going home removes it (its popstate is ignored). */
+  syncHistory(name) {
+    if (typeof history === 'undefined') return;
+    const inside = !!history.state?.synergy;
+    if (name !== 'home' && !inside) history.pushState({ synergy: 1 }, '');
+    else if (name === 'home' && inside) { this.ignorePop = true; history.back(); }
+  }
+
+  /**
+   * Back — the Android button, the browser/PWA back gesture, Esc: the screen's own back (a running game pauses),
+   * else its top-bar arrow, else home. Returns false at home (the host may close the app).
+   */
+  handleBack() {
+    if (this.screen?.onBack?.()) return true;
+    const arrow = this.root.querySelector('.top-bar .back-btn');
+    if (arrow) { arrow.click(); return true; }
+    if (this.screen?.name === 'home') return false;
+    this.go('home');
+    return true;
   }
 
   /** Route change for assistive tech (SPA practice): the screen's heading takes focus and names the tab. */
@@ -257,7 +306,7 @@ export class App {
   }
 
   showcaseBanner() {
-    return h('div', { class: 'showcase-banner', role: 'status' }, 'Демо-профиль: синтетические данные',
+    return h('div', { class: 'showcase-banner', role: 'status' }, h('span', {}, 'Демо-профиль', h('small', {}, ': синтетические данные')),
       h('button', { class: 'btn ghost small', onclick: () => { this.exitShowcase(); this.go('home'); } }, 'Выйти'));
   }
 

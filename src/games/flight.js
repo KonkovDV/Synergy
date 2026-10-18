@@ -178,7 +178,7 @@ export class FlightGame extends Game {
     // Middle line = relaxation.
     ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y(0.5)); ctx.lineTo(w, y(0.5)); ctx.stroke(); ctx.setLineDash([]);
-    text(ctx, 'покой', 8, y(0.5) - 9, { size: 11, color: 'rgba(255,255,255,0.4)', align: 'left' });
+    text(ctx, 'покой', 8, y(0.5) - 9, { size: 12, color: 'rgba(255,255,255,0.45)', align: 'left' });
     const tolPx = this.tol * span;
     // Streams.
     for (const s of this.track.filter(x => x.kind === 'stream')) {
@@ -215,7 +215,7 @@ export class FlightGame extends Game {
     rings.forEach(r => drawRing(r, true));
     for (const r of rings) if (r.burst) { r.burst = false; this.burst(gx, y(r.alt), ringColor(r), 16); }
     this.renderParticles(ctx);
-    if (this.flash?.t > 0) text(ctx, this.flash.text, gx + 70, y(this.alt) - 34, { size: 18, weight: 800, color: this.flash.color });
+    if (this.flash?.t > 0) text(ctx, this.flash.text, gx + 70, y(this.alt) - 34, { size: 18, weight: 800, color: this.flash.color, outline: true });
     if (this.streak >= 3) text(ctx, `Серия ×${this.streak}`, w - 12, 18, { size: 14, weight: 700, color: COLORS.warn, align: 'right' });
   }
 

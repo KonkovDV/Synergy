@@ -42,20 +42,25 @@ export function homeScreen(app) {
       ...week.days.map((d, i) => h('div', { class: `day ${week.trained[i] ? 'done' : ''} ${i === week.todayIndex ? 'today' : ''}` }, h('i'), h('small', {}, WEEKDAYS[i]))),
       h('p', { class: 'week-note' }, `${week.done} из ${week.goal} дней в неделю`)));
 
+  // The day's main action comes right under the title (5.8): at the end of the card it sat under the bottom bar
+  // on a 390 × 844 phone and was not visible without scrolling. The list below says what is inside.
+  const restText = app.checkin()?.reason === 'skin'
+    ? 'Сегодня вы отметили раздражение кожи под датчиками — день без датчиков: серия не прерывается. Если покраснение не проходит, покажите кожу протезисту.'
+    : 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.';
   const planCard = h('section', { class: 'card plan' },
     h('div', { class: 'card-head' }, h('h2', {}, plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
-    h('ol', { class: 'plan-list' }, ...plan.items.map(item => {
+    overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,
+    resting ? h('p', { class: 'note warn' }, restText) : null,
+    h('button', { class: 'btn primary big plan-start', disabled: allDone || resting, onclick: () => app.startPlan() },
+      resting ? 'Сегодня — отдых' : allDone ? 'План выполнен ✓' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
+    resting ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null,
+    h('ol', { class: 'plan-list', 'aria-label': 'Упражнения плана' }, ...plan.items.map(item => {
       const g = GAME_BY_ID[item.game];
       return h('li', { class: item.done ? 'done' : '' },
         h('span', { class: 'plan-icon', 'aria-hidden': 'true' }, item.done ? '✓' : g.icon),
         h('div', {}, h('b', {}, item.retention ? `${g.title}: без подсказки` : g.title),
-          h('small', {}, item.retention ? 'Проверка: навык без живой подсказки' : `Уровень ${item.level} · ${g.skills.map(k => SKILL_NAME[k]).slice(0, 2).join(', ')}`)));
-    })),
-    overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,
-    resting ? h('p', { class: 'note warn' }, 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.') : null,
-    h('button', { class: 'btn primary big', disabled: allDone || resting, onclick: () => app.startPlan() },
-      resting ? 'Сегодня — отдых' : allDone ? 'План выполнен ✓' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
-    resting ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null);
+          h('small', {}, item.done ? 'выполнено' : item.retention ? 'Проверка: навык без живой подсказки' : `Уровень ${item.level} · ${g.skills.map(k => SKILL_NAME[k]).slice(0, 2).join(', ')}`)));
+    })));
 
   const tipCard = h('section', { class: 'card tip' }, h('div', { class: 'coach-head' }, mioAvatar('support', 40), h('b', {}, 'Совет Мио')), h('p', {}, tip));
   const tutorialCard = !p.tutorialDone ? h('section', { class: 'card tutorial-card' },
@@ -76,7 +81,7 @@ export function homeScreen(app) {
         h('span', { class: 'game-meta' }, `★ ${stars}/${g.Game.levels.length * 3} · ур. ${gp.unlocked}`));
     })));
 
-  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, checkCard, tipCard, games), bottomNav(app, 'home')) };
+  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, planCard, tutorialCard, checkCard, tipCard, games), bottomNav(app, 'home')) };
 }
 
 export function levelsScreen(app, { game }) {

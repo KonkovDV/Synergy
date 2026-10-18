@@ -238,12 +238,12 @@ export class GripGame extends Game {
     // Grip badge.
     const need = o ? GRIP_NAME[o.grip] : '';
     fillRound(ctx, w - 150, 12, 138, 48, 10, 'rgba(255,255,255,0.07)');
-    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 81, 28, { size: 13, color: hand.grip === o?.grip ? COLORS.good : COLORS.warn });
-    text(ctx, o ? `Нужен: ${need}` : '', w - 81, 46, { size: 12, color: COLORS.muted });
+    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 81, 28, { size: 13, color: hand.grip === o?.grip ? COLORS.good : COLORS.warn, maxWidth: 128 });
+    text(ctx, o ? `Нужен: ${need}` : '', w - 81, 46, { size: 12, color: COLORS.muted, maxWidth: 128 });
     text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 14, color: COLORS.muted });
     if (o) text(ctx, o.name, ox, oy + s * 0.75, { size: 13, color: COLORS.text });
     this.renderParticles(ctx);
-    if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, h * 0.12, { size: 20, weight: 800, color: this.flash.color });
+    if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, Math.max(52, h * 0.16), { size: 20, weight: 800, color: this.flash.color, outline: true, maxWidth: w - 24 }); // under the «1 / 6» counter
   }
 }
 

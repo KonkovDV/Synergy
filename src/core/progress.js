@@ -52,7 +52,7 @@ export const ACHIEVEMENTS = [
   { id: 'week_goal', name: 'Цель недели', text: 'Выполните недельную цель', test: (p, run, ctx) => ctx?.weekly?.done >= ctx?.weekly?.goal },
   { id: 'retention', name: 'Без подсказки', text: 'Пройдите испытание без подсказки на 2★', test: (p, run) => run?.retention && run.stars >= 2 },
   { id: 'all_games', name: 'Универсал', text: 'Сыграйте во все четыре игры', test: (p) => Object.values(p.games).filter(g => g.played && !g.assessment).length >= 4 },
-  { id: 'tutorial', name: 'Первые шаги', text: 'Пройдите обучение: покой, A, B, сила, коактивация', test: (p) => !!p.tutorialDone },
+  { id: 'tutorial', name: 'Первые шаги', text: 'Пройдите обучение: покой, A, B, сила, коактивация', test: (p) => !!p.tutorialPassed },
   { id: 'check', name: 'Самопроверка', text: 'Пройдите проверку навыка', test: (p, run) => !!run?.details?.assessment },
 ];
 
@@ -67,7 +67,8 @@ export function createProfile() {
     skin: 'graphite',
     plan: null,
     onboarded: false,
-    tutorialDone: false,
+    tutorialDone: false,                        // the tutorial card left home (passed or finished early)
+    tutorialPassed: false,                      // every step done — the «Первые шаги» achievement
   };
 }
 

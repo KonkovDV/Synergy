@@ -19,7 +19,7 @@ const demo = await page.evaluate(() => window.Synergy.state().bridge);
 const statusText = await page.locator('.bridge-status').first().textContent();
 await page.getByRole('button', { name: 'Старт' }).click();
 await page.waitForTimeout(6000);
-await page.screenshot({ path: `${out}/60-bridge-demo.png` });
+await page.screenshot({ path: `${out}/60-bridge-demo.jpg`, type: 'jpeg', quality: 78, scale: 'css' });
 const result = { demoStatus: demo, statusText };
 if (labWs) {
   await page.evaluate(url => { const s = window.Synergy; s.go('settings'); }, labWs);
@@ -31,7 +31,7 @@ if (labWs) {
   await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.4);
   await page.mouse.down(); await page.waitForTimeout(1500);
   result.labChip = await page.locator('.meter-chip').textContent();
-  await page.screenshot({ path: `${out}/61-bridge-lab-pinch.png` });
+  await page.screenshot({ path: `${out}/61-bridge-lab-pinch.jpg`, type: 'jpeg', quality: 78, scale: 'css' });
   await page.mouse.up(); await page.waitForTimeout(800);
   result.labChipAfter = await page.locator('.meter-chip').textContent();
 }

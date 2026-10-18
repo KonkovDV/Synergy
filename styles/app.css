@@ -433,3 +433,141 @@ h2 { font-weight: 800; letter-spacing: -0.2px; }
   .play-screen .gkey { min-height: 48px; }
   .sheet { max-width: 640px; }
 }
+
+/* ===== 5.8 — robust layout «from start to finish» (tests/e2e/layout.mjs: 7 viewports × text 100/130/200 %).
+   Android WebView multiplies text by the system font scale (up to 200 % on Android 14+), so sizes that hold
+   text are in rem, tracks shrink (minmax(0, …)), long words wrap, nothing relies on a fixed pixel box. ===== */
+html { overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; scroll-padding-bottom: calc(64px + 2rem); }
+small { font-size: max(0.75rem, 0.83em); }
+.seg small, .day small, .stats small, .calendar small, .skin small, .xp small { font-size: 0.75rem; }
+.scroll { padding-bottom: calc(80px + 3rem); }
+.eyebrow, .play-title h1, .seg, .nav-item, .pad-label span, .bridge-panel small, .legend, .how li, .badge, .stats div { overflow-wrap: anywhere; }
+
+/* Radio groups wrap instead of overflowing: «Пропорциональный» does not fit a third of 320 px. */
+.segmented { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr)); }
+.checkin .segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); }
+.seg { min-width: 0; }
+
+/* Icon boxes grow with the text they sit next to. */
+.hero-top { grid-template-columns: 3.5rem minmax(0, 1fr) auto; }
+.avatar { width: 3.5rem; height: 3.5rem; }
+.game-icon { width: 3.25rem; height: 3.25rem; flex: none; }
+.plan-list li { grid-template-columns: 2.75rem minmax(0, 1fr); }
+.plan-icon { width: 2.5rem; height: 2.5rem; }
+.skill { grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) minmax(2.25rem, auto); }
+.skill span { overflow-wrap: anywhere; }
+.day i { width: min(30px, 100%); aspect-ratio: 1; height: auto; }
+
+/* Results: the stars are a picture (the score is text next to them) — sized by the screen, never wider than it. */
+.big-stars { font-size: min(4rem, 20vw); letter-spacing: 0.08em; }
+.big-score { font-size: min(3.25rem, 16vw); }
+
+/* Bottom bar: labels may take two lines at large text; the scroll padding above follows in rem. */
+.nav-item { padding: 4px 2px; line-height: 1.15; text-align: center; }
+.showcase-banner .btn { min-height: 44px; }
+
+/* Play: the title column shrinks (the score stays on screen), the stage gives way to the controls on short screens,
+   and if text is so large that nothing fits, the screen scrolls instead of cutting the pads off. */
+.play-top { grid-template-columns: 48px minmax(0, 1fr) 48px auto; }
+.play-screen { overflow: hidden auto; }
+.stage { min-height: 160px; }
+.play-side { display: contents; }
+
+/* Emulator pads: label at the top, value at the bottom — in the flow, so they can never overlap. */
+.pad { display: flex; flex-direction: column; justify-content: space-between; padding: 10px 12px; min-width: 0; }
+.pad-label, .pad-value { position: relative; inset: auto; z-index: 1; }
+.pad-label { gap: 2px; }
+.pad-label b { line-height: 1.1; }
+.pad-value { align-self: flex-end; line-height: 1.1; }
+.pads.two { grid-template-columns: minmax(0, 1fr) minmax(3.75rem, auto) minmax(0, 1fr); height: auto; min-height: clamp(120px, 22dvh, 190px); }
+.pad-co { padding: 4px 8px; }
+.settings .pads.two, .calibration .pads.two { height: auto; min-height: 120px; }
+.tutorial .controls .pads.two { height: auto; min-height: 130px; }
+.controls.compact .pads.two { height: auto; min-height: 96px; }
+
+@media (orientation: landscape) and (max-height: 540px) {
+  .play-screen { grid-template-rows: auto 4px minmax(0, 1fr); overflow: hidden; }
+  .play-screen .stage { grid-row: 3; }
+  .play-screen .play-side { grid-column: 2; grid-row: 3; display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; overflow-y: auto; }
+  .play-screen .pads.two { height: auto; min-height: clamp(120px, 46dvh, 220px); }
+}
+
+/* 5.8 — second pass of the layout audit. */
+.top-bar { grid-template-columns: 52px minmax(0, 1fr) 52px; }
+.top-bar h1 { overflow-wrap: anywhere; }
+.bottom-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.level-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 4.25rem), 1fr)); }
+.skins { grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr)); }
+.skin { min-width: 0; }
+.skin canvas { max-width: 100%; height: auto; }
+.table-wrap { overflow-x: auto; margin: 6px 0; border-radius: 10px; }
+.table-wrap:focus-visible { outline-offset: 0; }
+table.data { table-layout: fixed; margin: 0; }
+table.data th, table.data td { overflow-wrap: anywhere; hyphens: auto; }
+.row input[type=text], .row input[type=url], .row input[type=time] { width: 100%; min-width: 0; }
+.row > span { flex-wrap: wrap; }
+.pin-input { width: min(10ch, 100%); }
+.showcase-banner { flex-wrap: wrap; }
+
+/* The game hint is a bar under the field (5.8): over the canvas it hid what games draw at the bottom and, on a short
+   screen with large text, climbed over the header. Two lines are reserved so the layout does not jump. */
+.stage-hint { position: static; margin: 0; border-radius: 0; background: var(--bg2); border-top: 1px solid var(--line); min-height: calc(2.9em + 12px); display: grid; place-items: center; }
+.play-side > :first-child { margin-top: auto; } /* landscape column: overflow scrolls instead of escaping upwards */
+
+/* Short landscape screens: sticky footers would cover half of the page — they scroll with it. */
+@media (max-height: 540px) and (orientation: landscape) {
+  .sticky-actions { position: static; background: none; }
+  .play-screen { grid-template-rows: auto 4px minmax(0, 1fr) auto; }
+  .play-screen .stage { grid-column: 1; grid-row: 3; }
+  .play-screen .stage-hint { grid-column: 1; grid-row: 4; }
+  .play-screen .play-side { grid-column: 2; grid-row: 3 / 5; }
+}
+/* Only the field shrinks; the hint, the signal and the pads keep their content height. */
+.play-screen > .stage-hint, .play-screen .meter, .play-screen .controls { flex: none; }
+/* A pad narrower than 6.5 rem keeps «A»/«B» and the value; the word under the letter would break mid-word. */
+.pad { container-type: inline-size; }
+@container (max-width: 6.5rem) { .pad-label span { display: none; } }
+.row input:not([type=checkbox]):not([type=range]):not([type=file]) { min-height: 48px; }
+/* 5.8 — third pass. */
+@media (orientation: landscape) and (max-height: 540px) {
+  /* flex-end with overflow pushed the signal above the column; margin-top: auto aligns down only when it fits */
+  .play-screen .play-side { justify-content: normal; }
+  .play-screen .play-side .meter { align-self: stretch; }
+  .play-screen { overflow: hidden auto; grid-template-rows: auto 4px minmax(140px, 1fr) auto; }
+  /* A compact bottom bar: icon and label in a row, 48 px — a third of a 320 px high screen is too much. */
+  .nav-item { min-height: 48px; flex-direction: row; gap: 6px; }
+  .nav-item .nav-icon { padding: 2px 10px; }
+  :root { --nav-space: calc(58px + 1rem); }
+}
+html { scroll-padding-bottom: var(--nav-space, calc(64px + 2rem)); }
+.scroll { padding-bottom: calc(var(--nav-space, calc(64px + 2rem)) + 2rem); }
+.nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.nav-label { max-width: 100%; overflow-wrap: anywhere; }
+.fold > summary h2 { min-width: 0; overflow-wrap: anywhere; }
+.row.toggle { min-height: 48px; }
+/* Pad letters and values follow the pad width (container units) as well as the text size. */
+.pad-label b { font-size: min(1.75rem, 40cqi); line-height: 1.25; }
+.pad-value { font-size: min(1.125rem, 26cqi); line-height: 1.25; max-width: 100%; }
+.pad { gap: 2px; }
+.pads.two { grid-template-columns: minmax(0, 1fr) minmax(2.75rem, 0.55fr) minmax(0, 1fr); }
+.pad-label b { font-size: max(12px, min(1.75rem, 40cqi)); }
+.pad-value { font-size: max(12px, min(1.125rem, 26cqi)); }
+html { scroll-padding-top: calc(3rem + 24px); } /* sticky top bar / showcase banner */
+.showcase-banner small { font-size: inherit; }
+@media (max-width: 380px) { .showcase-banner small { display: none; } }
+/* Landscape: the field takes the whole left side; the hint sits on top of the right column (5.8). */
+@media (orientation: landscape) and (max-height: 540px) {
+  .play-screen { grid-template-rows: auto 4px auto minmax(0, 1fr); }
+  .play-screen .stage { grid-column: 1; grid-row: 3 / 5; }
+  .play-screen .stage-hint { grid-column: 2; grid-row: 3; border-top: 0; border-bottom: 1px solid var(--line); }
+  .play-screen .play-side { grid-column: 2; grid-row: 4; }
+}
+.big-stars { font-size: min(4rem, 20vw, 26vh); overflow-wrap: anywhere; }
+/* SVG line icons (5.8) instead of platform emoji. */
+.ico { width: 1.5rem; height: 1.5rem; display: block; }
+.icon-btn { display: inline-grid; place-items: center; }
+.nav-icon .ico { width: 1.375rem; height: 1.375rem; }
+.pad:focus-visible, .gkey:focus-visible, .pad-co:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+:root .showcase-banner small, :root.hc .showcase-banner small { color: inherit; }
+.plan .plan-start { margin: 4px 0 12px; }
+.plan .plan-list { margin-bottom: 0; }

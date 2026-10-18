@@ -14,7 +14,8 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 }, devi
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-const shot = name => page.screenshot({ path: `${out}/${name}.png` });
+// Light screenshots (5.8): JPEG in CSS pixels — every PNG@2× re-shot used to stay in git history (24 MB of 25).
+const shot = name => page.screenshot({ path: `${out}/${name}.jpg`, type: 'jpeg', quality: 78, scale: 'css' });
 const wait = ms => page.waitForTimeout(ms);
 
 await page.goto(base);

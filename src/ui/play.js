@@ -2,7 +2,7 @@
 // Hands-free flow: the intro can be confirmed by holding A for 1 s — the phone is in the sound hand,
 // the sensors are on the other arm, so the player should not need to touch the screen to continue.
 import { h, toast } from './dom.js';
-import { signalMeter } from './widgets.js';
+import { signalMeter, icon } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, COMMAND, gestureLegend } from '../core/vocabulary.js';
 import { COLORS } from '../render/draw.js';
@@ -39,7 +39,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     else {
       const pads = s.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator) : createTwoChannelPads(app.emulator);
       // In bridge mode the pads stay as a remote for the raw-EMG lab (bridge/ws_bridge.py --lab).
-      controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, h('small', {}, `${s.wsUrl || 'postMessage / window.Synergy.feed'} · площадки ниже управляют лабораторией --lab`)), pads] : [pads]));
+      controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, h('small', {}, s.wsUrl ? `Адрес: ${s.wsUrl}. Площадки ниже — пульт лаборатории (--lab).` : 'Кадры приходят от протеза или эмулятора напрямую (без адреса).')), pads] : [pads]));
       if (bridgeMode) controls.classList.add('compact');
     }
   };
@@ -49,14 +49,15 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const badge = retention ? 'Без подсказки' : demo ? 'Демо' : plan ? 'План дня' : '';
   const node = h('div', { class: 'screen play-screen' },
     h('header', { class: 'play-top' },
-      h('button', { class: 'icon-btn', 'aria-label': 'Выйти', onclick: () => exit() }, '✕'),
+      h('button', { class: 'icon-btn', 'aria-label': 'Выйти', onclick: () => exit() }, icon('close')),
       h('div', { class: 'play-title' }, h('h1', {}, `${entry.title} · ур. ${level}`), badge ? h('small', {}, badge) : null),
-      h('button', { class: 'icon-btn', 'aria-label': 'Пауза', onclick: () => pause() }, 'Ⅱ'),
+      h('button', { class: 'icon-btn', 'aria-label': 'Пауза', onclick: () => pause() }, icon('pause')),
       scoreEl),
     h('div', { class: 'play-progress', 'aria-hidden': 'true' }, bar),
-    h('main', { class: 'stage', 'aria-label': 'Игровое поле' }, canvas, hint, overlay),
-    s.showMeters ? meter.node : null,
-    controls);
+    h('main', { class: 'stage', 'aria-label': 'Игровое поле' }, canvas, overlay),
+    hint, // under the field, not over it: never covers the header or what a game draws at the bottom
+    // Signal and pads: one column on the right in landscape (styles/app.css), in the flow in portrait.
+    h('div', { class: 'play-side' }, s.showMeters ? meter.node : null, controls));
 
   // Canvas sizing (device pixel ratio aware).
   let view = { w: 300, h: 300 };
@@ -173,6 +174,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   return {
     node, tick,
     onHidden: pause,
+    /** Back during a run pauses it (a stray gesture must not throw the attempt away); back again leaves. */
+    onBack() { if (phase === 'running') pause(); else exit(); return true; },
     onBridgeStatus: updateBridge,
     cleanup() { music?.update(0, 1, false); observer.disconnect(); app.emulator.setTarget({ a: 0, b: 0, gesture: s.scheme === SCHEME.GESTURE ? 'rest' : null }); },
   };
