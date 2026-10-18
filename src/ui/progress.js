@@ -4,7 +4,7 @@ import { fmtNum, fmtPct, fmtDay, plural, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { bottomNav, skillBar } from './widgets.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
-import { skillProfile, ACHIEVEMENTS, SKINS, skinUnlocked, playerLevel, dayKey } from '../core/progress.js';
+import { skillProfile, ACHIEVEMENTS, SKINS, skinUnlocked, trainingDays, dayKey } from '../core/progress.js';
 import { COLORS, drawHand } from '../render/draw.js';
 import { gestureName as name, COMMAND_POSE } from '../core/vocabulary.js';
 import { buildReport, reportCsv, reportHtml, printHtml, download, wellbeingLog } from '../services/report.js';
@@ -137,7 +137,7 @@ export function progressScreen(app) {
   const runs = app.state.runs.filter(r => !r.demo);
   const profile = skillProfile(runs);
   const p = app.profile;
-  const lvl = playerLevel(p.xp);
+  const days = trainingDays(p);
   const trends = Object.keys(SKILL_NAME).map(k => {
     const values = runs.filter(r => !r.details?.assessment).map(r => r.skills?.[k]).filter(Number.isFinite).slice(-12);
     return h('div', { class: 'trend' }, skillBar(SKILL_NAME[k], profile[k]), sparkline(values));
@@ -174,7 +174,7 @@ export function progressScreen(app) {
       h('main', { class: 'scroll' },
         h('h1', {}, 'Прогресс'),
         h('section', { class: 'stats' },
-          h('div', {}, h('b', {}, lvl.level), h('small', {}, 'уровень')),
+          h('div', {}, h('b', {}, days), h('small', {}, `${plural(days, FORMS.days)} с занятиями`)),
           h('div', {}, h('b', {}, p.totals.runs), h('small', {}, plural(p.totals.runs, FORMS.exercises))),
           h('div', {}, h('b', {}, minutes), h('small', {}, plural(minutes, FORMS.minutes))),
           h('div', {}, h('b', {}, p.streak.best), h('small', {}, 'лучшая серия'))),

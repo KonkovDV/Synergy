@@ -12,7 +12,7 @@
 //   fold        — the day's «Начать» is below the fold of the home screen (portrait phones);
 //   action      — the main button of an open dialog is out of sight (5.10);
 //   reach       — a pad of a game, tutorial or calibration screen is off screen at the default text size (5.10).
-// Usage: npm run build && npm run audit:layout [-- baseUrl] [-- --quick]   (no URL — serves dist/ itself)
+// Usage: npm run build && npm run audit:layout [-- baseUrl] [-- --quick] [-- --view=568x320 --state=a,b]   (no URL — serves dist/ itself)
 import { createRequire } from 'node:module';
 import { baseUrl } from '../../tools/static-server.mjs';
 const require = createRequire(import.meta.url);
@@ -22,8 +22,12 @@ const server = await baseUrl();
 const base = server.url;
 const quick = process.argv.includes('--quick');
 
-const VIEWPORTS = quick ? [[320, 568], [390, 844], [844, 390]] : [[320, 568], [360, 740], [390, 844], [430, 932], [768, 1024], [844, 390], [568, 320]];
+// Re-check after a fix (5.11): `-- --view=568x320 --state=play-bridge,hc-play` runs one size and a few states.
+const arg = name => process.argv.find(a => a.startsWith(`--${name}=`))?.split('=')[1];
+const ALL_VIEWPORTS = [[320, 568], [360, 740], [390, 844], [430, 932], [768, 1024], [844, 390], [568, 320]];
+const VIEWPORTS = arg('view') ? ALL_VIEWPORTS.filter(([w, h]) => `${w}x${h}` === arg('view')) : quick ? [[320, 568], [390, 844], [844, 390]] : ALL_VIEWPORTS;
 const SCALES = quick ? [1, 2] : [1, 1.3, 2];
+const onlyStates = arg('state')?.split(',');
 
 /** Runs in the page: geometry checks of the current screen. */
 function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
@@ -241,6 +245,7 @@ const STATES = [
   ['progress-empty', async p => go(p, 'progress')],
   ['settings', async p => { await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
   ['calibration', async p => go(p, 'calibration')],
+  ['audiosync', async p => go(p, 'audiosync')],
   ['pin', async p => { await go(p, 'pin'); await p.getByLabel('PIN родителя').fill('12'); await p.keyboard.press('Enter'); }],
   ['gesture-play', async p => { await p.evaluate(() => window.Synergy.go('settings')); await p.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click(); await go(p, 'play', { game: 'safe', level: 5 }); }],
   ['gesture-running', async p => { await go(p, 'play', { game: 'safe', level: 5, demo: true }); await p.getByRole('button', { name: 'Старт' }).click(); await p.waitForTimeout(3600); }],
@@ -263,6 +268,7 @@ for (const [w, h] of VIEWPORTS) {
     page.on('pageerror', e => errors.push(`${w}×${h}@${scale}: ${e.message}`));
     await page.goto(base); await page.waitForTimeout(250);
     for (const [state, setup] of STATES) {
+      if (onlyStates && !onlyStates.includes(state) && !/^(home-new|onboarding)/.test(state)) continue;
       try { await setup(page); } catch (e) { errors.push(`${w}×${h}@${scale} ${state}: setup ${e.message.split('\n')[0]}`); continue; }
       await page.evaluate(s => { document.documentElement.style.setProperty('--text-scale', String(s)); document.querySelectorAll('.toast').forEach(t => t.remove()); }, scale);
       await page.waitForTimeout(state.startsWith('play') || state.startsWith('gesture') ? 350 : 150);

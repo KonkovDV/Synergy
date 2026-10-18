@@ -42,10 +42,10 @@ export function checkInAdvice({ pain = 0, fatigue = 0, skin = 0 } = {}) {
     return { action: CHECKIN_ACTION.STOP, reason: 'pain', text: 'Сильная боль — сегодня без тренировки. Если боль повторяется или усиливается, обратитесь к врачу или протезисту.' };
   }
   if (skin >= 1) {
-    return { action: CHECKIN_ACTION.STOP, reason: 'skin', text: 'Кожа под датчиками раздражена — сегодня без датчиков, пусть кожа отдохнёт. Если покраснение не проходит за несколько часов, появились пузыри или боль — покажите кожу протезисту или врачу.' };
+    return { action: CHECKIN_ACTION.STOP, reason: 'skin', text: 'Кожа под датчиками раздражена — сегодня без датчиков, пусть кожа отдохнёт. Если покраснение не проходит через 20–30 минут после снятия датчиков, появились сыпь, пузыри или боль — покажите кожу протезисту или врачу.' };
   }
   if (pain >= WELLBEING.painLight || fatigue >= WELLBEING.fatigueLight) {
-    return { action: CHECKIN_ACTION.LIGHT, reason: pain >= WELLBEING.painLight ? 'pain' : 'fatigue', text: 'Сегодня — лёгкая тренировка: одно упражнение и короткая проверка. Напрягайте мышцы мягко, без боли. Если операция или травма были недавно, нагрузку сначала согласуйте с врачом.' };
+    return { action: CHECKIN_ACTION.LIGHT, reason: pain >= WELLBEING.painLight ? 'pain' : 'fatigue', text: 'Сегодня план короче: одно упражнение и короткая проверка. Если появится или усилится боль — остановитесь. Если операция или травма были недавно, сначала согласуйте занятия с врачом.' };
   }
   return { action: CHECKIN_ACTION.GO, reason: null, text: 'Отлично, начинаем. Комфортная сила, без боли — максимум не нужен.' };
 }
@@ -93,10 +93,16 @@ export function freePlayCaution({ checkin, secondsToday, softCapMin }) {
   if (checkin?.action === CHECKIN_ACTION.STOP) {
     return checkin.reason === 'skin'
       ? 'Сегодня вы отметили раздражение кожи под датчиками. Если играете — только с эмулятором на экране, без датчиков.'
-      : 'Сегодня вы отметили сильную боль — лучше отдохнуть. Если играете — мягко и сразу остановитесь, если боль усилится.';
+      : 'Сегодня вы отметили сильную боль — сегодня без тренировки. Игра открыта, но при сильной боли напрягать мышцы не нужно. Если боль повторяется или усиливается — обратитесь к врачу или протезисту.';
   }
   return overDailyCap(secondsToday, softCapMin) ? capAdvice(softCapMin) : null;
 }
+
+/**
+ * «Пропустить» is offered only before the first answer (5.11, P0 of the legal-medical review): after «Сильная»
+ * a skip recorded «пропущено» and started the full plan — the stop was bypassed and the report lost the answer.
+ */
+export const checkinSkippable = answers => Object.values(answers).every(v => v === null);
 
 /** The check-in is asked once a day: an answer or «пропущено» (skipped) counts. */
 export const needsCheckin = (profile, today) => !profile.days?.[today]?.checkin;

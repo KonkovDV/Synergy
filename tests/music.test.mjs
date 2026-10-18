@@ -2,7 +2,7 @@
 // the player schedules each event to be HEARD at its game time (lookahead, output latency, pause/resume).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { musicPattern, MusicPlayer, MAJOR, triad, midiToHz } from '../src/core/music.js';
+import { musicPattern, MusicPlayer, MAJOR, triad, midiToHz, offsetClock, clickTrack } from '../src/core/music.js';
 import { MUSIC } from '../src/config.js';
 import { createGame } from '../src/games/registry.js';
 
@@ -83,4 +83,18 @@ test('music player: slowed game time stretches the schedule; pause silences and 
   player.update(gt, 1, true);
   const replayed = b.played.slice(before);
   assert.ok(replayed.length > 0 && replayed.every(h => h.e.t >= gt - MUSIC.lateS), 'resume replays the stopped events, not the past');
+});
+
+test('music: the player\'s sync offset moves when a click is started, not when it is heard (B.2, 5.11)', () => {
+  const late = fakeAudio(0.02), on = fakeAudio(0.02);
+  const track = clickTrack(0.75, 8);
+  assert.deepEqual(track.slice(0, 2).map(e => e.t), [0.75, 1.5]);
+  const shifted = new MusicPlayer(track, { clock: offsetClock(late.clock, 180), play: late.play });
+  const plain = new MusicPlayer(track, { clock: offsetClock(on.clock, 0), play: on.play });
+  for (let gt = 0; gt < 7; gt += 1 / 60) { late.now = on.now = 10 + gt; shifted.update(gt, 1, true); plain.update(gt, 1, true); }
+  // Headphones that add 180 ms unreported: started 180 ms earlier, so heard (device latency + 180 ms later) on the beat.
+  for (const h of late.played) assert.ok(Math.abs(h.at + 0.02 + 0.18 - (10 + h.e.t)) < 1 / 60 + 1e-9, `click at ${h.e.t}`);
+  assert.equal(late.played.length, 8, 'every click once'); assert.equal(on.played.length, 8);
+  assert.equal(offsetClock(() => null, 100)(), null, 'no audio — no clock');
+  assert.equal(offsetClock(on.clock, NaN)().latency, on.latency, 'a damaged offset is ignored');
 });

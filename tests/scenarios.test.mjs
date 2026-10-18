@@ -1,7 +1,7 @@
 // Scenarios of docs/SCENARIOS.md that had no automated check («—» in the table), named by their number.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adviseStop, needsCheckin, checkInAdvice, CHECKIN_ACTION, SKIN_LEVELS, freePlayCaution } from '../src/core/wellbeing.js';
+import { adviseStop, needsCheckin, checkInAdvice, checkinSkippable, CHECKIN_ACTION, SKIN_LEVELS, freePlayCaution } from '../src/core/wellbeing.js';
 import { createProfile, recordDayNote, sessionRules, buildDailyPlan, completePlanItem, recordRun, streakAlive } from '../src/core/progress.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
 
@@ -46,6 +46,13 @@ test('scenario 1.5: a skipped check-in is recorded and not asked again that day'
   recordDayNote(p, D, { checkin: { skipped: true, at: `${D}T09:00:00` } });
   assert.equal(needsCheckin(p, D), false, 'skipped counts as answered');
   assert.equal(needsCheckin(p, NEXT), true, 'asked again the next day');
+});
+
+test('scenario 1.5a: «Пропустить» is gone after the first answer — a severe-pain answer cannot be replaced by a skip', () => {
+  assert.equal(checkinSkippable({ pain: null, fatigue: null }), true);
+  assert.equal(checkinSkippable({ pain: 3, fatigue: null }), false, 'severe pain answered: no skip into the full plan');
+  assert.equal(checkinSkippable({ pain: null, fatigue: 0, skin: null }), false);
+  assert.equal(checkinSkippable({ pain: 0, fatigue: 0 }), false);
 });
 
 test('scenario 1.7: signs of fatigue turn «next exercise» into «stop for today»', () => {

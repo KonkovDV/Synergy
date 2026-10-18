@@ -649,3 +649,22 @@ table.data th { font-size: 0.75rem; }
 /* Rewards of a run (5.10): on the screen, not in toasts over the score. */
 .rewards { list-style: none; margin: 4px auto 10px; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .rewards li { background: var(--card2); border: 1px solid var(--warn); border-radius: 99px; padding: 6px 12px; font-size: 0.875rem; font-weight: 700; }
+
+/* 5.11 — «Синхронизация звука»: the dot reaches the line on every click (transform only: no layout per frame). */
+.sync-stage { position: relative; height: 10rem; margin: 1rem 0; border-radius: 16px; background: var(--card); border: 1px solid var(--line); overflow: hidden; }
+.sync-dot { position: absolute; top: 0; left: calc(50% - 1rem); width: 2rem; height: 2rem; border-radius: 50%; background: var(--accent); transform: translateY(calc(var(--y, 0) * 7rem)); }
+.sync-line { position: absolute; left: 10%; right: 10%; top: 9rem; height: 4px; border-radius: 2px; background: var(--muted); }
+.sync-line.hit { background: var(--good); }
+.sync-value { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+/* 5.11 — 320 px high landscape (568×320): the hint on top of the right column pushed the pads off the screen
+   (full layout audit of 5.10: `reach` in 5 states — a long intro hint, the bridge status, high contrast, 7 gestures).
+   On such screens the hint goes under the field, and the right column holds only the signal and the pads. */
+@media (orientation: landscape) and (max-height: 400px) {
+  .play-screen { grid-template-rows: auto 4px minmax(0, 1fr) auto; }
+  .play-screen .stage { grid-column: 1; grid-row: 3; }
+  .play-screen .stage-hint { grid-column: 1; grid-row: 4; border-top: 1px solid var(--line); border-bottom: 0; min-height: calc(1.45em + 12px); }
+  .play-screen .play-side { grid-column: 2; grid-row: 3 / 5; }
+  .play-screen .gkey, .frame .gkey { min-height: 44px; }
+  .play-screen .pads.gestures, .frame .pads.gestures { gap: 4px; }
+  .frame .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -3,7 +3,7 @@
 // Safety rules, not a diagnosis.
 import { h } from './dom.js';
 import { topBar, segmented } from './widgets.js';
-import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, checkInAdvice, CHECKIN_ACTION } from '../core/wellbeing.js';
+import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, checkInAdvice, checkinSkippable, CHECKIN_ACTION } from '../core/wellbeing.js';
 import { recordDayNote, lightenPlan, dayKey } from '../core/progress.js';
 
 export function checkinScreen(app) {
@@ -11,13 +11,15 @@ export function checkinScreen(app) {
   const answers = { pain: null, fatigue: null, ...(sensors ? { skin: null } : {}) };
   const advice = h('div', { class: 'checkin-advice', 'aria-live': 'polite' });
   const go = h('button', { class: 'btn primary big', disabled: true }, 'Дальше');
+  const skip = h('button', { class: 'btn ghost', onclick: () => { recordDayNote(app.profile, dayKey(), { checkin: { skipped: true, at: new Date().toISOString() } }); app.save(); app.startPlan({ checked: true }); } }, 'Пропустить');
   const update = () => {
+    skip.hidden = !checkinSkippable(answers);
     const ready = Object.values(answers).every(v => v !== null);
     go.disabled = !ready;
     if (!ready) return;
     const a = checkInAdvice(answers);
     advice.replaceChildren(h('p', { class: `note ${a.action === CHECKIN_ACTION.GO ? '' : 'warn'}` }, a.text));
-    go.textContent = a.action === CHECKIN_ACTION.STOP ? 'Понятно, отдыхаю' : a.action === CHECKIN_ACTION.LIGHT ? 'Начать лёгкую тренировку' : 'Начать тренировку';
+    go.textContent = a.action === CHECKIN_ACTION.STOP ? 'Понятно, отдыхаю' : a.action === CHECKIN_ACTION.LIGHT ? 'Начать короткий план' : 'Начать тренировку';
     app.say(a.text, { interrupt: true });
   };
   go.onclick = () => {
@@ -40,7 +42,6 @@ export function checkinScreen(app) {
         question('Усталость мышц', FATIGUE_LEVELS, 'fatigue'),
         sensors ? question('Кожа под датчиками', SKIN_LEVELS, 'skin') : null,
         advice,
-        h('div', { class: 'sticky-actions' }, go,
-          h('button', { class: 'btn ghost', onclick: () => { recordDayNote(app.profile, dayKey(), { checkin: { skipped: true, at: new Date().toISOString() } }); app.save(); app.startPlan({ checked: true }); } }, 'Пропустить')))),
+        h('div', { class: 'sticky-actions' }, go, skip))),
   };
 }

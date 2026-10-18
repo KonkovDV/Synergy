@@ -64,3 +64,16 @@ test('a scheme switched and switched back keeps today\'s finished exercises (B-3
   assert.equal(plan.day, dayKey());
   assert.ok(plan.items.some(i => i.done && i.game === first.game), 'kept after switching back (it went back to 0/4)');
 });
+
+test('arm pose (5.11): asked and recorded only with real sensors, never with the on-screen emulator or in a demo', () => {
+  const app = fresh();
+  assert.equal(app.createSession({ game: 'grip', level: 1, retention: true, pose: 'elbow' }).pose, null, 'emulator on the screen');
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  assert.equal(app.createSession({ game: 'grip', level: 1, retention: true, pose: 'elbow' }).pose?.id, 'elbow');
+  assert.equal(app.createSession({ game: 'grip', level: 1, retention: true, pose: 'elbow', demo: true }).pose, null, 'demo');
+  assert.equal(app.createSession({ game: 'grip', level: 1, retention: true, pose: 'nope' }).pose, null, 'unknown id');
+  const session = app.createSession({ game: 'grip', level: 1, retention: true, pose: 'forward' });
+  for (let t = 0; t < 400 && !session.game.done; t++) session.runner.step(t * 50, 0.05);
+  const { run } = app.finishSession(session);
+  assert.equal(run.pose, 'forward');
+});
