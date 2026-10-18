@@ -68,7 +68,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
   const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', {}, 'Насколько тяжело было?'),
     segmented(EFFORT_LEVELS.map(e => ({ value: e.id, label: e.label })), app.profile.days[today]?.effort ?? null,
-      v => { recordDayNote(app.profile, today, { effort: v }); app.save(); toast('Записано — это увидит специалист в отчёте'); }),
+      v => { recordDayNote(app.profile, today, { effort: v }); app.save(); toast('Записано — это увидит специалист в отчёте'); }, 'Насколько тяжело было'),
     h('p', { class: 'note' }, 'Ответ попадёт в отчёт для специалиста: так видно, подходит ли нагрузка.')) : null;
   const node = h('div', { class: 'screen results' },
     h('main', { class: 'scroll center' },

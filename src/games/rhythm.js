@@ -208,15 +208,14 @@ export class RhythmGame extends Game {
     for (const lane of ['a', 'b']) {
       const x = laneX[lane], col = lane === 'a' ? COLORS.a : COLORS.b;
       fillRound(ctx, x - 42, 0, 84, h, 18, 'rgba(255,255,255,0.04)');
-      const active = this.lane[lane] || this.lane.both;
+      const active = !this.retention && (this.lane[lane] || this.lane.both); // live lane light = concurrent feedback
       circle(ctx, x, hitY, 34, active ? col : 'rgba(255,255,255,0.08)');
       circle(ctx, x, hitY, 26, '#120d2e');
       text(ctx, lane === 'a' ? 'A' : 'B', x, hitY, { size: 18, weight: 800, color: col });
       text(ctx, lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + 46, { size: 12, color: COLORS.muted });
     }
-    // Notes (hidden in the retention probe — only the beat and the hit line remain).
+    // Notes are the task, not feedback: the retention probe shows them too (it hides the lane light and the force meter).
     for (const n of this.notes) {
-      if (this.retention && n.state === 'wait') continue;
       const ny = y(n.at + this.latency), endY = y(n.at + n.dur + this.latency);
       if (ny < -60 || endY > h + 40 || n.state === 'done' || n.state === 'miss') continue;
       if (n.lane === 'both') {
@@ -246,7 +245,7 @@ export class RhythmGame extends Game {
     }
     if (this.combo >= 4) text(ctx, `${this.combo} подряд`, w / 2, 26, { size: 16, weight: 800, color: COLORS.warn });
     if (this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, h * 0.4, { size: 54, weight: 800, color: 'rgba(255,255,255,0.6)' });
-    if (this.graded && !this.retention) {
+    if (this.graded) {
       const next = this.notes.find(n => n.state === 'wait' && n.band);
       if (next) text(ctx, `Следующая: ${BAND_NAME[next.band]}`, w / 2, 50, { size: 13, color: COLORS.muted });
     }

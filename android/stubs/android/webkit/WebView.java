@@ -11,4 +11,5 @@ public class WebView extends android.widget.AbsoluteLayout {
   public WebBackForwardList restoreState(android.os.Bundle b) { return null; }
   public WebBackForwardList saveState(android.os.Bundle b) { return null; }
   public void evaluateJavascript(String script, ValueCallback<String> cb) {}
+  public void destroy() {}
 }

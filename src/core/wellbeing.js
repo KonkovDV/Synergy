@@ -17,6 +17,15 @@ export const FATIGUE_LEVELS = [
   { id: 2, label: 'Сильная усталость', short: 'сильно' },
 ];
 
+/**
+ * Skin under the electrodes (asked only with real sensors). Myoelectric electrodes can irritate or even burn the
+ * skin (electrochemical burns: Scott, Caldwell & Bush, 1997); the safe rule is a day without electrodes.
+ */
+export const SKIN_LEVELS = [
+  { id: 0, label: 'Кожа в порядке' },
+  { id: 1, label: 'Покраснение или раздражение' },
+];
+
 /** Session effort after the plan (simplified Borg CR10: 1–3 / 4–6 / 7–10). */
 export const EFFORT_LEVELS = [
   { id: 0, label: 'Легко' },
@@ -26,15 +35,18 @@ export const EFFORT_LEVELS = [
 
 export const CHECKIN_ACTION = Object.freeze({ GO: 'go', LIGHT: 'light', STOP: 'stop' });
 
-/** What today's session should be, given the check-in answers. */
-export function checkInAdvice({ pain = 0, fatigue = 0 } = {}) {
+/** What today's session should be, given the check-in answers (`skin` — only when real sensors are used). */
+export function checkInAdvice({ pain = 0, fatigue = 0, skin = 0 } = {}) {
   if (pain >= WELLBEING.painStop) {
-    return { action: CHECKIN_ACTION.STOP, text: 'Сильная боль — сегодня без тренировки. Если боль повторяется или усиливается, обратитесь к врачу или протезисту.' };
+    return { action: CHECKIN_ACTION.STOP, reason: 'pain', text: 'Сильная боль — сегодня без тренировки. Если боль повторяется или усиливается, обратитесь к врачу или протезисту.' };
+  }
+  if (skin >= 1) {
+    return { action: CHECKIN_ACTION.STOP, reason: 'skin', text: 'Кожа под датчиками раздражена — сегодня без датчиков, пусть кожа отдохнёт. Если покраснение не проходит за несколько часов, появились пузыри или боль — покажите кожу протезисту или врачу.' };
   }
   if (pain >= WELLBEING.painLight || fatigue >= WELLBEING.fatigueLight) {
-    return { action: CHECKIN_ACTION.LIGHT, text: 'Сегодня — лёгкая тренировка: одно упражнение и короткая проверка. Напрягайте мышцы мягко, без боли.' };
+    return { action: CHECKIN_ACTION.LIGHT, reason: pain >= WELLBEING.painLight ? 'pain' : 'fatigue', text: 'Сегодня — лёгкая тренировка: одно упражнение и короткая проверка. Напрягайте мышцы мягко, без боли.' };
   }
-  return { action: CHECKIN_ACTION.GO, text: 'Отлично, начинаем. Комфортная сила, без боли — максимум не нужен.' };
+  return { action: CHECKIN_ACTION.GO, reason: null, text: 'Отлично, начинаем. Комфортная сила, без боли — максимум не нужен.' };
 }
 
 /**
@@ -63,6 +75,19 @@ export function adviseStop(runsToday, secondsToday, softCapMin) {
   if (fatigue) return { reason: 'fatigue', text: `Результат снизился на ${fatigue.drop} очков за ${fatigue.minutes} мин — похоже на усталость мышц. Лучше закончить на сегодня.` };
   if (overDailyCap(secondsToday, softCapMin)) return { reason: 'cap', text: capAdvice(softCapMin) };
   return null;
+}
+
+/**
+ * Free play stays open on a declared rest day and over the daily cap (never a lock), but with a caution
+ * on the game intro. Answers stored before 5.7 have no `reason`: a stop then meant severe pain.
+ */
+export function freePlayCaution({ checkin, secondsToday, softCapMin }) {
+  if (checkin?.action === CHECKIN_ACTION.STOP) {
+    return checkin.reason === 'skin'
+      ? 'Сегодня вы отметили раздражение кожи под датчиками. Если играете — только с эмулятором на экране, без датчиков.'
+      : 'Сегодня вы отметили сильную боль — лучше отдохнуть. Если играете — мягко и сразу остановитесь, если боль усилится.';
+  }
+  return overDailyCap(secondsToday, softCapMin) ? capAdvice(softCapMin) : null;
 }
 
 /** The check-in is asked once a day: an answer or «пропущено» (skipped) counts. */

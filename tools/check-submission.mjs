@@ -96,6 +96,14 @@ for (const f of textFiles.filter(f => f.endsWith('.md') && f !== 'CHANGELOG.md')
   for (const m of read(f).matchAll(/Synergy-(\d+\.\d+\.\d+)\.apk|версия-(\d+\.\d+\.\d+)/g)) if ((m[1] ?? m[2]) !== version) fail(`${f}: «${m[0]}», а версия ${version}`);
 }
 
+// 3c. Promises the product makes in its own metadata (5.7): the intended purpose is a training game, not a medical
+// device (323-ФЗ ст. 38 — the manufacturer's labelling counts), and the screen is not locked to one orientation
+// (WCAG 2.1 AA, 1.3.4 — a phone fixed on a wheelchair mount may be landscape).
+const manifest = JSON.parse(read('public/manifest.webmanifest'));
+if ((manifest.categories ?? []).includes('medical')) fail('public/manifest.webmanifest: категория «medical» противоречит позиционированию «не медицинское изделие» (docs/LEGAL.md)');
+if (manifest.orientation && !/^(any|natural)$/.test(manifest.orientation)) fail(`public/manifest.webmanifest: ориентация «${manifest.orientation}» заблокирована (WCAG 1.3.4)`);
+if (/android:screenOrientation="(portrait|landscape|sensorPortrait|sensorLandscape|userPortrait|userLandscape)"/.test(read('android/AndroidManifest.xml'))) fail('android/AndroidManifest.xml: ориентация заблокирована (WCAG 1.3.4)');
+
 // 4. Rights and submission hygiene (Правила, п. 5.5, 6.6).
 if (/_заполнить_/.test(read('AUTHORS.md'))) (draft ? warn : fail)('AUTHORS.md не заполнен (ФИО и вклад — п. 6.6)');
 if (/\b(MIT License|Apache License|GNU General Public|Creative Commons)\b/i.test(read('LICENSE'))) fail('LICENSE открытый — конфликт с отчуждением права (п. 6.6)');

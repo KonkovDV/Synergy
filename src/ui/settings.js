@@ -59,7 +59,7 @@ export function settingsScreen(app) {
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); };
 
-  const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'off', placeholder: '4–6 цифр', 'aria-label': 'Новый PIN родителя' });
+  const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'new-password', placeholder: '4–6 цифр', 'aria-label': 'Новый PIN родителя' });
   const childBox = h('div', { hidden: s.audience !== 'child' },
     h('label', { class: 'row' }, h('span', {}, 'PIN родителя для настроек', h('small', {}, s.parentPin ? 'установлен' : 'не установлен')), pinInput),
     h('div', { class: 'row-actions' },
@@ -74,14 +74,14 @@ export function settingsScreen(app) {
       h('h1', {}, 'Настройки'),
       app.showcase ? h('p', { class: 'note warn' }, 'Открыт демо-профиль для презентации: изменения не сохраняются.') : null,
       section('Управление',
-        segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { app.updateSettings({ scheme: v }); refreshPreview(); app.go('settings'); }),
+        segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { app.updateSettings({ scheme: v }); refreshPreview(); app.go('settings'); }, 'Схема управления'),
         h('p', { class: 'note' }, SCHEME_INFO[s.scheme].text),
-        h('label', { class: 'row' }, h('span', {}, 'Протез'),
-          segmented([{ value: 'right', label: 'Правая рука' }, { value: 'left', label: 'Левая рука' }], s.side, v => app.updateSettings({ side: v })))),
+        h('div', { class: 'row' }, h('span', {}, 'Протез'),
+          segmented([{ value: 'right', label: 'Правая рука' }, { value: 'left', label: 'Левая рука' }], s.side, v => app.updateSettings({ side: v }), 'Рука с протезом'))),
       section('Источник сигнала',
         segmented([{ value: 'touch', label: 'Эмулятор на экране', sub: 'без датчиков' }, { value: 'bridge', label: 'Внешний', sub: 'эмулятор / датчики / протез' }], s.source, v => {
           app.updateSettings({ source: v }); bridgeBox.hidden = v !== 'bridge'; refreshPreview();
-        }),
+        }, 'Источник сигнала'),
         bridgeBox,
         sliderRow('Реалистичность эмулятора', { min: 0, max: 1, step: 0.05, value: s.realism, format: v => v < 0.2 ? 'чистый сигнал' : v < 0.7 ? 'как у датчика' : 'шумно', onInput: v => app.updateSettings({ realism: v }) })),
       section('Чувствительность',
@@ -97,14 +97,14 @@ export function settingsScreen(app) {
       section('Тренировка',
         toggleRow('Адаптивная сложность', s.adaptive, v => app.updateSettings({ adaptive: v }), 'допуски подстраиваются, чтобы удавалось ~75 % попыток; испытание без подсказки и проверка — без подстройки'),
         toggleRow('Затухающие подсказки', s.fadedFeedback, v => app.updateSettings({ fadedFeedback: v }), 'чем лучше навык, тем чаще шкала скрыта в отдельных попытках — так навык прочнее держится без экрана'),
-        h('label', { class: 'row' }, h('span', {}, 'Кто занимается'),
-          segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { app.updateSettings({ audience: v }); childBox.hidden = v !== 'child'; })),
+        h('div', { class: 'row' }, h('span', {}, 'Кто занимается'),
+          segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { app.updateSettings({ audience: v }); childBox.hidden = v !== 'child'; }, 'Кто занимается')),
         h('p', { class: 'note' }, 'Детский режим: план из 2 упражнений, отдых 15 с, дневной лимит 20 мин; настройки можно закрыть PIN-кодом.'),
         childBox),
       section('Доступность',
         toggleRow('Озвучивание подсказок', s.voice, v => { app.updateSettings({ voice: v }); if (v) app.say('Озвучивание включено', { interrupt: true }); }, voiceAvailable() ? 'игра без взгляда на экран; при слабом зрении' : 'синтез речи недоступен на этом устройстве'),
-        h('label', { class: 'row' }, h('span', {}, 'Размер текста'),
-          segmented([{ value: 1, label: '100 %' }, { value: 1.15, label: '115 %' }, { value: 1.3, label: '130 %' }], s.textScale, v => app.updateSettings({ textScale: v }))),
+        h('div', { class: 'row' }, h('span', {}, 'Размер текста'),
+          segmented([{ value: 1, label: '100 %' }, { value: 1.15, label: '115 %' }, { value: 1.3, label: '130 %' }], s.textScale, v => app.updateSettings({ textScale: v }), 'Размер текста')),
         toggleRow('Высокий контраст', s.contrast, v => app.updateSettings({ contrast: v }), 'чёрный фон, белые рамки, жёлтые главные кнопки'),
         toggleRow('Меньше движения', s.reduceMotion, v => app.updateSettings({ reduceMotion: v }), 'без частиц, вспышек и анимаций'),
         toggleRow('Вибро-метроном в «Ритме»', s.hapticBeat, v => app.updateSettings({ hapticBeat: v }), 'такт ощущается рукой — для слабослышащих'),
@@ -138,6 +138,7 @@ export function settingsScreen(app) {
       section('О приложении',
         h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ (2 канала: пороговый и пропорциональный режимы; 7 жестов).`),
         h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
+        h('p', { class: 'note' }, `Возрастная категория: ${APP.ageRating} (436-ФЗ). Детям — с родителем.`),
         h('p', { class: 'note' }, 'Код создан командой с помощью ИИ-ассистента; что именно и как проверено — docs/AI_USAGE.md.'))),
     bottomNav(app, 'settings'));
 
@@ -150,6 +151,9 @@ export function settingsScreen(app) {
 }
 
 export function calibrationScreen(app) {
+  // Calibration changes how the signal is read: in child mode it sits behind the parent PIN like the settings
+  // (the results screen links here directly).
+  if (app.settings.audience === 'child' && app.settings.parentPin && !app.pinOk) return pinGateScreen(app, { next: 'calibration' });
   const kind = app.sourceKind();
   let recorder = new CalibrationRecorder();
   const title = h('h2', {}), text = h('p', {}), ring = h('div', { class: 'cal-ring' });
@@ -187,8 +191,10 @@ export function calibrationScreen(app) {
         const r = recorder.result();
         title.textContent = r.issues.length ? 'Есть замечания' : 'Готово';
         text.textContent = `Разделение каналов: A ${Math.round(r.separation[0] * 100)}%, B ${Math.round(r.separation[1] * 100)}%.`;
+        // Without signal there is nothing to save: the previous calibration stays.
+        const save = r.usable && kind !== 'touch';
         result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)),
-          h('button', { class: 'btn primary big', onclick: () => { if (kind !== 'touch') { app.state.calibrations[kind] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings'); } }, kind === 'touch' ? 'Понятно' : 'Сохранить'));
+          h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[kind] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings'); } }, save ? 'Сохранить' : 'Понятно'));
       }
     },
   };

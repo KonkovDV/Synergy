@@ -6,14 +6,13 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0d1530",
   "theme_color": "#0d1530",
   "lang": "ru",
   "categories": [
-    "health",
     "games",
-    "medical"
+    "education",
+    "fitness"
   ],
   "icons": [
     {

@@ -28,11 +28,15 @@ export class CalibrationRecorder {
   get done() { return this.index >= this.steps.length; }
   get stepProgress() { return this.step ? Math.min(1, this.elapsed / this.step.seconds) : 1; }
 
-  /** Adds one raw frame; the first 0.6 s of each step are skipped (reaction time). */
+  /**
+   * Adds one raw frame; the first 0.6 s of each step are skipped (reaction time). An external source keeps
+   * returning its last frame when the stream stops: the same frame object is one sample, not a new one each tick.
+   */
   push(frame, dt) {
     if (this.done) return;
     this.elapsed += dt;
-    if (frame && this.elapsed > 0.6) this.samples[this.step.id].push([frame.a, frame.b]);
+    if (frame && frame !== this.lastFrame && this.elapsed > 0.6) this.samples[this.step.id].push([frame.a, frame.b]);
+    if (frame) this.lastFrame = frame;
     if (this.elapsed >= this.step.seconds) { this.index++; this.elapsed = 0; }
   }
 
@@ -40,8 +44,10 @@ export class CalibrationRecorder {
     const restSamples = [...this.samples.rest, ...this.samples.relax];
     const rest = [0, 1].map(ch => percentile(restSamples.map(s => s[ch]), 0.5));
     const max = [0, 1].map(ch => percentile(this.samples[ch ? 'b' : 'a'].map(s => s[ch]), 0.8));
-    const issues = [];
-    [0, 1].forEach(ch => {
+    const issues = this.steps.filter(s => (s.channel !== null && this.samples[s.id].length < 5) || (s.id === 'rest' && !restSamples.length))
+      .map(s => `Нет сигнала на шаге «${s.title}» — проверьте подключение датчиков и повторите калибровку.`);
+    const usable = !issues.length; // without signal the span and the crosstalk say nothing about the muscles
+    if (usable) [0, 1].forEach(ch => {
       const span = max[ch] - rest[ch];
       if (span <= Math.max(1e-6, 0.25 * Math.abs(max[ch]))) issues.push(`Канал ${ch ? 'B' : 'A'}: напряжение почти не отличается от покоя — проверьте датчик или напрягите мышцу сильнее.`);
     });
@@ -52,9 +58,9 @@ export class CalibrationRecorder {
       1 - Math.max(0, crossA - rest[1]) / Math.max(1e-6, max[1] - rest[1]),
       1 - Math.max(0, crossB - rest[0]) / Math.max(1e-6, max[0] - rest[0]),
     ].map(v => Math.max(0, Math.min(1, v)));
-    if (Math.min(...separation) < 0.5) issues.push('Каналы сильно влияют друг на друга. Попробуйте сместить датчики — «Разделение» потренируйте в «Полёте».');
+    if (usable && Math.min(...separation) < 0.5) issues.push('Каналы сильно влияют друг на друга. Попробуйте сместить датчики — «Разделение» потренируйте в «Полёте».');
     const safeMax = max.map((m, ch) => Math.max(m, rest[ch] + 1e-3));
-    return { calibration: { rest, max: safeMax, at: new Date().toISOString() }, issues, separation };
+    return { calibration: { rest, max: safeMax, at: new Date().toISOString() }, issues, separation, usable };
   }
 }
 

@@ -3,8 +3,9 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.6.0',
+  version: '5.7.0',
   storageKey: 'synergy.v4',
+  ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
 
 export const SIGNAL = {
@@ -12,8 +13,11 @@ export const SIGNAL = {
   smoothingMs: 35,          // EMA time constant applied to normalized activation
   onThreshold: 0.22,        // channel becomes active (fraction of calibrated comfortable max)
   hysteresis: 0.07,         // channel turns off below onThreshold - hysteresis
-  coThreshold: 0.40,        // co-contraction counted as in Maas et al., 2024 (a scoring rule, not evidence of training effect)
-  coOnsetWindowMs: 350,     // ...and both onsets within 350 ms of each other
+  // Co-contraction scoring adapted from Maas et al., 2024 (a scoring rule, not evidence of a training effect):
+  // they counted both peaks ≥ 40 % of MVC within 350 ms; here 40 % of the calibrated *comfortable* level
+  // (≈ 70 % effort, so ≈ 28 % of MVC — less load) and both onsets of that zone within 350 ms.
+  coThreshold: 0.40,
+  coOnsetWindowMs: 350,
   gestureMinConfidence: 0.6,
   gestureStableMs: 90,      // a gesture must persist this long before it becomes a command
   thresholdIntensity: 0.6,  // fixed intensity of the threshold (two-button) scheme

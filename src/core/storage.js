@@ -1,7 +1,8 @@
 // Versioned local persistence. Never throws to the UI; corrupt data is backed up, not overwritten.
 import { APP, SIGNAL, SESSION, HANDS_FREE } from '../config.js';
-import { createProfile } from './progress.js';
+import { createProfile, SKINS } from './progress.js';
 import { defaultCalibration } from './signal.js';
+import { SCHEME } from './vocabulary.js';
 
 export const DEFAULT_SETTINGS = {
   scheme: 'proportional',
@@ -35,6 +36,32 @@ export const DEFAULT_SETTINGS = {
   hapticBeat: false,        // вибро-метроном в «Ритме» (для слабослышащих)
 };
 
+const oneOf = (...values) => v => values.includes(v);
+const range = (lo, hi) => v => v >= lo && v <= hi;
+
+/**
+ * Allowed values of the settings that are more than a type (RT-9: `scheme: "x"` from a backup threw on every
+ * launch). Ranges are the ones the settings screen offers; a value outside them falls back to the default.
+ */
+export const SETTINGS_RULES = {
+  scheme: oneOf(...Object.values(SCHEME)),
+  source: oneOf('touch', 'bridge', 'demo'),
+  side: oneOf('right', 'left'),
+  audience: oneOf('adult', 'child'),
+  sensitivity: range(0.1, 0.45),
+  coThreshold: range(0.25, 0.7),
+  realism: range(0, 1),
+  weeklyGoal: v => Number.isInteger(v) && v >= 2 && v <= 7,
+  textScale: oneOf(1, 1.15, 1.3),
+  gameSpeed: range(0.6, 1),
+  dwellS: range(HANDS_FREE.minS, HANDS_FREE.maxS),
+  wsUrl: v => v.length <= 200 && (v === '' || /^(wss?|https?):\/\//i.test(v)),
+  reminder: v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
+  name: v => v.length <= 24,
+  parentPin: v => v === '' || /^[0-9a-f]{8}$/.test(v),
+  pinLock: v => isObject(v) && Number.isFinite(v.fails) && Number.isFinite(v.until),
+};
+
 const MAX_RUNS = 2000;
 
 export function memoryStorage() {
@@ -51,6 +78,23 @@ function sameShape(value, def) {
   if (Array.isArray(def)) return Array.isArray(value);
   if (typeof def === 'number') return Number.isFinite(value);
   return typeof value === typeof def;
+}
+
+function validSetting(key, value, def) {
+  if (typeof value !== typeof def || (typeof def === 'number' && !Number.isFinite(value))) return false;
+  return SETTINGS_RULES[key]?.(value) ?? true;
+}
+
+const validPlan = p => p === null || (isObject(p) && typeof p.day === 'string' && typeof p.scheme === 'string' && Array.isArray(p.items)
+  && p.items.every(i => isObject(i) && typeof i.game === 'string' && Number.isInteger(i.level)));
+
+/** Day records: real dates only, numeric counters, a check-in only as an object. */
+function cleanDays(days) {
+  const count = v => (Number.isFinite(v) && v >= 0 ? v : 0);
+  return Object.fromEntries(Object.entries(days).filter(([k, d]) => /^\d{4}-\d{2}-\d{2}$/.test(k) && isObject(d)).map(([k, d]) => {
+    const { checkin, ...rest } = d;
+    return [k, { ...rest, seconds: count(d.seconds), runs: count(d.runs), ...(isObject(checkin) ? { checkin } : {}) }];
+  }));
 }
 
 function validRun(r) {
@@ -74,9 +118,12 @@ export function parseState(raw) {
   const profile = Object.fromEntries(Object.entries(base.profile).map(([k, v]) => [k, sameShape(storedProfile[k], v) ? storedProfile[k] : v]));
   profile.totals = { ...base.profile.totals, ...profile.totals };
   profile.streak = { ...base.profile.streak, ...profile.streak };
-  // Only known settings with the expected type survive (a backup file is untrusted input).
+  profile.days = cleanDays(profile.days);
+  if (!validPlan(profile.plan)) profile.plan = null;
+  if (!SKINS.some(s => s.id === profile.skin)) profile.skin = base.profile.skin;
+  // Only known settings with the expected type and an allowed value survive (a backup file is untrusted input).
   const stored = isObject(data.settings) ? data.settings : {};
-  const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, typeof stored[k] === typeof v && (typeof v !== 'number' || Number.isFinite(stored[k])) ? stored[k] : v]));
+  const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, validSetting(k, stored[k], v) ? stored[k] : v]));
   const validCal = c => isObject(c) && [c.rest, c.max].every(v => Array.isArray(v) && v.length === 2 && v.every(Number.isFinite));
   const calibrations = Object.fromEntries(Object.keys(base.calibrations).map(k => [k, validCal(data.calibrations?.[k]) ? data.calibrations[k] : base.calibrations[k]]));
   const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS) : [];

@@ -2,7 +2,11 @@
 // Every game × level × scheme must be winnable (≥ 2★), and a passive player must not win.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GAMES } from '../src/games/registry.js';
+import { GAMES, createGame } from '../src/games/registry.js';
+import { BionicHand } from '../src/core/hand.js';
+import { restIntent } from '../src/core/signal.js';
+import { COMMAND } from '../src/core/vocabulary.js';
+import { COLORS } from '../src/render/draw.js';
 import { play } from './helpers.mjs';
 
 for (const entry of GAMES) {
@@ -25,6 +29,42 @@ for (const entry of GAMES) {
 test('retention probe adds the retention skill', () => {
   const r = play('grip', { scheme: 'proportional', levelNumber: 2, retention: true });
   assert.equal(r.skills.retention, r.score);
+});
+
+/** Canvas stand-in that records filled circles (radius, colour) — enough to see what a frame shows. */
+function recordingCanvas() {
+  const fills = [];
+  let lastArc = null;
+  const ctx = new Proxy({ fillStyle: '', strokeStyle: '', globalAlpha: 1 }, {
+    get(target, key) {
+      if (key in target) return target[key];
+      if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => ({ addColorStop() {} });
+      if (key === 'measureText') return () => ({ width: 10 });
+      if (key === 'arc') return (x, y, r) => { lastArc = { x, y, r }; };
+      if (key === 'beginPath') return () => { lastArc = null; };
+      if (key === 'fill') return () => { if (lastArc) fills.push({ ...lastArc, color: target.fillStyle }); };
+      return () => {};
+    },
+    set(target, key, value) { target[key] = value; return true; },
+  });
+  return { ctx, fills };
+}
+
+test('rhythm retention probe: the notes (the task) stay visible, only the live feedback is hidden', () => {
+  const frame = retention => {
+    const game = createGame('rhythm', { levelNumber: 1, scheme: 'proportional', seed: 3, retention });
+    const hand = new BionicHand(), rest = restIntent('proportional', true);
+    for (let i = 0; i < 120; i++) game.update(1 / 60, rest, hand); // 2 s: the first notes scroll in
+    game.update(1 / 60, { ...rest, command: COMMAND.CLOSE, intensity: 0.6, a: 0.6, aOn: true }, hand); // lane A active
+    const { ctx, fills } = recordingCanvas();
+    game.render(ctx, { w: 360, h: 600 }, hand, rest);
+    return { notes: fills.filter(f => f.r === 24).length, laneA: fills.find(f => f.r === 34 && Math.abs(f.x - 360 * 0.32) < 1)?.color };
+  };
+  const normal = frame(false), probe = frame(true);
+  assert.ok(normal.notes > 0, 'notes are on screen at 2 s');
+  assert.equal(probe.notes, normal.notes, 'without the notes a human cannot know when to act — the probe would be unplayable');
+  assert.equal(normal.laneA, COLORS.a, 'live lane light in training');
+  assert.notEqual(probe.laneA, COLORS.a, 'no live lane light in the probe');
 });
 
 test('noisy emulator (realism 1) is still playable at level 1', () => {
