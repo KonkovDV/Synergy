@@ -8,7 +8,7 @@ VERSION="$(node -p "require('$ROOT/package.json').version")"
 NAME="${1:-SYNERGY_v$VERSION}"; OUTDIR="${2:-$PARENT}"
 [ -f "$ROOT/release/Synergy-$VERSION.apk" ] || { echo "Нет release/Synergy-$VERSION.apk — сначала sh tools/build-apk.sh"; exit 1; }
 rm -f "$OUTDIR/$NAME.zip"
-(cd "$PARENT" && zip -qr "$OUTDIR/$NAME.zip" "$BASE" -x "$BASE/node_modules/*" "$BASE/dist/*" "$BASE/tools/.cache/*" "$BASE/android/build/*")
+(cd "$PARENT" && zip -qr "$OUTDIR/$NAME.zip" "$BASE" -x "$BASE/node_modules/*" "$BASE/dist/*" "$BASE/tools/.cache/*" "$BASE/android/build/*" "*/__pycache__/*" "*.pyc" "*/.DS_Store")
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
 # node_modules is not in the archive (the receiver runs npm ci): link ours so the bundle test can run.

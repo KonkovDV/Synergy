@@ -13,7 +13,7 @@ import { PLAN_CATALOG, GAMES } from '../src/games/registry.js';
 import { parseExternal } from '../src/input/bridge.js';
 import { LineAssembler } from '../src/input/ble.js';
 import { hashPin, validPin } from '../src/ui/pin.js';
-import { reportHtml, reportCsv, escapeHtml } from '../src/services/report.js';
+import { reportHtml, reportCsv, escapeHtml, reminderIcs } from '../src/services/report.js';
 import { play } from './helpers.mjs';
 import { guidanceFor, showsFeedback } from '../src/core/guidance.js';
 import { createGame } from '../src/games/registry.js';
@@ -156,6 +156,15 @@ test('report: HTML escaping and CSV formula guard', () => {
   st.runs.push({ at: '2026-10-17', game: '=HYPERLINK("x")', level: 1, score: 1, stars: 0, details: {} });
   assert.ok(reportCsv(st).includes(`'=HYPERLINK`));
   assert.equal(escapeHtml(`"'&`), '&quot;&#39;&amp;');
+});
+
+test('reminder .ics follows RFC 5545: UID and DTSTAMP in the event, lines ≤ 75 octets, CRLF', () => {
+  const ics = reminderIcs('07:05');
+  const lines = ics.split('\r\n');
+  assert.ok(lines.includes('BEGIN:VEVENT') && lines.some(l => /^UID:/.test(l)) && lines.some(l => /^DTSTAMP:\d{8}T\d{6}Z$/.test(l)), ics);
+  assert.ok(lines.some(l => /^DTSTART:\d{8}T070500$/.test(l)), 'local start time');
+  for (const l of lines) assert.ok(new TextEncoder().encode(l).length <= 75, `${new TextEncoder().encode(l).length} octets: ${l}`);
+  assert.ok(!/[^\r]\n/.test(ics), 'every line break is CRLF');
 });
 
 test('catalog: 4 training games + the skill check, every game runs in every scheme', () => {

@@ -43,12 +43,27 @@ export function signalMeter(app) {
   };
 }
 
-export function segmented(options, value, onChange) {
-  const node = h('div', { class: 'segmented', role: 'radiogroup' });
-  const render = current => node.replaceChildren(...options.map(o => h('button', {
-    class: `seg ${o.value === current ? 'active' : ''}`, role: 'radio', 'aria-checked': String(o.value === current),
-    onclick: () => { render(o.value); onChange(o.value); },
-  }, h('b', {}, o.label), o.sub ? h('small', {}, o.sub) : null)));
+/**
+ * Radio group (WAI-ARIA APG «Radio Group»): named by `label`, one tab stop, arrow keys move and select.
+ * Screen-reader and switch users hear the question, not just «radio group».
+ */
+export function segmented(options, value, onChange, label = null) {
+  const node = h('div', { class: 'segmented', role: 'radiogroup', 'aria-label': label });
+  const pick = (o, focus = false) => { render(o.value); onChange(o.value); if (focus) node.querySelector('[aria-checked="true"]')?.focus(); };
+  const render = current => {
+    const tabStop = options.some(o => o.value === current) ? current : options[0].value;
+    node.replaceChildren(...options.map((o, i) => h('button', {
+      class: `seg ${o.value === current ? 'active' : ''}`, role: 'radio', 'aria-checked': String(o.value === current),
+      tabindex: o.value === tabStop ? '0' : '-1',
+      onclick: () => pick(o),
+      onkeydown: e => {
+        const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+        if (!step) return;
+        e.preventDefault();
+        pick(options[(i + step + options.length) % options.length], true);
+      },
+    }, h('b', {}, o.label), o.sub ? h('small', {}, o.sub) : null)));
+  };
   render(value);
   return node;
 }

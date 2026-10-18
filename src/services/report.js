@@ -4,7 +4,7 @@ import { APP } from '../config.js';
 import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabulary.js';
 import { skillProfile, playerLevel } from '../core/progress.js';
 import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
-import { PAIN_LEVELS, FATIGUE_LEVELS, EFFORT_LEVELS } from '../core/wellbeing.js';
+import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS } from '../core/wellbeing.js';
 
 export const DISCLAIMER = 'Тренажёр, не медицинское изделие. Метрики — игровые, без клинической валидации; решения о терапии принимает специалист.';
 
@@ -25,7 +25,7 @@ const realRuns = state => state.runs.filter(r => !r.demo);
 export function wellbeingLog(profile, days = 28) {
   return Object.entries(profile.days).filter(([, d]) => d.checkin || Number.isFinite(d.effort))
     .sort(([a], [b]) => (a < b ? 1 : -1)).slice(0, days)
-    .map(([day, d]) => ({ day, pain: d.checkin?.pain ?? null, fatigue: d.checkin?.fatigue ?? null, action: d.checkin?.action ?? (d.checkin?.skipped ? 'skipped' : null), effort: d.effort ?? null, minutes: Math.round((d.seconds ?? 0) / 60) }));
+    .map(([day, d]) => ({ day, pain: d.checkin?.pain ?? null, fatigue: d.checkin?.fatigue ?? null, skin: d.checkin?.skin ?? null, action: d.checkin?.action ?? (d.checkin?.skipped ? 'skipped' : null), effort: d.effort ?? null, minutes: Math.round((d.seconds ?? 0) / 60) }));
 }
 
 export function buildReport(state) {
@@ -46,9 +46,10 @@ export function buildReport(state) {
 const CSV_SKILLS = Object.keys(SKILL_NAME);
 const csvCell = v => {
   const text = v === null || v === undefined ? '' : String(v);
-  // Formula injection guard for spreadsheet apps (=, +, -, @ at the start).
-  const safe = /^[=+\-@]/.test(text) && !/^-?\d/.test(text) ? `'${text}` : text;
-  return /[;"\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+  // Formula injection guard for spreadsheet apps (OWASP: =, +, -, @, tab, CR at the start); only a whole
+  // number stays as is — «-2+3+cmd|…» starts with a digit too.
+  const safe = /^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text) ? `'${text}` : text;
+  return /[;"\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 };
 
 export function reportCsv(state) {
@@ -99,8 +100,8 @@ ${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 
 <h2>Ошибки распознавания жестов (с, последние ${conf.runs} упражнений)</h2>
 ${conf.top.length ? table(['Нужен жест', 'Распознан как', 'Секунд'], conf.top.map(t => [gname(t.wanted), gname(t.seen), t.seconds])) : '<p class="muted">нет данных в режиме жестов</p>'}
 <h2>Самочувствие (14 последних записей)</h2>
-${table(['День', 'Боль', 'Усталость', 'Решение', 'Нагрузка', 'Минут'],
-  log.map(l => [ruDate(`${l.day}T12:00:00`), label(PAIN_LEVELS, l.pain), label(FATIGUE_LEVELS, l.fatigue), { go: 'обычная', light: 'лёгкая', stop: 'отдых', skipped: 'пропущено' }[l.action] ?? '—', label(EFFORT_LEVELS, l.effort), l.minutes]))}
+${table(['День', 'Боль', 'Усталость', 'Кожа под датчиками', 'Решение', 'Нагрузка', 'Минут'],
+  log.map(l => [ruDate(`${l.day}T12:00:00`), label(PAIN_LEVELS, l.pain), label(FATIGUE_LEVELS, l.fatigue), label(SKIN_LEVELS, l.skin), { go: 'обычная', light: 'лёгкая', stop: 'отдых', skipped: 'пропущено' }[l.action] ?? '—', label(EFFORT_LEVELS, l.effort), l.minutes]))}
 <h2>Последние упражнения</h2>
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '']))}
@@ -123,16 +124,29 @@ export function printHtml(title, html) {
   return true;
 }
 
-export function reminderIcs(time = '19:00') {
-  const [hh, mm] = time.split(':').map(Number);
-  const d = new Date(); d.setHours(hh, mm, 0, 0);
+/** RFC 5545 §3.1: content lines longer than 75 octets are folded (CRLF + space), never inside a UTF-8 character. */
+function foldIcsLine(line) {
+  const parts = [];
+  let current = '', octets = 0;
+  for (const ch of line) {
+    const size = new TextEncoder().encode(ch).length, limit = parts.length ? 74 : 75; // a continuation starts with a space
+    if (octets + size > limit) { parts.push(current); current = ''; octets = 0; }
+    current += ch; octets += size;
+  }
+  parts.push(current);
+  return parts.join('\r\n ');
+}
+
+export function reminderIcs(time = '19:00', now = new Date()) {
+  const [hh, mm] = /^\d\d:\d\d$/.test(time) ? time.split(':').map(Number) : [19, 0];
   const pad = n => String(n).padStart(2, '0');
-  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(hh)}${pad(mm)}00`;
+  const day = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+  const utc = now.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, ''); // DTSTAMP is UTC: 20261018T061000Z
   return [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Synergy//Trainer//RU', 'BEGIN:VEVENT',
-    `UID:synergy-${Date.now()}@local`, `DTSTART:${stamp}`, 'DURATION:PT15M', 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+    `UID:synergy-${now.getTime()}@local`, `DTSTAMP:${utc}`, `DTSTART:${day}T${pad(hh)}${pad(mm)}00`, 'DURATION:PT15M', 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
     'SUMMARY:Синергия: тренировка 10–15 минут', 'DESCRIPTION:Тренировка дня ждёт. Мышцам — короткие регулярные занятия.',
     'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Пора на тренировку', 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR',
-  ].join('\r\n');
+  ].map(foldIcsLine).join('\r\n');
 }

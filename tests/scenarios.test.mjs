@@ -1,7 +1,7 @@
 // Scenarios of docs/SCENARIOS.md that had no automated check («—» in the table), named by their number.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adviseStop, needsCheckin, checkInAdvice, CHECKIN_ACTION } from '../src/core/wellbeing.js';
+import { adviseStop, needsCheckin, checkInAdvice, CHECKIN_ACTION, SKIN_LEVELS, freePlayCaution } from '../src/core/wellbeing.js';
 import { createProfile, recordDayNote, sessionRules, buildDailyPlan, completePlanItem, recordRun, streakAlive } from '../src/core/progress.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
 
@@ -13,6 +13,31 @@ test('scenario 1.3: severe pain → no training today, moderate pain → light s
   assert.equal(checkInAdvice({ pain: 2 }).action, CHECKIN_ACTION.LIGHT);
   assert.equal(checkInAdvice({ fatigue: 2 }).action, CHECKIN_ACTION.LIGHT);
   assert.equal(checkInAdvice({}).action, CHECKIN_ACTION.GO);
+});
+
+test('scenario 1.3a: irritated skin under the sensors → no sensor training today; the series is kept', () => {
+  const a = checkInAdvice({ pain: 0, fatigue: 0, skin: 1 });
+  assert.equal(a.action, CHECKIN_ACTION.STOP);
+  assert.equal(a.reason, 'skin');
+  assert.match(a.text, /протезист|врач/, 'points to a specialist');
+  assert.equal(checkInAdvice({ pain: 3, skin: 1 }).reason, 'pain', 'severe pain is named first');
+  assert.equal(checkInAdvice({ skin: 0 }).action, CHECKIN_ACTION.GO);
+  assert.equal(SKIN_LEVELS.length, 2);
+  // A declared rest day (pain or skin) never breaks the training series.
+  const p = createProfile();
+  recordRun(p, run('grip', 80, `${D}T10:00:00`), { today: D });
+  recordDayNote(p, '2026-10-18', { checkin: { ...a, skin: 1 } });
+  recordDayNote(p, '2026-10-19', { checkin: { ...a, skin: 1 } });
+  recordRun(p, run('grip', 80, '2026-10-21T10:00:00'), { today: '2026-10-21' });
+  assert.equal(p.streak.current, 2, 'two skin-rest days + one ordinary rest day keep the series');
+});
+
+test('scenario 1.3b: free play on a declared rest day or over the daily cap shows a caution', () => {
+  assert.equal(freePlayCaution({ checkin: undefined, secondsToday: 0, softCapMin: 30 }), null);
+  assert.match(freePlayCaution({ checkin: { action: 'stop', reason: 'pain' }, secondsToday: 0, softCapMin: 30 }), /боль/);
+  assert.match(freePlayCaution({ checkin: { action: 'stop', reason: 'skin' }, secondsToday: 0, softCapMin: 30 }), /эмулятор/);
+  assert.match(freePlayCaution({ checkin: { action: 'stop', pain: 3 }, secondsToday: 0, softCapMin: 30 }), /боль/, 'answers stored before 5.7 have no reason');
+  assert.match(freePlayCaution({ checkin: { action: 'go' }, secondsToday: 31 * 60, softCapMin: 30 }), /30 минут/);
 });
 
 test('scenario 1.5: a skipped check-in is recorded and not asked again that day', () => {

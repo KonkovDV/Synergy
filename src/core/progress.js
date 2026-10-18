@@ -1,7 +1,7 @@
 // Meta-game: XP, levels, training-day series, weekly goal, achievements, skins, daily plan.
 // Pure functions over plain data (easy to test and to persist).
 import { STARS, XP, SESSION, CHILD, SPACING } from '../config.js';
-import { SKILL } from './vocabulary.js';
+import { SKILL, ACTIVE_GESTURE_IDS } from './vocabulary.js';
 
 /** Session rules for the audience: a child trains with a parent — shorter plan, rest and daily cap. */
 export function sessionRules(audience = 'adult') {
@@ -45,7 +45,7 @@ export const ACHIEVEMENTS = [
   { id: 'jeweler', name: 'Ювелир', text: 'Донесите 5 хрупких предметов целыми за одну тренировку', test: (p, run) => (run?.details?.fragileSaved ?? 0) >= 5 },
   { id: 'switcher', name: 'Переключатель', text: 'Сделайте 20 смен хвата', test: (p) => p.totals.switches >= 20 },
   { id: 'rhythm', name: 'Чувство ритма', text: 'Серия из 16 попаданий в «Ритме»', test: (p, run) => (run?.details?.bestCombo ?? 0) >= 16 },
-  { id: 'seven', name: 'Семь жестов', text: 'Выполните все жесты в «Сейфе» в режиме жестов', test: (p, run) => (run?.details?.distinctGestures ?? 0) >= 6 },
+  { id: 'seven', name: 'Все жесты', text: 'Выполните все жесты в «Сейфе» в режиме жестов', test: (p, run) => (run?.details?.distinctGestures ?? 0) >= ACTIVE_GESTURE_IDS.length },
   { id: 'plan', name: 'Тренировка дня', text: 'Пройдите план на день целиком', test: (p) => p.totals.plans >= 1 },
   { id: 'streak3', name: 'Три дня', text: 'Серия из 3 тренировочных дней', test: (p) => p.streak.current >= 3 },
   { id: 'streak7', name: 'Неделя', text: 'Серия из 7 тренировочных дней', test: (p) => p.streak.current >= 7 },

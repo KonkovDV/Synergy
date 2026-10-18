@@ -9,6 +9,7 @@ import android.print.PrintManager;
 import android.speech.tts.TextToSpeech;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -35,20 +36,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        web = new WebView(this);
-        WebSettings s = web.getSettings();
-        s.setJavaScriptEnabled(true);
-        s.setDomStorageEnabled(true);
-        s.setAllowFileAccess(false); // android_asset still loads; no access to other local files
-        s.setMediaPlaybackRequiresUserGesture(false);
-        web.setWebChromeClient(new WebChromeClient());
-        web.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                return url == null || !url.startsWith(ASSETS); // stay inside the bundled game
-            }
-        });
-        web.addJavascriptInterface(new NativeBridge(), "SynergyNative");
+        web = createGameView();
         setContentView(web);
         tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
             public void onInit(int status) {
@@ -58,6 +46,36 @@ public class MainActivity extends Activity {
         });
         if (state == null) web.loadUrl(ASSETS + "www/index.html");
         else web.restoreState(state);
+    }
+
+    private WebView createGameView() {
+        WebView view = new WebView(this);
+        WebSettings s = view.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setAllowFileAccess(false); // android_asset still loads; no access to other local files
+        s.setAllowContentAccess(false); // nor to content:// providers
+        s.setMediaPlaybackRequiresUserGesture(false);
+        view.setWebChromeClient(new WebChromeClient());
+        view.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView v, String url) {
+                return url == null || !url.startsWith(ASSETS); // stay inside the bundled game
+            }
+
+            /** RT-8 (API 26+): the renderer died (low memory on a weak phone) — start a new view, not a crash. */
+            @Override
+            public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail detail) {
+                if (v != web) return true;
+                web = createGameView();
+                setContentView(web); // detaches the dead view; progress is in localStorage
+                v.destroy();
+                web.loadUrl(ASSETS + "www/index.html");
+                return true;
+            }
+        });
+        view.addJavascriptInterface(new NativeBridge(), "SynergyNative");
+        return view;
     }
 
     /** Forward one EMG frame from a native source (BLE prosthesis, SDK) into the game. */
@@ -114,6 +132,13 @@ public class MainActivity extends Activity {
                             sent = true;
                             PrintManager pm = (PrintManager) getSystemService(Context.PRINT_SERVICE);
                             pm.print(title, view.createPrintDocumentAdapter(title), new PrintAttributes.Builder().build());
+                        }
+
+                        @Override
+                        public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                            if (view == printPage) printPage = null; // the report page died: drop it, the game goes on
+                            view.destroy();
+                            return true;
                         }
                     });
                     printPage.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);

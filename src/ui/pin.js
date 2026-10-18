@@ -30,11 +30,14 @@ export function nextPinLock(lock, ok, now = Date.now()) {
 }
 
 export function pinGateScreen(app, { next = 'settings' } = {}) {
-  const input = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'off', 'aria-label': 'PIN родителя', class: 'pin-input' });
+  // autocomplete="current-password": a password manager may fill it (WCAG 2.2, 3.3.8 Accessible Authentication).
+  const input = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'current-password', 'aria-label': 'PIN родителя', class: 'pin-input' });
   const error = h('p', { class: 'note warn', 'aria-live': 'polite' });
-  const check = () => {
+  const check = e => {
+    e?.preventDefault();
     const wait = pinLockWait(app.settings.pinLock);
     if (wait) { error.textContent = `Слишком много попыток. Подождите ${wait} с`; input.value = ''; return; }
+    if (!input.value) { error.textContent = 'Введите PIN'; input.focus(); return; } // an empty field is not an attempt
     const ok = hashPin(input.value) === app.settings.parentPin;
     app.updateSettings({ pinLock: nextPinLock(app.settings.pinLock, ok) });
     if (ok) { app.pinOk = true; app.go(next); return; }
@@ -42,8 +45,6 @@ export function pinGateScreen(app, { next = 'settings' } = {}) {
     error.textContent = after ? `Неверный PIN. Следующая попытка через ${after} с` : 'Неверный PIN';
     input.value = ''; input.focus();
   };
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
-  input.addEventListener('keyup', e => { if (e.key === 'Enter') check(); });
   queueMicrotask(() => input.focus());
   return {
     node: h('div', { class: 'screen pin' },
@@ -51,8 +52,9 @@ export function pinGateScreen(app, { next = 'settings' } = {}) {
         h('p', { class: 'big-emoji', 'aria-hidden': 'true' }, '🔒'),
         h('h1', {}, 'Для взрослых'),
         h('p', {}, 'Настройки защищены PIN-кодом родителя.'),
-        input, error,
-        h('button', { class: 'btn primary big', onclick: check }, 'Открыть'),
+        // One submit per Enter or tap (5.6 listened to keydown and keyup: one wrong Enter cost two attempts).
+        h('form', { class: 'pin-form', onsubmit: check }, input, error,
+          h('button', { type: 'submit', class: 'btn primary big' }, 'Открыть')),
         h('p', { class: 'note' }, 'Забыли PIN? Переустановка приложения сбросит его вместе с прогрессом.')),
       bottomNav(app, 'settings')),
   };

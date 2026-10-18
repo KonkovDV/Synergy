@@ -2,9 +2,13 @@
 // every profile field with a wrong type falls back to its default and the screens' domain calls still work.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseState } from '../src/core/storage.js';
+import { parseState, DEFAULT_SETTINGS } from '../src/core/storage.js';
 import { createProfile, buildDailyPlan, recordRun, completePlanItem, unlockAchievements, secondsToday, playerLevel, skillProfile } from '../src/core/progress.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
+import { SCHEME_INFO } from '../src/core/vocabulary.js';
+import { HANDS_FREE } from '../src/config.js';
+import { reminderIcs, reportCsv } from '../src/services/report.js';
+import { trustedMessageSource } from '../src/input/bridge.js';
 
 const HOSTILE = [null, 42, 'x', [], {}, true, { __proto__: { polluted: 1 } }];
 const today = '2026-10-17';
@@ -47,4 +51,62 @@ test('logic: switching the scheme after finishing the plan does not pay the plan
 test('red team: a run with an unparseable date is dropped on import', () => {
   const st = parseState(JSON.stringify({ version: 4, runs: [{ ...run, at: 'not-a-date' }, run, { game: 'grip', level: 1, score: 1, stars: 0 }] }));
   assert.equal(st.runs.length, 2);
+});
+
+// RT-9 (5.7): settings were checked by type only — `scheme: "x"` passed and the home screen threw on every launch.
+test('red team: settings out of their range or enum fall back to the default (RT-9)', () => {
+  const OUT = ['x', '', -5, 0, 1e9, 30, 2.5, null, true, [], {}, 'javascript:alert(1)', '99:99', 'a'.repeat(5000)];
+  for (const key of Object.keys(DEFAULT_SETTINGS)) {
+    for (const bad of OUT) {
+      const s = parseState(JSON.stringify({ version: 4, settings: { ...DEFAULT_SETTINGS, [key]: bad } })).settings;
+      const why = `settings.${key} = ${JSON.stringify(bad).slice(0, 40)}`;
+      assert.ok(SCHEME_INFO[s.scheme], why);
+      assert.ok(['touch', 'bridge', 'demo'].includes(s.source) && ['right', 'left'].includes(s.side) && ['adult', 'child'].includes(s.audience), why);
+      assert.ok([1, 1.15, 1.3].includes(s.textScale), why);
+      assert.ok(s.gameSpeed >= 0.6 && s.gameSpeed <= 1 && s.dwellS >= HANDS_FREE.minS && s.dwellS <= HANDS_FREE.maxS, why);
+      assert.ok(s.sensitivity >= 0.1 && s.sensitivity <= 0.45 && s.coThreshold >= 0.25 && s.coThreshold <= 0.7 && s.realism >= 0 && s.realism <= 1, why);
+      assert.ok(Number.isInteger(s.weeklyGoal) && s.weeklyGoal >= 2 && s.weeklyGoal <= 7, why);
+      assert.match(s.reminder, /^\d\d:\d\d$/, why);
+      assert.ok(s.name.length <= 24 && s.wsUrl.length <= 200 && !/^javascript:/i.test(s.wsUrl), why);
+      assert.ok(Number.isFinite(s.pinLock.fails) && Number.isFinite(s.pinLock.until), why);
+      assert.ok(!reminderIcs(s.reminder).includes('NaN'), why);
+    }
+  }
+  const kept = parseState(JSON.stringify({ version: 4, settings: { scheme: 'gesture', textScale: 1.3, gameSpeed: 0.75, name: 'Аня', reminder: '07:30', wsUrl: 'ws://192.168.0.10:8765' } })).settings;
+  assert.deepEqual([kept.scheme, kept.textScale, kept.gameSpeed, kept.name, kept.reminder, kept.wsUrl], ['gesture', 1.3, 0.75, 'Аня', '07:30', 'ws://192.168.0.10:8765'], 'valid values survive');
+});
+
+test('red team: a hostile plan, skin or day record in a backup falls back to a safe shape (RT-10)', () => {
+  for (const plan of [{ day: today, scheme: 'proportional', items: null }, { day: today, scheme: 'proportional', items: [null, 5] }, { day: 5, items: [] }]) {
+    const st = parseState(JSON.stringify({ version: 4, profile: { ...createProfile(), plan } }));
+    const p = buildDailyPlan(st.profile, [], PLAN_CATALOG, 'proportional', today, { exercises: 3 });
+    assert.ok(Array.isArray(p.items) && p.items.every(i => typeof i.game === 'string'), JSON.stringify(plan));
+  }
+  const st = parseState(JSON.stringify({ version: 4, profile: { ...createProfile(), skin: 'evil', days: { [today]: { seconds: 'abc', runs: null, checkin: 7 }, 'not-a-day': { seconds: 5 } } } }));
+  assert.equal(st.profile.skin, 'graphite');
+  assert.deepEqual(Object.keys(st.profile.days), [today]);
+  assert.equal(secondsToday(st.profile, today), 0);
+  assert.equal(st.profile.days[today].checkin, undefined);
+});
+
+test('red team: CSV formula guard also catches «-2+3+cmd|…», tabs and CR; plain numbers stay numbers (RT-11)', () => {
+  const st = parseState(JSON.stringify({ version: 4 }));
+  for (const game of ["-2+3+cmd|' /C calc'!A0", '\tcmd', '\r=1+1', '+1+1', '@SUM(A1)']) {
+    st.runs = [{ ...run, game }];
+    const cell = reportCsv(st).split('\n')[1].split(';')[1];
+    assert.ok(cell.startsWith("'") || cell.startsWith(`"'`), `${JSON.stringify(game)} → ${cell}`);
+  }
+  st.runs = [{ ...run, score: 12.5, details: { difficulty: -0.25 } }];
+  const row = reportCsv(st).split('\n')[1].split(';');
+  assert.ok(row.includes('12.5') && row.includes('-0.25'), row.join(';'));
+});
+
+test('red team: postMessage frames only from the embedding parent or a native host (RT-7)', () => {
+  const win = { parent: null }; win.parent = win; // top-level window
+  assert.ok(trustedMessageSource({ source: null }, win), 'native WebMessage (no source window)');
+  assert.ok(trustedMessageSource({ source: win }, win), 'the page itself');
+  assert.ok(!trustedMessageSource({ source: { other: true } }, win), 'an opener or a child frame');
+  const parent = {}, framed = { parent };
+  assert.ok(trustedMessageSource({ source: parent }, framed), 'the embedding page');
+  assert.ok(!trustedMessageSource({ source: {} }, framed));
 });

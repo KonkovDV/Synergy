@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SignalPipeline } from '../src/core/signal.js';
-import { RestTracker, restAdaptationAllowed } from '../src/core/calibration.js';
+import { RestTracker, restAdaptationAllowed, CalibrationRecorder } from '../src/core/calibration.js';
 import { CALIBRATION_ADAPT } from '../src/config.js';
 import { COMMAND } from '../src/core/vocabulary.js';
 import { GAME_BY_ID } from '../src/games/registry.js';
@@ -23,6 +23,24 @@ function drive(pipeline, raw, seconds, t0 = 0) {
 
 const tracked = () => { const tracker = new RestTracker(CAL); return { tracker, pipeline: new SignalPipeline({ calibration: CAL, restTracker: tracker }) }; };
 const wobble = t => 0.01 * Math.sin(2 * Math.PI * 0.7 * t); // small deterministic ripple of the envelope
+
+test('calibration wizard: a stalled stream is not recorded as fresh samples; a step without signal is reported', () => {
+  const rec = new CalibrationRecorder();
+  const frozen = { t: 0, a: 0.05, b: 0.04 }; // the bridge keeps returning its last frame when the stream stops
+  for (let i = 0; i < 700; i++) rec.push(frozen, 1 / 60); // the wizard lasts 11 s
+  assert.ok(rec.done);
+  const total = Object.values(rec.samples).reduce((s, v) => s + v.length, 0);
+  assert.ok(total <= 1, `a repeated frame object is one sample, got ${total}`);
+  const r = rec.result();
+  assert.ok(r.issues.some(i => /Нет сигнала/.test(i)), r.issues.join(' | '));
+  // A live source (a new frame object every tick) records every step normally.
+  const live = new CalibrationRecorder();
+  for (let i = 0; i < 700; i++) {
+    const step = live.step?.id;
+    live.push({ t: i * 16, a: step === 'a' ? 0.8 : 0.05, b: step === 'b' ? 0.7 : 0.05 }, 1 / 60);
+  }
+  assert.ok(!live.result().issues.some(i => /Нет сигнала/.test(i)));
+});
 
 test('rest adaptation: slow drift of the baseline causes no false commands (it would without the tracker)', () => {
   const ramp = t => { const r = 0.25 * Math.min(1, t / 150) + wobble(t); return [Math.max(0, r), Math.max(0, r * 0.8)]; };

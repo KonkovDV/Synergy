@@ -69,6 +69,15 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   return frame;
 }
 
+/**
+ * RT-7: postMessage frames are accepted only from the page that embeds the game, from the page itself or from a
+ * native host (WebView WebMessage has no source window) — not from an opener tab or a child frame.
+ */
+export function trustedMessageSource(event, win) {
+  const src = event.source;
+  return src === null || src === undefined || src === win || (win.parent !== win && src === win.parent);
+}
+
 export class BridgeSource {
   constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {} } = {}) {
     this.url = url;
@@ -79,7 +88,7 @@ export class BridgeSource {
     this.received = 0;
     this.status = 'idle';
     this.retryMs = 500;
-    this.onMessage = e => { if (e.data?.type === 'synergy-frame') this.feed(e.data); };
+    this.onMessage = e => { if (e.data?.type === 'synergy-frame' && trustedMessageSource(e, window)) this.feed(e.data); };
   }
 
   /** Stamps local arrival time, so remote clocks never matter. */

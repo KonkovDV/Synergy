@@ -8,6 +8,8 @@ import { SCHEME, SCHEME_INFO, COMMAND, gestureLegend } from '../core/vocabulary.
 import { COLORS } from '../render/draw.js';
 import { MusicPlayer } from '../core/music.js';
 import { audioClock, playMusic } from '../services/audio.js';
+import { freePlayCaution } from '../core/wellbeing.js';
+import { secondsToday, dayKey } from '../core/progress.js';
 
 const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
 
@@ -17,7 +19,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   // Procedural music (only «Ритм» has a song): scheduled on the audio clock, heard when the note reaches the line.
   const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: audioClock, play: playMusic }) : null; };
   let music = musicFor(session);
-  let phase = 'intro', countdown = 0, confirm = 0, doneAt = 0, lastScore = -1, lastSpoken = '', lastCount = 0, lastNow = null;
+  let phase = 'intro', countdown = 0, confirm = 0, armed = false, doneAt = 0, lastScore = -1, lastSpoken = '', lastCount = 0, lastNow = null;
   const confirmS = s.dwellS;
   const entry = session.entry;
   const bridgeMode = s.source === 'bridge' && !demo;
@@ -48,11 +50,11 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const node = h('div', { class: 'screen play-screen' },
     h('header', { class: 'play-top' },
       h('button', { class: 'icon-btn', 'aria-label': 'Выйти', onclick: () => exit() }, '✕'),
-      h('div', { class: 'play-title' }, h('b', { 'data-heading': '' }, `${entry.title} · ур. ${level}`), badge ? h('small', {}, badge) : null),
+      h('div', { class: 'play-title' }, h('h1', {}, `${entry.title} · ур. ${level}`), badge ? h('small', {}, badge) : null),
       h('button', { class: 'icon-btn', 'aria-label': 'Пауза', onclick: () => pause() }, 'Ⅱ'),
       scoreEl),
     h('div', { class: 'play-progress', 'aria-hidden': 'true' }, bar),
-    h('div', { class: 'stage', role: 'region', 'aria-label': 'Игровое поле' }, canvas, hint, overlay),
+    h('main', { class: 'stage', 'aria-label': 'Игровое поле' }, canvas, hint, overlay),
     s.showMeters ? meter.node : null,
     controls);
 
@@ -68,7 +70,9 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const observer = new ResizeObserver(resize); observer.observe(canvas);
 
   function showIntro() {
-    phase = 'intro'; session.game.paused = true;
+    phase = 'intro'; session.game.paused = true; armed = false; confirm = 0;
+    // Safety > motivation: free play stays open on a declared rest day or over the cap, with a caution.
+    const caution = demo ? null : freePlayCaution({ checkin: app.checkin(), secondsToday: secondsToday(app.profile, dayKey()), softCapMin: app.rules.softCapMin });
     const legend = s.scheme === SCHEME.GESTURE
       ? gestureLegend()
       : 'A — сжатие · B — раскрытие · A+B разом — коактивация (смена хвата) · покой — протез держит';
@@ -80,12 +84,13 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       h('p', { class: 'legend' }, legend),
       !retention && session.game.guidance < 1 ? h('p', { class: 'note' }, `Навык растёт: шкала будет скрыта в ${session.game.guidance > 0.6 ? 'каждой третьей' : 'каждой второй'} попытке — результат вы увидите сразу после неё.`) : null,
       retention ? h('p', { class: 'note' }, 'Живые подсказки скрыты: так проверяется, держится ли навык без экрана. Это игровая метрика удержания навыка, а не прогноз управления протезом.') : null,
-      h('div', { class: 'confirm' }, h('i', { class: 'confirm-ring' }), h('span', {}, `Удерживайте сжатие (A) ${confirmS.toFixed(1).replace('.0', '')} с — старт без касания`)),
+      caution ? h('p', { class: 'note warn', role: 'status' }, caution) : null,
+      h('div', { class: 'confirm' }, h('i', { class: 'confirm-ring' }), h('span', {}, `Расслабьтесь, затем удерживайте сжатие (A) ${confirmS.toFixed(1).replace('.0', '')} с — старт без касания`)),
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn primary big', onclick: () => begin() }, 'Старт'),
         !demo ? h('button', { class: 'btn ghost', onclick: () => restart(true) }, 'Смотреть демо') : null)));
     overlay.hidden = false;
-    app.say(`${entry.title}. ${entry.how[0]}. Чтобы начать, удерживайте сжатие.`, { interrupt: true });
+    app.say(`${caution ? `${caution} ` : ''}${entry.title}. ${entry.how[0]}. Чтобы начать, расслабьтесь, затем удерживайте сжатие.`, { interrupt: true });
   }
 
   function begin() { phase = 'countdown'; countdown = 3; lastCount = 0; confirm = 0; overlay.hidden = true; }
@@ -131,7 +136,9 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     if (s.showMeters) meter.update(intent);
     if (bridgeMode) updateBridge(app.bridge?.status ?? 'idle');
     if (phase === 'intro') {
-      confirm = intent.valid && intent.command === COMMAND.CLOSE ? confirm + dt : Math.max(0, confirm - dt * 2);
+      // Armed only after a relaxation: a hold that left the results screen must not start the game too.
+      if (intent.valid && intent.command === COMMAND.REST) armed = true;
+      confirm = armed && intent.valid && intent.command === COMMAND.CLOSE ? confirm + dt : Math.max(0, confirm - dt * 2);
       overlay.querySelector('.confirm-ring')?.style.setProperty('--p', String(Math.min(1, confirm / confirmS)));
       if (confirm >= confirmS) begin();
     } else if (phase === 'countdown') {
