@@ -185,3 +185,21 @@ test('«Мастерская» at sensitivity 0.45: force windows lie above the 
   assert.equal(r.crushed, 0, 'nothing crushed');
   assert.ok(r.delivered >= r.total - 1, `${r.delivered}/${r.total} delivered`);
 });
+
+test('gesture scheme speaks of gestures, not channels A/B — in the intro lists and in the live hints (5.11)', async () => {
+  const { GAMES, howFor, createGame: make } = await import('../src/games/registry.js');
+  const { GameRunner } = await import('../src/games/runner.js');
+  const { EmgEmulator } = await import('../src/input/emulator.js');
+  const { SignalPipeline } = await import('../src/core/signal.js');
+  const { BionicHand } = await import('../src/core/hand.js');
+  const channels = /\((A|B)\)|\bA\+B\b|канал A|канал B|^A —|, B /;
+  for (const g of GAMES) for (const line of howFor(g, 'gesture')) assert.ok(!channels.test(line), `${g.id}: «${line}»`);
+  for (const id of ['grip', 'flight', 'rhythm', 'safe']) {
+    const game = make(id, { levelNumber: 3, scheme: 'gesture', seed: 3 });
+    const emulator = new EmgEmulator({ realism: 0.3, seed: 3 });
+    const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme: 'gesture' }), hand: new BionicHand(), source: emulator, emulator, autopilot: true });
+    const hints = new Set();
+    for (let t = 0; !game.done && t < 240000; t += 1000 / 60) { runner.step(t, 1 / 60); hints.add(game.hint); }
+    for (const hint of hints) assert.ok(!channels.test(hint), `${id}: «${hint}»`);
+  }
+});

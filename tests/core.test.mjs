@@ -231,3 +231,11 @@ test('plan (5.11): switching to child mode mid-day rebuilds today\'s plan to the
   assert.ok(child.items.some(i => i.done), 'the finished exercise stays finished');
   assert.equal(buildDailyPlan(p, [], PLAN_CATALOG, 'proportional', D, { exercises: sessionRules('child').planExercises }), child, 'same size — the same plan');
 });
+
+test('store (5.11): a failed save says so — the app warns instead of showing «+XP» for a run that is not kept', () => {
+  const full = { getItem: () => null, setItem: () => { throw new Error('QuotaExceededError'); }, removeItem: () => {} };
+  const store = new Store(full);
+  assert.equal(store.save(), false);
+  assert.equal(store.persisted, false);
+  assert.equal(new Store(memoryStorage()).save(), true);
+});

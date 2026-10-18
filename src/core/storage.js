@@ -220,9 +220,11 @@ export class Store {
     }
   }
 
+  /** @returns {boolean} saved (5.11: a full storage failed silently — the results still showed «+XP»). */
   save() {
     this.state.runs = this.state.runs.slice(-MAX_RUNS);
     try { this.storage.setItem(APP.storageKey, JSON.stringify(this.state)); this.persisted = true; } catch { this.persisted = false; }
+    return this.persisted;
   }
 
   /** Reset keeps one copy of the previous state on this device: a destructive action must be undoable. */

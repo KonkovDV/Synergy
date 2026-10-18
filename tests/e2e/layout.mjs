@@ -278,7 +278,7 @@ for (const [w, h] of VIEWPORTS) {
       if (scale === 1 && w < 700) found.push(...await focusWalk(page));
       // The day's main action is visible on the home screen without scrolling (portrait phones, default text).
       if (/home/.test(state) && scale === 1 && h > w && w < 700) {
-        const fold = await page.evaluate(() => { document.scrollingElement.scrollTop = 0; const b = document.querySelector('.plan-start')?.getBoundingClientRect(), nav = document.querySelector('.bottom-nav')?.getBoundingClientRect(); return b && nav ? b.bottom <= nav.top : true; });
+        const fold = await page.evaluate(() => { document.scrollingElement.scrollTop = 0; const b = (document.querySelector('.tutorial-card .btn') ?? document.querySelector('.plan-start'))?.getBoundingClientRect(), nav = document.querySelector('.bottom-nav')?.getBoundingClientRect(); return b && nav ? b.bottom <= nav.top : true; });
         if (!fold) found.push({ kind: 'fold', what: '«Начать» тренировку дня not visible without scrolling' });
       }
       for (const f of found) issues.push({ ...f, state, view: `${w}×${h}`, scale });

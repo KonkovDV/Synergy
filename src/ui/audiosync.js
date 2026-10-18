@@ -60,7 +60,7 @@ export function audioSyncScreen(app) {
       // The dot reaches the line exactly on every click: a sawtooth with the click period.
       const phase = (gameTime % PERIOD_S) / PERIOD_S;
       dot.style.setProperty('--y', phase.toFixed(3));
-      line.classList.toggle('hit', phase < 0.12 && !s.reduceMotion);
+      line.classList.toggle('hit', phase < 0.12 && !app.reduceMotion);
     },
     cleanup() { player?.silence(audioClock()?.now ?? 0); player = null; },
   };

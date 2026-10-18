@@ -2,7 +2,7 @@
 // Hands-free flow: the intro can be confirmed by holding A for 1 s — the phone is in the sound hand,
 // the sensors are on the other arm, so the player should not need to touch the screen to continue.
 import { h, toast } from './dom.js';
-import { signalMeter, icon, handsFreeText } from './widgets.js';
+import { signalMeter, icon, handsFreeText, BRIDGE_STATUS } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
 import { COLORS } from '../render/draw.js';
@@ -12,8 +12,11 @@ import { audioClock, playMusic } from '../services/audio.js';
 import { freePlayCaution } from '../core/wellbeing.js';
 import { secondsToday, dayKey } from '../core/progress.js';
 import { HoldConfirm } from '../core/handsfree.js';
+import { howFor } from '../games/registry.js';
 
-const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
+
+/** Hints that flip with the signal (spaced for screen readers); everything else is a task and is said promptly. */
+const FEEDBACK_HINT = /^(Держите|Сильнее|Слабее|Слабо|Сильно|Отлично|Несите)/;
 
 export function playScreen(app, { game, level, retention = false, plan = false, demo = false, pose = null }) {
   const s = app.settings;
@@ -73,6 +76,9 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   let view = { w: 300, h: 300 };
   const resize = () => {
     const r = canvas.getBoundingClientRect();
+    // The same pixel size: keep the backing store (5.11 — a 1 px hint change re-allocated 4–6 MB, 12 times in 15 s).
+    if (Math.round(r.width) === Math.round(view.w) && Math.round(r.height) === Math.round(view.h) && canvas.dataset.dpr === String(app.fps.degraded)) return;
+    canvas.dataset.dpr = String(app.fps.degraded);
     const dpr = Math.min(app.fps.degraded ? 1.5 : 2.5, window.devicePixelRatio || 1); // fewer pixels on a slow phone
     view = { w: Math.max(100, r.width), h: Math.max(100, r.height) };
     canvas.width = Math.round(view.w * dpr); canvas.height = Math.round(view.h * dpr);
@@ -90,10 +96,10 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       ? gestureLegend()
       : 'A — сжатие · B — раскрытие · A+B разом — коактивация (смена хвата) · покой — протез держит';
     overlay.replaceChildren(h('div', { class: 'sheet' },
-      h('p', { class: 'eyebrow' }, `${SCHEME_INFO[s.scheme].name} режим${retention ? ' · без подсказки' : ''}`),
+      h('p', { class: 'eyebrow' }, `${SCHEME_INFO[s.scheme].mode}${retention ? ' · без подсказки' : ''}`),
       h('h2', { id: 'play-dialog-title' }, `${entry.icon} ${entry.title}`),
       h('p', {}, entry.teaches),
-      h('ul', { class: 'how' }, ...entry.how.map(x => h('li', {}, x))),
+      h('ul', { class: 'how' }, ...howFor(entry, s.scheme).map(x => h('li', {}, x))),
       h('p', { class: 'legend' }, legend),
       !retention && session.game.guidance < 1 ? h('p', { class: 'note' }, `Навык растёт: шкала будет скрыта в ${session.game.guidance > 0.6 ? 'каждой третьей' : 'каждой второй'} попытке — результат вы увидите сразу после неё.`) : null,
       retention ? h('p', { class: 'note' }, 'Живые подсказки скрыты: так проверяется, держится ли навык без экрана. Это игровая метрика удержания навыка, а не прогноз управления протезом.') : null,
@@ -107,7 +113,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
           !demo ? h('button', { class: 'btn ghost', onclick: () => restart(true) }, 'Смотреть демо') : null))));
     setDialog(true);
     focusIn(overlay.querySelector('.btn.primary'));
-    app.say(`${caution ? `${caution} ` : ''}${entry.title}. ${entry.how[0]}. ${handsFreeText(s.scheme, confirmS, 'старт', { spoken: true })}`, { interrupt: true });
+    app.say(`${caution ? `${caution} ` : ''}${entry.title}. ${howFor(entry, s.scheme)[0]}. ${handsFreeText(s.scheme, confirmS, 'старт', { spoken: true })}`, { interrupt: true });
   }
 
   // Dialog focus (5.10): the main button takes focus when a sheet opens, the pause button when it closes —
@@ -194,7 +200,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       : retention && phase === 'running' ? 'Без подсказки: доверьтесь ощущениям' : session.game.hint;
     if (hint.textContent !== hintText) hint.textContent = hintText;
     // Screen reader and voice: the latest hint once it holds, not every flip (the voice says the countdown itself).
-    const spoken = announcer.update(hintText, now / 1000, { urgent: lost || phase === 'countdown' });
+    const spoken = announcer.update(hintText, now / 1000, { urgent: lost || phase === 'countdown', task: !FEEDBACK_HINT.test(hintText) });
     if (spoken !== null) {
       liveHint.textContent = spoken;
       if (phase === 'running') app.say(spoken, { interrupt: lost, minGapMs: 0 }); // the announcer already spaces them

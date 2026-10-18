@@ -34,6 +34,9 @@ export function bottomNav(app, active) {
 }
 
 /** The arrow is the screen's «back»: the Android button, the browser back gesture and Esc press it too (App.handleBack). */
+/** Status words of the external source — one copy for the game and the settings (5.11: two had to be kept in sync). */
+export const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
+
 export function topBar(title, onBack, extra = null) {
   return h('header', { class: 'top-bar' },
     onBack ? h('button', { class: 'icon-btn back-btn', 'aria-label': 'Назад', onclick: onBack }, icon('back')) : h('span'),
@@ -68,7 +71,8 @@ export function signalMeter(app) {
         : intent.gesture ? `${GESTURE_BY_ID[intent.gesture].name}${intent.uncertain ? '?' : ''}`
         : COMMAND_NAME[intent.command];
       if (chip.textContent !== label) chip.textContent = label;
-      chip.dataset.cmd = intent.valid ? intent.command : 'lost';
+      const cmd = intent.valid ? intent.command : 'lost';
+      if (chip.dataset.cmd !== cmd) chip.dataset.cmd = cmd; // no attribute write per frame (5.11: ~1.6 mutations a frame)
     },
   };
 }

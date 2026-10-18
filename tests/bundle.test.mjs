@@ -25,3 +25,10 @@ test('pwa: installable icons — 192 and 512 PNG «any», a separate maskable 51
   }
   assert.ok(m.start_url && m.display === 'standalone' && m.lang === 'ru');
 });
+
+test('build: Cyrillic ships as UTF-8, not \\uXXXX escapes (5.11 — 289 → 213 KB to parse on a weak phone)', () => {
+  const src = readFileSync('tools/build.mjs', 'utf8');
+  assert.match(src, /charset:\s*'utf8'/, 'esbuild charset');
+  for (const page of ['index.html']) assert.match(readFileSync(page, 'utf8'), /<meta charset="utf-8">/i, `${page} declares UTF-8`);
+  assert.match(src, /<meta charset="utf-8">/, 'the built pages declare UTF-8');
+});

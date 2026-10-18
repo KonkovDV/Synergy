@@ -39,8 +39,8 @@ export class FlightGame extends Game {
     this.hits = 0; this.perfect = 0; this.ringsSeen = 0; this.streak = 0;
     this.skillHits = 0; this.skillPerfect = 0; // against the level's original tolerance (not the adapted one)
     this.trail = [];
-    this.baseHint = this.scheme === SCHEME.THRESHOLD
-      ? 'A — набрать высоту, B — снизиться, покой — держать высоту'
+    this.baseHint = this.scheme === SCHEME.THRESHOLD ? 'A — набрать высоту, B — снизиться, покой — держать высоту'
+      : this.scheme === SCHEME.GESTURE ? `Жест хвата — выше, «${OPENING_GESTURE.name}» — ниже, покой — середина`
       : 'Сильнее A — выше, сильнее B — ниже, расслабление — середина';
     this.hint = this.baseHint;
   }
@@ -182,18 +182,21 @@ export class FlightGame extends Game {
     g.addColorStop(0, '#0b1230'); g.addColorStop(0.6, '#24215a'); g.addColorStop(1, '#3d2a6b');
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
     for (let i = 0; i < 40; i++) {
-      const sx = ((i * 97.3 - this.time * (8 + (i % 3) * 6)) % w + w) % w, sy = (i * 53.7) % (h * 0.7);
+      // «Меньше движения» freezes the scenery (5.11): the stars and hills kept drifting; the task (rings) still moves.
+      const drift = this.reduceMotion ? 0 : this.time;
+      const sx = ((i * 97.3 - drift * (8 + (i % 3) * 6)) % w + w) % w, sy = (i * 53.7) % (h * 0.7);
       circle(ctx, sx, sy, (i % 3) * 0.6 + 0.6, 'rgba(255,255,255,0.5)');
     }
     // Hills (parallax).
     ctx.fillStyle = '#1a1840';
     ctx.beginPath(); ctx.moveTo(0, h);
-    for (let x = 0; x <= w; x += 16) ctx.lineTo(x, h - 30 - 18 * Math.sin((x + this.time * 40) / 70));
+    const hills = this.reduceMotion ? 0 : this.time;
+    for (let x = 0; x <= w; x += 16) ctx.lineTo(x, h - 30 - 18 * Math.sin((x + hills * 40) / 70));
     ctx.lineTo(w, h); ctx.fill();
     // Middle line = relaxation.
     ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y(0.5)); ctx.lineTo(w, y(0.5)); ctx.stroke(); ctx.setLineDash([]);
-    text(ctx, 'покой', 8, y(0.5) - 9, { size: 12, color: 'rgba(255,255,255,0.45)', align: 'left' });
+    text(ctx, 'покой', 8, y(0.5) - 9, { size: 12, color: COLORS.muted, align: 'left' }); // ≥ 4.5:1 (5.11: 4.2:1 at 45 % white)
     const tolPx = this.tol * span;
     // Streams.
     for (const s of this.track.filter(x => x.kind === 'stream')) {

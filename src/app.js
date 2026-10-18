@@ -92,7 +92,7 @@ export class App {
     root.addEventListener('click', e => {
       if (this.lastPointer === 'touch' && performance.now() - (this.mountedAt ?? 0) < TAP_GUARD_MS) { e.preventDefault(); e.stopImmediatePropagation(); }
     }, true);
-    for (const q of ['(prefers-contrast: more)', '(forced-colors: active)']) globalThis.matchMedia?.(q).addEventListener?.('change', () => this.applyPresentation());
+    for (const q of ['(prefers-contrast: more)', '(forced-colors: active)', '(prefers-reduced-motion: reduce)']) globalThis.matchMedia?.(q).addEventListener?.('change', () => this.applyPresentation());
     // Back in a browser or an installed PWA: one history entry stands for «inside the app», so the back gesture
     // comes here instead of closing the app (an SPA without history entries is left by the first back).
     window.addEventListener('popstate', () => {
@@ -124,7 +124,13 @@ export class App {
   get state() { return this.store.state; }
   get settings() { return this.state.settings; }
   get profile() { return this.state.profile; }
-  save() { this.store.save(); }
+  save() {
+    const ok = this.store.save();
+    // Once per failure, not on every save: the data lives only on this device, a copy is the way out.
+    if (!ok && !this.saveWarned && !this.showcase) toast('Не удалось сохранить: память браузера заполнена или недоступна. Сохраните копию: Настройки → Данные.', 'bad');
+    this.saveWarned = !ok;
+    return ok;
+  }
 
   updateSettings(patch) {
     const before = this.settings.source;
@@ -167,8 +173,12 @@ export class App {
     this.systemContrast = typeof matchMedia === 'function' && (matchMedia('(prefers-contrast: more)').matches || matchMedia('(forced-colors: active)').matches);
     const contrast = !!s.contrast || this.systemContrast;
     root.classList.toggle('hc', contrast);
-    root.classList.toggle('rm', !!s.reduceMotion);
-    setRenderOptions({ scale: s.textScale, highContrast: contrast });
+    // The system's «reduce motion» counts too (5.11): only the app's own switch did, and the canvas kept moving.
+    this.reduceMotion = !!s.reduceMotion || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    root.classList.toggle('rm', this.reduceMotion);
+    // Canvas text follows the system font size as well (Android WebView scales the root font), up to the tuned +25 %.
+    const rootPx = typeof getComputedStyle === 'function' ? parseFloat(getComputedStyle(root).fontSize) || 16 : 16;
+    setRenderOptions({ scale: Math.max(s.textScale, rootPx / 16), highContrast: contrast });
     setPadMode({ sticky: s.stickyPads });
   }
 
@@ -299,7 +309,7 @@ export class App {
   createSession({ game, level, retention = false, demo = false, plan = false, pose = null }) {
     const s = this.settings;
     const instance = createGame(game, { levelNumber: level, scheme: s.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
-      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: s.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: s.sensitivity });
+      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: s.sensitivity });
     const hand = this.createHand();
     const adaptRest = restAdaptationAllowed({ source: this.sourceKind(), enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
     const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });

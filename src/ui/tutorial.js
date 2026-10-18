@@ -27,11 +27,13 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
     app.go(from, from === 'settings' ? { back: 'tutorial' } : {}); // go() stops the previous screen's speech: say it after (5.11 — it was cut at once)
     app.say(run.passed ? 'Обучение пройдено. Отлично!' : 'Обучение завершено. Шаги можно пройти снова в настройках.', { interrupt: true });
   };
+  const live = h('p', { class: 'sr-only', role: 'status' });
   const showStep = () => {
     const step = run.step;
     if (!step) return;
     counter.textContent = `Шаг ${run.index + 1} из ${run.steps.length}`;
     title.textContent = step.title; text.textContent = step.text; tip.textContent = '';
+    live.textContent = `${counter.textContent}. ${step.title}. ${step.text}`; // for a screen reader without the app's voice (5.11)
     app.say(`${step.title}. ${step.text}`, { interrupt: true });
   };
   showStep();
@@ -39,7 +41,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
   // until 5.9 the pads were below the fold on most phones and the instruction scrolled away to press them.
   const node = h('div', { class: 'screen tutorial frame' },
     topBar('Первые шаги', () => app.go(from, from === 'settings' ? { back: 'tutorial' } : {})),
-    h('main', { class: 'frame-body center' }, counter, canvas, ring, title, text, tip,
+    h('main', { class: 'frame-body center' }, counter, canvas, ring, title, text, tip, live,
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn ghost', onclick: () => { run.skipStep(); if (run.done) finish(); else showStep(); } }, 'Пропустить шаг'),
         h('button', { class: 'btn ghost', onclick: finish }, 'Завершить обучение'))),
@@ -60,7 +62,9 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       ctx.clearRect(0, 0, 320, 240);
       drawHand(ctx, { x: 150, y: 228, size: 92, pose: hand.pose(), skin: app.profile.skin, glow: intent.intensity, mirror: s.side === 'left' });
       const band = run.step?.band;
-      drawGauge(ctx, { x: 282, y: 20, w: 20, h: 180, value: intent.a, min: band?.[0] ?? null, max: band?.[1] ?? null, color: COLORS.a, label: 'A' });
+      // The channel of the step: B on «Раскрытие» (5.11 — the gauge always showed A, empty while B was working).
+      const ch = run.step?.id === 'open' ? 'b' : 'a';
+      drawGauge(ctx, { x: 282, y: 20, w: 20, h: 180, value: intent[ch], min: band?.[0] ?? null, max: band?.[1] ?? null, color: COLORS[ch], label: ch.toUpperCase() });
     },
   };
 }

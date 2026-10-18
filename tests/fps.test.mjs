@@ -34,3 +34,14 @@ test('fps guard: a pause (tab hidden) is not slowness', () => {
   for (let i = 0; i < 5; i++) assert.equal(g.update(4), false);
   assert.equal(g.degraded, false);
 });
+
+test('fps guard (5.11): an uneven ~33 fps that recovers for a frame now and then still degrades within 3.5 s', async () => {
+  const { FpsGuard } = await import('../src/core/fps.js');
+  const guard = new FpsGuard();
+  const pattern = [16.7, 33.3, 16.7, 50, 33.3].map(ms => ms / 1000);
+  let t = 0, at = null;
+  for (let i = 0; t < 6 && at === null; i++) { const dt = pattern[i % pattern.length]; t += dt; if (guard.update(dt)) at = t; }
+  assert.ok(at !== null && at <= 3.5, `degraded at ${at}`);
+  const smooth = new FpsGuard();
+  for (let i = 0; i < 600; i++) assert.equal(smooth.update(1 / 60), false, '60 fps never degrades');
+});
