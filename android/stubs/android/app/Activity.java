@@ -10,4 +10,5 @@ public class Activity extends android.content.Context {
   protected void onDestroy() {}
   public Object getSystemService(String name) { return null; }
   public void startActivity(android.content.Intent intent) {}
+  public android.content.ContentResolver getContentResolver() { return null; }
 }

@@ -167,3 +167,37 @@ test('settings ranges have one source: every slider value the screen offers is a
   }
   for (const v of TEXT_SCALES) assert.ok(SETTINGS_RULES.textScale(v));
 });
+
+test('RT-17 (5.11): built-in object keys are not «known games»; a dead calibration and deep nesting are refused', async () => {
+  const { parseState, emptyState } = await import('../src/core/storage.js');
+  const { GAME_BY_ID } = await import('../src/games/registry.js');
+  const catalog = Object.fromEntries(Object.keys(GAME_BY_ID).map(id => [id, GAME_BY_ID[id].Game.levels.length]));
+  const s = emptyState();
+  s.profile.plan = { day: '2026-10-18', scheme: 'proportional', items: ['constructor', 'toString', '__proto__', 'grip'].map(game => ({ game, level: 1, done: false, retention: false })) };
+  s.profile.games = { constructor: { unlocked: 1 }, hasOwnProperty: { unlocked: 1 }, grip: { unlocked: 2 } };
+  s.calibrations.touch = { rest: [5, 5], max: [6, 6] };
+  s.calibrations.bridge = { rest: [0.3, 0.2], max: [0.2, 0.9] };
+  const clean = parseState(JSON.stringify(s), catalog);
+  assert.deepEqual(clean.profile.plan.items.map(i => i.game), ['grip']);
+  assert.deepEqual(Object.keys(clean.profile.games), ['grip']);
+  assert.deepEqual(clean.calibrations.touch.rest, [0, 0], 'a touch calibration outside 0..1 is not kept');
+  assert.deepEqual(clean.calibrations.bridge.rest, [0, 0], 'rest above max is not kept');
+  assert.equal(GAME_BY_ID.constructor, undefined, 'lookup maps have no prototype');
+  let deep = []; for (let i = 0; i < 1000; i++) deep = [deep];
+  assert.throws(() => parseState(JSON.stringify({ ...emptyState(), junk: deep })), 'nesting deeper than any real state');
+  const big = emptyState(); big.runs = []; assert.doesNotThrow(() => parseState(JSON.stringify(big)));
+});
+
+test('RT-18 (5.11): CSV cells stay one cell under either separator — no formula after a comma', async () => {
+  const { reportCsv } = await import('../src/services/report.js');
+  const { emptyState } = await import('../src/core/storage.js');
+  const s = emptyState();
+  s.runs = [{ id: 'x', at: '2026-10-18T10:00:00Z', game: "grip,=cmd|' /C calc'!A0,", level: 1, levelCount: 8, scheme: 'x,+HYPERLINK(B1),', score: 50, stars: 1, skills: {}, details: {}, durationS: 60 }];
+  // A minimal CSV reader that honours quotes, for both separators.
+  const cells = (text, sep) => text.split('\n').flatMap(line => { const out = []; let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) { const c = line[i];
+      if (q) { if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === sep) { out.push(cur); cur = ''; } else cur += c; }
+    out.push(cur); return out; });
+  for (const sep of [';', ',']) for (const cell of cells(reportCsv(s), sep)) assert.ok(!/^[=+\-@\t\r]/.test(cell) || /^-?\d+(\.\d+)?$/.test(cell), `${sep}: «${cell}»`);
+});

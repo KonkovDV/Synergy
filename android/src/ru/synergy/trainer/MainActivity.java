@@ -1,9 +1,15 @@
 package ru.synergy.trainer;
 
 import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.print.PrintAttributes;
 import android.print.PrintManager;
 import android.speech.tts.TextToSpeech;
@@ -15,6 +21,9 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Locale;
 
 /**
@@ -27,6 +36,7 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     private static final String ASSETS = "file:///android_asset/";
     private static final int MAX_SHARE_CHARS = 4 * 1024 * 1024;
+    private static final int INLINE_SHARE_CHARS = 200 * 1024; // UTF-16 in the intent: well under the 1 MB binder limit
     private WebView web;
     private TextToSpeech tts;
     private boolean ttsReady;
@@ -87,6 +97,21 @@ public class MainActivity extends Activity {
     }
 
     /** Methods visible to the bundled JavaScript as window.SynergyNative. Called on a binder thread. */
+    /** Android 10+: a file of our own in the public Downloads folder, no storage permission needed (MediaStore). */
+    private Uri saveToDownloads(String name, String mime, String body) throws IOException {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+        values.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Synergy");
+        ContentResolver resolver = getContentResolver();
+        Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+        if (uri == null) throw new IOException("MediaStore insert failed");
+        OutputStream out = resolver.openOutputStream(uri);
+        if (out == null) throw new IOException("no output stream");
+        try { out.write(body.getBytes("UTF-8")); } finally { out.close(); }
+        return uri;
+    }
+
     public final class NativeBridge {
         @JavascriptInterface
         public void speak(String text, boolean interrupt) {
@@ -98,17 +123,38 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void stop() { if (ttsReady) tts.stop(); }
 
-        /** Share sheet for a text file (JSON/CSV/HTML): mail, messenger, cloud drive. */
+        /**
+         * Share sheet for a text file (JSON/CSV/HTML): mail, messenger, cloud drive. A large file (a long history) is
+         * first saved to «Загрузки/Synergy» and shared as a file (5.11, Red Team: up to 4M characters in EXTRA_TEXT
+         * exceeded the 1 MB binder limit — TransactionTooLargeException closed the app, and long-term users, who
+         * need a backup most, could not make one). Any failure is a message, never a crash.
+         */
         @JavascriptInterface
         public void share(final String name, final String mime, final String body) {
             if (body == null || body.length() > MAX_SHARE_CHARS) return;
+            final String file = name == null ? "synergy.txt" : name;
             runOnUiThread(new Runnable() {
                 public void run() {
-                    Intent send = new Intent(Intent.ACTION_SEND);
-                    send.setType("text/plain");
-                    send.putExtra(Intent.EXTRA_SUBJECT, name == null ? "Синергия" : name);
-                    send.putExtra(Intent.EXTRA_TEXT, body);
-                    startActivity(Intent.createChooser(send, "Отправить: " + name));
+                    try {
+                        Intent send = new Intent(Intent.ACTION_SEND);
+                        send.putExtra(Intent.EXTRA_SUBJECT, file);
+                        if (body.length() <= INLINE_SHARE_CHARS) {
+                            send.setType("text/plain");
+                            send.putExtra(Intent.EXTRA_TEXT, body);
+                        } else if (Build.VERSION.SDK_INT >= 29) {
+                            Uri saved = saveToDownloads(file, mime == null ? "text/plain" : mime, body);
+                            send.setType(mime == null ? "text/plain" : mime);
+                            send.putExtra(Intent.EXTRA_STREAM, saved);
+                            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            Toast.makeText(MainActivity.this, "Файл сохранён в «Загрузки/Synergy»: " + file, Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(MainActivity.this, "Файл слишком большой для отправки на этой версии Android", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        startActivity(Intent.createChooser(send, "Отправить: " + file));
+                    } catch (RuntimeException | IOException e) {
+                        Toast.makeText(MainActivity.this, "Не удалось отправить файл", Toast.LENGTH_LONG).show();
+                    }
                 }
             });
         }

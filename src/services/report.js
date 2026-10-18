@@ -71,7 +71,8 @@ const csvCell = v => {
   // Formula injection guard for spreadsheet apps (OWASP: =, +, -, @, tab, CR at the start); only a whole
   // number stays as is — «-2+3+cmd|…» starts with a digit too.
   const safe = /^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text) ? `'${text}` : text;
-  return /[;"\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+  // A comma is quoted too (5.11): spreadsheets in comma locales split «grip,=cmd|…» and the second cell was a formula.
+  return /[;,"\n\r\t]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 };
 
 export function reportCsv(state) {

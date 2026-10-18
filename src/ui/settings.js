@@ -13,6 +13,7 @@ import { createTwoChannelPads } from './controls.js';
 import { fmtOffset } from './audiosync.js';
 import { hashPin, validPin, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
+import { MAX_BACKUP_BYTES } from '../core/storage.js';
 import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
@@ -23,6 +24,7 @@ function pickTextFile(accept, onText) {
   input.addEventListener('change', () => {
     const file = input.files?.[0];
     input.remove();
+    if (file && file.size > MAX_BACKUP_BYTES) { toast('Файл слишком большой для копии «Синергии»', 'bad'); return; } // before reading it all (5.11)
     if (file) file.text().then(onText, () => toast('Не удалось прочитать файл', 'bad'));
   });
   document.body.append(input);
