@@ -8,20 +8,23 @@
 //   covered     — a control left under the floating bottom bar or sticky actions at the end of the page;
 //   focus       — a focused control hidden under a fixed/sticky bar (WCAG 2.2, 2.4.11);
 //   tiny        — visible text smaller than 12 px;
+//   broken      — a word split mid-word across lines at the default text size, phones ≥ 360 px (5.9: «Пропорциональны / й»);
 //   fold        — the day's «Начать» is below the fold of the home screen (portrait phones).
-// Usage: python3 tools/serve.py --dist --port 8091 & node tests/e2e/layout.mjs [baseUrl] [--quick]
+// Usage: npm run build && npm run audit:layout [-- baseUrl] [-- --quick]   (no URL — serves dist/ itself)
 import { createRequire } from 'node:module';
+import { baseUrl } from '../../tools/static-server.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require('/opt/node22/lib/node_modules/playwright'); }
-const base = process.argv.find(a => a.startsWith('http')) ?? 'http://127.0.0.1:8091/index.html';
+const server = await baseUrl();
+const base = server.url;
 const quick = process.argv.includes('--quick');
 
-const VIEWPORTS = quick ? [[320, 568], [844, 390]] : [[320, 568], [360, 740], [390, 844], [430, 932], [768, 1024], [844, 390], [568, 320]];
+const VIEWPORTS = quick ? [[320, 568], [390, 844], [844, 390]] : [[320, 568], [360, 740], [390, 844], [430, 932], [768, 1024], [844, 390], [568, 320]];
 const SCALES = quick ? [1, 2] : [1, 1.3, 2];
 
 /** Runs in the page: geometry checks of the current screen. */
-function inspect({ width, minTarget = 44, minFont = 12 }) {
+function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
   const out = [];
   // The device width, not innerWidth: a mobile browser zooms out a page that is too wide and innerWidth grows with it.
   const vw = width;
@@ -41,6 +44,13 @@ function inspect({ width, minTarget = 44, minFont = 12 }) {
   };
   const layerOf = el => el.closest(LAYERS);
   const fixedLike = el => !!el.closest('.bottom-nav, .sticky-actions, .top-bar, #toasts, .showcase-banner, .play-top');
+  // Text in a region that scrolls sideways (a data table, WCAG 1.4.10 exception) is reachable if the region fits the screen.
+  const inScroller = el => {
+    for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+      if (/(auto|scroll)/.test(getComputedStyle(n).overflowX)) { const b = n.getBoundingClientRect(); return b.left >= -1 && b.right <= vw + 1; }
+    }
+    return false;
+  };
   const inter = (a, b) => { const w = Math.min(a.right, b.right) - Math.max(a.left, b.left), h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); return w > 1 && h > 1 ? w * h : 0; };
 
   // 1. Horizontal overflow of the page — and the deepest elements that stick out (the cause, not the symptom).
@@ -62,9 +72,18 @@ function inspect({ width, minTarget = 44, minFont = 12 }) {
     texts.push({ el, rects });
     const fs = parseFloat(getComputedStyle(el).fontSize);
     if (fs < minFont - 0.01) out.push({ kind: 'tiny', what: `${name(el)} ${fs.toFixed(1)}px` });
+    // A word split across lines mid-word («Пропорциональны / й»): `overflow-wrap: anywhere` hides the overflow, not
+    // the defect. At the default text size every word must fit; at 130–200 % a split beats text past the edge.
+    if (checkWords) {
+      for (const m of node.textContent.matchAll(/[^\s\-–—/­]{2,}/g)) {
+        const word = document.createRange(); word.setStart(node, m.index); word.setEnd(node, m.index + m[0].length);
+        const lines = new Set([...word.getClientRects()].filter(r => r.width > 0.5).map(r => Math.round(r.top / 4)));
+        if (lines.size > 1) { out.push({ kind: 'broken', what: `${name(el)} word «${m[0]}» split across lines` }); break; }
+      }
+    }
     // Clipped by an ancestor that hides overflow, or past the screen edge.
     for (const r of rects) {
-      if (r.right > vw + 1 || r.left < -1) { out.push({ kind: 'overflow', what: `${name(el)} text x ${Math.round(r.left)}…${Math.round(r.right)} of ${vw}` }); break; }
+      if ((r.right > vw + 1 || r.left < -1) && !inScroller(el)) { out.push({ kind: 'overflow', what: `${name(el)} text x ${Math.round(r.left)}…${Math.round(r.right)} of ${vw}` }); break; }
       let clip = null;
       for (let n = el; n && n !== document.body; n = n.parentElement) {
         const cs = getComputedStyle(n);
@@ -186,6 +205,10 @@ const STATES = [
   ['gesture-tutorial', async p => go(p, 'tutorial')],
   ['showcase-progress', async p => { await go(p, 'settings'); await p.locator('summary', { hasText: 'Данные' }).click(); await p.getByRole('button', { name: 'Демо-профиль для презентации' }).click(); }],
   ['showcase-home', async p => go(p, 'home')],
+  // 5.9: the system asks for more contrast (the app follows it) and Windows forced colors — borders and outlines change.
+  ['hc-home', async p => { await p.emulateMedia({ contrast: 'more' }); await go(p, 'home'); }],
+  ['hc-play', async p => go(p, 'play', { game: 'flight', level: 1 })],
+  ['forced-colors-settings', async p => { await p.emulateMedia({ contrast: 'no-preference', forcedColors: 'active' }); await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
 ];
 const go = (p, name, params = {}) => p.evaluate(([n, q]) => window.Synergy.go(n, q), [name, params]);
 
@@ -201,7 +224,9 @@ for (const [w, h] of VIEWPORTS) {
       try { await setup(page); } catch (e) { errors.push(`${w}×${h}@${scale} ${state}: setup ${e.message.split('\n')[0]}`); continue; }
       await page.evaluate(s => { document.documentElement.style.setProperty('--text-scale', String(s)); document.querySelectorAll('.toast').forEach(t => t.remove()); }, scale);
       await page.waitForTimeout(state.startsWith('play') || state.startsWith('gesture') ? 350 : 150);
-      const found = [...await page.evaluate(inspect, { width: w }), ...await page.evaluate(coveredAtEnd)];
+      // Whole words at the default text size on phones from 360 px; at 320 px (the WCAG reflow width) and at 130–200 %
+      // text a split is the lesser evil than text past the edge.
+      const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...await page.evaluate(coveredAtEnd)];
       if (scale === 1 && w < 700) found.push(...await focusWalk(page));
       // The day's main action is visible on the home screen without scrolling (portrait phones, default text).
       if (/home/.test(state) && scale === 1 && h > w && w < 700) {
@@ -214,6 +239,7 @@ for (const [w, h] of VIEWPORTS) {
   }
 }
 await browser.close();
+await server.close();
 
 // Group the same finding across viewports and scales.
 const groups = new Map();

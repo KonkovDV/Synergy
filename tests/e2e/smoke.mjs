@@ -1,13 +1,15 @@
 // Mobile smoke test: onboarding → home → every game intro + demo frames → results → progress → settings.
-// Usage: node tests/e2e/smoke.mjs [baseUrl] [outDir]   (server: python3 tools/serve.py --port 8090)
+// Usage: node tests/e2e/smoke.mjs [baseUrl] [outDir]   (no URL — serves the repository itself: unbundled source)
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
+import { baseUrl } from '../../tools/static-server.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require('/opt/node22/lib/node_modules/playwright'); }
 
-const base = process.argv[2] ?? 'http://127.0.0.1:8090/index.html';
-const out = process.argv[3] ?? 'docs/screenshots';
+const server = await baseUrl({ source: true });
+const base = server.url;
+const out = process.argv.slice(2).find(a => !a.startsWith('http')) ?? 'docs/screenshots';
 mkdirSync(out, { recursive: true });
 const browser = await playwright.chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
@@ -62,4 +64,5 @@ await wait(300); await page.getByRole('button', { name: 'Старт' }).click();
 const state = await page.evaluate(() => window.Synergy.state());
 console.log(JSON.stringify({ errors, screen: state.screen, runs: state.runs, scheme: state.settings.scheme }, null, 2));
 await browser.close();
+await server.close();
 if (errors.length) process.exit(1);

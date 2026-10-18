@@ -75,3 +75,13 @@ test('noisy emulator (realism 1) is still playable at level 1', () => {
     assert.ok(r.stars >= 1, `${entry.id}: ${r.score}`);
   }
 });
+
+test('flight: the hint says where the next ring is — eyes-free play (voice, screen reader)', () => {
+  const game = createGame('flight', { levelNumber: 1, scheme: 'proportional', seed: 4 });
+  const hand = new BionicHand(), rest = restIntent('proportional', true);
+  assert.match(game.hint, /Сильнее A/, 'far from a ring: the general rule');
+  for (let i = 0; i < 40; i++) game.update(1 / 60, rest, hand); // ≈ 0.67 s: the first ring (at 2 s) is 1.3 s ahead
+  const ring = game.track[0], diff = ring.alt - game.alt;
+  const want = Math.abs(diff) <= game.tol * 0.8 ? /на вашей высоте/ : diff > 0 ? /Кольцо выше/ : /Кольцо ниже/;
+  assert.match(game.hint, want, `ring ${ring.alt.toFixed(2)}, glider ${game.alt.toFixed(2)}: «${game.hint}»`);
+});

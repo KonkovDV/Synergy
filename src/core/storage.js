@@ -34,6 +34,7 @@ export const DEFAULT_SETTINGS = {
   gameSpeed: 1,             // темп игрового мира 0.6–1
   dwellS: HANDS_FREE.confirmS, // время удержания A для «без касания»
   hapticBeat: false,        // вибро-метроном в «Ритме» (для слабослышащих)
+  stickyPads: false,        // площадки без удержания: касание включает, второе выключает (тремор, слабость)
 };
 
 const oneOf = (...values) => v => values.includes(v);

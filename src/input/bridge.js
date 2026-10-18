@@ -63,10 +63,33 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   const effort = num(data.effort ?? data.intensity);
   if (gesture && !Number.isFinite(a)) { a = 0; b = 0; }
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
-  const frame = { a: Math.abs(a), b: Math.abs(b) };
+  const frame = { a, b }; // the sign is kept: a negative value means raw EMG (BridgeSource builds the envelope)
   if (gesture) { frame.gesture = gesture; frame.confidence = Number.isFinite(confidence) ? confidence : 1; }
   if (Number.isFinite(effort)) frame.effort = effort;
   return frame;
+}
+
+/**
+ * Raw (bipolar) EMG → envelope. The contract is an envelope ≥ 0 (MAV/RMS at ≥ 20 Hz); a negative value can only
+ * be a raw sample. Then every message enters a moving RMS over windowMs (arrival time), so a 1 kHz stream is
+ * smoothed over all its samples — the game polls at 60 Hz and would otherwise see single samples.
+ * (Until 5.9 the modulus of the last frame was taken silently — external audit T6.)
+ */
+export const ENVELOPE = { windowMs: 150, maxSamples: 2048 };
+
+export class EnvelopeFilter {
+  constructor({ windowMs = ENVELOPE.windowMs, maxSamples = ENVELOPE.maxSamples } = {}) {
+    Object.assign(this, { windowMs, maxSamples });
+    this.samples = [];
+  }
+
+  push(t, a, b) {
+    this.samples.push([t, a * a, b * b]);
+    while (this.samples.length > this.maxSamples || this.samples[0][0] < t - this.windowMs) this.samples.shift();
+    let sa = 0, sb = 0;
+    for (const [, qa, qb] of this.samples) { sa += qa; sb += qb; }
+    return [Math.sqrt(sa / this.samples.length), Math.sqrt(sb / this.samples.length)];
+  }
 }
 
 /**
@@ -86,16 +109,21 @@ export class BridgeSource {
     this.onStatus = onStatus;
     this.latest = null;
     this.received = 0;
+    this.raw = false;      // raw bipolar EMG detected → envelope (EnvelopeFilter)
+    this.envelope = null;
     this.status = 'idle';
     this.retryMs = 500;
     this.onMessage = e => { if (e.data?.type === 'synergy-frame' && trustedMessageSource(e, window)) this.feed(e.data); };
   }
 
-  /** Stamps local arrival time, so remote clocks never matter. */
+  /** Stamps local arrival time, so remote clocks never matter. A negative value switches to the raw-EMG envelope. */
   feed(msg) {
     const frame = parseExternal(msg, this.map);
     if (!frame) return false;
-    this.latest = { ...frame, t: this.clock() };
+    const t = this.clock();
+    if (!this.raw && (frame.a < 0 || frame.b < 0)) { this.raw = true; this.envelope = new EnvelopeFilter(); }
+    if (this.raw) [frame.a, frame.b] = this.envelope.push(t, frame.a, frame.b);
+    this.latest = { ...frame, t };
     this.received++;
     if (this.status !== 'streaming') this.setStatus('streaming');
     return true;

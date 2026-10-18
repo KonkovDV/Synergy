@@ -16,6 +16,12 @@ test('pwa: installable icons — 192 and 512 PNG «any», a separate maskable 51
   const has = (size, purpose) => m.icons.some(i => i.sizes === size && i.type === 'image/png' && i.purpose === purpose);
   assert.ok(has('192x192', 'any') && has('512x512', 'any') && has('512x512', 'maskable'));
   assert.ok(!m.icons.some(i => /any maskable|maskable any/.test(i.purpose ?? '')), '«any maskable» crops the «any» icon');
-  for (const i of m.icons) assert.ok(existsSync(`public/${i.src}`), i.src);
+  // External audit 5.8: «129/130» was an archive extracted without PNGs — the message has to say so, not just a path.
+  const PNG = '89504e470d0a1a0a';
+  for (const i of m.icons) {
+    const file = `public/${i.src}`;
+    assert.ok(existsSync(file), `${file} not found — the archive was not extracted completely (PNG files are missing)`);
+    if (i.type === 'image/png') assert.equal(readFileSync(file).subarray(0, 8).toString('hex'), PNG, `${file} is not a PNG (damaged on extraction or a text placeholder)`);
+  }
   assert.ok(m.start_url && m.display === 'standalone' && m.lang === 'ru');
 });

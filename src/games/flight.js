@@ -20,6 +20,7 @@ const LEVELS = [
 // Altitude / s in the threshold scheme, rising with the level: at L1 a 250 ms reaction overshoots ≈ 0.08 < tolerance.
 const climbRate = levelNumber => 0.32 + 0.03 * (levelNumber - 1);
 const LEAD_S = 2.2;     // seconds of track visible ahead of the glider
+const CUE_AHEAD_S = 1.6; // the spoken cue names the next target this long before it
 
 export class FlightGame extends Game {
   static id = 'flight';
@@ -38,9 +39,22 @@ export class FlightGame extends Game {
     this.hits = 0; this.perfect = 0; this.ringsSeen = 0; this.streak = 0;
     this.skillHits = 0; this.skillPerfect = 0; // against the level's original tolerance (not the adapted one)
     this.trail = [];
-    this.hint = this.scheme === SCHEME.THRESHOLD
+    this.baseHint = this.scheme === SCHEME.THRESHOLD
       ? 'A — набрать высоту, B — снизиться, покой — держать высоту'
       : 'Сильнее A — выше, сильнее B — ниже, расслабление — середина';
+    this.hint = this.baseHint;
+  }
+
+  /**
+   * Eyes-free cue (5.9): where the next ring or stream is relative to the glider. The play screen speaks the hint
+   * and screen readers read it (aria-live); the words change only when the answer does. Hidden in the retention probe.
+   */
+  cue(target) {
+    if (!target || target.at - this.time > CUE_AHEAD_S) return this.baseHint;
+    const what = target.kind === 'stream' ? 'Поток' : 'Кольцо';
+    const diff = target.alt - this.alt;
+    if (Math.abs(diff) <= this.tol * 0.8) return `${what} на вашей высоте — держите`;
+    return diff > 0 ? `${what} выше` : `${what} ниже`;
   }
 
   buildTrack() {
@@ -80,6 +94,7 @@ export class FlightGame extends Game {
     }
     const target = this.nextTarget();
     if (target && target.side !== 0) this.separation.add(intent, target.side > 0, dt);
+    this.hint = this.cue(target);
     for (const item of this.track) {
       if (item.done) continue;
       if (item.kind === 'ring' && this.time >= item.at) this.passRing(item);

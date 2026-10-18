@@ -14,7 +14,7 @@ import { buildShowcaseState } from './core/showcase.js';
 import { EmgEmulator } from './input/emulator.js';
 import { BridgeSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
-import { bindKeyboard } from './ui/controls.js';
+import { bindKeyboard, setPadMode } from './ui/controls.js';
 import { createGame, GAME_BY_ID, PLAN_CATALOG } from './games/registry.js';
 import { GameRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
@@ -63,6 +63,7 @@ export class App {
     window.addEventListener('pointerdown', unlockAudio, { once: true });
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.screen?.onHidden?.(); });
     document.addEventListener('focusin', e => keepFocusVisible(e.target));
+    for (const q of ['(prefers-contrast: more)', '(forced-colors: active)']) globalThis.matchMedia?.(q).addEventListener?.('change', () => this.applyPresentation());
     // Back in a browser or an installed PWA: one history entry stands for «inside the app», so the back gesture
     // comes here instead of closing the app (an SPA without history entries is left by the first back).
     window.addEventListener('popstate', () => {
@@ -96,9 +97,13 @@ export class App {
     setSoundEnabled(s.sound);
     setVoiceEnabled(s.voice);
     root.style.setProperty('--text-scale', String(s.textScale));
-    root.classList.toggle('hc', !!s.contrast);
+    // The system's «increase contrast» / Windows high contrast turns our contrast mode on by itself (5.9).
+    this.systemContrast = typeof matchMedia === 'function' && (matchMedia('(prefers-contrast: more)').matches || matchMedia('(forced-colors: active)').matches);
+    const contrast = !!s.contrast || this.systemContrast;
+    root.classList.toggle('hc', contrast);
     root.classList.toggle('rm', !!s.reduceMotion);
-    setRenderOptions({ scale: s.textScale, highContrast: s.contrast });
+    setRenderOptions({ scale: s.textScale, highContrast: contrast });
+    setPadMode({ sticky: s.stickyPads });
   }
 
   /** Voice prompt (no-op when the voice setting is off). */
@@ -266,6 +271,8 @@ export class App {
   go(name, params = {}) {
     if (!PIN_SCREENS.includes(name)) this.pinOk = false; // leaving the settings locks them again
     this.screen?.cleanup?.();
+    // A pad latched on the previous screen (pads without holding) must not keep «contracting» on the next one.
+    this.emulator.setTarget({ a: 0, b: 0, gesture: this.settings.scheme === 'gesture' ? 'rest' : null });
     const screen = SCREENS[name](this, params);
     this.screen = { name, ...screen };
     mount(this.root, ...(this.showcase ? [this.showcaseBanner()] : []), screen.node);

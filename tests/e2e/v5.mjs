@@ -1,13 +1,15 @@
 // v5 mobile smoke: every screen renders without JS errors and without axe-core accessibility violations
 // (WCAG 2.2 A/AA + best practices, any impact — the baseline is zero); screenshots for README.
-// Usage: python3 tools/serve.py --dist --port 8091 & node tests/e2e/v5.mjs [baseUrl] [outDir]
+// Usage: npm run build && node tests/e2e/v5.mjs [baseUrl] [outDir]   (no URL — serves dist/ itself, no Python needed)
 import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync } from 'node:fs';
+import { baseUrl } from '../../tools/static-server.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require('/opt/node22/lib/node_modules/playwright'); }
-const base = process.argv[2] ?? 'http://127.0.0.1:8091/index.html';
-const out = process.argv[3] ?? 'docs/screenshots';
+const server = await baseUrl();
+const base = server.url;
+const out = process.argv.slice(2).find(a => !a.startsWith('http')) ?? 'docs/screenshots';
 mkdirSync(out, { recursive: true });
 const browser = await playwright.chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
@@ -110,6 +112,25 @@ await page.locator('.pad-b').focus(); await page.keyboard.down('Space'); await w
 const chipSpace = await page.locator('.meter-chip').textContent(); await page.keyboard.up('Space'); await wait(200);
 if (chipSpace !== 'Раскрытие') errors.push(`Space on pad B: «${chipSpace}»`);
 
+// 5.9 — pads without holding (tremor): a tap latches the pad, a second tap releases it.
+const openSettings = async () => { await go('settings'); await wait(300); if (await page.getByLabel('PIN родителя').count()) { await page.getByLabel('PIN родителя').fill('1234'); await page.keyboard.press('Enter'); await wait(300); } };
+await openSettings(); await page.getByRole('switch', { name: /Площадки без удержания/ }).check(); await wait(200);
+await go('tutorial'); await wait(300);
+await page.locator('.pad-a').click(); await wait(400);
+const latched = await page.locator('.meter-chip').textContent();
+await page.locator('.pad-a').click(); await wait(400);
+const released = await page.locator('.meter-chip').textContent();
+if (latched !== 'Сжатие' || released !== 'Покой') errors.push(`pads without holding: «${latched}» then «${released}»`);
+// A latched pad does not carry over to the next screen: the emulator target is reset to rest on navigation.
+await page.locator('.pad-a').click(); await wait(200); await go('tutorial'); await wait(600);
+const carried = await page.locator('.meter-chip').textContent();
+if (carried !== 'Покой') errors.push(`a latched pad carried over to the next screen: «${carried}»`);
+await openSettings(); await page.getByRole('switch', { name: /Площадки без удержания/ }).uncheck(); await wait(200);
+// 5.9 — the system's «increase contrast» turns the contrast mode on by itself.
+await page.emulateMedia({ contrast: 'more' }); await page.reload(); await wait(500);
+if (!(await page.evaluate(() => document.documentElement.classList.contains('hc')))) errors.push('prefers-contrast: more did not switch the contrast mode on');
+await page.emulateMedia({ contrast: 'no-preference' }); await page.reload(); await wait(500);
+
 // 5.7 — landscape (WCAG 1.3.4: orientation not locked): the pads fit, nothing is cut off, no axe violations.
 const land = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 land.on('pageerror', e => errors.push(`landscape: ${e.message}`));
@@ -128,4 +149,5 @@ for (const [scheme, game] of [['proportional', 'grip'], ['gesture', 'safe']]) {
 }
 console.log(JSON.stringify({ errors, a11y }, null, 1));
 await browser.close();
+await server.close();
 process.exit(errors.length || a11y.length ? 1 : 0);

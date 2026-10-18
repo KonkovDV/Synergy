@@ -44,7 +44,7 @@ export function checkInAdvice({ pain = 0, fatigue = 0, skin = 0 } = {}) {
     return { action: CHECKIN_ACTION.STOP, reason: 'skin', text: 'Кожа под датчиками раздражена — сегодня без датчиков, пусть кожа отдохнёт. Если покраснение не проходит за несколько часов, появились пузыри или боль — покажите кожу протезисту или врачу.' };
   }
   if (pain >= WELLBEING.painLight || fatigue >= WELLBEING.fatigueLight) {
-    return { action: CHECKIN_ACTION.LIGHT, reason: pain >= WELLBEING.painLight ? 'pain' : 'fatigue', text: 'Сегодня — лёгкая тренировка: одно упражнение и короткая проверка. Напрягайте мышцы мягко, без боли.' };
+    return { action: CHECKIN_ACTION.LIGHT, reason: pain >= WELLBEING.painLight ? 'pain' : 'fatigue', text: 'Сегодня — лёгкая тренировка: одно упражнение и короткая проверка. Напрягайте мышцы мягко, без боли. Если операция или травма были недавно, нагрузку сначала согласуйте с врачом.' };
   }
   return { action: CHECKIN_ACTION.GO, reason: null, text: 'Отлично, начинаем. Комфортная сила, без боли — максимум не нужен.' };
 }

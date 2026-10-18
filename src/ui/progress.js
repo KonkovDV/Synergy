@@ -18,14 +18,44 @@ function hiDpiCanvas(w, hgt, cls) {
   return { canvas, ctx };
 }
 
+/**
+ * Radar geometry for a canvas `width` px wide and labels of `labelWidths` px (5.9). Until 5.9 the canvas was 260 px
+ * with centred labels: «Без подсказки» and «Переключение» started left of the canvas and were cut on every screen.
+ * Side labels now point outwards and the chart is as large as the width leaves room for them.
+ */
+export function radarLayout(width, labelWidths, fontPx = 12) {
+  const n = labelWidths.length, gap = 8, pad = 2;
+  const angle = i => -Math.PI / 2 + i * 2 * Math.PI / n;
+  // Room the widest label needs beside its vertex, for every vertex that is not at the top or bottom.
+  const need = Math.max(0, ...labelWidths.map((lw, i) => (Math.abs(Math.cos(angle(i))) > 0.01 ? lw + gap + pad : 0)));
+  const sideCos = Math.max(...labelWidths.map((_, i) => Math.abs(Math.cos(angle(i)))));
+  const R = Math.max(40, Math.min(92, (width / 2 - need) / sideCos));
+  const h = Math.round(2 * (R + gap + fontPx + pad)), cx = width / 2, cy = h / 2;
+  const pt = (i, r) => [cx + Math.cos(angle(i)) * r, cy + Math.sin(angle(i)) * r];
+  const labels = labelWidths.map((lw, i) => {
+    const c = Math.cos(angle(i)), [x, y] = pt(i, R + gap);
+    const align = Math.abs(c) <= 0.01 ? 'center' : c < 0 ? 'right' : 'left';
+    const left = align === 'center' ? x - lw / 2 : align === 'right' ? x - lw : x;
+    const dy = Math.abs(c) <= 0.01 ? Math.sign(Math.sin(angle(i))) * fontPx / 2 : 0; // top label above, bottom below
+    return { x, y: y + dy, align, left, right: left + lw };
+  });
+  return { w: width, h, cx, cy, R, pt, labels };
+}
+
 /** Single-series radar: values are also listed as text next to it (no colour-only reading). */
 function radar(profile) {
   const keys = Object.keys(SKILL_NAME);
-  const size = 260, cx = size / 2, cy = size / 2, R = 92;
-  const { canvas, ctx } = hiDpiCanvas(size, size, 'radar');
+  // Canvas text follows the app's text size (12 px at 100 %). The canvas spans the card including its padding
+  // (`.radar` margin −16 px): screen ≤ 560 px − page padding 32 − card borders 2.
+  const fontPx = Math.round(0.75 * (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16));
+  const font = `600 ${fontPx}px system-ui, sans-serif`;
+  const probe = document.createElement('canvas').getContext('2d'); probe.font = font;
+  const width = Math.max(254, Math.min(innerWidth, 560) - 34);
+  const L = radarLayout(width, keys.map(k => probe.measureText(SKILL_NAME[k]).width), fontPx);
+  const { canvas, ctx } = hiDpiCanvas(L.w, L.h, 'radar');
   canvas.setAttribute('role', 'img');
   canvas.setAttribute('aria-label', 'Профиль навыков: ' + keys.map(k => `${SKILL_NAME[k]} ${profile[k] ?? 'нет данных'}`).join(', '));
-  const pt = (i, r) => [cx + Math.cos(-Math.PI / 2 + i * 2 * Math.PI / keys.length) * r, cy + Math.sin(-Math.PI / 2 + i * 2 * Math.PI / keys.length) * r];
+  const { pt, R } = L;
   ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
   for (const f of [0.25, 0.5, 0.75, 1]) { ctx.beginPath(); keys.forEach((_, i) => ctx.lineTo(...pt(i, R * f))); ctx.closePath(); ctx.stroke(); }
   ctx.beginPath();
@@ -34,9 +64,9 @@ function radar(profile) {
   keys.forEach((k, i) => {
     const [x, y] = pt(i, R * (profile[k] ?? 0) / 100);
     ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fillStyle = COLORS.accent; ctx.fill();
-    const [lx, ly] = pt(i, R + 22);
-    ctx.font = '600 11px system-ui, sans-serif'; ctx.fillStyle = COLORS.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(SKILL_NAME[k], lx, ly);
+    const l = L.labels[i];
+    ctx.font = font; ctx.fillStyle = COLORS.muted; ctx.textAlign = l.align; ctx.textBaseline = 'middle';
+    ctx.fillText(SKILL_NAME[k], l.x, l.y);
   });
   return canvas;
 }
