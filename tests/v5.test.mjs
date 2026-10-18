@@ -5,7 +5,7 @@ import { AdaptiveDifficulty } from '../src/core/adaptive.js';
 import { checkInAdvice, fatigueSigns, CHECKIN_ACTION } from '../src/core/wellbeing.js';
 import { TutorialRun, tutorialSteps } from '../src/core/tutorial.js';
 import { confusionMatrix, assessmentHistory } from '../src/core/analytics.js';
-import { createProfile, buildDailyPlan, lightenPlan, updateStreak, streakAlive, sessionRules, skillProfile, assessmentStatus, recordRun } from '../src/core/progress.js';
+import { createProfile, buildDailyPlan, lightenPlan, updateStreak, streakAlive, sessionRules, skillProfile, assessmentStatus, recordRun, unlockAchievements } from '../src/core/progress.js';
 import { emptyState, exportState, importState, parseState } from '../src/core/storage.js';
 import { buildShowcaseState } from '../src/core/showcase.js';
 import { assessmentTrials, FITTS } from '../src/games/assess.js';
@@ -83,6 +83,19 @@ test('tutorial: steps complete only when the command is held', () => {
   assert.equal(run.index, 2);
   assert.ok(tutorialSteps('gesture').some(s => s.id === CLOSING_GESTURES[1].id), 'the second grip is taught');
   assert.ok(tutorialSteps('threshold').every(s => s.id !== 'level'), 'no graded force in the threshold scheme');
+});
+
+test('tutorial: the «Первые шаги» achievement needs every step done — skipping or «Завершить» does not earn it', () => {
+  const skipped = new TutorialRun('threshold');
+  while (!skipped.done) skipped.skipStep();
+  assert.equal(skipped.passed, false);
+  const p = createProfile();
+  assert.deepEqual(unlockAchievements({ ...p, tutorialDone: true }, null, {}, '2026-10-18'), [], 'card hidden, no medal');
+  const done = new TutorialRun('threshold');
+  const want = { rest: 'rest', relax: 'rest', relax2: 'rest', close: 'close', open: 'open', switch: 'switch' };
+  for (let i = 0; i < 2000 && !done.done; i++) done.update({ valid: true, command: want[done.step.id], intensity: 0.5 }, 0.05);
+  assert.ok(done.done && done.passed);
+  assert.ok(unlockAchievements({ ...createProfile(), tutorialDone: true, tutorialPassed: true }, null, {}, '2026-10-18').includes('tutorial'));
 });
 
 test('skill check: fixed protocol, Motion-Test metrics, passive = 0', () => {

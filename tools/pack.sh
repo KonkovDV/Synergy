@@ -15,4 +15,7 @@ unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
 [ -d "$ROOT/node_modules" ] && ln -s "$ROOT/node_modules" "$TMP/$BASE/node_modules"
 echo "Проверка распакованного архива:"
 (cd "$TMP/$BASE" && node tools/check-submission.mjs --draft)
-echo "Архив: $OUTDIR/$NAME.zip ($(du -k "$OUTDIR/$NAME.zip" | cut -f1) КБ)"
+KB=$(du -k "$OUTDIR/$NAME.zip" | cut -f1)
+echo "Архив: $OUTDIR/$NAME.zip ($KB КБ)"
+# Upload limit of the hand-off (30 MB): git history carries every screenshot ever committed — keep new ones light (JPEG, CSS px).
+[ "$KB" -le 29296 ] || echo "⚠ архив больше 30 МБ ($KB КБ): git gc, лёгкие скриншоты (tests/e2e/*.mjs пишут JPEG)"

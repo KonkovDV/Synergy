@@ -91,7 +91,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
         h('div', { class: 'confirm' }, ring, h('span', {}, 'или удерживайте A — без касания')),
         h('div', { class: 'row-actions' },
           stopAdvice && next ? h('button', { class: 'btn ghost', onclick: () => app.go('rest', { next }) }, 'Всё равно продолжить') : null,
-          h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: run.game, level: run.level, retention: run.retention, plan }) }, 'Повторить'),
+          primary.label === 'Ещё раз' ? null : h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: run.game, level: run.level, retention: run.retention, plan }) }, 'Повторить'),
           h('button', { class: 'btn ghost', onclick: () => app.go('home') }, 'Домой')))));
   const confirm = muscleConfirm(app, ring, primary.go);
   app.say(`${run.stars} ${plural(run.stars, ['звезда', 'звезды', 'звёзд'])} из трёх. ${run.score} ${plural(run.score, ['очко', 'очка', 'очков'])}. ${stopAdvice ?? advice[0] ?? ''} Дальше: ${primary.label}.`, { interrupt: true });

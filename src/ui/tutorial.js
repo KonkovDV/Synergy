@@ -16,12 +16,13 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
   const title = h('h2', {}), text = h('p', { class: 'lead' }), tip = h('p', { class: 'note warn' });
   const counter = h('p', { class: 'eyebrow' });
   const ring = h('div', { class: 'cal-ring tut-ring' });
-  const canvas = h('canvas', { class: 'tut-canvas', width: 320, height: 240, 'aria-hidden': 'true' });
+  const canvas = h('canvas', { class: 'tut-canvas', width: 640, height: 480, 'aria-hidden': 'true' });
   const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2); // sharp on 2–3× screens; drawn in 320 × 240
   const meter = signalMeter(app);
   const pads = s.source === 'touch' ? (s.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator) : createTwoChannelPads(app.emulator)) : null;
   const finish = () => {
-    const fresh = app.completeTutorial();
+    const fresh = app.completeTutorial(run.passed);
     fresh.forEach(id => toast(`🏅 ${ACHIEVEMENTS.find(a => a.id === id).name}`, 'good'));
     app.say('Обучение пройдено. Отлично!', { interrupt: true });
     app.go(from);
@@ -50,9 +51,11 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       hand.update(intent, dt);
       if (run.update(intent, dt)) { app.feedback.event({ name: 'ring' }); if (run.done) { finish(); return; } showStep(); }
       ring.style.setProperty('--p', String(run.stepProgress));
-      if (run.showTip && !tip.textContent) { tip.textContent = run.step.tip; app.say(run.step.tip); }
+      // Pad tips are for the on-screen emulator; with sensors the usual cause is contact or calibration.
+      const tipText = s.source === 'touch' ? run.step.tip : 'Не получается? Проверьте, что датчики плотно прилегают к коже, или пройдите калибровку в настройках.';
+      if (run.showTip && !tip.textContent) { tip.textContent = tipText; app.say(tipText); }
       // Live picture: the prosthesis follows the signal; the force band of the «level» step is drawn.
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, 320, 240);
       drawHand(ctx, { x: 150, y: 228, size: 92, pose: hand.pose(), skin: app.profile.skin, glow: intent.intensity, mirror: s.side === 'left' });
       const band = run.step?.band;
       drawGauge(ctx, { x: 282, y: 20, w: 20, h: 180, value: intent.a, min: band?.[0] ?? null, max: band?.[1] ?? null, color: COLORS.a, label: 'A' });

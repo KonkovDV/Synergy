@@ -39,9 +39,20 @@ export function roundRect(ctx, x, y, w, h, r) {
 
 export function fillRound(ctx, x, y, w, h, r, color) { roundRect(ctx, x, y, w, h, r); ctx.fillStyle = color; ctx.fill(); }
 
-export function text(ctx, str, x, y, { size = 16, weight = 600, color = COLORS.text, align = 'center', baseline = 'middle', font = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif' } = {}) {
-  ctx.font = `${weight} ${Math.round(size * textScale)}px ${font}`;
-  ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = baseline;
+/**
+ * Canvas text. `maxWidth` — the font shrinks (not squeezes) until the line fits, down to 60 % of its size;
+ * `outline` — a dark rim, so a label stays readable over notes, particles and the glider (5.8).
+ */
+export function text(ctx, str, x, y, { size = 16, weight = 600, color = COLORS.text, align = 'center', baseline = 'middle', font = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', maxWidth = 0, outline = false } = {}) {
+  let px = Math.round(size * textScale);
+  ctx.font = `${weight} ${px}px ${font}`;
+  if (maxWidth > 0) {
+    const width = ctx.measureText(str).width;
+    if (width > maxWidth) { px = Math.max(Math.round(size * textScale * 0.6), Math.floor(px * maxWidth / width)); ctx.font = `${weight} ${px}px ${font}`; }
+  }
+  ctx.textAlign = align; ctx.textBaseline = baseline;
+  if (outline) { ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, px * 0.22); ctx.strokeStyle = 'rgba(8,12,30,0.85)'; ctx.strokeText(str, x, y); }
+  ctx.fillStyle = color;
   ctx.fillText(str, x, y);
 }
 

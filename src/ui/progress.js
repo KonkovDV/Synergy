@@ -82,9 +82,10 @@ function calendar(profile) {
 
 /** Accessible data table (numbers as text; shading only reinforces them). */
 function dataTable(caption, head, rows, cellClass = () => '') {
-  return h('table', { class: 'data' }, h('caption', {}, caption),
+  // A table that does not fit (large text on a small phone) scrolls inside its own box, not the page (WCAG 1.4.10).
+  return h('div', { class: 'table-wrap', role: 'region', 'aria-label': caption, tabindex: '0' }, h('table', { class: 'data' }, h('caption', {}, caption),
     h('thead', {}, h('tr', {}, ...head.map(c => h('th', { scope: 'col' }, c)))),
-    h('tbody', {}, ...rows.map((r, ri) => h('tr', {}, ...r.map((c, ci) => (ci === 0 ? h('th', { scope: 'row' }, c) : h('td', { class: cellClass(ri, ci, c) }, c ?? '—')))))));
+    h('tbody', {}, ...rows.map((r, ri) => h('tr', {}, ...r.map((c, ci) => (ci === 0 ? h('th', { scope: 'row' }, c) : h('td', { class: cellClass(ri, ci, c) }, c ?? '—'))))))));
 }
 
 /** Gesture confusion matrix: rows = asked gesture, columns = recognized one; seconds of wrong recognition. */

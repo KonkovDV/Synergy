@@ -14,7 +14,8 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 }, devi
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-const shot = (name, full = false) => page.screenshot({ path: `${out}/${name}.png`, fullPage: full });
+// Light screenshots (5.8): JPEG in CSS pixels — every PNG@2× re-shot used to stay in git history (24 MB of 25).
+const shot = (name, full = false) => page.screenshot({ path: `${out}/${name}.jpg`, type: 'jpeg', quality: 78, scale: 'css', fullPage: full });
 const wait = ms => page.waitForTimeout(ms);
 const go = (name, params) => page.evaluate(([n, p]) => window.Synergy.go(n, p), [name, params ?? {}]);
 // axe-core is evaluated through the DevTools protocol, so the page's CSP (no inline scripts) stays intact.
@@ -91,6 +92,24 @@ if (!(await page.getByRole('radiogroup', { name: 'Кожа под датчика
 await audit('checkin-sensors');
 await page.evaluate(() => window.Synergy.useTouch());
 
+// 5.8 — back: the browser/PWA back gesture pauses a running game, a second back leaves it; Esc goes back too.
+await go('play', { game: 'grip', level: 1, demo: true }); await wait(300);
+await page.getByRole('button', { name: 'Старт' }).click(); await wait(4200);
+await page.goBack(); await wait(300);
+if (!(await page.getByRole('heading', { name: 'Пауза' }).count())) errors.push('back during a run did not pause it');
+await page.goBack(); await wait(300);
+if ((await page.evaluate(() => window.Synergy.state().screen)) === 'play') errors.push('second back did not leave the game');
+await go('tutorial'); await wait(300); await page.keyboard.press('Escape'); await wait(300);
+if ((await page.evaluate(() => window.Synergy.state().screen)) === 'tutorial') errors.push('Esc did not go back from the tutorial');
+// 5.8 — keyboard and switch access outside the game: F works in the tutorial, Space on a focused pad holds it.
+await go('tutorial'); await wait(300);
+await page.keyboard.down('KeyF'); await wait(400);
+const chipF = await page.locator('.meter-chip').textContent(); await page.keyboard.up('KeyF'); await wait(300);
+if (chipF !== 'Сжатие') errors.push(`F in the tutorial: «${chipF}»`);
+await page.locator('.pad-b').focus(); await page.keyboard.down('Space'); await wait(400);
+const chipSpace = await page.locator('.meter-chip').textContent(); await page.keyboard.up('Space'); await wait(200);
+if (chipSpace !== 'Раскрытие') errors.push(`Space on pad B: «${chipSpace}»`);
+
 // 5.7 — landscape (WCAG 1.3.4: orientation not locked): the pads fit, nothing is cut off, no axe violations.
 const land = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 land.on('pageerror', e => errors.push(`landscape: ${e.message}`));
@@ -102,7 +121,7 @@ for (const [scheme, game] of [['proportional', 'grip'], ['gesture', 'safe']]) {
   await land.evaluate(g => window.Synergy.go('play', { game: g, level: 1 }), game); await land.waitForTimeout(400);
   const box = await land.evaluate(() => { const c = document.querySelector('.controls').getBoundingClientRect(), s = document.querySelector('.stage').getBoundingClientRect(); return { controls: c.bottom, stage: s.height, h: innerHeight }; });
   if (box.controls > box.h + 1 || box.stage < 150) errors.push(`landscape ${scheme}: ${JSON.stringify(box)}`);
-  await land.screenshot({ path: `${out}/v5-12-landscape-${game}.png` });
+  await land.screenshot({ path: `${out}/v5-12-landscape-${game}.jpg`, type: 'jpeg', quality: 78, scale: 'css' });
   if (!(await land.evaluate(() => !!window.axe))) await land.evaluate(axeSource);
   const r = await land.evaluate(() => window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] }));
   for (const v of r.violations) a11y.push({ screen: `landscape-${game}`, rule: v.id, impact: v.impact, nodes: v.nodes.slice(0, 3).map(n => n.target.join(' ')) });

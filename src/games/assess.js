@@ -217,14 +217,19 @@ export class AssessmentGame extends Game {
     drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
     ctx.strokeStyle = COLORS.good; ctx.lineWidth = 6; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.arc(hx, y0 + ch * 0.5, ch * 0.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(t.hold / holdOf(t))); ctx.stroke();
-    text(ctx, t.name, x0 + cw * 0.68, y0 + ch * 0.38, { size: 18, weight: 800 });
-    text(ctx, `${Math.max(0, ASSESS.timeoutS - t.t).toFixed(1)} с`, x0 + cw * 0.68, y0 + ch * 0.58, { size: 13, color: COLORS.muted });
-    if (t.band && this.scheme === SCHEME.PROPORTIONAL && intent) {
+    // Text between the hold ring and the force gauge; «Сжатие · 30 % · широко» goes on two lines (5.8: it ran off the card).
+    const showGauge = t.band && this.scheme === SCHEME.PROPORTIONAL;
+    const left = hx + ch * 0.4 + 10, right = x0 + cw - (showGauge ? 44 : 12), tx = (left + right) / 2, maxWidth = right - left;
+    const [main, ...detail] = t.name.split(' · ');
+    text(ctx, main, tx, y0 + ch * 0.3, { size: 18, weight: 800, maxWidth });
+    if (detail.length) text(ctx, detail.join(' · '), tx, y0 + ch * 0.46, { size: 14, weight: 700, maxWidth });
+    text(ctx, `${Math.max(0, ASSESS.timeoutS - t.t).toFixed(1)} с`, tx, y0 + ch * (detail.length ? 0.62 : 0.5), { size: 13, color: COLORS.muted, maxWidth });
+    if (showGauge && intent) {
       drawGauge(ctx, { x: x0 + cw - 34, y: y0 + 16, w: 18, h: ch - 44, value: intent.intensity, min: t.band[0], max: t.band[1], color: COLORS.accent, label: 'сила' });
     }
     if (intent) {
       const seen = intent.gesture ? GESTURE_BY_ID[intent.gesture]?.name : COMMAND_NAME[intent.command];
-      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''}`, w / 2, y0 + ch + 22, { size: 13, color: COLORS.muted });
+      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''}`, w / 2, y0 + ch + 22, { size: 13, color: COLORS.muted, maxWidth: w - 16 });
     }
   }
 }

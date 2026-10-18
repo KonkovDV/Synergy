@@ -17,13 +17,14 @@ jobs:
       - run: node tools/gesture-drill.mjs
       - run: npm run build
       - run: node tools/check-submission.mjs --draft
-      - name: e2e (mobile smoke + axe-core accessibility audit, Playwright)
+      - name: e2e (mobile smoke + axe-core accessibility audit + layout audit, Playwright)
         run: |
           npm i --no-save playwright@1.56.1
           npx playwright install --with-deps chromium
           python3 tools/serve.py --dist --port 8091 &
           sleep 1
           node tests/e2e/v5.mjs http://127.0.0.1:8091/index.html /tmp/shots
+          node tests/e2e/layout.mjs http://127.0.0.1:8091/index.html   # 7 viewports × text 100/130/200 %: overflow, overlap, targets, focus
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: web-build, path: dist/ }
   lab:

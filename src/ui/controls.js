@@ -23,10 +23,28 @@ function bindPad(el, onLevel) {
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-function padView(label, sub, cls) {
+/**
+ * Keyboard / switch access to a focused pad (5.8): Space or Enter held = the muscle held; the level grows with
+ * the hold like the global keys. A switch interface usually sends exactly these keys.
+ */
+function bindPadKeys(el, onLevel) {
+  let start = 0, raf = 0;
+  const isPress = e => e.code === 'Space' || e.code === 'Enter' || e.key === ' ' || e.key === 'Enter';
+  const tick = () => { onLevel(Math.min(1, 0.3 + (performance.now() - start) / 1600)); raf = requestAnimationFrame(tick); };
+  const end = () => { if (!raf) return; cancelAnimationFrame(raf); raf = 0; el.classList.remove('on'); onLevel(0); };
+  el.addEventListener('keydown', e => {
+    if (!isPress(e)) return;
+    e.preventDefault(); e.stopPropagation();
+    if (!raf) { start = performance.now(); el.classList.add('on'); tick(); }
+  });
+  el.addEventListener('keyup', e => { if (isPress(e)) { e.preventDefault(); end(); } });
+  el.addEventListener('blur', end);
+}
+
+function padView(label, sub, cls, keys) {
   const fill = h('div', { class: 'pad-fill' });
   const value = h('div', { class: 'pad-value' }, '0%');
-  const el = h('div', { class: `pad ${cls}`, role: 'button', 'aria-label': `${label}: удерживайте, высота пальца — сила` },
+  const el = h('div', { class: `pad ${cls}`, role: 'button', tabindex: '0', 'aria-keyshortcuts': keys, 'aria-label': `${label}: удерживайте, высота пальца — сила; с клавиатуры — пробел на площадке или ${keys.split(' ')[0]}` },
     fill, h('div', { class: 'pad-ticks' }), h('div', { class: 'pad-label' }, h('b', {}, label), h('span', {}, sub)), value);
   const show = level => { fill.style.height = `${Math.round(level * 100)}%`; value.textContent = `${Math.round(level * 100)}%`; };
   return { el, show };
@@ -35,12 +53,13 @@ function padView(label, sub, cls) {
 export function createTwoChannelPads(emulator) {
   const state = { a: 0, b: 0, co: 0 };
   const apply = () => emulator.setTarget({ gesture: null, a: Math.max(state.a, state.co), b: Math.max(state.b, state.co) });
-  const A = padView('A', 'сжатие', 'pad-a');
-  const B = padView('B', 'раскрытие', 'pad-b');
-  const co = h('button', { class: 'pad-co', type: 'button', 'aria-label': 'Коактивация: оба канала сразу' }, 'A+B');
-  bindPad(A.el, v => { state.a = v; A.show(v); apply(); });
-  bindPad(B.el, v => { state.b = v; B.show(v); apply(); });
-  bindPad(co, v => { state.co = v ? 0.75 : 0; apply(); });
+  const A = padView('A', 'сжатие', 'pad-a', 'F ArrowLeft');
+  const B = padView('B', 'раскрытие', 'pad-b', 'J ArrowRight');
+  const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'Коактивация: оба канала сразу' }, 'A+B');
+  const onA = v => { state.a = v; A.show(v); apply(); }, onB = v => { state.b = v; B.show(v); apply(); }, onCo = v => { state.co = v ? 0.75 : 0; apply(); };
+  bindPad(A.el, onA); bindPadKeys(A.el, onA);
+  bindPad(B.el, onB); bindPadKeys(B.el, onB);
+  bindPad(co, onCo); bindPadKeys(co, onCo);
   return h('div', { class: 'pads two' }, A.el, co, B.el);
 }
 
@@ -54,8 +73,10 @@ export function gestureIcon(gesture, skin = 'icon', size = 44) {
 
 export function createGesturePads(emulator, skin) {
   const keys = ACTIVE_GESTURES.map(g => {
-    const el = h('div', { class: 'gkey', role: 'button', 'aria-label': `Жест ${g.name}` }, gestureIcon(g), h('span', {}, g.name));
-    bindPad(el, v => { emulator.setTarget(v ? { gesture: g.id, effort: v } : { gesture: 'rest', effort: 0 }); });
+    const digit = String(GESTURES.indexOf(g) + 1);
+    const el = h('div', { class: 'gkey', role: 'button', tabindex: '0', 'aria-keyshortcuts': digit, 'aria-label': `Жест ${g.name}` }, gestureIcon(g), h('span', {}, g.name));
+    const onLevel = v => { emulator.setTarget(v ? { gesture: g.id, effort: v } : { gesture: 'rest', effort: 0 }); };
+    bindPad(el, onLevel); bindPadKeys(el, onLevel);
     return el;
   });
   emulator.setTarget({ gesture: 'rest', effort: 0 });
@@ -81,8 +102,11 @@ export function bindKeyboard(emulator, getScheme) {
   };
   const relevant = code => /^(KeyF|KeyJ|ArrowLeft|ArrowRight|Space|Digit[1-9])$/.test(code);
   const down = e => {
-    if (!relevant(e.code) || e.repeat || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
-    if (!document.querySelector('.play-screen')) return;
+    if (!relevant(e.code) || e.repeat) return;
+    // Any screen with pads (play, tutorial, calibration, settings), not only the game (5.8); a focused control
+    // keeps its own keys: Space on «Старт» presses it, arrows move a radio group, a pad handles itself.
+    const t = e.target, onPad = t.closest?.('.pad, .gkey, .pad-co');
+    if (!document.querySelector('.pads') || (onPad ? e.code === 'Space' : t.closest?.('input, select, textarea, button, a, summary, [role=radio], [role=button]'))) return;
     e.preventDefault(); held.set(e.code, performance.now()); if (!raf) tick();
   };
   const up = e => { if (held.delete(e.code)) tick(); };

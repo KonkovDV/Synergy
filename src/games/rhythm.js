@@ -18,13 +18,18 @@ const LEVELS = [
 ];
 
 export const BANDS = { 1: [0.18, 0.45], 2: [0.45, 0.7], 3: [0.7, 1.01] };
-const BAND_NAME = { 1: 'слабо', 2: 'средне', 3: 'сильно' };
 const PERFECT_S = 0.1, GOOD_S = 0.22;
 // Input-chain delay compensated in judging: envelope rise + smoothing (two channels),
 // plus classifier window and debounce for gestures (pattern recognition is slower).
 const LATENCY_S = { threshold: 0.08, proportional: 0.08, gesture: 0.2 };
 const LOOKAHEAD_S = 2.2;
 const COUNT_IN_BEATS = 4;
+
+/** Field geometry from its size: hit circle radius R, hit line, lanes, note radius; labels only on a tall field. */
+export function rhythmLayout(w, h) {
+  const R = Math.max(18, Math.min(34, h * 0.1)), labels = h >= 260;
+  return { R, labels, hitY: h - R - (labels ? 34 : 10), laneX: { a: w * 0.32, b: w * 0.68 }, laneW: R + 8, noteR: R * 0.7 };
+}
 
 export class RhythmGame extends Game {
   static id = 'rhythm';
@@ -197,7 +202,9 @@ export class RhythmGame extends Game {
 
   render(ctx, view, hand, intent) {
     const { w, h } = view;
-    const hitY = h * 0.7, laneX = { a: w * 0.32, b: w * 0.68 };
+    // Geometry from the field size (5.8): on a short landscape field the labels under the circles were cut off
+    // and the HUD text sat on the falling notes. HUD text is drawn *behind* the notes, the notes are never covered.
+    const { R, labels, hitY, laneX, laneW, noteR } = rhythmLayout(w, h);
     const beatPhase = (this.time / this.beat) % 1;
     const g = ctx.createLinearGradient(0, 0, 0, h);
     g.addColorStop(0, '#120d2e'); g.addColorStop(1, '#2a1350');
@@ -207,47 +214,45 @@ export class RhythmGame extends Game {
     // Lanes.
     for (const lane of ['a', 'b']) {
       const x = laneX[lane], col = lane === 'a' ? COLORS.a : COLORS.b;
-      fillRound(ctx, x - 42, 0, 84, h, 18, 'rgba(255,255,255,0.04)');
+      fillRound(ctx, x - laneW, 0, laneW * 2, h, 18, 'rgba(255,255,255,0.04)');
       const active = !this.retention && (this.lane[lane] || this.lane.both); // live lane light = concurrent feedback
-      circle(ctx, x, hitY, 34, active ? col : 'rgba(255,255,255,0.08)');
-      circle(ctx, x, hitY, 26, '#120d2e');
-      text(ctx, lane === 'a' ? 'A' : 'B', x, hitY, { size: 18, weight: 800, color: col });
-      text(ctx, lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + 46, { size: 12, color: COLORS.muted });
+      circle(ctx, x, hitY, R, active ? col : 'rgba(255,255,255,0.08)');
+      circle(ctx, x, hitY, R * 0.76, '#120d2e');
+      text(ctx, lane === 'a' ? 'A' : 'B', x, hitY, { size: Math.min(18, R * 0.6), weight: 800, color: col });
+      if (labels) text(ctx, lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, color: COLORS.muted, maxWidth: laneW * 2 + 16 });
     }
+    // Behind the notes: the count-in and the combo.
+    if (this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, hitY * 0.5, { size: Math.min(54, h * 0.2), weight: 800, color: 'rgba(255,255,255,0.35)' });
+    if (this.combo >= 4) text(ctx, `${this.combo} подряд`, w / 2, Math.max(16, hitY * 0.12), { size: 15, weight: 800, color: 'rgba(255,204,77,0.75)', maxWidth: w * 0.3 });
     // Notes are the task, not feedback: the retention probe shows them too (it hides the lane light and the force meter).
     for (const n of this.notes) {
       const ny = y(n.at + this.latency), endY = y(n.at + n.dur + this.latency);
       if (ny < -60 || endY > h + 40 || n.state === 'done' || n.state === 'miss') continue;
       if (n.lane === 'both') {
-        fillRound(ctx, laneX.a - 34, ny - 14, laneX.b - laneX.a + 68, 28, 14, '#ffffff');
+        fillRound(ctx, laneX.a - noteR - 10, ny - noteR * 0.6, laneX.b - laneX.a + noteR * 2 + 20, noteR * 1.2, noteR * 0.6, '#ffffff');
         text(ctx, 'A + B', w / 2, ny, { size: 13, weight: 800, color: '#2a1350' });
         continue;
       }
       const x = laneX[n.lane], col = n.lane === 'a' ? COLORS.a : COLORS.b;
-      if (n.dur > 0) fillRound(ctx, x - 14, endY, 28, ny - endY, 14, n.lane === 'a' ? 'rgba(255,181,71,0.45)' : 'rgba(90,209,255,0.45)');
-      circle(ctx, x, ny, 24, col);
-      for (let i = 0; i < n.band; i++) circle(ctx, x - (n.band - 1) * 7 + i * 14, ny, 4, '#120d2e');
+      if (n.dur > 0) fillRound(ctx, x - noteR * 0.58, endY, noteR * 1.16, ny - endY, noteR * 0.58, n.lane === 'a' ? 'rgba(255,181,71,0.45)' : 'rgba(90,209,255,0.45)');
+      circle(ctx, x, ny, noteR, col);
+      for (let i = 0; i < n.band; i++) circle(ctx, x - (n.band - 1) * noteR * 0.3 + i * noteR * 0.6, ny, Math.max(2.5, noteR * 0.17), '#120d2e');
     }
     // Intensity meter for graded notes.
     // Faded feedback by bars of 8 beats: the force meter is hidden on some bars, the verdict still pops up.
     if (this.graded && intent && this.liveFeedback(Math.floor(this.time / (this.beat * 8)))) {
-      const mx = w - 26, my = h * 0.2, mh = h * 0.5;
+      const mx = w - 26, my = h * 0.12, mh = hitY - h * 0.12 - 18;
       fillRound(ctx, mx, my, 12, mh, 6, 'rgba(255,255,255,0.08)');
       for (const b of [1, 2, 3]) { const [lo] = BANDS[b]; ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(mx - 4, my + mh * (1 - lo), 20, 2); }
       fillRound(ctx, mx + 2, my + mh * (1 - intent.intensity), 8, Math.max(4, mh * intent.intensity), 4, COLORS.good);
-      text(ctx, 'сила', mx + 6, my + mh + 14, { size: 11, color: COLORS.muted });
+      text(ctx, 'сила', mx + 6, my + mh + 10, { size: 12, color: COLORS.muted });
     }
+    // Verdicts last, with a dark rim: readable over the notes they may cross.
     for (const p of this.popups) {
       const x = p.lane === 'both' ? w / 2 : laneX[p.lane];
       ctx.globalAlpha = Math.min(1, p.t * 2);
-      text(ctx, p.label, x, hitY - 70 - (0.7 - p.t) * 40, { size: 16, weight: 800, color: p.color });
+      text(ctx, p.label, x, hitY - R - 22 - (0.7 - p.t) * 30, { size: 16, weight: 800, color: p.color, outline: true, maxWidth: laneW * 2 + 24 });
       ctx.globalAlpha = 1;
-    }
-    if (this.combo >= 4) text(ctx, `${this.combo} подряд`, w / 2, 26, { size: 16, weight: 800, color: COLORS.warn });
-    if (this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, h * 0.4, { size: 54, weight: 800, color: 'rgba(255,255,255,0.6)' });
-    if (this.graded) {
-      const next = this.notes.find(n => n.state === 'wait' && n.band);
-      if (next) text(ctx, `Следующая: ${BAND_NAME[next.band]}`, w / 2, 50, { size: 13, color: COLORS.muted });
     }
   }
 }
