@@ -16,7 +16,8 @@ git clone -q --no-local "$ROOT" "$STAGE/$BASE"
 git -C "$STAGE/$BASE" remote remove origin
 git -C "$STAGE/$BASE" reflog expire --expire=now --all
 git -C "$STAGE/$BASE" gc -q --prune=now
-(cd "$STAGE" && zip -qr "$OUTDIR/$NAME.zip" "$BASE")
+git -C "$STAGE/$BASE" repack -a -d -f -q --window=250 --depth=250 # tighter deltas: the history is close to the 30 MB limit
+(cd "$STAGE" && zip -9 -qr "$OUTDIR/$NAME.zip" "$BASE")
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
 KEYS="$(find "$TMP" \( -name '*.keystore' -o -name '*.jks' -o -name '*.p12' -o -name '*.pem' -o -name '*.key' \) | head -5)"
 [ -z "$(git -C "$TMP/$BASE" fsck --unreachable --no-reflogs 2>/dev/null | head -1)" ] || { echo "✗ в архиве недостижимые объекты git"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }

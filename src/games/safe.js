@@ -13,16 +13,16 @@ import { reachableBand } from '../core/signal.js';
 export const PROMPTS = {
   gesture: ACTIVE_GESTURES.map(g => ({ id: g.id, from: g.introducedAt ?? 1, name: g.name, pose: g.pose, gesture: g.id })),
   proportional: [
-    { id: 'close', name: 'Сжать', from: 1, command: 'close', band: [0.22, 1.01], pose: COMMAND_POSE.close },
-    { id: 'open', name: 'Раскрыть', from: 1, command: 'open', band: [0.22, 1.01], pose: COMMAND_POSE.open },
+    { id: 'close', name: 'Сжатие', from: 1, command: 'close', band: [0.22, 1.01], pose: COMMAND_POSE.close },
+    { id: 'open', name: 'Раскрытие', from: 1, command: 'open', band: [0.22, 1.01], pose: COMMAND_POSE.open },
     { id: 'switch', name: 'Коактивация', from: 2, command: 'switch', band: [0, 1.01], pose: COMMAND_POSE.switch },
-    { id: 'close-soft', name: 'Сжать слабо', from: 3, command: 'close', band: [0.22, 0.45], pose: [0.5, 0.55, 0.55, 0.55, 0.55] },
-    { id: 'close-strong', name: 'Сжать сильно', from: 3, command: 'close', band: [0.65, 1.01], pose: COMMAND_POSE.close },
-    { id: 'open-soft', name: 'Раскрыть слабо', from: 4, command: 'open', band: [0.22, 0.45], pose: [0.15, 0.15, 0.15, 0.15, 0.15] },
+    { id: 'close-soft', name: 'Слабое сжатие', from: 3, command: 'close', band: [0.22, 0.45], pose: [0.5, 0.55, 0.55, 0.55, 0.55] },
+    { id: 'close-strong', name: 'Сильное сжатие', from: 3, command: 'close', band: [0.65, 1.01], pose: COMMAND_POSE.close },
+    { id: 'open-soft', name: 'Слабое раскрытие', from: 4, command: 'open', band: [0.22, 0.45], pose: [0.15, 0.15, 0.15, 0.15, 0.15] },
   ],
   threshold: [
-    { id: 'close', name: 'Сжать', from: 1, command: 'close', band: [0, 1.01], pose: COMMAND_POSE.close },
-    { id: 'open', name: 'Раскрыть', from: 1, command: 'open', band: [0, 1.01], pose: COMMAND_POSE.open },
+    { id: 'close', name: 'Сжатие', from: 1, command: 'close', band: [0, 1.01], pose: COMMAND_POSE.close },
+    { id: 'open', name: 'Раскрытие', from: 1, command: 'open', band: [0, 1.01], pose: COMMAND_POSE.open },
     { id: 'switch', name: 'Коактивация', from: 2, command: 'switch', band: [0, 1.01], pose: COMMAND_POSE.switch },
   ],
 };
@@ -189,7 +189,10 @@ export class SafeGame extends Game {
         drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
         text(ctx, card.name, w / 2 + cw * 0.14, y0 + ch * 0.4, { size: 18, weight: 800, maxWidth: cw * 0.6 });
         if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {
-          text(ctx, `${Math.round(card.band[0] * 100)}–${Math.min(100, Math.round(card.band[1] * 100))}\u00a0%`, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
+          // «любая сила» / «от 65 %» instead of a range that ends at 100 (5.11, design review).
+          const lo = Math.round(card.band[0] * 100), hi = Math.round(card.band[1] * 100);
+          const label = hi < 100 ? `${lo}–${hi}\u00a0%` : lo <= Math.round(this.onThreshold * 100) + 1 ? 'любая сила' : `от ${lo}\u00a0%`;
+          text(ctx, label, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
         }
         const left = Math.max(0, this.limit - this.cardTime);
         text(ctx, `${fmtFixed(left)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, color: left < 1.5 ? COLORS.warn : COLORS.muted }); // amber: red #ff6b6b was 4.3:1 on the card

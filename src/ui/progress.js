@@ -174,6 +174,9 @@ export function progressScreen(app) {
     node: h('div', { class: 'screen progress' },
       h('main', { class: 'scroll' },
         h('h1', {}, 'Прогресс'),
+        // Before the first exercise: one way forward instead of empty bars and a report with nothing in it (5.11).
+        runs.length ? null : h('section', { class: 'card' }, h('p', {}, 'Здесь появятся навыки, проверки и календарь — после первого упражнения.'),
+          h('button', { class: 'btn primary', onclick: () => app.startPlan() }, 'К тренировке дня')),
         h('section', { class: 'stats' },
           h('div', {}, h('b', {}, days), h('small', {}, `${plural(days, FORMS.days)} с занятиями`)),
           h('div', {}, h('b', {}, p.totals.runs), h('small', {}, plural(p.totals.runs, FORMS.exercises))),
@@ -189,7 +192,7 @@ export function progressScreen(app) {
         h('section', { class: 'card' }, h('h2', {}, 'Облик протеза'), skins),
         h('section', { class: 'card' }, h('h2', {}, 'Для специалиста'),
           h('p', { class: 'note' }, 'Игровая статистика каждого упражнения — её можно показать протезисту или реабилитологу. Файл содержит ответы о самочувствии (сведения о здоровье): отправляйте его только тем, кому доверяете.'),
-          h('button', { class: 'btn primary', onclick: () => printHtml(`Синергия — отчёт ${dayKey()}`, reportHtml(app.state, id => GAME_BY_ID[id]?.title ?? id)) }, 'Отчёт для специалиста (печать / PDF)'),
+          h('button', { class: `btn ${runs.length ? 'primary' : 'ghost'}`, onclick: () => printHtml(`Синергия — отчёт ${dayKey()}`, reportHtml(app.state, id => GAME_BY_ID[id]?.title ?? id)) }, 'Отчёт для специалиста · PDF'),
           h('div', { class: 'row-actions' },
             h('button', { class: 'btn ghost', onclick: () => download(`synergy-report-${dayKey()}.json`, JSON.stringify(buildReport(app.state), null, 2), 'application/json') }, 'Отчёт JSON'),
             h('button', { class: 'btn ghost', onclick: () => download(`synergy-runs-${dayKey()}.csv`, '﻿' + reportCsv(app.state), 'text/csv') }, 'Таблица CSV')))),

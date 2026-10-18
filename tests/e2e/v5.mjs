@@ -55,7 +55,7 @@ await go('play', { game: 'check', level: 1, demo: true }); await wait(300); awai
 await page.waitForSelector('.results', { timeout: 60000 }); await wait(600); await shot('v5-09-check-results', true); await audit('results');
 await go('settings'); await wait(300); await shot('v5-10-settings', true); await audit('settings');
 await go('calibration'); await wait(300); await audit('calibration');
-await go('audiosync'); await wait(500); await shot('v5-13-audiosync'); await audit('audiosync');
+await go('audiosync'); await wait(500); await audit('audiosync'); // no screenshot: the archive is at its size limit (PLAN C.1.61)
 await go('levels', { game: 'grip' }); await wait(300); await audit('levels');
 await go('rest', { next: { game: 'flight', level: 1, retention: false } }); await wait(300); await audit('rest');
 await go('pin'); await wait(300); await audit('pin');

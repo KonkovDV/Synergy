@@ -62,7 +62,7 @@ export function homeScreen(app) {
       return h('li', { class: item.done ? 'done' : '' },
         h('span', { class: 'plan-icon', 'aria-hidden': 'true' }, item.done ? '✓' : g.icon),
         h('div', {}, h('b', {}, item.retention ? `${g.title}: без подсказки` : g.title),
-          h('small', {}, item.done ? 'выполнено' : item.retention ? 'Проверка: навык без живой подсказки' : `Уровень ${item.level} · ${g.skills.map(k => SKILL_NAME[k]).slice(0, 2).join(', ')}`)));
+          h('small', {}, item.done ? 'выполнено' : item.retention ? 'Испытание без живой подсказки' : `Уровень ${item.level} · ${g.skills.map(k => SKILL_NAME[k]).slice(0, 2).join(', ')}`)));
     })));
 
   const tipCard = h('section', { class: 'card tip' }, h('div', { class: 'coach-head' }, mioAvatar('support', 40), h('b', {}, 'Совет Мио')), h('p', {}, tip));
