@@ -32,14 +32,16 @@ function muscleConfirm(app, ring, action) {
  * next item, the next level, or the same exercise again.
  * @returns {{ kind: 'home'|'rest'|'play', label: string, params?: object }}
  */
-export function resultsAction({ run, plan, demo, next, stopAdvice, restS, titleOf }) {
-  if (plan && demo) return { kind: 'play', label: 'Начать упражнение', params: { game: run.game, level: run.level, retention: run.retention, plan: true } };
+export function resultsAction({ run, plan, demo, next, stopAdvice, restS, titleOf, pose = run.pose }) {
+  // The arm pose of the plan's probe travels with the same exercise (5.11: lost on demo → «Начать упражнение»).
+  const same = { game: run.game, level: run.level, retention: run.retention, ...(pose ? { pose } : {}) };
+  if (plan && demo) return { kind: 'play', label: 'Начать упражнение', params: { ...same, plan: true } };
   if (plan && !next) return { kind: 'home', label: 'Готово на сегодня' };
   if (stopAdvice) return { kind: 'home', label: 'Закончить на сегодня' };
   if (next) return { kind: 'rest', label: `Отдых ${restS} с → ${titleOf(next.game)}`, params: { next } };
   if (run.stars > 0 && run.level < run.levelCount && !demo) return { kind: 'play', label: `Уровень ${run.level + 1}`, params: { game: run.game, level: run.level + 1 } };
-  if (demo) return { kind: 'play', label: 'Попробовать самому', params: { game: run.game, level: run.level, retention: run.retention } };
-  return { kind: 'play', label: 'Ещё раз', params: { game: run.game, level: run.level, retention: run.retention } };
+  if (demo) return { kind: 'play', label: 'Попробовать самому', params: same };
+  return { kind: 'play', label: 'Ещё раз', params: same };
 }
 
 /** Rewards of a run, shown on the screen (5.10): toasts covered the stars and the score and vanished in 3 s. */
@@ -52,7 +54,7 @@ function rewardList(report) {
   ];
 }
 
-export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote = null, plan = false, demo = false }) {
+export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote = null, plan = false, demo = false, pose = null }) {
   const g = GAME_BY_ID[run.game];
   const advice = coachFeedback(run.game, run, app.state.runs);
   const next = plan && !demo ? app.nextPlanItem() : null;
@@ -62,7 +64,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
   const stopAdvice = !demo && next ? adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs)?.text ?? null : null;
-  const action = resultsAction({ run, plan, demo, next, stopAdvice, restS: app.rules.restS, titleOf: id => GAME_BY_ID[id]?.title ?? id });
+  const action = resultsAction({ run, plan, demo, next, stopAdvice, restS: app.rules.restS, titleOf: id => GAME_BY_ID[id]?.title ?? id, pose: run.pose ?? pose });
   const primary = { label: action.label, go: () => app.go(action.kind, action.params) };
   // The hands-free «дальше» needs sensors: with the on-screen emulator there are no pads on this screen (5.10).
   const handsFree = app.sourceKind() !== 'touch';
@@ -112,7 +114,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
         handsFree ? h('div', { class: 'confirm' }, ring, h('span', {}, `или ${handsFreeText(app.settings.scheme, app.settings.dwellS + HANDS_FREE.leaveExtraS, 'дальше').replace(/^Р/, 'р')}`)) : null,
         h('div', { class: 'row-actions' },
           stopAdvice && next ? h('button', { class: 'btn ghost', onclick: () => app.go('rest', { next }) }, 'Всё равно продолжить') : null,
-          action.label === 'Ещё раз' || demo ? null : h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: run.game, level: run.level, retention: run.retention, plan, pose: run.pose }) }, 'Повторить'),
+          action.label === 'Ещё раз' || demo ? null : h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: run.game, level: run.level, retention: run.retention, plan, pose: run.pose ?? pose }) }, 'Повторить'),
           h('button', { class: 'btn ghost', onclick: () => app.go('home') }, 'Домой')))));
   const confirm = handsFree ? muscleConfirm(app, ring, primary.go) : null;
   app.say(`${count(run.stars, FORMS.stars)} из трёх. ${count(run.score, FORMS.points)}. ${rewards.length ? `${rewards.map(r => r.replace(/^\S+ /, '')).join('. ')}. ` : ''}${stopAdvice ?? advice[0] ?? ''} Дальше: ${primary.label}.`, { interrupt: true });

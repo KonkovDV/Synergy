@@ -24,7 +24,8 @@ import { setRenderOptions } from './render/draw.js';
 import { mount, toast, h } from './ui/dom.js';
 import { SCREENS } from './ui/screens.js';
 
-const PIN_SCREENS = ['settings', 'calibration', 'pin'];
+const TAP_GUARD_MS = 350;
+const PIN_SCREENS = ['settings', 'calibration', 'pin', 'audiosync', 'tutorial']; // sub-screens of the settings keep them open
 /** Game catalog for the stored-state check (core does not import games): id → number of levels. */
 const CATALOG = Object.fromEntries(Object.entries(GAME_BY_ID).map(([id, g]) => [id, g.Game.levels.length]));
 
@@ -84,14 +85,23 @@ export class App {
     window.addEventListener('pointerdown', unlockAudio, { once: true });
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.screen?.onHidden?.(); });
     document.addEventListener('focusin', e => keepFocusVisible(e.target));
+    // A double tap must not land on the next screen (5.11): the second tap after «Отдых 20 с → Ритм» hit «Пропустить
+    // отдых», after «Начать» it chose a pain level. Touch only — a mouse or keyboard click is deliberate.
+    root.addEventListener('pointerdown', e => { this.lastPointer = e.pointerType; }, true);
+    root.addEventListener('keydown', () => { this.lastPointer = 'keyboard'; }, true);
+    root.addEventListener('click', e => {
+      if (this.lastPointer === 'touch' && performance.now() - (this.mountedAt ?? 0) < TAP_GUARD_MS) { e.preventDefault(); e.stopImmediatePropagation(); }
+    }, true);
     for (const q of ['(prefers-contrast: more)', '(forced-colors: active)']) globalThis.matchMedia?.(q).addEventListener?.('change', () => this.applyPresentation());
     // Back in a browser or an installed PWA: one history entry stands for «inside the app», so the back gesture
     // comes here instead of closing the app (an SPA without history entries is left by the first back).
     window.addEventListener('popstate', () => {
       if (this.ignorePop) { this.ignorePop = false; return; }
-      this.handleBack();
+      const handled = this.handleBack();
       // go() inside handleBack may have pushed the entry already: never two (5.10 — one back on home did nothing).
-      if (this.screen?.name !== 'home' && !history.state?.synergy) history.pushState({ synergy: 1 }, '');
+      // Not handled (home, the first onboarding page): no new entry, so the next back leaves the app (5.11 — the
+      // browser back never left the first onboarding page).
+      if (handled && this.screen?.name !== 'home' && !history.state?.synergy) history.pushState({ synergy: 1 }, '');
     });
     // Another window of the app saved (a second tab, the PWA and a browser tab): take its state instead of writing
     // ours over it later (5.10 — a finished exercise vanished when the other tab toggled a setting).
@@ -126,11 +136,15 @@ export class App {
     this.saveTimer = setTimeout(() => { this.saveTimer = null; this.save(); }, 300);
   }
 
-  /** After the whole state changed (import, reset, undo, demo profile): presentation, emulator and source follow it. */
+  /**
+   * After the whole state changed (import, reset, undo, demo profile, another window's save): presentation, emulator
+   * and source follow it. The source restarts only when it really changed (5.11 — another window ticking «Меньше
+   * движения» rebuilt the bridge, and a running exercise froze on «Нет сигнала»).
+   */
   refreshFromState() {
     this.emulator.realism = this.settings.realism;
     this.applyPresentation();
-    this.applySource();
+    this.applySource({ force: false });
   }
 
   /** Deletes the progress (one copy stays for undo). Until 5.10 the signal source was not re-applied: a reset on the
@@ -177,7 +191,10 @@ export class App {
     };
   }
 
-  applySource() {
+  applySource({ force = true } = {}) {
+    const key = `${this.settings.source}|${this.settings.wsUrl}`;
+    if (!force && key === this.appliedSource) return;
+    this.appliedSource = key;
     if (this.settings.source === 'bridge') {
       this.ble?.disconnect(); this.ble = null;
       this.bridge?.stop();
@@ -215,6 +232,8 @@ export class App {
   exitShowcase() {
     if (!this.showcase) return;
     this.store = this.realStore; this.realStore = null; this.showcase = false;
+    // Another window may have saved meanwhile (its storage events are ignored in the demo): read, don't overwrite (5.11).
+    this.store.state = this.store.load();
     this.refreshFromState();
   }
 
@@ -334,7 +353,8 @@ export class App {
     if (!PIN_SCREENS.includes(name)) this.pinOk = false; // leaving the settings locks them again
     // The same screen redrawn (a setting changed) keeps scroll, open sections and focus (5.10: an arrow key in
     // «Схема управления» changed the scheme and sent focus to the heading, an opened section closed).
-    const view = this.screen?.name === name ? captureView(this.root) : null;
+    // `fresh`: the next screen of the same name mounts anew (after the PIN gate; a replay of the game — 5.11).
+    const view = this.screen?.name === name && !this.screen.fresh ? captureView(this.root) : null;
     this.screen?.cleanup?.();
     stopVoice(); // the previous screen's long phrase must not run over the next one
     // A pad latched on the previous screen (pads without holding) must not keep «contracting» on the next one.
@@ -348,10 +368,12 @@ export class App {
       name = 'recovery';
     }
     this.screen = { name, ...screen };
+    this.mountedAt = performance.now();
     mount(this.root, ...(this.showcase ? [this.showcaseBanner()] : []), screen.node);
     if (!(view && restoreView(this.root, view))) {
       if (!view) { this.root.scrollTop = 0; window.scrollTo(0, 0); }
       this.announce(screen.node, { focus: !view });
+      if (!view) screen.focus?.focus({ preventScroll: true }); // a dialog's main button, a control to return to
     }
     this.syncHistory(name);
   }

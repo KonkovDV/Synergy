@@ -4,6 +4,7 @@
 // does not mix into the result. The clicks go through the same scheduler as the game (MusicPlayer + offsetClock).
 import { h } from './dom.js';
 import { topBar } from './widgets.js';
+import { pinGateScreen } from './pin.js';
 import { MusicPlayer, offsetClock, clickTrack } from '../core/music.js';
 import { audioClock, playMusic, unlockAudio } from '../services/audio.js';
 import { SETTINGS_RANGES } from '../config.js';
@@ -14,6 +15,8 @@ export const fmtOffset = ms => `${ms > 0 ? '+' : ms < 0 ? '−' : ''}${Math.abs(
 
 export function audioSyncScreen(app) {
   const s = app.settings;
+  // A setting like the others: behind the parent PIN in child mode (5.11).
+  if (s.audience === 'child' && s.parentPin && !app.pinOk) return pinGateScreen(app, { next: 'audiosync' });
   let offset = s.audioOffsetMs ?? 0;
   const value = h('output', { class: 'sync-value', 'aria-live': 'polite' }, fmtOffset(offset));
   const dot = h('div', { class: 'sync-dot', 'aria-hidden': 'true' });
@@ -34,7 +37,7 @@ export function audioSyncScreen(app) {
   unlockAudio();
   restart();
   const node = h('div', { class: 'screen audiosync' },
-    topBar('Синхронизация звука', () => app.go('settings')),
+    topBar('Синхронизация звука', () => app.go('settings', { back: 'audiosync' })),
     h('main', { class: 'scroll' },
       h('p', {}, 'Нужна, если в «Ритме» удар звучит раньше или позже, чем нота доходит до линии. Чаще всего так бывает в Bluetooth-наушниках.'),
       s.sound ? null : h('p', { class: 'note warn' }, 'Звук выключен. Включите «Звук» в настройках, чтобы подстроить.'),
@@ -46,7 +49,7 @@ export function audioSyncScreen(app) {
         h('button', { class: 'btn ghost', disabled: !s.sound, onclick: () => nudge(-R.step) }, 'Щелчок спешит')),
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn ghost', disabled: !s.sound, onclick: () => nudge(-offset) }, 'Сбросить'),
-        h('button', { class: 'btn primary', onclick: () => app.go('settings') }, 'Готово')),
+        h('button', { class: 'btn primary', onclick: () => app.go('settings', { back: 'audiosync' }) }, 'Готово')),
       h('p', { class: 'note' }, `Шаг ${R.step} мс, от ${fmtOffset(R.min)} до ${fmtOffset(R.max)}. Поправка нужна только для музыки «Ритма»: попадание в ноту она не меняет.`)));
   return {
     node,

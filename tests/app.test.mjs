@@ -77,3 +77,34 @@ test('arm pose (5.11): asked and recorded only with real sensors, never with the
   const { run } = app.finishSession(session);
   assert.equal(run.pose, 'forward');
 });
+
+test('another window\'s save does not restart an unchanged source (5.11 — a running exercise froze on «Нет сигнала»)', () => {
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  app.save();
+  const bridge = app.bridge;
+  app.store.state = app.store.load();
+  app.refreshFromState();
+  assert.equal(app.bridge, bridge, 'same source, same bridge');
+  const ws = globalThis.WebSocket;
+  globalThis.WebSocket = undefined; // no real connection from a unit test
+  try {
+    app.state.settings.wsUrl = 'ws://127.0.0.1:9999';
+    app.refreshFromState();
+    assert.notEqual(app.bridge, bridge, 'a changed address restarts it');
+  } finally { app.bridge?.stop(); globalThis.WebSocket = ws; }
+});
+
+test('leaving the demo profile reads what another window saved meanwhile (5.11 — it wrote old data over it)', async () => {
+  const app = fresh();
+  app.save();
+  app.enterShowcase();
+  const other = JSON.parse(store.get('synergy.v4'));
+  other.settings.name = 'Борис';
+  store.set('synergy.v4', JSON.stringify(other)); // the other window's save
+  app.exitShowcase();
+  assert.equal(app.settings.name, 'Борис');
+  app.updateSettings({ textScale: 1.3 });
+  app.save();
+  assert.equal(JSON.parse(store.get('synergy.v4')).settings.name, 'Борис', 'not overwritten by the stale copy');
+});

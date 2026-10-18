@@ -11,9 +11,12 @@ export function checkinScreen(app) {
   const answers = { pain: null, fatigue: null, ...(sensors ? { skin: null } : {}) };
   const advice = h('div', { class: 'checkin-advice', 'aria-live': 'polite' });
   const go = h('button', { class: 'btn primary big', disabled: true }, 'Дальше');
-  const skip = h('button', { class: 'btn ghost', onclick: () => { recordDayNote(app.profile, dayKey(), { checkin: { skipped: true, at: new Date().toISOString() } }); app.save(); app.startPlan({ checked: true }); } }, 'Пропустить');
+  const skip = h('button', { class: 'btn ghost', onclick: () => {
+    if (!checkinSkippable(answers, app.checkin())) return; // a stored answer is never overwritten by a skip
+    recordDayNote(app.profile, dayKey(), { checkin: { skipped: true, at: new Date().toISOString() } }); app.save(); app.startPlan({ checked: true });
+  } }, 'Пропустить');
   const update = () => {
-    skip.hidden = !checkinSkippable(answers);
+    skip.hidden = !checkinSkippable(answers, app.checkin());
     const ready = Object.values(answers).every(v => v !== null);
     go.disabled = !ready;
     if (!ready) return;
@@ -29,6 +32,7 @@ export function checkinScreen(app) {
     app.save();
     if (a.action === CHECKIN_ACTION.STOP) app.go('home'); else app.startPlan({ checked: true });
   };
+  skip.hidden = !checkinSkippable(answers, app.checkin());
   const question = (title, levels, key) => h('section', { class: 'card' }, h('h2', {}, title),
     segmented(levels.map(l => ({ value: l.id, label: l.label, sub: l.nrs })), null, v => { answers[key] = v; update(); }, title));
   app.say(sensors ? 'Как рука сегодня? Есть ли боль, усталость, раздражение кожи под датчиками?' : 'Как рука сегодня? Есть ли боль и усталость?', { interrupt: true });

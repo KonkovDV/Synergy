@@ -47,7 +47,7 @@ export function signalMeter(app) {
     const fill = h('i', { class: 'fill' });
     const on = h('b', { class: 'mark on', style: { left: `${s.sensitivity * 100}%` }, title: 'порог' });
     const co = h('b', { class: 'mark co', style: { left: `${s.coThreshold * 100}%` }, title: 'коактивация' });
-    return { node: h('div', { class: `meter-bar ${cls}` }, fill, on, co), fill };
+    return { node: h('div', { class: `meter-bar ${cls}` }, fill, on, co), fill, on, co };
   };
   const A = bar('a'), B = bar('b');
   const chip = h('div', { class: 'meter-chip' }, 'Покой');
@@ -57,6 +57,10 @@ export function signalMeter(app) {
     h('div', { class: 'meter-row' }, B.node, h('span', { class: 'meter-label b' }, 'B')));
   return {
     node,
+    /** The marks follow the sliders (5.11: they stayed where the meter was built). */
+    setThresholds({ sensitivity = s.sensitivity, coThreshold = s.coThreshold } = {}) {
+      for (const bar of [A, B]) { bar.on.style.left = `${sensitivity * 100}%`; bar.co.style.left = `${coThreshold * 100}%`; }
+    },
     update(intent) {
       A.fill.style.width = `${Math.round(intent.a * 100)}%`;
       B.fill.style.width = `${Math.round(intent.b * 100)}%`;

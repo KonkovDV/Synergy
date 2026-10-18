@@ -47,6 +47,7 @@ export function pinGateScreen(app, { next = 'settings' } = {}) {
   };
   queueMicrotask(() => input.focus());
   return {
+    fresh: true, // the screen behind it is mounted fresh after the right PIN (focus on its heading)
     node: h('div', { class: 'screen pin' },
       h('main', { class: 'scroll center' },
         h('p', { class: 'big-emoji', 'aria-hidden': 'true' }, '🔒'),

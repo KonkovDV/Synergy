@@ -219,3 +219,15 @@ test('reminder (5.11): the first event falls on a reminder day for every weekday
     }
   }
 });
+
+test('plan (5.11): switching to child mode mid-day rebuilds today\'s plan to the child size, finished items kept', async () => {
+  const { buildDailyPlan, createProfile, sessionRules } = await import('../src/core/progress.js');
+  const { PLAN_CATALOG } = await import('../src/games/registry.js');
+  const p = createProfile(), D = '2026-10-18';
+  const adult = buildDailyPlan(p, [], PLAN_CATALOG, 'proportional', D, { exercises: sessionRules('adult').planExercises });
+  adult.items[0].done = true;
+  const child = buildDailyPlan(p, [], PLAN_CATALOG, 'proportional', D, { exercises: sessionRules('child').planExercises });
+  assert.equal(child.items.filter(i => !i.retention).length, sessionRules('child').planExercises);
+  assert.ok(child.items.some(i => i.done), 'the finished exercise stays finished');
+  assert.equal(buildDailyPlan(p, [], PLAN_CATALOG, 'proportional', D, { exercises: sessionRules('child').planExercises }), child, 'same size — the same plan');
+});

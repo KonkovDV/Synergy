@@ -30,7 +30,7 @@ function pickTextFile(accept, onText) {
   input.click();
 }
 
-export function settingsScreen(app) {
+export function settingsScreen(app, { back = null } = {}) {
   const s = app.settings;
   if (s.audience === 'child' && s.parentPin && !app.pinOk) return pinGateScreen(app);
   const meter = signalMeter(app);
@@ -45,7 +45,7 @@ export function settingsScreen(app) {
     h('label', { class: 'row' }, h('span', {}, 'WebSocket эмулятора'), urlInput),
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ wsUrl: urlInput.value.trim() }); toast('Подключаемся…'); } }, 'Подключить'),
-      h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка')),
+      h('button', { class: 'btn ghost', 'data-return': 'calibration', onclick: () => app.go('calibration') }, 'Калибровка')),
     status,
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn ghost', disabled: !bleSupported(), onclick: connectBle }, 'Bluetooth-датчик (BLE UART)')),
@@ -87,14 +87,14 @@ export function settingsScreen(app) {
         bridgeBox,
         sliderRow('Реалистичность эмулятора', { ...R.realism, value: s.realism, format: v => v < 0.2 ? 'чистый сигнал' : v < 0.7 ? 'как у датчика' : 'шумно', onInput: v => app.updateSettings({ realism: v }) })),
       section('Чувствительность',
-        sliderRow('Порог включения канала', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); } }),
-        sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); } }),
+        sliderRow('Порог включения канала', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); meter.setThresholds(); } }),
+        sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); meter.setThresholds(); } }),
         h('p', { class: 'note' }, 'Проверка вживую — напрягите мышцы или используйте площадки ниже:'),
         meter.node,
         s.source === 'touch' && s.scheme !== 'gesture' ? createTwoChannelPads(app.emulator) : null,
         h('div', { class: 'row-actions' },
-          h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка датчиков'),
-          h('button', { class: 'btn ghost', onclick: () => app.go('tutorial', { from: 'settings' }) }, 'Первые шаги (обучение)')),
+          h('button', { class: 'btn ghost', 'data-return': 'calibration', onclick: () => app.go('calibration') }, 'Калибровка датчиков'),
+          h('button', { class: 'btn ghost', 'data-return': 'tutorial', onclick: () => app.go('tutorial', { from: 'settings' }) }, 'Первые шаги (обучение)')),
         toggleRow('Подстраивать покой', s.adaptRest, v => app.updateSettings({ adaptRest: v }), 'внешние датчики: покой медленно следует за дрейфом сигнала; при большом сдвиге попросим перекалибровать')),
       section('Тренировка',
         toggleRow('Адаптивная сложность', s.adaptive, v => app.updateSettings({ adaptive: v }), 'допуски подстраиваются, чтобы удавалось ~75 % попыток; испытание без подсказки и проверка — без подстройки'),
@@ -121,7 +121,7 @@ export function settingsScreen(app) {
         h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) })),
         toggleRow('Звук', s.sound, v => app.updateSettings({ sound: v })),
         toggleRow('Музыка в «Ритме»', s.music, v => app.updateSettings({ music: v }), 'барабаны, бас и аккорды в темпе уровня: такт слышен, когда нота доходит до линии'),
-        h('button', { class: 'btn ghost', onclick: () => app.go('audiosync') }, `Синхронизация звука: ${fmtOffset(s.audioOffsetMs ?? 0)}`),
+        h('button', { class: 'btn ghost', 'data-return': 'audiosync', onclick: () => app.go('audiosync') }, `Синхронизация звука: ${fmtOffset(s.audioOffsetMs ?? 0)}`),
         toggleRow('Вибрация', s.haptics, v => app.updateSettings({ haptics: v })),
         toggleRow('Полоски сигнала в игре', s.showMeters, v => app.updateSettings({ showMeters: v }), 'мышечная обратная связь рядом с игровой')),
       section('Данные',
@@ -146,8 +146,13 @@ export function settingsScreen(app) {
         h('p', { class: 'note' }, 'Код создан командой с помощью ИИ-ассистента; что именно и как проверено — docs/AI_USAGE.md.'))),
     bottomNav(app, 'settings'));
 
+  // Back from a sub-screen (calibration, sound sync, tutorial): its section is open and focus is on the button that
+  // led there (5.11 — focus went to the heading at the top with the section folded again).
+  const returnTo = back ? [...node.querySelectorAll(`[data-return="${back}"]`)].find(b => !b.closest('[hidden]')) : null;
+  if (returnTo) returnTo.closest('details')?.setAttribute('open', '');
   return {
     node,
+    focus: returnTo,
     tick(now) { meter.update(preview.pipeline.process(preview.source?.sample(now) ?? null, now)); },
     onBridgeStatus(st) { status.textContent = `Статус: ${BRIDGE_STATUS[st] ?? st}`; },
     onBleStatus(st) { bleStatus.textContent = st === 'disconnected' ? 'Bluetooth: связь потеряна — переподключаемся…' : st === 'failed' ? 'Bluetooth: не удалось переподключиться' : `Bluetooth: ${st}`; },
@@ -167,7 +172,7 @@ export function calibrationScreen(app) {
   const source = app.signalSource();
   // Same frame as «Первые шаги» (5.10): the steps scroll, the signal and the pads stay on screen.
   const node = h('div', { class: 'screen calibration frame' },
-    topBar('Калибровка', () => app.go('settings')),
+    topBar('Калибровка', () => app.go('settings', { back: 'calibration' })),
     h('main', { class: 'frame-body center' },
       h('p', { class: 'note' }, kind === 'touch'
         ? 'Сейчас источник — эмулятор на экране: калибровка покажет процесс, а результат для эмулятора не нужен. Подключите внешний источник для настоящей калибровки.'
@@ -175,7 +180,7 @@ export function calibrationScreen(app) {
       ring, title, text, result,
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn ghost', onclick: () => { recorder = new CalibrationRecorder(); result.replaceChildren(); } }, 'Заново'),
-        h('button', { class: 'btn ghost', onclick: () => { app.state.calibrations[kind] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))),
+        h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Сбросить калибровку этого источника к значениям по умолчанию? Сохранённую калибровку вернуть нельзя.')) return; app.state.calibrations[kind] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))),
     h('div', { class: 'frame-dock' }, meter.node,
       kind === 'touch' ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, createTwoChannelPads(app.emulator)) : null));
   let finished = false;
@@ -200,7 +205,7 @@ export function calibrationScreen(app) {
         // Without signal there is nothing to save: the previous calibration stays.
         const save = r.usable && kind !== 'touch';
         result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)),
-          h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[kind] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings'); } }, save ? 'Сохранить' : 'Понятно'));
+          h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[kind] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings', { back: 'calibration' }); } }, save ? 'Сохранить' : 'Понятно'));
       }
     },
   };

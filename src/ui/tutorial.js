@@ -24,8 +24,8 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
   const finish = () => {
     const fresh = app.completeTutorial(run.passed);
     fresh.forEach(id => toast(`🏅 ${ACHIEVEMENTS.find(a => a.id === id).name}`, 'good'));
-    app.say('Обучение пройдено. Отлично!', { interrupt: true });
-    app.go(from);
+    app.go(from, from === 'settings' ? { back: 'tutorial' } : {}); // go() stops the previous screen's speech: say it after (5.11 — it was cut at once)
+    app.say(run.passed ? 'Обучение пройдено. Отлично!' : 'Обучение завершено. Шаги можно пройти снова в настройках.', { interrupt: true });
   };
   const showStep = () => {
     const step = run.step;
@@ -38,7 +38,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
   // A frame like the game screen (5.10): the step scrolls in the middle, the signal and the pads stay on screen —
   // until 5.9 the pads were below the fold on most phones and the instruction scrolled away to press them.
   const node = h('div', { class: 'screen tutorial frame' },
-    topBar('Первые шаги', () => app.go(from)),
+    topBar('Первые шаги', () => app.go(from, from === 'settings' ? { back: 'tutorial' } : {})),
     h('main', { class: 'frame-body center' }, counter, canvas, ring, title, text, tip,
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn ghost', onclick: () => { run.skipStep(); if (run.done) finish(); else showStep(); } }, 'Пропустить шаг'),

@@ -185,7 +185,8 @@ export function skillProfile(runs, last = 12) {
  * @param catalog [{ id, schemes, skills, levelCount }]
  */
 export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(), { exercises = SESSION.planExercises } = {}) {
-  if (profile.plan?.day === today && profile.plan.scheme === scheme) return profile.plan;
+  // Today's plan is kept unless the scheme or the plan size changed (5.11: switching to child mode mid-day kept 0/4).
+  if (profile.plan?.day === today && profile.plan.scheme === scheme && (profile.plan.exercises ?? exercises) === exercises) return profile.plan;
   const games = catalog.filter(g => g.schemes.includes(scheme));
   const skills = skillProfile(runs);
   const weakness = g => {
@@ -212,7 +213,7 @@ export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(),
     if (same) same.done = true; else items.splice(items.length - (items.at(-1)?.retention ? 1 : 0), 0, { ...old });
   }
   const rewarded = profile.plan?.day === today && !!profile.plan.rewarded;
-  profile.plan = { day: today, scheme, items, rewarded };
+  profile.plan = { day: today, scheme, exercises, items, rewarded };
   return profile.plan;
 }
 

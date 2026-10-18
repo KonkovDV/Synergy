@@ -114,9 +114,19 @@ if (chipF !== 'Сжатие') errors.push(`F in the tutorial: «${chipF}»`);
 await page.locator('.pad-b').focus(); await page.keyboard.down('Space'); await wait(400);
 const chipSpace = await page.locator('.meter-chip').textContent(); await page.keyboard.up('Space'); await wait(200);
 if (chipSpace !== 'Раскрытие') errors.push(`Space on pad B: «${chipSpace}»`);
+// 5.11 — F/J work while a button has focus (after «Старт» focus is on «Пауза»); a held key stays at the strength set
+// with the arrows on the pad (it used to climb to 100 %, «вполсилы» could not be held).
+await page.locator('.back-btn').focus(); await page.keyboard.down('KeyF'); await wait(400);
+const chipFocus = await page.locator('.meter-chip').textContent(); await page.keyboard.up('KeyF'); await wait(300);
+if (chipFocus !== 'Сжатие') errors.push(`F with a button focused: «${chipFocus}»`);
+await page.locator('.pad-a').focus(); await page.keyboard.press('ArrowUp'); await page.keyboard.press('ArrowUp');
+if ((await page.locator('.pad-a').getAttribute('aria-valuenow')) !== '70') errors.push('arrows on pad A did not set 70 %');
+await page.keyboard.down('Space'); await wait(1600);
+const held = await page.locator('.pad-a .pad-value').textContent(); await page.keyboard.up('Space'); await wait(200);
+if (held.replace(/\s/g, '') !== '70%') errors.push(`Space on pad A held at «${held}», expected 70 %`);
 
 // 5.9 — pads without holding (tremor): a tap latches the pad, a second tap releases it.
-const openSettings = async () => { await go('settings'); await wait(300); if (await page.getByLabel('PIN родителя').count()) { await page.getByLabel('PIN родителя').fill('1234'); await page.keyboard.press('Enter'); await wait(300); } };
+const openSettings = async () => { await go('settings'); await wait(300); if (await page.locator('.screen.pin').count()) { await page.getByLabel('PIN родителя').fill('1234'); await page.keyboard.press('Enter'); await wait(300); } };
 await openSettings(); await page.getByRole('switch', { name: /Площадки без удержания/ }).check(); await wait(200);
 await go('tutorial'); await wait(300);
 await page.locator('.pad-a').click(); await wait(400);

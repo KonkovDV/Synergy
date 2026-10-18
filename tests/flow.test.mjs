@@ -41,3 +41,10 @@ test('hands-free hold: armed only after a relaxation, fires once, a slip costs t
   for (let i = 0; i < 60; i++) fired += c.update(close, 1 / 60);
   assert.equal(fired, 1, 'fires exactly once');
 });
+
+test('results lead: the arm pose of the plan probe travels with the same exercise (5.11)', () => {
+  const probe = run({ retention: true });
+  assert.equal(resultsAction({ ...base, run: probe, plan: true, demo: true, pose: 'elbow' }).params.pose, 'elbow', 'demo → «Начать упражнение»');
+  assert.equal(resultsAction({ ...base, run: { ...probe, stars: 0, pose: 'side' } }).params.pose, 'side', '«Ещё раз»');
+  assert.equal(resultsAction({ ...base, run: run() }).params.pose, undefined, 'the next level has no pose');
+});
