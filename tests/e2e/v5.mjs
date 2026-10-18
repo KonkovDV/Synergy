@@ -32,8 +32,8 @@ async function audit(screen) {
 }
 
 await page.goto(base); await wait(500); await shot('v5-01-onboarding'); await audit('onboarding');
-await page.getByRole('button', { name: 'Дальше' }).click(); await wait(150);
-await page.getByRole('button', { name: 'Дальше' }).click(); await wait(150);
+await page.getByRole('button', { name: 'Дальше' }).click(); await wait(350);
+await page.getByRole('button', { name: 'Дальше' }).click(); await wait(350);
 await page.getByRole('button', { name: 'Пропустить обучение' }).click(); await wait(400);
 await shot('v5-02-home'); await audit('home');
 await go('tutorial'); await wait(800); await shot('v5-03-tutorial'); await audit('tutorial');
@@ -135,7 +135,7 @@ await page.emulateMedia({ contrast: 'no-preference' }); await page.reload(); awa
 const land = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 land.on('pageerror', e => errors.push(`landscape: ${e.message}`));
 await land.goto(base); await land.waitForTimeout(400);
-for (let i = 0; i < 2; i++) { await land.getByRole('button', { name: 'Дальше' }).click(); await land.waitForTimeout(120); }
+for (let i = 0; i < 2; i++) { await land.getByRole('button', { name: 'Дальше' }).click(); await land.waitForTimeout(350); }
 await land.getByRole('button', { name: 'Пропустить обучение' }).click(); await land.waitForTimeout(300);
 for (const [scheme, game] of [['proportional', 'grip'], ['gesture', 'safe']]) {
   if (scheme === 'gesture') { await land.evaluate(() => window.Synergy.go('settings')); await land.waitForTimeout(200); await land.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click(); await land.waitForTimeout(200); }

@@ -8,9 +8,14 @@ VERSION="$(node -p "require('$ROOT/package.json').version")"
 NAME="${1:-SYNERGY_v$VERSION}"; OUTDIR="${2:-$PARENT}"
 [ -f "$ROOT/release/Synergy-$VERSION.apk" ] || { echo "Нет release/Synergy-$VERSION.apk — сначала sh tools/build-apk.sh"; exit 1; }
 rm -f "$OUTDIR/$NAME.zip"
-(cd "$PARENT" && zip -qr "$OUTDIR/$NAME.zip" "$BASE" -x "$BASE/node_modules/*" "$BASE/dist/*" "$BASE/tools/.cache/*" "$BASE/android/build/*" "*/__pycache__/*" "*.pyc" "*/.DS_Store")
+# Tracked files and the git history only (5.10): zipping the working tree also took gitignored files —
+# a release keystore, tools/.cache — and the gate, which looks at tracked files, did not notice.
+(cd "$ROOT" && { git ls-files --cached | while IFS= read -r f; do [ -e "$f" ] && printf '%s\n' "$f"; done; find .git -type f; }) \
+  | sed "s|^|$BASE/|" | (cd "$PARENT" && zip -q "$OUTDIR/$NAME.zip" -@)
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
+KEYS="$(find "$TMP" \( -name '*.keystore' -o -name '*.jks' -o -name '*.p12' -o -name '*.pem' -o -name '*.key' \) -not -path '*/.git/*' | head -5)"
+[ -z "$KEYS" ] || { echo "✗ в архиве ключи: $KEYS"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }
 # node_modules is not in the archive (the receiver runs npm ci): link ours so the bundle test can run.
 [ -d "$ROOT/node_modules" ] && ln -s "$ROOT/node_modules" "$TMP/$BASE/node_modules"
 echo "Проверка распакованного архива:"

@@ -23,8 +23,11 @@ const weekStart = key => { const d = new Date(`${key}T12:00:00`); const shift = 
 export function starsFor(score) { return STARS.filter(s => score >= s).length; }
 
 export const levelThreshold = n => 50 * n * (n - 1); // XP needed to reach player level n
+/** Closed form (5.10): the old loop never ended for xp = 1e308 from a crafted backup — the app froze on launch. */
 export function playerLevel(xp) {
-  let n = 1; while (xp >= levelThreshold(n + 1)) n++;
+  const x = Number.isFinite(xp) ? Math.max(0, xp) : 0;
+  let n = Math.max(1, Math.floor((1 + Math.sqrt(1 + 0.08 * x)) / 2));
+  if (x < levelThreshold(n)) n--; else if (x >= levelThreshold(n + 1)) n++; // floating-point edges
   const from = levelThreshold(n), to = levelThreshold(n + 1);
   return { level: n, progress: (xp - from) / (to - from), toNext: to - xp };
 }
@@ -196,7 +199,13 @@ export function buildDailyPlan(profile, runs, catalog, scheme, today = dayKey(),
   const picked = ordered.slice(0, Math.min(exercises, ordered.length));
   const items = picked.map(g => ({ game: g.id, level: recommendedLevel(profile, g.id), done: false, retention: false }));
   if (items.length) items.push({ ...items[0], retention: true });
-  // Rebuilt the same day (scheme switched): the plan bonus of today is not paid twice.
+  // Rebuilt the same day (scheme switched): finished exercises stay finished (5.10 — the plan went back to 0/4 and a
+  // light day offered one more exercise), and the plan bonus of today is not paid twice.
+  const before = profile.plan?.day === today ? profile.plan : null;
+  for (const old of before?.items.filter(i => i.done) ?? []) {
+    const same = items.find(i => !i.done && i.game === old.game && i.retention === old.retention);
+    if (same) same.done = true; else items.splice(items.length - (items.at(-1)?.retention ? 1 : 0), 0, { ...old });
+  }
   const rewarded = profile.plan?.day === today && !!profile.plan.rewarded;
   profile.plan = { day: today, scheme, items, rewarded };
   return profile.plan;

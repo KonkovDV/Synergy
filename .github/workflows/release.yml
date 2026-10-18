@@ -13,7 +13,7 @@ jobs:
         with: { node-version: 22, cache: npm }
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
         with: { distribution: temurin, java-version: '17' }
-      - run: npm ci && npm test
+      - run: npm ci --ignore-scripts && npm test   # no install scripts in the job that receives the signing key
       - name: Build and sign APK with the team key (repository secrets)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}

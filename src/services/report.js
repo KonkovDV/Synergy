@@ -1,12 +1,13 @@
 // Specialist report (JSON, CSV, printable HTML) and a calendar reminder (.ics) — no server, no account.
 // Every string that reaches the HTML report is escaped: names and stored data are untrusted input.
+import { count, fmtNum, FORMS } from '../core/format.js';
 import { APP } from '../config.js';
 import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabulary.js';
 import { skillProfile, playerLevel } from '../core/progress.js';
 import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS } from '../core/wellbeing.js';
 
-export const DISCLAIMER = 'Тренажёр, не медицинское изделие. Метрики — игровые, без клинической валидации; решения о терапии принимает специалист.';
+export const DISCLAIMER = 'Тренажёр, не медицинское изделие. Игровая статистика без клинической валидации: не для оценки состояния, подбора нагрузки или решений о лечении.';
 
 const native = () => globalThis.SynergyNative;
 
@@ -95,9 +96,9 @@ ${table(Object.values(SKILL_NAME), [Object.keys(SKILL_NAME).map(k => skills[k] ?
 <p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью. Игровая метрика удержания навыка (по мотивам тренировки с отсроченной обратной связью, Dupan et al., 2025); клинической валидации у этой игры нет.</p>
 <h2>Проверка навыка (стандартный набор, по мотивам Motion Test / TAC)</h2>
 ${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 'Выполнение, мс', 'Точность, %', 'Перелёты', 'ПС, бит/с', 'Эфф. пути, %'],
-  checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots, c.throughputBps?.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) ?? '—', c.pathEfficiency ?? '—']))}
+  checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots, fmtNum(c.throughputBps) ?? '—', c.pathEfficiency ?? '—']))}
 <p class="muted">ПС — игровая пропускная способность по мотивам теста Фиттса (пропорциональная схема; аналогия наведения, не классический эксперимент Фиттса): log₂(D/W + 1) / время движения, среднее по попыткам; эффективность пути — расстояние до цели / пройденный путь сигнала. Сравнивайте с прошлыми неделями этого же человека: с цифрами из статей не сравнимо (другие задачи и устройства).</p>
-<h2>Ошибки распознавания жестов (с, последние ${conf.runs} упражнений)</h2>
+<h2>Ошибки распознавания жестов (с, последние ${count(conf.runs, FORMS.exercises)})</h2>
 ${conf.top.length ? table(['Нужен жест', 'Распознан как', 'Секунд'], conf.top.map(t => [gname(t.wanted), gname(t.seen), t.seconds])) : '<p class="muted">нет данных в режиме жестов</p>'}
 <h2>Самочувствие (14 последних записей)</h2>
 ${table(['День', 'Боль', 'Усталость', 'Кожа под датчиками', 'Решение', 'Нагрузка', 'Минут'],
@@ -105,7 +106,7 @@ ${table(['День', 'Боль', 'Усталость', 'Кожа под датч
 <h2>Последние упражнения</h2>
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '']))}
-<p class="muted">Данные хранятся только на устройстве пользователя и переданы специалисту им самим.</p>
+<p class="muted">Файл сформирован на устройстве пользователя и передан им самим. Содержит сведения о самочувствии.</p>
 </body></html>`;
 }
 

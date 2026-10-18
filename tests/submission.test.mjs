@@ -38,6 +38,7 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
     const version = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).version;
     const cases = [
       ['no APK', () => rmSync(join(dir, 'release', `Synergy-${version}.apk`)), `нет release/Synergy-${version}.apk`],
+      ['unsigned APK', () => writeFileSync(join(dir, 'release', `Synergy-${version}.apk`), Buffer.from([0x50, 0x4b, 0x05, 0x06, ...new Array(18).fill(0)])), 'не подписан'],
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
       ['unverified claim (fact-check)', () => edit(dir, 'README.md', s => `${s}\n${UNVERIFIED}\n`), 'README.md:'],
       ['«up to 44 %»', () => edit(dir, 'README.md', s => `${s}\n${UP_TO_44}\n`), 'README.md:'],
@@ -73,4 +74,12 @@ test('submission gate: a published set must equal vocabulary.js', () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('APK signer: the release APK of a draft carries the local debug key — the strict gate refuses it (Red Team C-1)', async () => {
+  const { apkSigner } = await import('../tools/apk-signer.mjs');
+  const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
+  const sig = apkSigner(`release/Synergy-${version}.apk`);
+  assert.equal(sig.signed, true);
+  assert.equal(sig.debug, true, 'built by tools/build-apk.sh with the debug key; the team key comes from release.yml');
 });

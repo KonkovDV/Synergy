@@ -1,6 +1,7 @@
 // On-screen and keyboard controls of the EMG emulator (for testing without sensors).
 // Two-channel pads: hold = muscle activation, finger height inside the pad = strength,
 // both pads (two thumbs) or the «A+B» key = co-contraction. Gesture scheme: 7 gesture keys.
+import { fmtPct } from '../core/format.js';
 import { GESTURES, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { drawHand } from '../render/draw.js';
 import { h, longestWord } from './dom.js';
@@ -64,7 +65,7 @@ function padView(label, sub, cls, keys) {
   const value = h('div', { class: 'pad-value' }, '0%');
   const el = h('div', { class: `pad ${cls}`, role: 'button', tabindex: '0', 'aria-keyshortcuts': keys, 'aria-label': `${label}: удерживайте, высота пальца — сила; с клавиатуры — пробел на площадке или ${keys.split(' ')[0]}` },
     fill, h('div', { class: 'pad-ticks' }), h('div', { class: 'pad-label' }, h('b', {}, label), h('span', {}, sub)), value);
-  const show = level => { fill.style.height = `${Math.round(level * 100)}%`; value.textContent = `${Math.round(level * 100)}%`; };
+  const show = level => { fill.style.height = `${Math.round(level * 100)}%`; value.textContent = fmtPct(Math.round(level * 100)); };
   return { el, show };
 }
 
@@ -89,7 +90,7 @@ export function gestureIcon(gesture, skin = 'icon', size = 44) {
   return canvas;
 }
 
-export function createGesturePads(emulator, skin) {
+export function createGesturePads(emulator) {
   const group = { current: null }; // one latched gesture at a time
   const keys = ACTIVE_GESTURES.map(g => {
     const digit = String(GESTURES.indexOf(g) + 1);

@@ -12,7 +12,7 @@ jobs:
         with: { persist-credentials: false, fetch-depth: 0 }
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with: { node-version: 22, cache: npm }
-      - run: npm ci
+      - run: npm ci --ignore-scripts   # no install scripts in jobs that hold tokens and secrets (esbuild works without)
       - run: npm test
       - run: node tools/gesture-drill.mjs
       - run: npm run build
@@ -35,7 +35,7 @@ jobs:
         with: { persist-credentials: false, fetch-depth: 0 }
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with: { node-version: 22, cache: npm }
-      - run: npm ci
+      - run: npm ci --ignore-scripts   # no install scripts in jobs that hold tokens and secrets (esbuild works without)
       - run: npm test
       - run: npm run build
   lab:

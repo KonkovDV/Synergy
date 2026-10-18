@@ -3,7 +3,7 @@
 // the first game. Pure step logic (UI in ui/tutorial.js), tested in tests/core.test.mjs.
 import { COMMAND, SCHEME, CLOSING_GESTURES, OPENING_GESTURE } from './vocabulary.js';
 
-const rest = { id: 'rest', title: 'Покой', text: 'Полностью расслабьте руку. Протез держит позицию сам — это и есть покой.', holdS: 1.2, check: i => i.command === COMMAND.REST };
+const rest = { id: 'rest', title: 'Покой', text: 'Полностью расслабьте руку. Протез держит позицию сам — это и есть покой.', holdS: 1.2, check: i => i.relaxed };
 const relax = { ...rest, id: 'relax', title: 'Снова покой', text: 'Отпустите — расслабление так же важно, как напряжение.', holdS: 0.8 };
 
 const TWO_CHANNEL = [

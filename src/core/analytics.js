@@ -8,13 +8,17 @@ import { ACTIVE_GESTURE_IDS as ACTIVE } from './vocabulary.js';
  */
 export function confusionMatrix(runs, last = 20) {
   const recent = runs.filter(r => !r.demo && r.scheme === 'gesture' && r.details?.confusion).slice(-last);
-  const cells = {};
+  // Known gestures only, on prototype-free objects: an own `__proto__` key from a crafted backup polluted every
+  // object of the page (5.10, Red Team C-11). Rows of a gesture set changed on 28.10 are skipped, not crashed on.
+  const known = new Set(ACTIVE);
+  const cells = Object.create(null);
   let total = 0;
   for (const r of recent) {
     for (const [wanted, row] of Object.entries(r.details.confusion)) {
+      if (!known.has(wanted) || !row || typeof row !== 'object') continue;
       for (const [seen, sec] of Object.entries(row)) {
-        if (!Number.isFinite(sec)) continue;
-        (cells[wanted] ??= {})[seen] = ((cells[wanted]?.[seen]) ?? 0) + sec;
+        if (!known.has(seen) || !Number.isFinite(sec)) continue;
+        (cells[wanted] ??= Object.create(null))[seen] = (cells[wanted][seen] ?? 0) + sec;
         total += sec;
       }
     }
@@ -31,5 +35,6 @@ export function assessmentHistory(runs, scheme = null, last = 8) {
     completionRate: r.details.completionRate, selectionMs: r.details.selectionMs, completionMs: r.details.completionMs,
     accuracy: r.details.accuracy, overshoots: r.details.overshoots,
     throughputBps: r.details.throughputBps ?? null, pathEfficiency: r.details.pathEfficiency ?? null,
+    onThreshold: Number.isFinite(r.details.onThreshold) ? r.details.onThreshold : null,
   }));
 }

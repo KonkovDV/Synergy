@@ -74,7 +74,11 @@ test('streak: a declared pain-rest day is neutral', () => {
 
 test('tutorial: steps complete only when the command is held', () => {
   const run = new TutorialRun('proportional');
-  const rest = { valid: true, command: 'rest', intensity: 0 };
+  const rest = { valid: true, command: 'rest', relaxed: true, intensity: 0 };
+  // 5.10: both muscles tense without a co-contraction is REST for the prosthesis, but not relaxation.
+  const tense = { valid: true, command: 'rest', relaxed: false, aOn: true, bOn: true, intensity: 0 };
+  for (let i = 0; i < 40; i++) run.update(tense, 0.05);
+  assert.equal(run.index, 0, 'two tense muscles do not pass the «Покой» step');
   for (let i = 0; i < 30 && run.index === 0; i++) run.update(rest, 0.05);
   assert.equal(run.index, 1);
   for (let i = 0; i < 40; i++) run.update(rest, 0.05);
@@ -93,7 +97,7 @@ test('tutorial: the «Первые шаги» achievement needs every step done 
   assert.deepEqual(unlockAchievements({ ...p, tutorialDone: true }, null, {}, '2026-10-18'), [], 'card hidden, no medal');
   const done = new TutorialRun('threshold');
   const want = { rest: 'rest', relax: 'rest', relax2: 'rest', close: 'close', open: 'open', switch: 'switch' };
-  for (let i = 0; i < 2000 && !done.done; i++) done.update({ valid: true, command: want[done.step.id], intensity: 0.5 }, 0.05);
+  for (let i = 0; i < 2000 && !done.done; i++) done.update({ valid: true, command: want[done.step.id], relaxed: want[done.step.id] === 'rest', intensity: 0.5 }, 0.05);
   assert.ok(done.done && done.passed);
   assert.ok(unlockAchievements({ ...createProfile(), tutorialDone: true, tutorialPassed: true }, null, {}, '2026-10-18').includes('tutorial'));
 });
@@ -138,7 +142,7 @@ test('backup: round trip; untrusted settings filtered by type; size limit', () =
 });
 
 test('showcase profile is valid stored state and populated', () => {
-  const st = buildShowcaseState(undefined, '2026-10-17');
+  const st = buildShowcaseState(undefined, '2026-10-17', PLAN_CATALOG);
   const again = parseState(JSON.stringify(st));
   assert.ok(again.runs.length > 30);
   assert.ok(again.runs.some(r => r.details?.assessment));
@@ -161,7 +165,7 @@ test('parent PIN: 4 digits, stored as a hash', () => {
 });
 
 test('report: HTML escaping and CSV formula guard', () => {
-  const st = buildShowcaseState(undefined, '2026-10-17');
+  const st = buildShowcaseState(undefined, '2026-10-17', PLAN_CATALOG);
   st.settings.name = '<img src=x onerror=alert(1)>';
   const html = reportHtml(st);
   assert.ok(!html.includes('<img src=x')); assert.ok(html.includes('&lt;img'));

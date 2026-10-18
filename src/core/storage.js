@@ -1,8 +1,8 @@
 // Versioned local persistence. Never throws to the UI; corrupt data is backed up, not overwritten.
-import { APP, SIGNAL, SESSION, HANDS_FREE } from '../config.js';
+import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES } from '../config.js';
 import { createProfile, SKINS } from './progress.js';
 import { defaultCalibration } from './signal.js';
-import { SCHEME } from './vocabulary.js';
+import { SCHEME, GESTURE_BY_ID } from './vocabulary.js';
 
 export const DEFAULT_SETTINGS = {
   scheme: 'proportional',
@@ -38,7 +38,7 @@ export const DEFAULT_SETTINGS = {
 };
 
 const oneOf = (...values) => v => values.includes(v);
-const range = (lo, hi) => v => v >= lo && v <= hi;
+const range = (lo, hi) => v => v >= lo - 1e-9 && v <= hi + 1e-9; // a slider step like 70 × 0.01 is 0.7000000000000001
 
 /**
  * Allowed values of the settings that are more than a type (RT-9: `scheme: "x"` from a backup threw on every
@@ -49,12 +49,12 @@ export const SETTINGS_RULES = {
   source: oneOf('touch', 'bridge', 'demo'),
   side: oneOf('right', 'left'),
   audience: oneOf('adult', 'child'),
-  sensitivity: range(0.1, 0.45),
-  coThreshold: range(0.25, 0.7),
-  realism: range(0, 1),
-  weeklyGoal: v => Number.isInteger(v) && v >= 2 && v <= 7,
-  textScale: oneOf(1, 1.15, 1.3),
-  gameSpeed: range(0.6, 1),
+  sensitivity: range(SETTINGS_RANGES.sensitivity.min, SETTINGS_RANGES.sensitivity.max),
+  coThreshold: range(SETTINGS_RANGES.coThreshold.min, SETTINGS_RANGES.coThreshold.max),
+  realism: range(SETTINGS_RANGES.realism.min, SETTINGS_RANGES.realism.max),
+  weeklyGoal: v => Number.isInteger(v) && v >= SETTINGS_RANGES.weeklyGoal.min && v <= SETTINGS_RANGES.weeklyGoal.max,
+  textScale: oneOf(...TEXT_SCALES),
+  gameSpeed: range(SETTINGS_RANGES.gameSpeed.min, SETTINGS_RANGES.gameSpeed.max),
   dwellS: range(HANDS_FREE.minS, HANDS_FREE.maxS),
   wsUrl: v => v.length <= 200 && (v === '' || /^(wss?|https?):\/\//i.test(v)),
   reminder: v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
@@ -64,6 +64,45 @@ export const SETTINGS_RULES = {
 };
 
 const MAX_RUNS = 2000;
+const MAX_XP = 1e9; // ~4 500 player levels: far beyond any real use, small enough for every formula
+
+/** Plain object of finite numbers keyed by 1…levelCount (stars, best scores). */
+const levelMap = (m, levelCount, max) => Object.fromEntries(Object.entries(isObject(m) ? m : {})
+  .filter(([k, v]) => /^\d+$/.test(k) && +k >= 1 && +k <= levelCount && Number.isFinite(v)).map(([k, v]) => [k, Math.max(0, Math.min(max, v))]));
+
+/**
+ * Nested progress against the game catalog ({ id: levelCount }) — 5.10, external Red Team: a backup with
+ * `games.grip.stars = 5`, a plan item of an unknown game or `unlocked = 99` blanked the app on every launch.
+ * Unknown games are dropped, levels clamped to the game, numbers made finite.
+ */
+export function sanitizeProgress(state, catalog) {
+  if (!catalog) return state;
+  const p = state.profile;
+  p.games = Object.fromEntries(Object.entries(p.games).filter(([id, g]) => catalog[id] && isObject(g)).map(([id, g]) => {
+    const n = catalog[id];
+    const lastStars = Object.fromEntries(Object.entries(isObject(g.lastStars) ? g.lastStars : {})
+      .filter(([k, v]) => /^\d+$/.test(k) && +k >= 1 && +k <= n && Array.isArray(v)).map(([k, v]) => [k, v.filter(Number.isInteger).slice(-3)]));
+    return [id, { unlocked: Number.isInteger(g.unlocked) ? Math.max(1, Math.min(n, g.unlocked)) : 1, stars: levelMap(g.stars, n, 3), best: levelMap(g.best, n, 100),
+      played: !!g.played, assessment: !!g.assessment, lastStars }];
+  }));
+  if (p.plan) {
+    p.plan.items = p.plan.items.filter(i => catalog[i.game]).map(i => ({ ...i, level: Math.max(1, Math.min(catalog[i.game], i.level)), done: !!i.done, retention: !!i.retention }));
+    if (!p.plan.items.length) p.plan = null;
+  }
+  return state; // runs of an unknown game stay: history is never deleted silently, and no screen needs their game
+}
+
+/** Gesture confusion of a run: known gesture ids and finite seconds only (an own `__proto__` key polluted every object). */
+function cleanConfusion(c) {
+  if (!isObject(c)) return undefined;
+  const out = {};
+  for (const [wanted, row] of Object.entries(c)) {
+    if (!Object.hasOwn(GESTURE_BY_ID, wanted) || !isObject(row)) continue;
+    const cells = Object.entries(row).filter(([seen, v]) => Object.hasOwn(GESTURE_BY_ID, seen) && Number.isFinite(v) && v >= 0);
+    if (cells.length) out[wanted] = Object.fromEntries(cells);
+  }
+  return out;
+}
 
 export function memoryStorage() {
   const data = new Map();
@@ -109,8 +148,8 @@ export function emptyState() {
   return { version: 4, profile: createProfile(), settings: { ...DEFAULT_SETTINGS }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration() }, runs: [] };
 }
 
-/** Merges stored JSON over defaults so that new fields appear after updates. */
-export function parseState(raw) {
+/** Merges stored JSON over defaults so that new fields appear after updates; `catalog` checks nested progress. */
+export function parseState(raw, catalog = null) {
   const base = emptyState();
   const data = JSON.parse(raw);
   if (!isObject(data) || data.version !== 4) throw new Error('Unsupported state');
@@ -120,15 +159,27 @@ export function parseState(raw) {
   profile.totals = { ...base.profile.totals, ...profile.totals };
   profile.streak = { ...base.profile.streak, ...profile.streak };
   profile.days = cleanDays(profile.days);
+  profile.xp = Math.max(0, Math.min(MAX_XP, profile.xp));
+  for (const k of Object.keys(profile.totals)) if (!Number.isFinite(profile.totals[k]) || profile.totals[k] < 0) profile.totals[k] = 0;
+  const count = v => (Number.isInteger(v) && v >= 0 ? v : 0);
+  profile.streak = { current: count(profile.streak.current), best: count(profile.streak.best),
+    lastDay: typeof profile.streak.lastDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(profile.streak.lastDay) ? profile.streak.lastDay : null };
   if (!validPlan(profile.plan)) profile.plan = null;
   if (!SKINS.some(s => s.id === profile.skin)) profile.skin = base.profile.skin;
   // Only known settings with the expected type and an allowed value survive (a backup file is untrusted input).
   const stored = isObject(data.settings) ? data.settings : {};
   const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, validSetting(k, stored[k], v) ? stored[k] : v]));
-  const validCal = c => isObject(c) && [c.rest, c.max].every(v => Array.isArray(v) && v.length === 2 && v.every(Number.isFinite));
-  const calibrations = Object.fromEntries(Object.keys(base.calibrations).map(k => [k, validCal(data.calibrations?.[k]) ? data.calibrations[k] : base.calibrations[k]]));
-  const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS) : [];
-  return { version: 4, profile, settings, calibrations, runs };
+  const pair = v => Array.isArray(v) && v.length === 2 && v.every(Number.isFinite);
+  const validCal = c => isObject(c) && pair(c.rest) && pair(c.max);
+  // Known fields only: `ref` (the wizard's rest level) steers rest adaptation, so a broken one is dropped.
+  const cleanCal = c => ({ rest: c.rest, max: c.max, at: typeof c.at === 'string' ? c.at : null, ...(pair(c.ref) ? { ref: c.ref } : {}),
+    ...(typeof c.adaptedAt === 'string' ? { adaptedAt: c.adaptedAt } : {}) });
+  const calibrations = Object.fromEntries(Object.keys(base.calibrations).map(k => [k, validCal(data.calibrations?.[k]) ? cleanCal(data.calibrations[k]) : base.calibrations[k]]));
+  const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS).map(r => {
+    if (!isObject(r.details) || r.details.confusion === undefined) return r;
+    return { ...r, details: { ...r.details, confusion: cleanConfusion(r.details.confusion) } };
+  }) : [];
+  return sanitizeProgress({ version: 4, profile, settings, calibrations, runs }, catalog);
 }
 
 export const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
@@ -139,14 +190,15 @@ export function exportState(state) {
 }
 
 /** Validates a backup file; throws a user-facing message on anything suspicious. */
-export function importState(raw) {
+export function importState(raw, catalog = null) {
   if (typeof raw !== 'string' || raw.length > MAX_BACKUP_BYTES) throw new Error('Файл слишком большой или пустой');
-  try { return parseState(raw); } catch { throw new Error('Это не копия «Синергии» или файл повреждён'); }
+  try { return parseState(raw, catalog); } catch { throw new Error('Это не копия «Синергии» или файл повреждён'); }
 }
 
 export class Store {
-  constructor(storage) {
+  constructor(storage, { catalog = null } = {}) {
     this.storage = storage;
+    this.catalog = catalog;
     this.persisted = true;
     this.state = this.load();
   }
@@ -155,7 +207,7 @@ export class Store {
     let raw = null;
     try { raw = this.storage.getItem(APP.storageKey); } catch { this.persisted = false; return emptyState(); }
     if (!raw) return emptyState();
-    try { return parseState(raw); } catch {
+    try { return parseState(raw, this.catalog); } catch {
       try { this.storage.setItem(`${APP.storageKey}.corrupt`, raw); } catch { /* keep going */ }
       return emptyState();
     }
@@ -176,7 +228,7 @@ export class Store {
 
   undoReset() {
     const key = `${APP.storageKey}.beforeReset`;
-    this.state = parseState(this.storage.getItem(key)); this.save();
+    this.state = parseState(this.storage.getItem(key), this.catalog); this.save();
     try { this.storage.removeItem(key); } catch { /* keep going */ }
   }
 

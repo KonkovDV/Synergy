@@ -85,3 +85,49 @@ test('flight: the hint says where the next ring is — eyes-free play (voice, sc
   const want = Math.abs(diff) <= game.tol * 0.8 ? /на вашей высоте/ : diff > 0 ? /Кольцо выше/ : /Кольцо ниже/;
   assert.match(game.hint, want, `ring ${ring.alt.toFixed(2)}, glider ${game.alt.toFixed(2)}: «${game.hint}»`);
 });
+
+test('rhythm: a note is drawn on the hit line exactly at its beat (the input delay is compensated once, in judging)', () => {
+  for (const scheme of ['proportional', 'gesture']) {
+    const game = createGame('rhythm', { levelNumber: 1, scheme, seed: 3 });
+    const hand = new BionicHand(), rest = restIntent(scheme, true);
+    const first = game.notes[0];
+    while (game.time < first.at - 1e-9) game.update(Math.min(1 / 120, first.at - game.time), rest, hand);
+    const { ctx, fills } = recordingCanvas();
+    game.render(ctx, { w: 360, h: 600 }, hand, rest);
+    const { noteR, hitY, laneX } = rhythmLayout(360, 600);
+    const note = fills.find(f => Math.abs(f.r - noteR) < 0.01 && Math.abs(f.x - laneX[first.lane]) < 1);
+    assert.ok(note, `${scheme}: the first note is on screen`);
+    assert.ok(Math.abs(note.y - hitY) < 1, `${scheme}: note at y ${note.y.toFixed(1)}, line at ${hitY} (until 5.10 it was ${scheme === 'gesture' ? '200' : '80'} ms above)`);
+  }
+});
+
+test('stability and emulator noise do not depend on the frame rate', async () => {
+  const { StabilityMeter } = await import('../src/games/base.js');
+  const { EmgEmulator } = await import('../src/input/emulator.js');
+  const scores = [30, 60, 120].map(fps => {
+    const m = new StabilityMeter(0.08);
+    for (let t = 0; t < 4; t += 1 / fps) m.add(0.5 + 0.03 * Math.sin(2 * Math.PI * 3 * t), 1 / fps);
+    return m.score;
+  });
+  assert.ok(Math.max(...scores) - Math.min(...scores) <= 3, `stability at 30/60/120 fps: ${scores} (was 72/82/89)`);
+  const spread = [30, 60, 120].map(fps => {
+    const e = new EmgEmulator({ realism: 1, seed: 7 }); e.setTarget({ a: 0.5, b: 0 });
+    const xs = [];
+    for (let t = 0; t < 20000; t += 1000 / fps) { const f = e.sample(t); if (t > 1000) xs.push(f.a); }
+    const m = xs.reduce((s, v) => s + v, 0) / xs.length;
+    return Math.sqrt(xs.reduce((s, v) => s + (v - m) ** 2, 0) / xs.length);
+  });
+  assert.ok(Math.max(...spread) / Math.min(...spread) < 1.25, `emulator spread at 30/60/120 fps: ${spread.map(s => s.toFixed(3))} (was 0.031/0.024/0.019)`);
+});
+
+test('game metadata has one source: the registry and the plan see exactly what each game measures (5.10: grip «separation»)', async () => {
+  const { PLAN_CATALOG } = await import('../src/games/registry.js');
+  for (const entry of GAMES) {
+    assert.equal(entry.id, entry.Game.id); assert.equal(entry.title, entry.Game.title);
+    assert.deepEqual(entry.skills, entry.Game.skills);
+    const r = play(entry.id, { scheme: 'proportional', levelNumber: entry.id === 'check' ? 1 : 3 });
+    // A run omits what it did not exercise (no grip switch on a level without one); it never returns an unlisted skill.
+    assert.ok(Object.keys(r.skills).every(k => entry.skills.includes(k)), `${entry.id}: returned ${Object.keys(r.skills)}, listed ${entry.skills}`);
+  }
+  assert.ok(PLAN_CATALOG.find(g => g.id === 'grip').skills.includes('separation'));
+});

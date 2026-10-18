@@ -13,7 +13,8 @@ Frames: {"a": 0..1, "b": 0..1, "gesture"?: id, "confidence"?: 0..1, "effort"?: 0
 Security (EMG is health data): a web page from another site must not read the stream (cross-site WebSocket
 hijacking, OWASP WSTG). Native clients (no Origin) and pages served from this computer connect freely; any
 other page — the standalone HTML (Origin "null"), GitHub Pages, a phone in the LAN — needs the token printed
-at start (ws://host:port/?token=…) or an explicit --allow-origin.
+at start (ws://host:port/?token=…) or an explicit --allow-origin. A peer from another computer always needs the
+token, with or without an Origin header (5.10: a LAN process without Origin read the stream freely).
 """
 import argparse, asyncio, base64, hashlib, json, math, secrets, struct, sys, threading, time
 from pathlib import Path
@@ -26,14 +27,26 @@ MAX_BUFFER = 1 << 20      # a client that stops reading is dropped before it eat
 LOOPBACK = ('127.0.0.1', 'localhost', '::1')
 
 
-def origin_allowed(origin, token_given, token, allowed=()):
-    """CSWSH guard: no Origin (native client), an allowed origin or a page from this computer — free;
-    anything else (incl. "null" of file:// and sandboxed frames) must present the session token."""
+def origin_allowed(origin, token_given, token, allowed=(), peer='127.0.0.1'):
+    """CSWSH guard: on this computer — no Origin (native client), an allowed origin or a page from this computer —
+    free; anything else (incl. "null" of file:// and sandboxed frames, and any peer from another computer) must
+    present the session token."""
+    has_token = bool(token) and secrets.compare_digest(token_given or '', token)
+    if peer not in LOOPBACK and not str(peer).startswith('::ffff:127.'):
+        return has_token
     if origin is None or origin in allowed:
         return True
     if origin != 'null' and urlsplit(origin).hostname in LOOPBACK:
         return True
-    return bool(token) and secrets.compare_digest(token_given or '', token)
+    return has_token
+
+
+def clean_intent(msg):
+    """An intent from the game, as the lab expects it: a known gesture or none, numbers in 0..1 (5.10: one
+    {"effort": null} raised TypeError in the pump and stopped the whole bridge)."""
+    num = lambda v, d: max(0.0, min(1.0, float(v))) if isinstance(v, (int, float)) and not isinstance(v, bool) and v == v else d
+    gesture = msg.get('gesture') if msg.get('gesture') in GESTURES else None
+    return {'type': 'intent', 'gesture': gesture, 'effort': num(msg.get('effort'), 0.6), 'a': num(msg.get('a'), 0.0), 'b': num(msg.get('b'), 0.0)}
 GESTURES = ['rest', 'fist', 'open', 'pinch', 'point', 'key', 'thumb']
 
 
@@ -107,9 +120,9 @@ class Bridge:
         print(f'отказано ({status}): {why}', flush=True)
 
     async def handle(self, reader, writer):
-        try:
-            head = await reader.readuntil(b'\r\n\r\n')
-        except (asyncio.IncompleteReadError, asyncio.LimitOverrunError):
+        try:  # a client that opens a connection and never sends the handshake is dropped
+            head = await asyncio.wait_for(reader.readuntil(b'\r\n\r\n'), timeout=5)
+        except (asyncio.IncompleteReadError, asyncio.LimitOverrunError, asyncio.TimeoutError):
             writer.close(); return
         lines = head.decode('latin1').split('\r\n')
         headers = {k.strip().lower(): v.strip() for k, _, v in (l.partition(':') for l in lines[1:] if ':' in l)}
@@ -118,7 +131,8 @@ class Bridge:
             return await self.refuse(writer, '400 Bad Request', 'не WebSocket')
         target = (lines[0].split(' ') + ['/', '/'])[1]
         token_given = parse_qs(urlsplit(target).query).get('token', [''])[0]
-        if not origin_allowed(headers.get('origin'), token_given, self.token, self.allowed):
+        peer = (writer.get_extra_info('peername') or ('127.0.0.1',))[0]
+        if not origin_allowed(headers.get('origin'), token_given, self.token, self.allowed, peer):
             return await self.refuse(writer, '403 Forbidden', f"Origin {headers.get('origin')} без токена")
         if len(self.clients) >= MAX_CLIENTS:
             return await self.refuse(writer, '503 Service Unavailable', 'слишком много клиентов')
@@ -141,7 +155,7 @@ class Bridge:
                 if op == 1:
                     try:
                         msg = json.loads(data)
-                        if isinstance(msg, dict) and msg.get('type') == 'intent': self.intent = msg
+                        if isinstance(msg, dict) and msg.get('type') == 'intent': self.intent = clean_intent(msg)
                     except ValueError:
                         pass
         except (asyncio.IncompleteReadError, ConnectionError):
@@ -160,7 +174,11 @@ class Bridge:
     async def pump(self):
         start = time.monotonic()
         while True:
-            frame = self.source.frame(time.monotonic() - start, self.intent)
+            try:  # a source error is reported, not fatal: the pump is the bridge
+                frame = self.source.frame(time.monotonic() - start, self.intent)
+            except Exception as e:
+                frame = None
+                if not getattr(self, 'reported', False): print(f'ошибка источника: {e!r}', flush=True); self.reported = True
             if frame is not None and self.clients:
                 packet = self.encode(json.dumps(frame))
                 for w in list(self.clients):

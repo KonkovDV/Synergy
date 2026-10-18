@@ -1,4 +1,5 @@
 // Home: who I am today (level, series, weekly goal) → today's plan → free play.
+import { fmtPct } from '../core/format.js';
 import { h, starsText } from './dom.js';
 import { bottomNav, topBar, mioAvatar } from './widgets.js';
 import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
@@ -67,7 +68,7 @@ export function homeScreen(app) {
     h('b', {}, '👋 Первые шаги · 2 минуты'), h('p', {}, 'Покой, сжатие, раскрытие, сила и коактивация — с живой подсказкой, до первой игры.'),
     h('button', { class: 'btn primary', onclick: () => app.go('tutorial') }, 'Пройти обучение')) : null;
   const checkCard = h('section', { class: `card g-check ${check.due ? 'due' : ''}` },
-    h('div', { class: 'card-head' }, h('b', {}, `${ASSESSMENT.icon} ${ASSESSMENT.title}`), h('span', { class: 'pill' }, check.last ? `${check.last.details.completionRate}%` : 'новое')),
+    h('div', { class: 'card-head' }, h('b', {}, `${ASSESSMENT.icon} ${ASSESSMENT.title}`), h('span', { class: 'pill' }, check.last ? fmtPct(check.last.details.completionRate) : 'новое')),
     h('p', { class: 'note' }, check.last ? (check.due ? `Прошло ${check.days} дн. — пора сравнить себя с собой.` : `Последняя: ${check.days ? `${check.days} дн. назад` : 'сегодня'}. Следующая — через ${SESSION.assessmentEveryDays - check.days} дн.`) : ASSESSMENT.tagline),
     h('button', { class: `btn ${check.due ? 'primary' : 'ghost'}`, onclick: () => app.go('play', { game: ASSESSMENT.id, level: 1 }) }, check.due ? 'Пройти проверку · ≈ 2 мин' : 'Пройти ещё раз'));
 

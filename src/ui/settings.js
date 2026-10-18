@@ -1,5 +1,6 @@
 // Settings (control, signal source, sensitivity, training, accessibility, habit, data) and the calibration wizard.
 // Child mode: the screen sits behind the parent PIN gate (ui/pin.js).
+import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
@@ -11,9 +12,9 @@ import { bleSupported } from '../input/ble.js';
 import { createTwoChannelPads } from './controls.js';
 import { hashPin, validPin, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
-import { APP, HANDS_FREE } from '../config.js';
+import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD } from '../config.js';
 
-const pct = v => `${Math.round(v * 100)}%`;
+const pct = v => fmtPct(Math.round(v * 100));
 const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', error: 'ошибка адреса' };
 
 /** Reads a user-picked file as text (backup restore). */
@@ -83,10 +84,10 @@ export function settingsScreen(app) {
           app.updateSettings({ source: v }); bridgeBox.hidden = v !== 'bridge'; refreshPreview();
         }, 'Источник сигнала'),
         bridgeBox,
-        sliderRow('Реалистичность эмулятора', { min: 0, max: 1, step: 0.05, value: s.realism, format: v => v < 0.2 ? 'чистый сигнал' : v < 0.7 ? 'как у датчика' : 'шумно', onInput: v => app.updateSettings({ realism: v }) })),
+        sliderRow('Реалистичность эмулятора', { ...R.realism, value: s.realism, format: v => v < 0.2 ? 'чистый сигнал' : v < 0.7 ? 'как у датчика' : 'шумно', onInput: v => app.updateSettings({ realism: v }) })),
       section('Чувствительность',
-        sliderRow('Порог включения канала', { min: 0.1, max: 0.45, step: 0.01, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); } }),
-        sliderRow('Порог коактивации (A+B)', { min: 0.25, max: 0.7, step: 0.01, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); } }),
+        sliderRow('Порог включения канала', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); } }),
+        sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); } }),
         h('p', { class: 'note' }, 'Проверка вживую — напрягите мышцы или используйте площадки ниже:'),
         meter.node,
         s.source === 'touch' && s.scheme !== 'gesture' ? createTwoChannelPads(app.emulator) : null,
@@ -99,20 +100,20 @@ export function settingsScreen(app) {
         toggleRow('Затухающие подсказки', s.fadedFeedback, v => app.updateSettings({ fadedFeedback: v }), 'чем лучше навык, тем чаще шкала скрыта в отдельных попытках — так навык прочнее держится без экрана'),
         h('div', { class: 'row' }, h('span', {}, 'Кто занимается'),
           segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { app.updateSettings({ audience: v }); childBox.hidden = v !== 'child'; }, 'Кто занимается')),
-        h('p', { class: 'note' }, 'Детский режим: план из 2 упражнений, отдых 15 с, дневной лимит 20 мин; настройки можно закрыть PIN-кодом.'),
+        h('p', { class: 'note' }, `Детский режим: в плане ${count(CHILD.planExercises, FORMS.exercises)}, отдых ${CHILD.restBetweenExercisesS} с, дневной лимит ${CHILD.dailySoftCapMin} мин; настройки можно закрыть PIN-кодом.`),
         childBox),
       section('Доступность',
         toggleRow('Озвучивание подсказок', s.voice, v => { app.updateSettings({ voice: v }); if (v) app.say('Озвучивание включено', { interrupt: true }); }, voiceAvailable() ? 'игра без взгляда на экран; при слабом зрении' : 'синтез речи недоступен на этом устройстве'),
         h('div', { class: 'row' }, h('span', {}, 'Размер текста'),
-          segmented([{ value: 1, label: '100 %' }, { value: 1.15, label: '115 %' }, { value: 1.3, label: '130 %' }], s.textScale, v => app.updateSettings({ textScale: v }), 'Размер текста')),
+          segmented(TEXT_SCALES.map(v => ({ value: v, label: fmtPct(Math.round(v * 100)) })), s.textScale, v => app.updateSettings({ textScale: v }), 'Размер текста')),
         toggleRow('Высокий контраст', s.contrast, v => app.updateSettings({ contrast: v }), app.systemContrast ? 'сейчас включён настройкой системы (повышенный контраст)' : 'чёрный фон, белые рамки, жёлтые главные кнопки; включается и сам, если в системе выбран повышенный контраст'),
         toggleRow('Меньше движения', s.reduceMotion, v => app.updateSettings({ reduceMotion: v }), 'без частиц, вспышек и анимаций'),
         toggleRow('Площадки без удержания', s.stickyPads, v => app.updateSettings({ stickyPads: v }), 'касание включает сигнал, второе касание выключает — если трудно держать палец (тремор, слабость)'),
         toggleRow('Вибро-метроном в «Ритме»', s.hapticBeat, v => app.updateSettings({ hapticBeat: v }), 'такт ощущается рукой — для слабослышащих'),
-        sliderRow('Темп игр', { min: 0.6, max: 1, step: 0.05, value: s.gameSpeed, format: pct, onInput: v => app.updateSettings({ gameSpeed: v }) }),
-        sliderRow('Удержание A для «без касания»', { min: HANDS_FREE.minS, max: HANDS_FREE.maxS, step: 0.1, value: s.dwellS, format: v => `${v.toFixed(1)} с`, onInput: v => app.updateSettings({ dwellS: v }) })),
+        sliderRow('Темп игр', { ...R.gameSpeed, value: s.gameSpeed, format: pct, onInput: v => app.updateSettings({ gameSpeed: v }) }),
+        sliderRow('Удержание A для «без касания»', { min: HANDS_FREE.minS, max: HANDS_FREE.maxS, step: 0.1, value: s.dwellS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ dwellS: v }) })),
       section('Привычка',
-        sliderRow('Цель: дней в неделю', { min: 2, max: 7, step: 1, value: s.weeklyGoal, format: v => String(v), onInput: v => app.updateSettings({ weeklyGoal: v }) }),
+        sliderRow('Цель: дней в неделю', { ...R.weeklyGoal, value: s.weeklyGoal, format: v => String(v), onInput: v => app.updateSettings({ weeklyGoal: v }) }),
         h('label', { class: 'row' }, h('span', {}, 'Напоминание'),
           h('input', { type: 'time', value: s.reminder, onchange: e => app.updateSettings({ reminder: e.target.value }) })),
         h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder), 'text/calendar') }, 'Добавить в календарь (.ics)'),
@@ -122,7 +123,7 @@ export function settingsScreen(app) {
         toggleRow('Вибрация', s.haptics, v => app.updateSettings({ haptics: v })),
         toggleRow('Полоски сигнала в игре', s.showMeters, v => app.updateSettings({ showMeters: v }), 'мышечная обратная связь рядом с игровой')),
       section('Данные',
-        h('p', { class: 'note' }, app.store.persisted ? 'Всё хранится только на этом устройстве. Без аккаунта, сети и аналитики.' : 'Хранилище недоступно: результаты не сохранятся после закрытия.'),
+        h('p', { class: 'note' }, app.store.persisted ? location.protocol === 'file:' ? 'Файл открыт с диска: браузер может давать доступ к этим данным другим файлам с диска. Для занятий — PWA или APK.' : 'Всё хранится на этом устройстве: без аккаунта, сервера и аналитики. Наружу данные уходят только в файлах, которые вы сохраняете, и к источнику сигнала, который вы подключили.' : 'Хранилище недоступно: результаты не сохранятся после закрытия.'),
         h('div', { class: 'row-actions' },
           h('button', { class: 'btn ghost', disabled: !!app.showcase, onclick: () => download(`synergy-backup-${dayKey()}.json`, app.exportBackup(), 'application/json') }, 'Сохранить копию'),
           h('button', { class: 'btn ghost', disabled: !!app.showcase, onclick: () => pickTextFile('application/json,.json', raw => {
@@ -134,8 +135,8 @@ export function settingsScreen(app) {
             ? h('button', { class: 'btn ghost', onclick: () => { app.exitShowcase(); app.go('settings'); } }, 'Выйти из демо-профиля')
             : h('button', { class: 'btn ghost', onclick: () => { app.enterShowcase(); app.go('progress'); } }, 'Демо-профиль для презентации')),
         !app.showcase && app.store.canUndoReset()
-          ? h('button', { class: 'btn ghost', onclick: () => { if (confirm('Вернуть данные, которые были до последнего сброса? Текущие данные заменятся.')) { app.store.undoReset(); app.applyPresentation(); toast('Данные до сброса возвращены', 'good'); app.go('home'); } } }, 'Вернуть данные до сброса') : null,
-        h('button', { class: 'btn danger', disabled: !!app.showcase, onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве? Копия останется до следующего сброса: вернуть — здесь же, в «Данных»; сбросить ещё раз — удалить без следа.')) { app.store.reset(); app.applyPresentation(); toast('Прогресс удалён. Вернуть: Настройки → Данные'); app.go('onboarding'); } } }, 'Сбросить прогресс')),
+          ? h('button', { class: 'btn ghost', onclick: () => { if (confirm('Вернуть данные, которые были до последнего сброса? Текущие данные заменятся.')) { try { app.undoReset(); toast('Данные до сброса возвращены', 'good'); app.go('home'); } catch (e) { toast(e.message, 'bad'); } } } }, 'Вернуть данные до сброса') : null,
+        h('button', { class: 'btn danger', disabled: !!app.showcase, onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве? Копия останется до следующего сброса: вернуть — здесь же, в «Данных»; сбросить ещё раз — удалить без следа.')) { app.resetProgress(); toast('Прогресс удалён. Вернуть: Настройки → Данные'); app.go('onboarding'); } } }, 'Сбросить прогресс')),
       section('О приложении',
         h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ (2 канала: пороговый и пропорциональный режимы; 7 жестов).`),
         h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
@@ -162,17 +163,19 @@ export function calibrationScreen(app) {
   const result = h('div', { class: 'cal-result' });
   const pipeline = app.createPipeline();
   const source = app.signalSource();
-  const node = h('div', { class: 'screen calibration' },
+  // Same frame as «Первые шаги» (5.10): the steps scroll, the signal and the pads stay on screen.
+  const node = h('div', { class: 'screen calibration frame' },
     topBar('Калибровка', () => app.go('settings')),
-    h('main', { class: 'scroll center' },
+    h('main', { class: 'frame-body center' },
       h('p', { class: 'note' }, kind === 'touch'
         ? 'Сейчас источник — эмулятор на экране: калибровка покажет процесс, а результат для эмулятора не нужен. Подключите внешний источник для настоящей калибровки.'
         : 'Как «чувствительность датчиков» в приложении протеза: определяем покой и комфортное напряжение каждого канала.'),
-      ring, title, text, meter.node, result,
-      kind === 'touch' ? createTwoChannelPads(app.emulator) : null,
+      ring, title, text, result,
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn ghost', onclick: () => { recorder = new CalibrationRecorder(); result.replaceChildren(); } }, 'Заново'),
-        h('button', { class: 'btn ghost', onclick: () => { app.state.calibrations[kind] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))));
+        h('button', { class: 'btn ghost', onclick: () => { app.state.calibrations[kind] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))),
+    h('div', { class: 'frame-dock' }, meter.node,
+      kind === 'touch' ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, createTwoChannelPads(app.emulator)) : null));
   let finished = false;
   return {
     node,

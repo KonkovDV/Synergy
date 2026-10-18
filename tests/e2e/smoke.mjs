@@ -22,8 +22,8 @@ const wait = ms => page.waitForTimeout(ms);
 
 await page.goto(base);
 await wait(400); await shot('01-onboarding');
-await page.getByRole('button', { name: 'Дальше' }).click(); await wait(200);
-await page.getByRole('button', { name: 'Дальше' }).click(); await wait(200);
+await page.getByRole('button', { name: 'Дальше' }).click(); await wait(350);
+await page.getByRole('button', { name: 'Дальше' }).click(); await wait(350);
 await shot('02-setup');
 await page.getByRole('button', { name: 'Пропустить обучение' }).click(); await wait(400); // v5 onboarding: setup → home
 await shot('03-home');

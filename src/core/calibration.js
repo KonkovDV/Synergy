@@ -46,11 +46,12 @@ export class CalibrationRecorder {
     const max = [0, 1].map(ch => percentile(this.samples[ch ? 'b' : 'a'].map(s => s[ch]), 0.8));
     const issues = this.steps.filter(s => (s.channel !== null && this.samples[s.id].length < 5) || (s.id === 'rest' && !restSamples.length))
       .map(s => `Нет сигнала на шаге «${s.title}» — проверьте подключение датчиков и повторите калибровку.`);
-    const usable = !issues.length; // without signal the span and the crosstalk say nothing about the muscles
-    if (usable) [0, 1].forEach(ch => {
-      const span = max[ch] - rest[ch];
-      if (span <= Math.max(1e-6, 0.25 * Math.abs(max[ch]))) issues.push(`Канал ${ch ? 'B' : 'A'}: напряжение почти не отличается от покоя — проверьте датчик или напрягите мышцу сильнее.`);
-    });
+    const signal = !issues.length; // without signal the span and the crosstalk say nothing about the muscles
+    // A flat channel (electrode off the skin, a dead sensor) is not saved either: its span collapses to ~0 and
+    // every ripple of the rest level becomes a full command (5.10 — until then «Сохранить» was offered).
+    const flat = signal ? [0, 1].filter(ch => max[ch] - rest[ch] <= Math.max(1e-6, 0.25 * Math.abs(max[ch]))) : [];
+    flat.forEach(ch => issues.push(`Канал ${ch ? 'B' : 'A'}: напряжение почти не отличается от покоя — проверьте датчик или напрягите мышцу сильнее. Калибровка не сохранена.`));
+    const usable = signal && !flat.length;
     // Crosstalk: while contracting A, B should stay well below its own comfortable level.
     const crossA = percentile(this.samples.a.map(s => s[1]), 0.8);
     const crossB = percentile(this.samples.b.map(s => s[0]), 0.8);
@@ -58,9 +59,10 @@ export class CalibrationRecorder {
       1 - Math.max(0, crossA - rest[1]) / Math.max(1e-6, max[1] - rest[1]),
       1 - Math.max(0, crossB - rest[0]) / Math.max(1e-6, max[0] - rest[0]),
     ].map(v => Math.max(0, Math.min(1, v)));
-    if (usable && Math.min(...separation) < 0.5) issues.push('Каналы сильно влияют друг на друга. Попробуйте сместить датчики — «Разделение» потренируйте в «Полёте».');
+    if (signal && Math.min(...separation) < 0.5) issues.push('Каналы сильно влияют друг на друга. Попробуйте сместить датчики — «Разделение» потренируйте в «Полёте».');
     const safeMax = max.map((m, ch) => Math.max(m, rest[ch] + 1e-3));
-    return { calibration: { rest, max: safeMax, at: new Date().toISOString() }, issues, separation, usable };
+    // `ref` — the wizard's rest level: rest adaptation is bounded around it across sessions, not around yesterday's.
+    return { calibration: { rest, max: safeMax, ref: [...rest], at: new Date().toISOString() }, issues, separation, usable };
   }
 }
 
@@ -74,7 +76,9 @@ export class RestTracker {
   constructor(calibration, { onThreshold = SIGNAL.onThreshold, params = CALIBRATION_ADAPT } = {}) {
     this.params = params;
     this.onThreshold = onThreshold;
-    this.rest0 = [...calibration.rest];
+    // The reference is the wizard's rest level (`ref`), not the last adapted one: otherwise the ±maxShift bound and
+    // the drift warning restart every session and a slow creep adds up unnoticed (5.10: 46 % after six sessions).
+    this.rest0 = [...(calibration.ref ?? calibration.rest)];
     this.span = [0, 1].map(ch => Math.max(1e-6, calibration.max[ch] - calibration.rest[ch]));
     this.observed = [...calibration.rest];
     this.calibration = { ...calibration, rest: [...calibration.rest], max: [...calibration.max] };

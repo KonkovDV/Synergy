@@ -103,7 +103,7 @@ export class FlightGame extends Game {
         if (this.time <= item.end) {
           if (!item.started) { item.started = true; this.stability.segment(); }
           if (inside) item.inside += dt;
-          this.stability.add(this.alt);
+          this.stability.add(this.alt, dt);
           if (inside && this.rng() < dt * 8) this.emit('tick');
         } else {
           item.done = true;

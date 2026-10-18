@@ -35,13 +35,15 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
     app.say(`${step.title}. ${step.text}`, { interrupt: true });
   };
   showStep();
-  const node = h('div', { class: 'screen tutorial' },
+  // A frame like the game screen (5.10): the step scrolls in the middle, the signal and the pads stay on screen —
+  // until 5.9 the pads were below the fold on most phones and the instruction scrolled away to press them.
+  const node = h('div', { class: 'screen tutorial frame' },
     topBar('Первые шаги', () => app.go(from)),
-    h('main', { class: 'scroll center' }, counter, canvas, ring, title, text, tip,
+    h('main', { class: 'frame-body center' }, counter, canvas, ring, title, text, tip,
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn ghost', onclick: () => { run.skipStep(); if (run.done) finish(); else showStep(); } }, 'Пропустить шаг'),
-        h('button', { class: 'btn ghost', onclick: finish }, 'Завершить'))),
-    meter.node, pads ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, pads) : null);
+        h('button', { class: 'btn ghost', onclick: finish }, 'Завершить обучение'))),
+    h('div', { class: 'frame-dock' }, meter.node, pads ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, pads) : null));
 
   return {
     node,

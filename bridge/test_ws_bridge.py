@@ -1,7 +1,7 @@
 """Red Team tests of the WebSocket bridge (standard library only): python -m unittest bridge/test_ws_bridge.py"""
 import asyncio, base64, os, struct, sys, unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ws_bridge import Bridge, origin_allowed, MAX_PAYLOAD
+from ws_bridge import Bridge, origin_allowed, clean_intent, MAX_PAYLOAD
 
 
 class Silent:
@@ -68,6 +68,38 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
     async def test_unmasked_frame_is_closed_with_1002(self):
         data = await self.closed_after(bytes([0x81, 2]) + b'{}')
         self.assertIn(bytes([0x88, 2]) + struct.pack('!H', 1002), data)
+
+
+class HardeningTest(unittest.TestCase):
+    """5.10 (Red Team C-13): a LAN peer needs the token; a malformed intent or a failing source does not stop the bridge."""
+
+    def test_peer_from_another_computer_needs_the_token(self):
+        token = 'secret-token'
+        self.assertTrue(origin_allowed(None, '', token, peer='127.0.0.1'), 'native client on this computer')
+        self.assertFalse(origin_allowed(None, '', token, peer='192.168.1.20'), 'a LAN process without Origin')
+        self.assertFalse(origin_allowed('http://127.0.0.1:8091', '', token, peer='192.168.1.20'), 'a spoofed loopback Origin from the LAN')
+        self.assertTrue(origin_allowed(None, token, token, peer='192.168.1.20'), 'with the token')
+
+    def test_intent_is_cleaned(self):
+        self.assertEqual(clean_intent({'type': 'intent', 'effort': None, 'gesture': 'nope', 'a': 7, 'b': float('nan')}),
+                         {'type': 'intent', 'gesture': None, 'effort': 0.6, 'a': 1.0, 'b': 0.0})
+        self.assertEqual(clean_intent({'gesture': 'pinch', 'effort': 0.4})['gesture'], 'pinch')
+
+    def test_a_failing_source_does_not_stop_the_pump(self):
+        class Broken:
+            calls = 0
+            def frame(self, _t, _intent):
+                Broken.calls += 1
+                raise TypeError('boom')
+        async def run():
+            bridge = Bridge(Broken(), hz=200)
+            task = asyncio.create_task(bridge.pump())
+            await asyncio.sleep(0.05)
+            alive = not task.done()
+            task.cancel()
+            return alive
+        self.assertTrue(asyncio.run(run()))
+        self.assertGreater(Broken.calls, 2, 'the pump keeps going after an error')
 
 
 if __name__ == '__main__':
