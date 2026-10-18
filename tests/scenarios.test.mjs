@@ -53,6 +53,9 @@ test('scenario 1.5a: «Пропустить» is gone after the first answer —
   assert.equal(checkinSkippable({ pain: 3, fatigue: null }), false, 'severe pain answered: no skip into the full plan');
   assert.equal(checkinSkippable({ pain: null, fatigue: 0, skin: null }), false);
   assert.equal(checkinSkippable({ pain: 0, fatigue: 0 }), false);
+  // «Изменить ответ» on a stop day: the screen starts empty, but today's stored answer cannot be skipped away.
+  assert.equal(checkinSkippable({ pain: null, fatigue: null }, { pain: 3, action: 'stop', reason: 'pain' }), false);
+  assert.equal(checkinSkippable({ pain: null, fatigue: null }, { skipped: true }), true, 'a skipped day may be skipped again');
 });
 
 test('scenario 1.7: signs of fatigue turn «next exercise» into «stop for today»', () => {

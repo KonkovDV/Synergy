@@ -18,21 +18,26 @@ function levelFromPointer(el, e) {
  * a tap latches the pad at the level of the touch, a second tap releases it — for tremor or weakness.
  */
 let sticky = false;
-export function setPadMode({ sticky: on = false } = {}) { sticky = !!on; }
+const latchedPads = new Set();
+/** Turning the mode off releases latched pads (5.11: a latched pad could not be released any more). */
+export function setPadMode({ sticky: on = false } = {}) {
+  sticky = !!on;
+  if (!sticky) for (const release of [...latchedPads]) release();
+}
 
 /** Makes `el` behave like a muscle: pointerdown/move set level, release relaxes (or a second tap, when latched). */
 function bindPad(el, onLevel, group = null) {
   const active = new Set();
   let latched = false;
   const update = e => { onLevel(levelFromPointer(el, e)); };
-  const release = () => { latched = false; el.classList.remove('on'); onLevel(0); };
+  const release = () => { latched = false; latchedPads.delete(release); el.describe?.(false); el.classList.remove('on'); onLevel(0); };
   el.padRelease = release;
   el.addEventListener('pointerdown', e => {
     e.preventDefault(); el.setPointerCapture?.(e.pointerId); active.add(e.pointerId);
     if (sticky) {
       if (latched) { release(); return; }
       if (group?.current && group.current !== el) group.current.padRelease();
-      latched = true; if (group) group.current = el;
+      latched = true; latchedPads.add(release); el.describe?.(true); if (group) group.current = el;
     }
     el.classList.add('on'); update(e);
   });
@@ -43,28 +48,59 @@ function bindPad(el, onLevel, group = null) {
 }
 
 /**
- * Keyboard / switch access to a focused pad (5.8): Space or Enter held = the muscle held; the level grows with
- * the hold like the global keys. A switch interface usually sends exactly these keys.
+ * Keyboard and switch strength (5.11, accessibility review): a held key used to ramp 0.3 → 1 in 1.1 s, so a keyboard
+ * or switch user could not hold «вполсилы» — the tutorial step never completed and the skill check under-reported.
+ * A hold now rises to the chosen strength and stays there; arrows on a focused pad set it (10–100 %, step 10).
  */
-function bindPadKeys(el, onLevel) {
-  let start = 0, raf = 0;
+const kbStrength = { a: 0.5, b: 0.5 };
+const KB_FIXED = { co: 0.75, gesture: 0.8 };
+const rampTo = (cap, since) => Math.min(cap, 0.3 + (performance.now() - since) / 1600);
+const STRENGTH_KEYS = { ArrowUp: 0.1, ArrowRight: 0.1, ArrowDown: -0.1, ArrowLeft: -0.1 };
+
+/**
+ * Keyboard / switch access to a focused pad (5.8): Space or Enter held = the muscle held, at the chosen strength.
+ * With «Площадки без удержания» one press latches and the next releases, as a tap does (5.11). A switch interface
+ * usually sends exactly these keys.
+ */
+function bindPadKeys(el, onLevel, channel = null, fixed = KB_FIXED.gesture) {
+  let start = 0, raf = 0, latched = false;
   const isPress = e => e.code === 'Space' || e.code === 'Enter' || e.key === ' ' || e.key === 'Enter';
-  const tick = () => { onLevel(Math.min(1, 0.3 + (performance.now() - start) / 1600)); raf = requestAnimationFrame(tick); };
-  const end = () => { if (!raf) return; cancelAnimationFrame(raf); raf = 0; el.classList.remove('on'); onLevel(0); };
+  const cap = () => (channel ? kbStrength[channel] : fixed);
+  const tick = () => { onLevel(rampTo(cap(), start)); raf = requestAnimationFrame(tick); };
+  const on = () => { if (!raf) { start = performance.now(); el.classList.add('on'); tick(); } };
+  const end = () => { latchedPads.delete(end); latched = false; el.describe?.(false); if (!raf) return; cancelAnimationFrame(raf); raf = 0; el.classList.remove('on'); onLevel(0); };
   el.addEventListener('keydown', e => {
+    if (channel && (e.key in STRENGTH_KEYS || e.key === 'Home' || e.key === 'End')) {
+      e.preventDefault(); e.stopPropagation();
+      const v = e.key === 'Home' ? 0.1 : e.key === 'End' ? 1 : kbStrength[channel] + STRENGTH_KEYS[e.key];
+      kbStrength[channel] = Math.round(10 * Math.min(1, Math.max(0.1, v))) / 10;
+      el.describe?.(latched);
+      return;
+    }
     if (!isPress(e)) return;
     e.preventDefault(); e.stopPropagation();
-    if (!raf) { start = performance.now(); el.classList.add('on'); tick(); }
+    if (e.repeat) return;
+    if (sticky) { if (latched) end(); else { latched = true; latchedPads.add(end); el.describe?.(true); on(); } return; }
+    on();
   });
-  el.addEventListener('keyup', e => { if (isPress(e)) { e.preventDefault(); end(); } });
-  el.addEventListener('blur', end);
+  el.addEventListener('keyup', e => { if (isPress(e) && !latched) { e.preventDefault(); end(); } });
+  el.addEventListener('blur', () => { if (!latched) end(); });
 }
 
-function padView(label, sub, cls, keys) {
+function padView(label, sub, cls, keys, channel) {
   const fill = h('div', { class: 'pad-fill' });
   const value = h('div', { class: 'pad-value' }, '0%');
-  const el = h('div', { class: `pad ${cls}`, role: 'button', tabindex: '0', 'aria-keyshortcuts': keys, 'aria-label': `${label}: удерживайте, высота пальца — сила; с клавиатуры — пробел на площадке или ${keys.split(' ')[0]}` },
+  // A slider for assistive tech (5.11): its value is the keyboard strength, Space holds the muscle at it.
+  const el = h('div', { class: `pad ${cls}`, role: 'slider', tabindex: '0', 'aria-orientation': 'vertical', 'aria-valuemin': 10, 'aria-valuemax': 100, 'aria-keyshortcuts': keys,
+    'aria-label': `${label}, ${sub}: касание — высота пальца задаёт силу; клавиатура — пробел держит, стрелки меняют силу, ${keys.split(' ')[0]} — тоже` },
     fill, h('div', { class: 'pad-ticks' }), h('div', { class: 'pad-label' }, h('b', {}, label), h('span', {}, sub)), value);
+  el.describe = (latched = el.classList.contains('latched')) => {
+    const pct = Math.round(kbStrength[channel] * 100);
+    el.classList.toggle('latched', latched);
+    el.setAttribute('aria-valuenow', String(pct));
+    el.setAttribute('aria-valuetext', `сила ${pct} %${latched ? ', включено' : ''}`);
+  };
+  el.describe(false);
   const show = level => { fill.style.height = `${Math.round(level * 100)}%`; value.textContent = fmtPct(Math.round(level * 100)); };
   return { el, show };
 }
@@ -72,13 +108,13 @@ function padView(label, sub, cls, keys) {
 export function createTwoChannelPads(emulator) {
   const state = { a: 0, b: 0, co: 0 };
   const apply = () => emulator.setTarget({ gesture: null, a: Math.max(state.a, state.co), b: Math.max(state.b, state.co) });
-  const A = padView('A', 'сжатие', 'pad-a', 'F ArrowLeft');
-  const B = padView('B', 'раскрытие', 'pad-b', 'J ArrowRight');
+  const A = padView('A', 'сжатие', 'pad-a', 'F ArrowLeft', 'a');
+  const B = padView('B', 'раскрытие', 'pad-b', 'J ArrowRight', 'b');
   const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'Коактивация: оба канала сразу' }, h('span', {}, 'A+B'));
   const onA = v => { state.a = v; A.show(v); apply(); }, onB = v => { state.b = v; B.show(v); apply(); }, onCo = v => { state.co = v ? 0.75 : 0; apply(); };
-  bindPad(A.el, onA); bindPadKeys(A.el, onA);
-  bindPad(B.el, onB); bindPadKeys(B.el, onB);
-  bindPad(co, onCo); bindPadKeys(co, onCo);
+  bindPad(A.el, onA); bindPadKeys(A.el, onA, 'a');
+  bindPad(B.el, onB); bindPadKeys(B.el, onB, 'b');
+  bindPad(co, onCo); bindPadKeys(co, onCo, null, KB_FIXED.co);
   return h('div', { class: 'pads two' }, A.el, co, B.el);
 }
 
@@ -95,6 +131,8 @@ export function createGesturePads(emulator) {
   const keys = ACTIVE_GESTURES.map(g => {
     const digit = String(GESTURES.indexOf(g) + 1);
     const el = h('div', { class: 'gkey', role: 'button', tabindex: '0', 'aria-keyshortcuts': digit, 'aria-label': `Жест ${g.name}` }, gestureIcon(g), h('span', {}, g.name));
+    el.describe = latched => { el.classList.toggle('latched', latched); if (sticky) el.setAttribute('aria-pressed', String(latched)); else el.removeAttribute('aria-pressed'); };
+    el.describe(false);
     const onLevel = v => { emulator.setTarget(v ? { gesture: g.id, effort: v } : { gesture: 'rest', effort: 0 }); };
     bindPad(el, onLevel, group); bindPadKeys(el, onLevel);
     return el;
@@ -103,33 +141,53 @@ export function createGesturePads(emulator) {
   return h('div', { class: 'pads gestures', style: { '--word': longestWord(ACTIVE_GESTURES.map(g => g.name)) } }, ...keys, h('p', { class: 'pads-note' }, 'Удерживайте жест; выше палец — сильнее'));
 }
 
-/** Keyboard: F/← = A, J/→ = B, Space = A+B; hold longer = stronger; digits = gestures in GESTURES order (1 = rest). */
+/**
+ * Keyboard: F/← = A, J/→ = B, Space = A+B; a hold rises to the strength set on the pads (5.11); digits = gestures in
+ * GESTURES order (1 = rest). With «Площадки без удержания» a press latches and the next press releases.
+ */
+const capOf = code => (/^(KeyF|ArrowLeft)$/.test(code) ? kbStrength.a : /^(KeyJ|ArrowRight)$/.test(code) ? kbStrength.b : code === 'Space' ? KB_FIXED.co : KB_FIXED.gesture);
 export function bindKeyboard(emulator, getScheme) {
   const held = new Map();
   let raf = 0;
   const tick = () => {
-    const now = performance.now();
-    const level = key => (held.has(key) ? Math.min(1, 0.3 + (now - held.get(key)) / 1600) : 0);
+    const level = key => (held.has(key) ? rampTo(capOf(key), held.get(key)) : 0);
     if (getScheme() === 'gesture') {
       const g = [...held.keys()].find(k => /^Digit[1-9]$/.test(k));
       const gesture = (g && GESTURES[Number(g.slice(5)) - 1]?.id) || 'rest';
       emulator.setTarget({ gesture, effort: g ? level(g) : 0 });
     } else {
-      const co = level('Space') ? 0.75 : 0;
+      const co = level('Space') ? KB_FIXED.co : 0;
       emulator.setTarget({ gesture: null, a: Math.max(co, level('KeyF'), level('ArrowLeft')), b: Math.max(co, level('KeyJ'), level('ArrowRight')) });
     }
     raf = held.size ? requestAnimationFrame(tick) : 0;
   };
-  const relevant = code => /^(KeyF|KeyJ|ArrowLeft|ArrowRight|Space|Digit[1-9])$/.test(code);
+  const relevant = code => /^(KeyF|KeyJ|ArrowLeft|ArrowRight|Space|Digit[1-9]|Equal|Minus|NumpadAdd|NumpadSubtract)$/.test(code);
+  const releaseKeys = () => { latchedPads.delete(releaseKeys); held.clear(); tick(); };
   const down = e => {
     if (!relevant(e.code) || e.repeat) return;
     // Any screen with pads (play, tutorial, calibration, settings), not only the game (5.8); a focused control
     // keeps its own keys: Space on «Старт» presses it, arrows move a radio group, a pad handles itself.
-    const t = e.target, onPad = t.closest?.('.pad, .gkey, .pad-co');
-    if (!document.querySelector('.pads') || (onPad ? e.code === 'Space' : t.closest?.('input, select, textarea, button, a, summary, [role=radio], [role=button]'))) return;
-    e.preventDefault(); held.set(e.code, performance.now()); if (!raf) tick();
+    // Only the keys the focused control uses are left to it (5.11: F/J did nothing once «Старт» moved focus to
+    // «Пауза» — keyboard and switch play stopped after the first tap).
+    const t = e.target;
+    const typing = t.closest?.('input, select, textarea, [contenteditable]');
+    const owns = e.code === 'Space' ? t.closest?.('button, a, summary, [role=button], [role=radio], [role=slider], [role=switch]')
+      : /^Arrow/.test(e.code) ? t.closest?.('[role=radio], [role=slider], [role=switch]') : null;
+    if (!document.querySelector('.pads') || typing || owns) return;
+    e.preventDefault();
+    if (/^(Equal|Minus|NumpadAdd|NumpadSubtract)$/.test(e.code)) { // strength of both channels without focusing a pad
+      const d = /Equal|Add/.test(e.code) ? 0.1 : -0.1;
+      for (const ch of ['a', 'b']) kbStrength[ch] = Math.round(10 * Math.min(1, Math.max(0.1, kbStrength[ch] + d))) / 10;
+      document.querySelectorAll('.pad[role=slider]').forEach(p => p.describe?.());
+      return;
+    }
+    if (sticky) {
+      if (held.has(e.code)) held.delete(e.code); else { held.set(e.code, performance.now()); latchedPads.add(releaseKeys); }
+      tick(); return;
+    }
+    held.set(e.code, performance.now()); if (!raf) tick();
   };
-  const up = e => { if (held.delete(e.code)) tick(); };
+  const up = e => { if (!sticky && held.delete(e.code)) tick(); };
   const blur = () => { held.clear(); tick(); };
   window.addEventListener('keydown', down); window.addEventListener('keyup', up); window.addEventListener('blur', blur);
   return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); window.removeEventListener('blur', blur); };

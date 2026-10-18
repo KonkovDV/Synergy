@@ -99,10 +99,11 @@ export function freePlayCaution({ checkin, secondsToday, softCapMin }) {
 }
 
 /**
- * «Пропустить» is offered only before the first answer (5.11, P0 of the legal-medical review): after «Сильная»
- * a skip recorded «пропущено» and started the full plan — the stop was bypassed and the report lost the answer.
+ * «Пропустить» is offered only before the first answer and only while today has no answer yet (5.11, P0 of the
+ * legal-medical review): after «Сильная» a skip recorded «пропущено» and started the full plan — the stop was
+ * bypassed and the report lost the answer; «Изменить ответ» → «Пропустить» did the same with a stored answer.
  */
-export const checkinSkippable = answers => Object.values(answers).every(v => v === null);
+export const checkinSkippable = (answers, today = null) => !(today && !today.skipped) && Object.values(answers).every(v => v === null);
 
 /** The check-in is asked once a day: an answer or «пропущено» (skipped) counts. */
 export const needsCheckin = (profile, today) => !profile.days?.[today]?.checkin;

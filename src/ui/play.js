@@ -105,7 +105,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
         h('div', { class: 'row-actions' },
           h('button', { class: 'btn primary big', onclick: () => begin() }, 'Старт'),
           !demo ? h('button', { class: 'btn ghost', onclick: () => restart(true) }, 'Смотреть демо') : null))));
-    overlay.hidden = false;
+    setDialog(true);
     focusIn(overlay.querySelector('.btn.primary'));
     app.say(`${caution ? `${caution} ` : ''}${entry.title}. ${entry.how[0]}. ${handsFreeText(s.scheme, confirmS, 'старт', { spoken: true })}`, { interrupt: true });
   }
@@ -113,9 +113,14 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   // Dialog focus (5.10): the main button takes focus when a sheet opens, the pause button when it closes —
   // focus used to drop to the page body, and a screen-reader user did not hear the pause at all.
   function focusIn(el) { el?.focus({ preventScroll: true }); }
+  // What the open dialog covers is inert (5.11): Tab used to walk to the pads under it and drop to the page body.
+  function setDialog(open) {
+    overlay.hidden = !open;
+    for (const el of [node.querySelector('.stage'), hint, node.querySelector('.play-side')]) el?.toggleAttribute('inert', open);
+  }
   const pauseBtn = () => header.querySelector('.pause-btn');
 
-  function begin() { phase = 'countdown'; countdown = 3; lastCount = 0; overlay.hidden = true; focusIn(pauseBtn()); }
+  function begin() { phase = 'countdown'; countdown = 3; lastCount = 0; setDialog(false); focusIn(pauseBtn()); }
 
   function pause() {
     if (phase !== 'running') return;
@@ -124,10 +129,10 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     overlay.replaceChildren(h('div', { class: 'sheet small' }, h('h2', { id: 'play-dialog-title' }, 'Пауза'),
       h('p', {}, 'Расслабьте руку. Если устали — закончите на сегодня, это тоже правильно.'),
       h('div', { class: 'row-actions col' },
-        h('button', { class: 'btn primary big', onclick: () => { overlay.hidden = true; phase = 'running'; session.game.paused = false; focusIn(pauseBtn()); } }, 'Продолжить'),
+        h('button', { class: 'btn primary big', onclick: () => { setDialog(false); phase = 'running'; session.game.paused = false; focusIn(pauseBtn()); } }, 'Продолжить'),
         h('button', { class: 'btn ghost', onclick: () => restart(demo) }, 'Начать заново'),
         h('button', { class: 'btn ghost', onclick: () => exit() }, 'Выйти'))));
-    overlay.hidden = false;
+    setDialog(true);
     focusIn(overlay.querySelector('.btn.primary'));
   }
 
@@ -148,7 +153,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   // The run is saved the moment the game ends (5.10): until then it was saved only after the 0.9 s pause, and a
   // back, ✕ or Esc in that pause threw a finished exercise away. Results follow after the pause.
   function finishNow() { outcome = app.finishSession(session); }
-  function showResults() { phase = 'leaving'; app.go('results', { ...outcome, plan, demo }); }
+  function showResults() { phase = 'leaving'; app.go('results', { ...outcome, plan, demo, pose }); }
 
   function drawCountdown() {
     ctx.fillStyle = 'rgba(8,12,30,0.55)'; ctx.fillRect(0, 0, view.w, view.h);
@@ -164,7 +169,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     if (bridgeMode) updateBridge(app.bridge?.status ?? 'idle');
     if (phase === 'intro') {
       // Armed only after a relaxation: a hold that left the results screen must not start the game too.
-      const go = confirm.update(intent, dt);
+      // The demo bot drives the emulator during the intro too: it must not start the game itself (5.11).
+      const go = !demo && confirm.update(intent, dt);
       overlay.querySelector('.confirm-ring')?.style.setProperty('--p', String(confirm.progress));
       if (go) begin();
     } else if (phase === 'countdown') {
@@ -206,7 +212,9 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
 
   showIntro();
   return {
-    node, tick,
+    node, tick, fresh: true,
+    // First focus after the screen is mounted (5.11): focusing «Старт» while building it was undone by the heading.
+    get focus() { return phase === 'intro' ? overlay.querySelector('.btn.primary') : null; },
     onHidden: pause,
     /** Back during a run pauses it (a stray gesture must not throw the attempt away); back again leaves. */
     onBack() { if (phase === 'running') pause(); else if (phase !== 'leaving') exit(); return true; },

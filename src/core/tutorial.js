@@ -15,7 +15,7 @@ const TWO_CHANNEL = [
 ];
 
 const LEVEL_STEP = { id: 'level', title: 'Сила — вполсилы', text: 'Сожмите вполсилы: держите полоску A в зелёной зоне 35–65 %.', holdS: 1, band: [0.35, 0.65],
-  check: i => i.command === COMMAND.CLOSE && i.intensity >= 0.35 && i.intensity <= 0.65, tip: 'Выше палец на площадке — сильнее. Плавно, без рывка.' };
+  check: i => i.command === COMMAND.CLOSE && i.intensity >= 0.35 && i.intensity <= 0.65, tip: 'Выше палец на площадке — сильнее. Плавно, без рывка. С клавиатуры: стрелки на площадке A — сила, пробел — держать.' };
 
 const SWITCH_STEP = { id: 'switch', title: 'Коактивация · A+B', text: 'Напрягите обе мышцы одновременно и коротко — так протез меняет хват.', holdS: 0.15,
   check: i => i.command === COMMAND.SWITCH, tip: 'Начните оба напряжения в пределах трети секунды. На экране — кнопка «A+B».' };
