@@ -179,8 +179,17 @@ class Bridge:
             except Exception as e:
                 frame = None
                 if not getattr(self, 'reported', False): print(f'ошибка источника: {e!r}', flush=True); self.reported = True
+            packet = None
             if frame is not None and self.clients:
-                packet = self.encode(json.dumps(frame))
+                try:
+                    text = json.dumps(frame)
+                    # The game drops anything over 4096 characters; a 70 KB line used to crash the encoder (5.11).
+                    packet = self.encode(text) if len(text.encode()) <= MAX_PAYLOAD else None
+                except (TypeError, ValueError, struct.error):
+                    packet = None
+                if packet is None and not getattr(self, 'oversize_reported', False):
+                    print('кадр пропущен: больше 4 КБ или не JSON', flush=True); self.oversize_reported = True
+            if packet is not None:
                 for w in list(self.clients):
                     try:
                         if w.transport.get_write_buffer_size() > MAX_BUFFER: raise ConnectionError('client stopped reading')

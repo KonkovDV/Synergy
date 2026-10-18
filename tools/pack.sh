@@ -5,16 +5,21 @@
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; BASE="$(basename "$ROOT")"; PARENT="$(dirname "$ROOT")"
 VERSION="$(node -p "require('$ROOT/package.json').version")"
-NAME="${1:-SYNERGY_v$VERSION}"; OUTDIR="${2:-$PARENT}"
+NAME="${1:-SYNERGY_v$VERSION}"; OUTDIR="$(cd "${2:-$PARENT}" && pwd)"
 [ -f "$ROOT/release/Synergy-$VERSION.apk" ] || { echo "Нет release/Synergy-$VERSION.apk — сначала sh tools/build-apk.sh"; exit 1; }
 rm -f "$OUTDIR/$NAME.zip"
-# Tracked files and the git history only (5.10): zipping the working tree also took gitignored files —
-# a release keystore, tools/.cache — and the gate, which looks at tracked files, did not notice.
-(cd "$ROOT" && { git ls-files --cached | while IFS= read -r f; do [ -e "$f" ] && printf '%s\n' "$f"; done; find .git; }) \
-  | sed "s|^|$BASE/|" | (cd "$PARENT" && zip -q "$OUTDIR/$NAME.zip" -@)
-TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+TMP="$(mktemp -d)"; STAGE="$(mktemp -d)"; trap 'rm -rf "$TMP" "$STAGE"' EXIT
+# The archive is a fresh clone of HEAD (5.11, Red Team): the working .git carried reflogs and unreachable objects —
+# a key staged and then unstaged stayed recoverable — and zipping the working tree took gitignored files (5.10).
+git -C "$ROOT" diff --quiet HEAD -- || echo "⚠ есть незакоммиченные изменения — в архив попадает только HEAD"
+git clone -q --no-local "$ROOT" "$STAGE/$BASE"
+git -C "$STAGE/$BASE" remote remove origin
+git -C "$STAGE/$BASE" reflog expire --expire=now --all
+git -C "$STAGE/$BASE" gc -q --prune=now
+(cd "$STAGE" && zip -qr "$OUTDIR/$NAME.zip" "$BASE")
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
-KEYS="$(find "$TMP" \( -name '*.keystore' -o -name '*.jks' -o -name '*.p12' -o -name '*.pem' -o -name '*.key' \) -not -path '*/.git/*' | head -5)"
+KEYS="$(find "$TMP" \( -name '*.keystore' -o -name '*.jks' -o -name '*.p12' -o -name '*.pem' -o -name '*.key' \) | head -5)"
+[ -z "$(git -C "$TMP/$BASE" fsck --unreachable --no-reflogs 2>/dev/null | head -1)" ] || { echo "✗ в архиве недостижимые объекты git"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }
 [ -z "$KEYS" ] || { echo "✗ в архиве ключи: $KEYS"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }
 # node_modules is not in the archive (the receiver runs npm ci): link ours so the bundle test can run.
 [ -d "$ROOT/node_modules" ] && ln -s "$ROOT/node_modules" "$TMP/$BASE/node_modules"

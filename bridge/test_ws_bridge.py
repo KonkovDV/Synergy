@@ -102,5 +102,28 @@ class HardeningTest(unittest.TestCase):
         self.assertGreater(Broken.calls, 2, 'the pump keeps going after an error')
 
 
+    def test_an_oversized_source_frame_is_skipped_not_fatal(self):
+        class Big:
+            calls = 0
+            def frame(self, _t, _intent):
+                Big.calls += 1
+                return {'a': 0.1, 'junk': 'x' * 70000} if Big.calls == 1 else {'a': 0.2, 'b': 0.0}
+        class Writer:
+            def __init__(self): self.sent = []; self.transport = self
+            def get_write_buffer_size(self): return 0
+            def write(self, data): self.sent.append(data)
+            def close(self): pass
+        async def run():
+            bridge = Bridge(Big(), hz=200)
+            client = Writer(); bridge.clients.add(client)
+            task = asyncio.create_task(bridge.pump())
+            await asyncio.sleep(0.05)
+            alive = not task.done()
+            task.cancel()
+            return alive, client.sent
+        alive, sent = asyncio.run(run())
+        self.assertTrue(alive, 'a 70 KB line used to crash the encoder and close the bridge')
+        self.assertTrue(sent and all(len(p) < 4200 for p in sent), 'later frames still go out, the big one does not')
+
 if __name__ == '__main__':
     unittest.main()

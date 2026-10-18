@@ -155,10 +155,26 @@ export function emptyState() {
 }
 
 /** Merges stored JSON over defaults so that new fields appear after updates; `catalog` checks nested progress. */
+/**
+ * Deeper than any real state (runs → details → trials → item is 5): a backup nested 200 000 levels deep parsed fine,
+ * then every save threw «Maximum call stack size exceeded» silently (5.11, Red Team). Iterative, stops early.
+ */
+export const MAX_DEPTH = 12;
+export function tooDeep(value, limit = MAX_DEPTH) {
+  const stack = [[value, 0]];
+  while (stack.length) {
+    const [v, d] = stack.pop();
+    if (v === null || typeof v !== 'object') continue;
+    if (d >= limit) return true;
+    for (const child of Object.values(v)) if (child !== null && typeof child === 'object') stack.push([child, d + 1]);
+  }
+  return false;
+}
+
 export function parseState(raw, catalog = null) {
   const base = emptyState();
   const data = JSON.parse(raw);
-  if (!isObject(data) || data.version !== 4) throw new Error('Unsupported state');
+  if (!isObject(data) || data.version !== 4 || tooDeep(data)) throw new Error('Unsupported state');
   // Every profile field keeps the shape of its default (a backup is untrusted: `days: null` once broke home).
   const storedProfile = isObject(data.profile) ? data.profile : {};
   const profile = Object.fromEntries(Object.entries(base.profile).map(([k, v]) => [k, sameShape(storedProfile[k], v) ? storedProfile[k] : v]));
@@ -176,11 +192,14 @@ export function parseState(raw, catalog = null) {
   const stored = isObject(data.settings) ? data.settings : {};
   const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, validSetting(k, stored[k], v) ? stored[k] : v]));
   const pair = v => Array.isArray(v) && v.length === 2 && v.every(Number.isFinite);
-  const validCal = c => isObject(c) && pair(c.rest) && pair(c.max);
+  // A calibration that maps nothing to a command is not kept (5.11: `touch: {rest:[5,5], max:[6,6]}` made the
+  // on-screen pads dead across restarts): rest below max on both channels; the screen emulator works in 0..1.
+  const span = c => [0, 1].every(ch => c.max[ch] > c.rest[ch] && c.rest[ch] >= 0);
+  const validCal = (c, kind) => isObject(c) && pair(c.rest) && pair(c.max) && span(c) && (kind !== 'touch' || [...c.rest, ...c.max].every(v => v <= 1));
   // Known fields only: `ref` (the wizard's rest level) steers rest adaptation, so a broken one is dropped.
   const cleanCal = c => ({ rest: c.rest, max: c.max, at: typeof c.at === 'string' ? c.at : null, ...(pair(c.ref) ? { ref: c.ref } : {}),
     ...(typeof c.adaptedAt === 'string' ? { adaptedAt: c.adaptedAt } : {}) });
-  const calibrations = Object.fromEntries(Object.keys(base.calibrations).map(k => [k, validCal(data.calibrations?.[k]) ? cleanCal(data.calibrations[k]) : base.calibrations[k]]));
+  const calibrations = Object.fromEntries(Object.keys(base.calibrations).map(k => [k, validCal(data.calibrations?.[k], k) ? cleanCal(data.calibrations[k]) : base.calibrations[k]]));
   const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS).map(r => {
     if (r.pose !== undefined && !POSE_IDS.includes(r.pose)) { const { pose, ...rest } = r; r = rest; } // the report prints it
     if (!isObject(r.details) || r.details.confusion === undefined) return r;
