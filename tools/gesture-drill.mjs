@@ -16,7 +16,9 @@ const TRIPOD = "{ id: 'tripod', name: 'Трипод', command: 'close', grip: 't
 const tmp = mkdtempSync(join(tmpdir(), 'synergy-drill-'));
 try {
   for (const dir of ['src', 'tests', 'public']) cpSync(join(root, dir), join(tmp, dir), { recursive: true });
-  cpSync(join(root, 'package.json'), join(tmp, 'package.json'));
+  // Tests of the servers and the build read tools/ and index.html (5.10–5.11); the tool cache (131 MB, a key) stays out.
+  cpSync(join(root, 'tools'), join(tmp, 'tools'), { recursive: true, filter: src => !src.includes(`${join('tools', '.cache')}`) });
+  for (const file of ['package.json', 'index.html']) cpSync(join(root, file), join(tmp, file));
   if (existsSync(join(root, 'node_modules'))) symlinkSync(join(root, 'node_modules'), join(tmp, 'node_modules'), 'dir'); // esbuild for the bundle test
   const file = join(tmp, 'src/core/vocabulary.js');
   const before = readFileSync(file, 'utf8');

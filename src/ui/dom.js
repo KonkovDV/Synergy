@@ -10,7 +10,8 @@ export function h(tag, attrs = {}, ...children) {
   }
   for (const c of children.flat(Infinity)) {
     if (c === null || c === undefined || c === false) continue;
-    el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    // A dash never starts a line (5.11, typography): the space before «—» is non-breaking.
+    el.append(c instanceof Node ? c : document.createTextNode(String(c).replace(/ —/g, '\u00a0—')));
   }
   return el;
 }

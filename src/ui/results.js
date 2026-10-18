@@ -86,7 +86,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     : calibrationNote ? h('p', { class: 'note' }, calibrationNote.shiftPct >= 1
       ? `Калибровка подстроилась под датчик: покой сдвинут на ${fmtPct(calibrationNote.shiftPct)} диапазона.`
       : 'Калибровка подстроилась под датчик: покой вернулся к уровню калибровки.') : null;
-  const difficulty = !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
+  const difficulty = !demo && !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
   const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', {}, 'Насколько тяжело было?'),
     segmented(EFFORT_LEVELS.map(e => ({ value: e.id, label: e.label })), app.profile.days[today]?.effort ?? null,
@@ -95,11 +95,11 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const node = h('div', { class: 'screen results' },
     h('main', { class: 'scroll center' },
       h('h1', { class: 'sr-only' }, `Итоги: ${g.title}`),
-      h('p', { class: 'eyebrow' }, `${g.title} · уровень ${run.level}${run.retention ? ' · без подсказки' : ''}${demo ? ' · демо' : ''}`),
+      h('p', { class: 'eyebrow' }, `${g.title}${g.assessment ? '' : ` · уровень ${run.level}`}${run.retention ? ' · без подсказки' : ''}${demo ? ' · демо' : ''}`),
       h('div', { class: `big-stars s${run.stars}`, 'aria-label': `${run.stars} из 3 звёзд` }, starsText(run.stars)),
       h('p', { class: 'big-score' }, run.score, h('small', {}, ' / 100')),
       report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel} игры` : ''}`)
-        : h('p', { class: 'note' }, 'Демо не влияет на прогресс.'),
+        : h('p', { class: 'note' }, 'Так играет автопилот. Демо не влияет на прогресс.'),
       rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, r))) : null,
       difficulty,
       calibrationCard,

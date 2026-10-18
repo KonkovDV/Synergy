@@ -57,7 +57,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const badge = retention ? 'Без подсказки' : demo ? 'Демо' : plan ? 'План дня' : '';
   const header = h('header', { class: 'play-top' },
     h('button', { class: 'icon-btn', 'aria-label': 'Выйти', onclick: () => exit() }, icon('close')),
-    h('div', { class: 'play-title' }, h('h1', {}, `${entry.title} · ур. ${level}`), badge ? h('small', {}, badge) : null),
+    h('div', { class: 'play-title' }, h('h1', {}, entry.assessment ? entry.title : `${entry.title} · ур. ${level}`), badge ? h('small', {}, badge) : null),
     h('button', { class: 'icon-btn pause-btn', 'aria-label': 'Пауза', onclick: () => pause() }, icon('pause')),
     scoreEl);
   const node = h('div', { class: 'screen play-screen' },
