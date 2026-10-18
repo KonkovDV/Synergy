@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.9.0',
+  version: '5.10.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -12,12 +12,16 @@ export const SIGNAL = {
   frameTimeoutMs: 300,      // watchdog: no fresh valid frame for this long → «сигнал потерян»
   smoothingMs: 35,          // EMA time constant applied to normalized activation
   onThreshold: 0.22,        // channel becomes active (fraction of calibrated comfortable max)
-  hysteresis: 0.07,         // channel turns off below onThreshold - hysteresis
+  hysteresis: 0.07,         // channel turns off below onThreshold - hysteresis…
+  hysteresisMinRatio: 0.65, // …but never below 65 % of onThreshold: at the lowest sensitivity setting (0.10) a fixed
+                            // gap left the off point at 0.03, under normal crosstalk, and a channel never switched off
   // Co-contraction scoring adapted from Maas et al., 2024 (a scoring rule, not evidence of a training effect):
   // they counted both peaks ≥ 40 % of MVC within 350 ms; here 40 % of the calibrated *comfortable* level
   // (≈ 70 % effort, so ≈ 28 % of MVC — less load) and both onsets of that zone within 350 ms.
   coThreshold: 0.40,
   coOnsetWindowMs: 350,
+  coHysteresis: 0.05,       // a channel stays «high» down to coThreshold − 0.05: a one-frame dip of a steady hold
+                            // no longer restarts its onset and breaks the co-contraction
   gestureMinConfidence: 0.6,
   gestureStableMs: 90,      // a gesture must persist this long before it becomes a command
   thresholdIntensity: 0.6,  // fixed intensity of the threshold (two-button) scheme
@@ -102,7 +106,20 @@ export const MUSIC = {
 export const PERF = { minFps: 45, degradeAfterS: 3, smoothing: 0.1, pauseS: 0.5 }; // a frame longer than pauseS is a pause (tab hidden), not slowness
 
 /** Hands-free confirmation (hold A) — the phone is in the sound hand, sensors on the other arm. */
-export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5 };
+/**
+ * Ranges of the settings sliders — one source for the settings screen and for the check of stored/imported
+ * settings (5.10: the two copies were kept in sync by a comment).
+ */
+export const SETTINGS_RANGES = {
+  realism: { min: 0, max: 1, step: 0.05 },
+  sensitivity: { min: 0.1, max: 0.45, step: 0.01 },
+  coThreshold: { min: 0.25, max: 0.7, step: 0.01 },
+  gameSpeed: { min: 0.6, max: 1, step: 0.05 },
+  weeklyGoal: { min: 2, max: 7, step: 1 },
+};
+export const TEXT_SCALES = [1, 1.15, 1.3];
+
+export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 
 /** Wellbeing check-in thresholds (numeric rating scale categories 0 / 1–3 / 4–6 / 7–10). */
 export const WELLBEING = {
