@@ -1,8 +1,8 @@
 // First run: what this is, safety, and the two choices that matter (control scheme, prosthesis side).
 import { h } from './dom.js';
 import { segmented } from './widgets.js';
-import { SCHEME_INFO, OPENING_GESTURE } from '../core/vocabulary.js';
-import { gestureIcon } from './controls.js';
+import { SCHEME_INFO } from '../core/vocabulary.js';
+import { mio, badgeArt, trails, coverScene } from './art.js';
 
 export function onboardingScreen(app) {
   let step = 0, shownAt = 0;
@@ -13,21 +13,26 @@ export function onboardingScreen(app) {
   const s = { scheme: app.settings.scheme, side: app.settings.side, audience: app.settings.audience, name: app.settings.name };
 
   const pages = [
-    () => [h('div', { class: 'onb-art' }, gestureIcon(OPENING_GESTURE, 'icon', 110)),
+    // Each page opens with a cover (the sample's onboarding, the brand's dark cover with light trails): Мио, the title, one line.
+    () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art scene' }, coverScene(230)),
       h('h1', {}, 'Синергия'),
-      h('p', { class: 'lead' }, 'Игра-тренажёр управления бионическим протезом.'),
+      h('p', { class: 'lead' }, 'Игра-тренажёр управления бионическим протезом.')),
+      h('p', { class: 'lead pet-promise' }, 'Тренировки согревают яйцо Жар-птицы: вырастите её от птенца до огненной птицы.'),
       h('p', {}, 'Четыре игры тренируют то, что нужно протезу каждый день: взять предмет с нужной силой, удержать, отпустить, сменить хват, включиться вовремя.'),
       h('p', { class: 'note' }, 'Короткие игры по 10–15 минут. Сколько дней в неделю заниматься, лучше решить с реабилитологом или протезистом; цель недели меняется в настройках.')],
-    () => [h('div', { class: 'onb-art big-emoji', 'aria-hidden': 'true' }, '🛡️'),
+    () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art small' }, badgeArt('shield', 84)),
       h('h1', {}, 'Безопасно'),
-      h('ul', { class: 'how' },
+      h('p', { class: 'lead' }, 'Комфорт и самочувствие важнее очков.')),
+      h('ul', { class: 'how card onb-card' },
         h('li', {}, 'Это тренажёр, а не медицинское изделие.'),
         h('li', {}, 'Напрягайте мышцы комфортно, без боли — максимум не нужен.'),
         h('li', {}, 'Устали — отдохните. Между упражнениями будет пауза.'),
         h('li', {}, 'Программу занятий согласуйте с реабилитологом. После операции — начинайте, когда разрешит лечащий врач.'),
         h('li', {}, 'Датчики — только на здоровую кожу. Покраснение, которое не проходит, или усиление фантомной боли — повод остановиться и сказать специалисту.')),
       h('p', { class: 'note' }, 'Нет датчиков? Встроенный эмулятор ЭМГ на экране: удерживайте площадки A и B, высота пальца — сила.')],
-    () => [h('h1', {}, 'Ваш протез'),
+    () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art small' }, mio('focus', 84)),
+      h('h1', {}, 'Ваш протез'),
+      h('p', { class: 'lead' }, 'Три вопроса — и можно начинать.')),
       h('p', {}, 'Как вы управляете протезом?'),
       segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { s.scheme = v; }, 'Схема управления'),
       h('p', { class: 'note' }, 'Не уверены — выберите «Пропорциональный». Режим можно сменить в настройках.'),

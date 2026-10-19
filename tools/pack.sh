@@ -16,7 +16,7 @@ git clone -q --no-local "$ROOT" "$STAGE/$BASE"
 git -C "$STAGE/$BASE" remote remove origin
 git -C "$STAGE/$BASE" reflog expire --expire=now --all
 git -C "$STAGE/$BASE" gc -q --prune=now
-git -C "$STAGE/$BASE" repack -a -d -f -q --window=250 --depth=250 # tighter deltas: the history is close to the 30 MB limit
+git -C "$STAGE/$BASE" repack -a -d -f -q --window=250 --depth=250 # tighter deltas
 (cd "$STAGE" && zip -9 -qr "$OUTDIR/$NAME.zip" "$BASE")
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
 KEYS="$(find "$TMP" \( -name '*.keystore' -o -name '*.jks' -o -name '*.p12' -o -name '*.pem' -o -name '*.key' \) | head -5)"
@@ -28,5 +28,6 @@ echo "Проверка распакованного архива:"
 (cd "$TMP/$BASE" && node tools/check-submission.mjs --draft)
 KB=$(du -k "$OUTDIR/$NAME.zip" | cut -f1)
 echo "Архив: $OUTDIR/$NAME.zip ($KB КБ)"
-# Upload limit of the hand-off (30 MB): git history carries every screenshot ever committed — keep new ones light (JPEG, CSS px).
-[ "$KB" -le 29296 ] || echo "⚠ архив больше 30 МБ ($KB КБ): git gc, лёгкие скриншоты (tests/e2e/*.mjs пишут JPEG)"
+# Target of the hand-off (5.12: ≈ 20 MB, the upload limit is 30 MB): git history carries every file ever committed —
+# screenshots only as light JPEG (CSS px) and only those the README and the pitch show.
+[ "$KB" -le 20480 ] || echo "⚠ архив больше 20 МБ ($KB КБ): лёгкие скриншоты (tests/e2e/*.mjs пишут JPEG), без лишних бинарных файлов в истории"

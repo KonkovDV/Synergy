@@ -1,14 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1d2d66"/><stop offset="1" stop-color="#3a1f5f"/></linearGradient></defs>
-  <rect width="512" height="512" rx="112" fill="url(#g)"/>
-  <g fill="#5ad1ff" stroke="none">
-    <rect x="178" y="232" width="156" height="170" rx="40"/>
-    <rect x="182" y="120" width="30" height="132" rx="15"/>
-    <rect x="224" y="98" width="30" height="150" rx="15"/>
-    <rect x="266" y="108" width="30" height="140" rx="15"/>
-    <rect x="308" y="140" width="28" height="112" rx="14"/>
-    <rect x="120" y="250" width="30" height="110" rx="15" transform="rotate(-38 135 305)"/>
+  <!-- «Синергия» 5.12: the coach Мио (a glossy sphere in the green → teal → blue gradient) on a dark cover with a light
+       trail; the antenna bulbs are the channels A (coral) and B (blue). Corporate palette of «Моторика», no brand marks. -->
+  <defs>
+    <radialGradient id="glowA" cx=".82" cy=".1" r=".7"><stop offset="0" stop-color="#1b4e8f"/><stop offset="1" stop-color="#1b4e8f" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowB" cx="0" cy="1" r=".7"><stop offset="0" stop-color="#0f6b55"/><stop offset="1" stop-color="#0f6b55" stop-opacity="0"/></radialGradient>
+    <linearGradient id="bg" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#0b1d2b"/><stop offset="1" stop-color="#071019"/></linearGradient>
+    <linearGradient id="trail" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#16e182"/><stop offset=".45" stop-color="#25c2c4"/><stop offset=".75" stop-color="#3b82f6"/><stop offset="1" stop-color="#8a6dff"/></linearGradient>
+    <radialGradient id="halo" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#5ff3b9" stop-opacity=".55"/><stop offset=".6" stop-color="#25c2c4" stop-opacity=".18"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></radialGradient>
+    <radialGradient id="body" cx=".32" cy=".22" r=".95"><stop offset="0" stop-color="#dcfff0"/><stop offset=".2" stop-color="#5ff3b9"/><stop offset=".5" stop-color="#1fd0a6"/><stop offset=".8" stop-color="#2196d6"/><stop offset="1" stop-color="#1d4fbf"/></radialGradient>
+    <linearGradient id="under" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#05101a" stop-opacity="0"/><stop offset="1" stop-color="#05101a" stop-opacity=".28"/></linearGradient>
+    <radialGradient id="gloss" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".55" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="visor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b3249"/><stop offset="1" stop-color="#05101a"/></linearGradient>
+    <radialGradient id="a" cx=".34" cy=".28" r=".85"><stop offset="0" stop-color="#ffe2d4"/><stop offset=".5" stop-color="#ff7a45"/><stop offset="1" stop-color="#c63f12"/></radialGradient>
+    <radialGradient id="b" cx=".34" cy=".28" r=".85"><stop offset="0" stop-color="#dbe9ff"/><stop offset=".5" stop-color="#3b82f6"/><stop offset="1" stop-color="#1a46a8"/></radialGradient>
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <rect class="tile" width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect class="tile" width="512" height="512" rx="112" fill="url(#glowA)"/>
+  <rect class="tile" width="512" height="512" rx="112" fill="url(#glowB)"/>
+  <path class="tile" d="M-20 430 C 120 330, 220 470, 330 330 S 470 170, 540 210" fill="none" stroke="url(#trail)" stroke-width="30" stroke-linecap="round" opacity=".2"/>
+  <path class="tile" d="M-20 430 C 120 330, 220 470, 330 330 S 470 170, 540 210" fill="none" stroke="url(#trail)" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="256" cy="282" r="210" fill="url(#halo)"/>
+  <g transform="translate(76 96) scale(3)">
+    <path d="M50 27 Q46 17 41 12 M70 27 Q74 17 79 12" fill="none" stroke="#dff7ff" stroke-width="3.8" stroke-linecap="round"/>
+    <circle cx="40" cy="10" r="10" fill="#ff7a45" opacity=".5" filter="url(#blur)"/><circle cx="80" cy="10" r="10" fill="#3b82f6" opacity=".5" filter="url(#blur)"/>
+    <circle cx="40" cy="10" r="8.5" fill="url(#a)"/><circle cx="80" cy="10" r="8.5" fill="url(#b)"/>
+    <circle cx="37.4" cy="7.2" r="2.4" fill="#fff" opacity=".85"/><circle cx="77.4" cy="7.2" r="2.4" fill="#fff" opacity=".85"/>
+    <rect x="18" y="22" width="84" height="87" rx="40" fill="url(#body)"/>
+    <rect x="18" y="22" width="84" height="87" rx="40" fill="url(#under)"/>
+    <path d="M99 66 Q101 98 70 107" fill="none" stroke="#c9ecff" stroke-width="2.4" stroke-linecap="round" opacity=".6"/>
+    <ellipse cx="42" cy="37" rx="19" ry="10" fill="url(#gloss)" transform="rotate(-28 42 37)"/><circle cx="33" cy="36" r="3.2" fill="#fff" opacity=".9"/>
+    <rect x="28" y="44" width="64" height="40" rx="20" fill="url(#visor)"/>
+    <path d="M36 54 Q45 47.5 58 47.5" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" opacity=".22"/>
+    <circle cx="48" cy="63" r="6" fill="#7dffc4"/><circle cx="72" cy="63" r="6" fill="#7dffc4"/>
+    <circle cx="46" cy="61" r="2" fill="#fff"/><circle cx="70" cy="61" r="2" fill="#fff"/>
+    <path d="M51 71 Q60 81 69 71 Z" fill="#7dffc4"/>
+    <ellipse cx="23.5" cy="77" rx="5" ry="3.2" fill="#ff8fa3" opacity=".85"/><ellipse cx="96.5" cy="77" rx="5" ry="3.2" fill="#ff8fa3" opacity=".85"/>
+    <rect x="45" y="92" width="30" height="7" rx="3.5" fill="#0b2233"/>
+    <circle cx="52" cy="95.5" r="2.4" fill="#ffb08a"/><circle cx="68" cy="95.5" r="2.4" fill="#8ab8ff"/>
   </g>
-  <circle cx="256" cy="300" r="22" fill="#ffb547"/>
-  <path d="M60 440 h80 l24 -40 l30 70 l30 -100 l26 70 h202" fill="none" stroke="#ffb547" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

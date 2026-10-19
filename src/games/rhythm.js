@@ -3,7 +3,7 @@
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
-import { COLORS, text, circle, fillRound } from '../render/draw.js';
+import { COLORS, text, circle, fillRound, backdrop, scene } from '../render/draw.js';
 import { musicPattern } from '../core/music.js';
 import { reachableBand } from '../core/signal.js';
 
@@ -210,25 +210,24 @@ export class RhythmGame extends Game {
     // and the HUD text sat on the falling notes. HUD text is drawn *behind* the notes, the notes are never covered.
     const { R, labels, hitY, laneX, laneW, noteR } = rhythmLayout(w, h);
     const beatPhase = (this.time / this.beat) % 1;
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#120d2e'); g.addColorStop(1, '#2a1350');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-    if (!this.reduceMotion) { ctx.globalAlpha = 0.15 * (1 - beatPhase); ctx.fillStyle = COLORS.violet; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; }
+    // Stage: lavender to pink by day, the night club in the dark theme; the whole stage pulses on the beat.
+    backdrop(ctx, w, h, scene([[0, '#e2f0ff'], [1, '#ece7ff']], [[0, '#081322'], [1, '#191240']]));
+    if (!this.reduceMotion) { ctx.globalAlpha = scene(0.1, 0.15) * (1 - beatPhase); ctx.fillStyle = COLORS.violet; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; }
     const y = t => hitY - ((t - this.time) / LOOKAHEAD_S) * hitY;
     // Lanes.
     for (const lane of ['a', 'b']) {
       const x = laneX[lane], col = lane === 'a' ? COLORS.a : COLORS.b;
-      fillRound(ctx, x - laneW, 0, laneW * 2, h, 18, 'rgba(255,255,255,0.04)');
+      fillRound(ctx, x - laneW, 0, laneW * 2, h, 18, scene('rgba(255,255,255,0.62)', 'rgba(255,255,255,0.04)'));
       const active = !this.retention && (this.lane[lane] || this.lane.both); // live lane light = concurrent feedback
-      circle(ctx, x, hitY, R, active ? col : 'rgba(255,255,255,0.08)');
-      circle(ctx, x, hitY, R * 0.76, '#120d2e');
-      text(ctx, lane === 'a' ? 'A' : 'B', x, hitY, { size: Math.min(18, R * 0.6), weight: 800, color: col });
-      if (labels) text(ctx, this.scheme === SCHEME.GESTURE ? (lane === 'a' ? 'жест хвата' : OPENING_GESTURE.name) : lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, color: COLORS.muted, maxWidth: laneW * 2 + 16 });
+      circle(ctx, x, hitY, R, active ? col : scene('#d5dde3', 'rgba(255,255,255,0.08)'));
+      circle(ctx, x, hitY, R * 0.76, COLORS.panel);
+      text(ctx, lane === 'a' ? 'A' : 'B', x, hitY, { size: Math.min(18, R * 0.6), weight: 850, color: lane === 'a' ? COLORS.aInk : COLORS.bInk });
+      if (labels) text(ctx, this.scheme === SCHEME.GESTURE ? (lane === 'a' ? 'жест хвата' : OPENING_GESTURE.name) : lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, weight: 700, color: COLORS.muted, maxWidth: laneW * 2 + 16 });
     }
     // Behind the notes: the count-in and the combo.
     // The game's count-in only while it runs: not drawn under the app's own 3-2-1 (5.11).
-    if (!this.paused && this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, hitY * 0.5, { size: Math.min(54, h * 0.2), weight: 800, color: 'rgba(255,255,255,0.35)' });
-    if (this.combo >= 4) text(ctx, `${this.combo} подряд`, w / 2, Math.max(16, hitY * 0.12), { size: 15, weight: 800, color: 'rgba(255,204,77,0.75)', maxWidth: w * 0.3 });
+    if (!this.paused && this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, hitY * 0.5, { size: Math.min(54, h * 0.2), weight: 850, color: scene('rgba(5,16,26,0.28)', 'rgba(255,255,255,0.35)') });
+    if (this.combo >= 4) text(ctx, `${this.combo} подряд`, w / 2, Math.max(16, hitY * 0.12), { size: 15, weight: 850, color: COLORS.warnInk, maxWidth: w * 0.3 });
     // Notes are the task, not feedback: the retention probe shows them too (it hides the lane light and the force meter).
     // A note is on the line exactly at its beat — when the music and the vibration mark it. The input delay is
     // compensated once, in judging (`time − latency`); until 5.10 it was also added here, so a player who acted on
@@ -237,23 +236,23 @@ export class RhythmGame extends Game {
       const ny = y(n.at), endY = y(n.at + n.dur);
       if (ny < -60 || endY > h + 40 || n.state === 'done' || n.state === 'miss') continue;
       if (n.lane === 'both') {
-        fillRound(ctx, laneX.a - noteR - 10, ny - noteR * 0.6, laneX.b - laneX.a + noteR * 2 + 20, noteR * 1.2, noteR * 0.6, '#ffffff');
-        text(ctx, 'A + B', w / 2, ny, { size: 13, weight: 800, color: '#2a1350' });
+        fillRound(ctx, laneX.a - noteR - 10, ny - noteR * 0.6, laneX.b - laneX.a + noteR * 2 + 20, noteR * 1.2, noteR * 0.6, COLORS.violet);
+        text(ctx, 'A + B', w / 2, ny, { size: 13, weight: 850, color: '#ffffff' });
         continue;
       }
       const x = laneX[n.lane], col = n.lane === 'a' ? COLORS.a : COLORS.b;
-      if (n.dur > 0) fillRound(ctx, x - noteR * 0.58, endY, noteR * 1.16, ny - endY, noteR * 0.58, n.lane === 'a' ? 'rgba(255,181,71,0.45)' : 'rgba(90,209,255,0.45)');
+      if (n.dur > 0) fillRound(ctx, x - noteR * 0.58, endY, noteR * 1.16, ny - endY, noteR * 0.58, n.lane === 'a' ? 'rgba(242,98,46,0.38)' : 'rgba(47,111,224,0.32)');
       circle(ctx, x, ny, noteR, col);
-      for (let i = 0; i < n.band; i++) circle(ctx, x - (n.band - 1) * noteR * 0.3 + i * noteR * 0.6, ny, Math.max(2.5, noteR * 0.17), '#120d2e');
+      for (let i = 0; i < n.band; i++) circle(ctx, x - (n.band - 1) * noteR * 0.3 + i * noteR * 0.6, ny, Math.max(2.5, noteR * 0.17), COLORS.panel);
     }
     // Intensity meter for graded notes.
     // Faded feedback by bars of 8 beats: the force meter is hidden on some bars, the verdict still pops up.
     if (this.graded && intent && this.liveFeedback(Math.floor(this.time / (this.beat * 8)))) {
       const mx = w - 26, my = h * 0.12, mh = hitY - h * 0.12 - 18;
-      fillRound(ctx, mx, my, 12, mh, 6, 'rgba(255,255,255,0.08)');
-      for (const b of [1, 2, 3]) { const [lo] = this.bands[b]; ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(mx - 4, my + mh * (1 - lo), 20, 2); }
+      fillRound(ctx, mx, my, 12, mh, 6, COLORS.track);
+      for (const b of [1, 2, 3]) { const [lo] = this.bands[b]; ctx.fillStyle = scene('rgba(5,16,26,0.4)', 'rgba(255,255,255,0.35)'); ctx.fillRect(mx - 4, my + mh * (1 - lo), 20, 2); }
       fillRound(ctx, mx + 2, my + mh * (1 - intent.intensity), 8, Math.max(4, mh * intent.intensity), 4, COLORS.good);
-      text(ctx, 'сила', mx + 6, my + mh + 10, { size: 12, color: COLORS.muted });
+      text(ctx, 'сила', mx + 6, my + mh + 10, { size: 12, weight: 700, color: COLORS.muted });
     }
     // Verdicts last, with a dark rim: readable over the notes they may cross.
     for (const p of this.popups) {

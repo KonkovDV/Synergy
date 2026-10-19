@@ -4,7 +4,7 @@
 // Rings test hitting a level; «потоки» test holding it steadily; centre rings test relaxation.
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
-import { COLORS, text, circle, fillRound } from '../render/draw.js';
+import { COLORS, text, circle, fillRound, backdrop, scene } from '../render/draw.js';
 
 const LEVELS = [
   { rings: 8, gap: 2.8, tol: 0.15, spread: 0.25, streams: 0 },
@@ -177,75 +177,92 @@ export class FlightGame extends Game {
     const top = 24, bottom = h - 24, span = bottom - top;
     const y = alt => bottom - alt * span;
     const gx = w * 0.24, pps = (w - gx) / LEAD_S;
-    // Sky.
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#0b1230'); g.addColorStop(0.6, '#24215a'); g.addColorStop(1, '#3d2a6b');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 40; i++) {
-      // «Меньше движения» freezes the scenery (5.11): the stars and hills kept drifting; the task (rings) still moves.
-      const drift = this.reduceMotion ? 0 : this.time;
-      const sx = ((i * 97.3 - drift * (8 + (i % 3) * 6)) % w + w) % w, sy = (i * 53.7) % (h * 0.7);
-      circle(ctx, sx, sy, (i % 3) * 0.6 + 0.6, 'rgba(255,255,255,0.5)');
+    // Sky: an airy brand morning (cyan → mint) with drifting clouds by day, the starry night in the dark theme.
+    // «Меньше движения» freezes the scenery (5.11): the stars, clouds and hills stand still; the task (rings) still moves.
+    const dark = COLORS.theme === 'dark', drift = this.reduceMotion ? 0 : this.time;
+    backdrop(ctx, w, h, scene([[0, '#cfe8ff'], [0.5, '#def8ee'], [1, '#f6fffa']], [[0, '#06121c'], [0.6, '#0b2433'], [1, '#12304a']]));
+    const sunR = Math.min(w, h) * 0.1;
+    circle(ctx, w * 0.82, h * 0.2, sunR * 1.7, dark ? 'rgba(220,240,255,0.07)' : 'rgba(255,255,255,0.45)');
+    circle(ctx, w * 0.82, h * 0.2, sunR, dark ? '#e3f1ff' : '#ffffff');
+    if (dark) {
+      for (let i = 0; i < 40; i++) {
+        const sx = ((i * 97.3 - drift * (8 + (i % 3) * 6)) % w + w) % w, sy = (i * 53.7) % (h * 0.7);
+        circle(ctx, sx, sy, (i % 3) * 0.6 + 0.6, 'rgba(255,255,255,0.5)');
+      }
+    } else {
+      for (let i = 0; i < 6; i++) {
+        const cw = 60 + (i % 3) * 22, span2 = w + cw * 2;
+        const cx = ((i * 173 - drift * (10 + (i % 3) * 7)) % span2 + span2) % span2 - cw, cy = 20 + (i * 61) % (h * 0.55);
+        ctx.globalAlpha = 0.85;
+        circle(ctx, cx, cy, cw * 0.22, '#ffffff'); circle(ctx, cx + cw * 0.24, cy - cw * 0.1, cw * 0.27, '#ffffff'); circle(ctx, cx + cw * 0.5, cy, cw * 0.2, '#ffffff');
+        fillRound(ctx, cx - cw * 0.1, cy, cw * 0.72, cw * 0.2, cw * 0.1, '#ffffff');
+        ctx.globalAlpha = 1;
+      }
     }
-    // Hills (parallax).
-    ctx.fillStyle = '#1a1840';
-    ctx.beginPath(); ctx.moveTo(0, h);
-    const hills = this.reduceMotion ? 0 : this.time;
-    for (let x = 0; x <= w; x += 16) ctx.lineTo(x, h - 30 - 18 * Math.sin((x + hills * 40) / 70));
-    ctx.lineTo(w, h); ctx.fill();
+    // Hills (parallax): two layers in the brand greens.
+    const hill = (base, amp, speed, len, color) => {
+      ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(0, h);
+      for (let x = 0; x <= w; x += 16) ctx.lineTo(x, h - base - amp * Math.sin((x + drift * speed) / len));
+      ctx.lineTo(w, h); ctx.fill();
+    };
+    hill(44, 14, 22, 90, scene('#b5efd9', '#0e2c38'));
+    hill(30, 18, 40, 70, scene('#6fdcb8', '#0a212b'));
     // Middle line = relaxation.
-    ctx.setLineDash([6, 8]); ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1;
+    ctx.setLineDash([6, 8]); ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(0, y(0.5)); ctx.lineTo(w, y(0.5)); ctx.stroke(); ctx.setLineDash([]);
-    text(ctx, 'покой', 8, y(0.5) - 9, { size: 12, color: COLORS.muted, align: 'left' }); // ≥ 4.5:1 (5.11: 4.2:1 at 45 % white)
+    text(ctx, 'покой', 8, y(0.5) - 10, { size: 12, weight: 700, color: COLORS.muted, align: 'left', outline: true }); // ≥ 4.5:1 with the rim
     const tolPx = this.tol * span;
     // Streams.
     for (const s of this.track.filter(x => x.kind === 'stream')) {
       const x1 = gx + (s.at - this.time) * pps, x2 = gx + (s.end - this.time) * pps;
       if (x2 < -20 || x1 > w + 20) continue;
-      const col = s.side > 0 ? 'rgba(255,181,71,0.22)' : 'rgba(90,209,255,0.22)';
+      const col = s.side > 0 ? 'rgba(249,115,22,0.22)' : 'rgba(14,143,214,0.2)';
       fillRound(ctx, x1, y(s.alt) - tolPx, x2 - x1, tolPx * 2, tolPx, col);
       ctx.strokeStyle = s.side > 0 ? COLORS.a : COLORS.b; ctx.lineWidth = 2;
       ctx.setLineDash([10, 6]); ctx.beginPath(); ctx.moveTo(x1, y(s.alt)); ctx.lineTo(x2, y(s.alt)); ctx.stroke(); ctx.setLineDash([]);
     }
     // Rings (back half).
     const rings = this.track.filter(x => x.kind === 'ring');
-    const ringColor = r => r.result === 'miss' ? COLORS.bad : r.side > 0 ? COLORS.a : r.side < 0 ? COLORS.b : '#ffffff';
+    const ringColor = r => r.result === 'miss' ? COLORS.bad : r.side > 0 ? COLORS.a : r.side < 0 ? COLORS.b : COLORS.ringNeutral;
     const drawRing = (r, front) => {
       const x = gx + (r.at - this.time) * pps;
       if (x < -40 || x > w + 40) return;
       const ry = Math.max(tolPx, 14), rx = ry * 0.38;
-      ctx.lineWidth = front ? 6 : 4; ctx.strokeStyle = ringColor(r);
       ctx.globalAlpha = r.done ? Math.max(0, 1 - (this.time - r.at) * 2) : 1;
-      ctx.beginPath(); ctx.ellipse(x, y(r.alt), rx, ry, 0, front ? -Math.PI / 2 : Math.PI / 2, front ? Math.PI / 2 : Math.PI * 1.5); ctx.stroke();
+      // A rim under the ring (white by day, dark at night) keeps it apart from the sky.
+      for (const [width, color] of [[(front ? 6 : 4) + 4, COLORS.rim], [front ? 6 : 4, ringColor(r)]]) {
+        ctx.lineWidth = width; ctx.strokeStyle = color;
+        ctx.beginPath(); ctx.ellipse(x, y(r.alt), rx, ry, 0, front ? -Math.PI / 2 : Math.PI / 2, front ? Math.PI / 2 : Math.PI * 1.5); ctx.stroke();
+      }
       ctx.globalAlpha = 1;
     };
     rings.forEach(r => drawRing(r, false));
     // Glider + trail (hidden in the retention probe until a ring is passed).
     const hidden = this.retention && !(this.flash?.t > 0);
     if (!hidden) {
-      ctx.strokeStyle = 'rgba(90,209,255,0.35)'; ctx.lineWidth = 3; ctx.beginPath();
+      ctx.strokeStyle = COLORS.accentSoft; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath();
       this.trail.forEach((a, i) => { const tx = gx - (this.trail.length - i) * 4; i ? ctx.lineTo(tx, y(a)) : ctx.moveTo(tx, y(a)); });
       ctx.stroke();
       this.drawGlider(ctx, gx, y(this.alt));
     } else {
-      text(ctx, '?', gx, y(0.5), { size: 28, color: 'rgba(255,255,255,0.35)' });
+      text(ctx, '?', gx, y(0.5), { size: 28, weight: 800, color: COLORS.muted, outline: true });
     }
     rings.forEach(r => drawRing(r, true));
     for (const r of rings) if (r.burst) { r.burst = false; this.burst(gx, y(r.alt), ringColor(r), 16); }
     this.renderParticles(ctx);
     if (this.flash?.t > 0) text(ctx, this.flash.text, gx + 70, y(this.alt) - 34, { size: 18, weight: 800, color: this.flash.color, outline: true });
-    if (this.streak >= 3) text(ctx, `Серия ×${this.streak}`, w - 12, 18, { size: 14, weight: 700, color: COLORS.warn, align: 'right' });
+    if (this.streak >= 3) text(ctx, `Серия ×${this.streak}`, w - 12, 18, { size: 14, weight: 800, color: COLORS.warnInk, align: 'right', outline: true });
   }
 
   drawGlider(ctx, x, y) {
     const flap = Math.sin(this.time * 10) * 6;
     ctx.save(); ctx.translate(x, y);
-    ctx.fillStyle = '#e9f3ff';
-    ctx.beginPath(); ctx.ellipse(0, 0, 20, 9, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, 20, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.fillStyle = COLORS.accent;
     ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-18, -20 - flap); ctx.lineTo(8, -4); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(-6, 2); ctx.lineTo(-16, 16 + flap); ctx.lineTo(8, 4); ctx.closePath(); ctx.fill();
-    circle(ctx, 12, -2, 3, '#0b1230');
+    circle(ctx, 12, -2, 3, '#1e1b4b');
     ctx.fillStyle = COLORS.a; ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(28, 3); ctx.lineTo(19, 5); ctx.fill();
     ctx.restore();
   }

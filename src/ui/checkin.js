@@ -2,7 +2,7 @@
 // under the electrodes → normal, light or no session today. Big taps; the answers go to the specialist report.
 // Safety rules, not a diagnosis.
 import { h } from './dom.js';
-import { topBar, segmented } from './widgets.js';
+import { topBar, segmented, mioAvatar } from './widgets.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, checkInAdvice, checkinSkippable, CHECKIN_ACTION } from '../core/wellbeing.js';
 import { recordDayNote, lightenPlan, dayKey } from '../core/progress.js';
 
@@ -40,7 +40,7 @@ export function checkinScreen(app) {
     node: h('div', { class: 'screen checkin' },
       topBar('Самочувствие', () => app.go('home')),
       h('main', { class: 'scroll' },
-        h('p', { class: 'lead' }, 'Как рука сегодня?'),
+        h('div', { class: 'checkin-hero' }, mioAvatar('support', 64), h('p', { class: 'lead' }, 'Как рука сегодня?')),
         h('p', { class: 'note' }, `${sensors ? 'Три вопроса' : 'Два вопроса'} перед тренировкой — чтобы вовремя остановиться или сделать день лёгким. Ответы хранятся на этом устройстве и попадают в копию и отчёт, которые вы сохраняете сами.`),
         question('Боль в культе или руке', PAIN_LEVELS, 'pain'),
         question('Усталость мышц', FATIGUE_LEVELS, 'fatigue'),

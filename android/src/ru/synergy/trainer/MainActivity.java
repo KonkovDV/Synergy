@@ -5,6 +5,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -122,6 +123,12 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void stop() { if (ttsReady) tts.stop(); }
+
+        /** The system dark theme (5.12): a WebView of an app targeting API 29 does not pass it to prefers-color-scheme. */
+        @JavascriptInterface
+        public boolean nightMode() {
+            return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        }
 
         /**
          * Share sheet for a text file (JSON/CSV/HTML): mail, messenger, cloud drive. A large file (a long history) is

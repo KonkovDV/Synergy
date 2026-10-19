@@ -1,31 +1,61 @@
 // Canvas drawing primitives shared by all games (DRY). Everything is procedural: no image assets.
 
-export const COLORS = {
-  bg: '#0d1530', bg2: '#16224a', panel: '#1b2a57', line: '#2c3d73',
-  text: '#f2f5ff', muted: '#9fb0dd', accent: '#5ad1ff', a: '#ffb547', b: '#5ad1ff',
-  good: '#3fe0a0', warn: '#ffcc4d', bad: '#ff6b6b', violet: '#9b7bff',
+/**
+ * Canvas palettes (5.12, corporate style of «Моторика»: green → teal → blue → violet, near-black ink). Light scenes are
+ * bright and airy, so text in a state colour uses its «Ink» shade (≥ 4.5:1 on the scene); fills keep the bright shade.
+ * A — coral, B — blue, A+B — violet in every theme.
+ */
+const PALETTES = {
+  light: {
+    bg: '#f3f5f7', bg2: '#e8edf0', panel: '#ffffff', line: '#e1e6ea',
+    text: '#05101a', muted: '#4f5b66', accent: '#0a9d63', accentInk: '#0a7a47', accentSoft: 'rgba(22,225,130,0.22)',
+    a: '#f2622e', b: '#2f6fe0', good: '#0a9d63', warn: '#d98200', bad: '#e0364a', violet: '#6d4ef0',
+    aInk: '#b53d0d', bInk: '#1d5fbf', goodInk: '#0a7047', warnInk: '#8a4f00', badInk: '#c21b2e',
+    track: '#e6ebef', grid: 'rgba(5,16,26,0.14)', rim: '#ffffff', veil: 'rgba(243,245,247,0.82)',
+    sceneTop: '#eaf8f2', sceneBottom: '#ffffff', ringNeutral: '#0e9f8f', shade: 'rgba(5,16,26,0.1)',
+  },
+  dark: {
+    bg: '#071019', bg2: '#0e1a24', panel: '#15232f', line: '#213140',
+    text: '#eef3f6', muted: '#a3b3c0', accent: '#16e182', accentInk: '#3ef0a0', accentSoft: 'rgba(22,225,130,0.2)',
+    a: '#ff8a52', b: '#4d94ff', good: '#16e182', warn: '#ffc24d', bad: '#ff6b78', violet: '#9a7dff',
+    aInk: '#ffb084', bInk: '#8ab8ff', goodInk: '#4cf0a6', warnInk: '#ffd27a', badInk: '#ff9aa4',
+    track: 'rgba(255,255,255,0.09)', grid: 'rgba(255,255,255,0.14)', rim: 'rgba(4,10,16,0.85)', veil: 'rgba(4,10,16,0.62)',
+    sceneTop: '#0d1d2a', sceneBottom: '#071019', ringNeutral: '#ffffff', shade: 'rgba(0,0,0,0.35)',
+  },
 };
-
-const BASE = { ...COLORS };
 // High contrast reaches the game field too (5.11: only the muted text changed): black surfaces, white lines.
-const HIGH_CONTRAST = { bg: '#000000', bg2: '#000000', panel: '#101010', line: '#ffffff', muted: '#e8ecff', bad: '#ff8a8a' };
+const HIGH_CONTRAST = { bg: '#000000', bg2: '#000000', panel: '#101010', line: '#ffffff', muted: '#e8ecff', bad: '#ff8a8a', badInk: '#ff8a8a' };
+
+/** The current palette (mutated in place by setRenderOptions, so games always read the live theme). */
+export const COLORS = { ...PALETTES.light, theme: 'light', hc: false };
 let textScale = 1;
 
-/** Presentation options from the accessibility settings (canvas text size, high contrast). */
-export function setRenderOptions({ scale = 1, highContrast = false } = {}) {
+/** Presentation options from the accessibility settings: canvas text size, theme, high contrast (black field). */
+export function setRenderOptions({ scale = 1, highContrast = false, theme = 'light' } = {}) {
   textScale = Math.min(1.25, Math.max(1, scale)); // canvas layouts are tuned up to +25 %
-  Object.assign(COLORS, BASE, highContrast ? HIGH_CONTRAST : {});
+  const name = highContrast ? 'dark' : PALETTES[theme] ? theme : 'light';
+  Object.assign(COLORS, PALETTES[name], { theme: name, hc: !!highContrast }, highContrast ? HIGH_CONTRAST : {});
+  Object.assign(SKIN_COLORS, THEME_SKINS[name]);
 }
 
+/** Scene colours of a theme: games pick their backdrop from here (light — daylight, dark — night). */
+export const scene = (light, dark) => (COLORS.theme === 'dark' ? dark : light);
+
 export const SKIN_COLORS = {
-  graphite: { base: '#7d8bb0', dark: '#56627f', light: '#a9b6d8', glow: '#5ad1ff' }, // ≥ 3:1 on the game field (WCAG 1.4.11; 5.11 — it was 1.9:1)
+  // Graphite follows the theme like the brand's black prostheses: dark on the light field, light on the night one
+  // (≥ 3:1 on the game field either way, WCAG 1.4.11; 5.11 — it was 1.9:1).
+  graphite: { base: '#3d4a57', dark: '#222b34', light: '#6b7a88', glow: '#16e182' },
   sky: { base: '#4f8ff7', dark: '#2f62c9', light: '#8fb8ff', glow: '#d6ecff' },
   coral: { base: '#ff7a6b', dark: '#d9534a', light: '#ffab9f', glow: '#fff1ee' },
   mint: { base: '#36c9a3', dark: '#1f9a7c', light: '#7fe6cb', glow: '#e6fff8' },
   gold: { base: '#e8b33a', dark: '#b8841c', light: '#f7d47d', glow: '#fff6d6' },
   neon: { base: '#9b5cff', dark: '#6a2fd6', light: '#c4a1ff', glow: '#5affd8' },
   cosmos: { base: '#26357a', dark: '#121b47', light: '#4b5fb8', glow: '#ff6ad5' },
-  icon: { base: '#cfe0ff', dark: '#8ea9dc', light: '#ffffff', glow: '#ffb547' }, // UI pictograms on dark surfaces
+  icon: { base: '#2e3c4a', dark: '#18222c', light: '#5f7080', glow: '#16e182' }, // UI pictograms: follows the theme
+};
+const THEME_SKINS = {
+  light: { graphite: { base: '#3d4a57', dark: '#222b34', light: '#6b7a88', glow: '#16e182' }, icon: { base: '#2e3c4a', dark: '#18222c', light: '#5f7080', glow: '#16e182' } },
+  dark: { graphite: { base: '#7d8bb0', dark: '#56627f', light: '#a9b6d8', glow: '#16e182' }, icon: { base: '#cfdbe4', dark: '#8fa2b2', light: '#ffffff', glow: '#16e182' } },
 };
 
 export function roundRect(ctx, x, y, w, h, r) {
@@ -41,9 +71,23 @@ export function roundRect(ctx, x, y, w, h, r) {
 
 export function fillRound(ctx, x, y, w, h, r, color) { roundRect(ctx, x, y, w, h, r); ctx.fillStyle = color; ctx.fill(); }
 
+/** A raised panel of a scene (cards, badges): a soft contact shadow, then the surface. */
+export function panel(ctx, x, y, w, h, r, color = COLORS.panel) {
+  fillRound(ctx, x, y + 3, w, h, r, COLORS.shade);
+  fillRound(ctx, x, y, w, h, r, color);
+}
+
+/** Vertical backdrop gradient of a scene: stops [[offset, colour], …]. */
+export function backdrop(ctx, w, h, stops) {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  for (const [o, c] of stops) g.addColorStop(o, c);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+}
+
 /**
  * Canvas text. `maxWidth` — the font shrinks (not squeezes) until the line fits, down to 60 % of its size;
- * `outline` — a dark rim, so a label stays readable over notes, particles and the glider (5.8).
+ * `outline` — a rim in the scene colour (white by day, dark at night), so a label stays readable over notes,
+ * particles and the glider (5.8).
  */
 export function text(ctx, str, x, y, { size = 16, weight = 600, color = COLORS.text, align = 'center', baseline = 'middle', font = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', maxWidth = 0, outline = false } = {}) {
   let px = Math.round(size * textScale);
@@ -53,7 +97,7 @@ export function text(ctx, str, x, y, { size = 16, weight = 600, color = COLORS.t
     if (width > maxWidth) { px = Math.max(Math.round(size * textScale * 0.6), Math.floor(px * maxWidth / width)); ctx.font = `${weight} ${px}px ${font}`; }
   }
   ctx.textAlign = align; ctx.textBaseline = baseline;
-  if (outline) { ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, px * 0.22); ctx.strokeStyle = 'rgba(8,12,30,0.85)'; ctx.strokeText(str, x, y); }
+  if (outline) { ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, px * 0.24); ctx.strokeStyle = COLORS.rim; ctx.strokeText(str, x, y); }
   ctx.fillStyle = color;
   ctx.fillText(str, x, y);
 }
@@ -113,47 +157,15 @@ export function drawHand(ctx, { x, y, size, pose, skin = 'graphite', angle = 0, 
 
 /** Vertical gauge with a target window — used for force and level feedback. */
 export function drawGauge(ctx, { x, y, w, h, value, min = null, max = null, danger = null, color = COLORS.accent, label = '' }) {
-  fillRound(ctx, x, y, w, h, w / 2, 'rgba(255,255,255,0.08)');
+  fillRound(ctx, x - 3, y - 3, w + 6, h + 6, (w + 6) / 2, COLORS.panel); // a white (night: dark) capsule under the scale
+  fillRound(ctx, x, y, w, h, w / 2, COLORS.track);
   if (min !== null && max !== null) {
-    fillRound(ctx, x, y + h * (1 - max), w, h * (max - min), 6, 'rgba(63,224,160,0.35)');
+    fillRound(ctx, x, y + h * (1 - max), w, h * (max - min), 6, 'rgba(34,197,94,0.3)');
     ctx.strokeStyle = COLORS.good; ctx.lineWidth = 2;
     roundRect(ctx, x, y + h * (1 - max), w, h * (max - min), 6); ctx.stroke();
   }
-  if (danger !== null) fillRound(ctx, x, y, w, h * (1 - danger), w / 2, 'rgba(255,107,107,0.25)');
+  if (danger !== null) fillRound(ctx, x, y, w, h * (1 - danger), w / 2, 'rgba(239,68,68,0.25)');
   const v = Math.max(0, Math.min(1, value));
   fillRound(ctx, x + 3, y + h * (1 - v) , w - 6, Math.max(6, h * v - 3), (w - 6) / 2, color);
-  if (label) text(ctx, label, x + w / 2, y + h + 14, { size: 12, color: COLORS.muted });
+  if (label) text(ctx, label, x + w / 2, y + h + 16, { size: 12, weight: 700, color: COLORS.muted, outline: true });
 }
-
-/**
- * «Мио» — the coach: a round bionic buddy with a two-sensor antenna (channels A and B) and a visor face.
- * Moods: joy (success), support (keep going), rest (stop for today). Procedural, no assets.
- */
-export function drawMio(ctx, { x, y, size, mood = 'support' }) {
-  const r = size / 2, body = mood === 'rest' ? COLORS.violet : COLORS.accent;
-  ctx.save(); ctx.translate(x, y);
-  ctx.strokeStyle = COLORS.muted; ctx.lineWidth = r * 0.08; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(0, -r * 0.85); ctx.lineTo(0, -r * 1.12); ctx.stroke();
-  circle(ctx, -r * 0.16, -r * 1.16, r * 0.11, COLORS.a); circle(ctx, r * 0.16, -r * 1.16, r * 0.11, COLORS.b);
-  const grad = ctx.createLinearGradient(0, -r, 0, r);
-  grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.35, body); grad.addColorStop(1, mood === 'rest' ? '#5b3fc4' : '#2f7fd6');
-  circle(ctx, 0, 0, r, grad);
-  fillRound(ctx, -r * 0.66, -r * 0.4, r * 1.32, r * 0.9, r * 0.4, '#0f1a36');
-  const eyeY = -r * 0.1, eyeX = r * 0.3, ink = mood === 'rest' ? '#c4b5ff' : COLORS.good;
-  ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineWidth = r * 0.1;
-  for (const side of [-1, 1]) {
-    ctx.beginPath();
-    if (mood === 'joy') ctx.arc(side * eyeX, eyeY + r * 0.06, r * 0.13, Math.PI * 1.1, Math.PI * 1.9);
-    else if (mood === 'rest') { ctx.moveTo(side * eyeX - r * 0.12, eyeY); ctx.lineTo(side * eyeX + r * 0.12, eyeY); }
-    else { ctx.arc(side * eyeX, eyeY, r * 0.11, 0, Math.PI * 2); ctx.fill(); }
-    ctx.stroke();
-  }
-  ctx.beginPath(); // mouth
-  if (mood === 'joy') ctx.arc(0, r * 0.12, r * 0.22, Math.PI * 0.15, Math.PI * 0.85);
-  else if (mood === 'rest') { ctx.moveTo(-r * 0.1, r * 0.25); ctx.lineTo(r * 0.1, r * 0.25); }
-  else ctx.arc(0, r * 0.14, r * 0.14, Math.PI * 0.25, Math.PI * 0.75);
-  ctx.stroke();
-  if (mood === 'joy') for (const side of [-1, 1]) circle(ctx, side * r * 0.5, r * 0.22, r * 0.08, 'rgba(255,130,170,0.7)');
-  ctx.restore();
-}
-

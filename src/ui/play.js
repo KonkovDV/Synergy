@@ -5,7 +5,8 @@ import { h, toast } from './dom.js';
 import { signalMeter, icon, handsFreeText, BRIDGE_STATUS } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
-import { COLORS } from '../render/draw.js';
+import { COLORS, circle, text } from '../render/draw.js';
+import { gameArt } from './art.js';
 import { LiveAnnouncer } from '../core/announce.js';
 import { MusicPlayer, offsetClock } from '../core/music.js';
 import { audioClock, playMusic } from '../services/audio.js';
@@ -97,7 +98,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       : 'A — сжатие · B — раскрытие · A+B разом — коактивация (смена хвата) · покой — протез держит';
     overlay.replaceChildren(h('div', { class: 'sheet' },
       h('p', { class: 'eyebrow' }, `${SCHEME_INFO[s.scheme].mode}${retention ? ' · без подсказки' : ''}`),
-      h('h2', { id: 'play-dialog-title' }, `${entry.icon} ${entry.title}`),
+      h('div', { class: 'sheet-title' }, h('span', { class: `tile g-${entry.id}`, 'aria-hidden': 'true' }, gameArt(entry.id, 44)), h('h2', { id: 'play-dialog-title' }, entry.title)),
       h('p', {}, entry.teaches),
       h('ul', { class: 'how' }, ...howFor(entry, s.scheme).map(x => h('li', {}, x))),
       h('p', { class: 'legend' }, legend),
@@ -161,12 +162,15 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   function finishNow() { outcome = app.finishSession(session); }
   function showResults() { phase = 'leaving'; app.go('results', { ...outcome, plan, demo, pose }); }
 
+  // Countdown: the scene under a veil, the number in a round badge whose ring runs out with the second.
   function drawCountdown() {
-    ctx.fillStyle = 'rgba(8,12,30,0.55)'; ctx.fillRect(0, 0, view.w, view.h);
-    ctx.font = '800 72px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = COLORS.text; ctx.fillText(String(Math.ceil(countdown)), view.w / 2, view.h / 2);
-    ctx.font = '600 16px system-ui, sans-serif'; ctx.fillStyle = COLORS.muted;
-    ctx.fillText('Расслабьтесь', view.w / 2, view.h / 2 + 60);
+    ctx.fillStyle = COLORS.veil; ctx.fillRect(0, 0, view.w, view.h);
+    const r = Math.max(30, Math.min(60, view.h * 0.2)), cx = view.w / 2, cy = view.h / 2 - 12;
+    circle(ctx, cx, cy, r, COLORS.panel);
+    ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(cx, cy, r - 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (countdown % 1 || 1)); ctx.stroke();
+    text(ctx, String(Math.ceil(countdown)), cx, cy + 2, { size: Math.round(r * 1.1), weight: 850, color: COLORS.accentInk });
+    text(ctx, 'Расслабьтесь', cx, cy + r + 22, { size: 16, weight: 700, color: COLORS.text, maxWidth: view.w - 24 });
   }
 
   function tick(now, dt) {

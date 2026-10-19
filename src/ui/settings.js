@@ -2,7 +2,7 @@
 // Child mode: the screen sits behind the parent PIN gate (ui/pin.js).
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
-import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, BRIDGE_STATUS } from './widgets.js';
+import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, BRIDGE_STATUS, icon } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
 import { CalibrationRecorder, CALIBRATION_STEPS } from '../core/calibration.js';
 import { defaultCalibration } from '../core/signal.js';
@@ -17,6 +17,9 @@ import { MAX_BACKUP_BYTES } from '../core/storage.js';
 import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
+/** Section glyph and its tile tint (5.12): the sections are told apart at a glance, the title stays the name. */
+const SECTION_ICON = { 'Управление': ['hand', 'green'], 'Источник сигнала': ['signal', 'blue'], 'Чувствительность': ['gauge', 'coral'], 'Тренировка': ['dumbbell', 'teal'],
+  'Доступность': ['access', 'violet'], 'Звук и вибрация': ['sound', 'coral'], 'Привычка': ['bell', 'yellow'], 'Данные': ['data', 'blue'], 'О приложении': ['info', 'green'] };
 
 /** Reads a user-picked file as text (backup restore). */
 function pickTextFile(accept, onText) {
@@ -58,7 +61,11 @@ export function settingsScreen(app, { back = null } = {}) {
 
   // Progressive disclosure (W3C COGA «help users focus»): everyday sections are open, the rest fold (native <details>).
   const OPEN = ['Управление', 'Источник сигнала', 'Доступность'];
-  const section = (title, ...children) => h('details', { class: 'card fold', open: OPEN.includes(title) }, h('summary', {}, h('h2', {}, title)), ...children);
+  const section = (title, ...children) => {
+    const [glyph, tint] = SECTION_ICON[title] ?? ['info', 'violet'];
+    return h('details', { class: 'card fold', open: OPEN.includes(title) },
+      h('summary', {}, h('span', { class: 'sec-head' }, h('span', { class: `sec-ico t-${tint}`, 'aria-hidden': 'true' }, icon(glyph)), h('h2', {}, title))), ...children);
+  };
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); };
 
@@ -105,6 +112,8 @@ export function settingsScreen(app, { back = null } = {}) {
         h('p', { class: 'note' }, `Детский режим: в плане ${count(CHILD.planExercises, FORMS.exercises)}, отдых ${CHILD.restBetweenExercisesS} с, дневной лимит ${CHILD.dailySoftCapMin} мин; настройки можно закрыть PIN-кодом.`),
         childBox),
       section('Доступность',
+        h('div', { class: 'row' }, h('span', {}, 'Тема оформления'),
+          segmented([{ value: 'auto', label: 'Как в системе' }, { value: 'light', label: 'Светлая' }, { value: 'dark', label: 'Тёмная' }], s.theme, v => app.updateSettings({ theme: v }), 'Тема оформления')),
         toggleRow('Озвучивание подсказок', s.voice, v => { app.updateSettings({ voice: v }); if (v) app.say('Озвучивание включено', { interrupt: true }); }, voiceAvailable() ? 'игра без взгляда на экран; при слабом зрении' : 'синтез речи недоступен на этом устройстве'),
         h('div', { class: 'row' }, h('span', {}, 'Размер текста'),
           segmented(TEXT_SCALES.map(v => ({ value: v, label: fmtPct(Math.round(v * 100)) })), s.textScale, v => app.updateSettings({ textScale: v }), 'Размер текста')),
@@ -119,7 +128,8 @@ export function settingsScreen(app, { back = null } = {}) {
         h('label', { class: 'row' }, h('span', {}, 'Напоминание'),
           h('input', { type: 'time', value: s.reminder, onchange: e => app.updateSettings({ reminder: e.target.value }) })),
         h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder, new Date(), s.weeklyGoal), 'text/calendar') }, 'Добавить в календарь (.ics)'),
-        h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) }))),
+        h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) })),
+        h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы'), h('input', { type: 'text', value: s.petName, maxlength: 16, placeholder: 'Искра', onchange: e => app.updateSettings({ petName: e.target.value.trim() }) }))),
       // Sound and vibration have their own section (5.11, design review: they sat under «Привычка»).
       section('Звук и вибрация',
         toggleRow('Звук', s.sound, v => app.updateSettings({ sound: v })),

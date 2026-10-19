@@ -1,5 +1,6 @@
 // Renders public/icons/icon.svg into Android launcher PNGs (android/res/mipmap-*/ic_launcher.png) and the PWA icons:
 // 192/512 «any» (Android install), a separate 512 «maskable» with the glyph in the 80 % safe zone, 180 opaque for iOS.
+// Then (optional, files 3–4× smaller): python3 tools/quantize-icons.py.
 import { createRequire } from 'node:module';
 import { readFileSync, mkdirSync } from 'node:fs';
 const require = createRequire(import.meta.url);
@@ -17,7 +18,7 @@ for (const [density, px] of Object.entries(sizes)) {
   await page.close();
 }
 // PWA icons (public/icons, copied to dist/ by tools/build.mjs).
-const GRADIENT = 'linear-gradient(135deg, #1d2d66, #3a1f5f)';
+const GRADIENT = 'radial-gradient(70% 70% at 82% 10%, #1b4e8f, transparent), radial-gradient(70% 70% at 0% 100%, #0f6b55, transparent), linear-gradient(160deg, #0b1d2b, #071019)';
 const web = [
   { file: 'icon-192.png', px: 192, scale: 1, bg: 'transparent' },
   { file: 'icon-512.png', px: 512, scale: 1, bg: 'transparent' },
@@ -27,7 +28,9 @@ const web = [
 for (const { file, px, scale, bg } of web) {
   const page = await browser.newPage({ viewport: { width: px, height: px } });
   const inner = Math.round(px * scale), pad = Math.round((px - inner) / 2);
-  await page.setContent(`<html><body style="margin:0;width:${px}px;height:${px}px;background:${bg}"><div style="padding:${pad}px">${svg.replace('<svg ', `<svg width="${inner}" height="${inner}" `)}</div></body></html>`);
+  // On an opaque background the glyph goes without its own tile (class «tile»): a tile inside the tile showed an edge.
+  const glyph = bg === 'transparent' ? svg : svg.replace(/class="tile"/g, 'display="none"');
+  await page.setContent(`<html><body style="margin:0;width:${px}px;height:${px}px;background:${bg}"><div style="padding:${pad}px">${glyph.replace('<svg ', `<svg width="${inner}" height="${inner}" `)}</div></body></html>`);
   await page.screenshot({ path: new URL(`../public/icons/${file}`, import.meta.url).pathname, omitBackground: bg === 'transparent' });
   await page.close();
 }

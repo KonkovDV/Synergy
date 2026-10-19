@@ -1,15 +1,17 @@
 // Results (knowledge of results + coach advice + rewards) and the rest break between plan items.
 import { count, fmtNum, fmtPct, FORMS } from '../core/format.js';
-import { h, starsText, toast } from './dom.js';
+import { h, toast } from './dom.js';
+import { gameArt, badgeArt, starRow, firebird } from './art.js';
+import { petStageUp } from '../core/pet.js';
 import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID } from '../games/registry.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
-import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday } from '../core/progress.js';
+import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays } from '../core/progress.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
 import { coachFeedback, coachMood } from './coach.js';
-import { CALIBRATION_ADAPT, HANDS_FREE } from '../config.js';
+import { CALIBRATION_ADAPT, HANDS_FREE, PET } from '../config.js';
 import { signalMeter, segmented, mioAvatar } from './widgets.js';
 
 /** Hands-free confirm of the primary action (results and rest): the same rule as the game start, a bit longer. */
@@ -48,9 +50,9 @@ export function resultsAction({ run, plan, demo, next, stopAdvice, restS, titleO
 function rewardList(report) {
   if (!report) return [];
   return [
-    ...report.achievements.map(id => `🏅 Достижение: ${ACHIEVEMENTS.find(a => a.id === id)?.name ?? id}`),
-    ...report.skins.map(id => `🎨 Новый облик: ${SKINS.find(sk => sk.id === id)?.name ?? id}`),
-    ...(report.levelUp ? [`⬆ Уровень игрока: ${report.level}`] : []),
+    ...report.achievements.map(id => ({ art: 'medal', text: `Достижение: ${ACHIEVEMENTS.find(a => a.id === id)?.name ?? id}` })),
+    ...report.skins.map(id => ({ art: 'palette', text: `Новый облик: ${SKINS.find(sk => sk.id === id)?.name ?? id}` })),
+    ...(report.levelUp ? [{ art: 'levelup', text: `Уровень игрока: ${report.level}` }] : []),
   ];
 }
 
@@ -60,6 +62,9 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const next = plan && !demo ? app.nextPlanItem() : null;
   const planDone = plan && !demo && !next;
   const rewards = rewardList(report);
+  // Жар-птица (5.12): the first run of a day is a training day — it may move the bird to its next stage.
+  const grown = report && !demo ? petStageUp(trainingDays(app.profile), app.runsToday().length === 1) : null;
+  if (grown) rewards.unshift({ art: 'pet', stage: grown.id, text: grown.id === 'chick' ? `${app.settings.petName || PET.defaultName} вылупилась из яйца!` : `${app.settings.petName || PET.defaultName} выросла: ${grown.name}` });
   const ring = h('i', { class: 'confirm-ring' });
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
@@ -78,7 +83,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       'throughputBps' in d ? metric('ПС, бит/с', fmtNum(d.throughputBps)) : null),
     h('p', { class: 'note' }, `Время выбора — до первого верного сигнала; выполнение — до удержания 1 с${'throughputBps' in d ? ' (уровни силы — 0,5 с). ПС — игровая пропускная способность по мотивам теста Фиттса: чем быстрее и точнее выход на уровень силы, тем она выше' : ''}. Сравнивайте с прошлой неделей на экране «Прогресс». Метрики игровые, не клинический тест.`)) : null;
   const calibrationCard = calibrationNote?.recalibrate
-    ? h('div', { class: 'card warn-card', role: 'status' }, h('b', {}, '⚠ Пора перекалибровать'),
+    ? h('div', { class: 'card warn-card', role: 'status' }, h('b', { class: 'with-art' }, badgeArt('warning', 28), 'Пора перекалибровать'),
       h('p', {}, calibrationNote.stuckChannel !== null
         ? `Канал ${calibrationNote.stuckChannel ? 'B' : 'A'} был включён больше ${CALIBRATION_ADAPT.stuckS} с подряд. Если рука была расслаблена — датчик сместился или контакт изменился.`
         : 'Сигнал покоя заметно ушёл от калибровки — так бывает от пота или смещения датчика.'),
@@ -96,15 +101,15 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     h('main', { class: 'scroll center' },
       h('h1', { class: 'sr-only' }, `Итоги: ${g.title}`),
       h('p', { class: 'eyebrow' }, `${g.title}${g.assessment ? '' : ` · уровень ${run.level}`}${run.retention ? ' · без подсказки' : ''}${demo ? ' · демо' : ''}`),
-      h('div', { class: `big-stars s${run.stars}`, 'aria-label': `${run.stars} из 3 звёзд` }, starsText(run.stars)),
+      h('div', { class: `big-stars s${run.stars}`, role: 'img', 'aria-label': `${count(run.stars, FORMS.stars)} из 3` }, starRow(run.stars, 3, 72)),
       h('p', { class: 'big-score' }, run.score, h('small', {}, ' / 100')),
       report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel} игры` : ''}`)
         : h('p', { class: 'note' }, 'Так играет автопилот. Демо не влияет на прогресс.'),
-      rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, r))) : null,
+      rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, r.art === 'pet' ? firebird(r.stage, 'fed', 30) : badgeArt(r.art, 24), r.text))) : null,
       difficulty,
       calibrationCard,
-      planDone ? h('div', { class: 'card celebrate' }, h('b', {}, '🎉 Тренировка дня выполнена'), h('p', {}, 'Отличная работа! День отдыха серию не прерывает.')) : null,
-      stopAdvice ? h('div', { class: 'card warn-card' }, h('b', {}, '⏸ Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
+      planDone ? h('div', { class: 'card celebrate tinted' }, h('b', { class: 'with-art' }, badgeArt('trophy', 30), 'Тренировка дня выполнена'), h('p', {}, 'Отличная работа! День отдыха серию не прерывает.')) : null,
+      stopAdvice ? h('div', { class: 'card warn-card' }, h('b', { class: 'with-art' }, badgeArt('moon', 28), 'Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
       effortCard,
       assessmentCard,
       h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills),
@@ -117,7 +122,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
           action.label === 'Ещё раз' || demo ? null : h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: run.game, level: run.level, retention: run.retention, plan, pose: run.pose ?? pose }) }, 'Повторить'),
           h('button', { class: 'btn ghost', onclick: () => app.go('home') }, 'Домой')))));
   const confirm = handsFree ? muscleConfirm(app, ring, primary.go) : null;
-  app.say(`${count(run.stars, FORMS.stars)} из трёх. ${count(run.score, FORMS.points)}. ${rewards.length ? `${rewards.map(r => r.replace(/^\S+ /, '')).join('. ')}. ` : ''}${stopAdvice ?? advice[0] ?? ''} Дальше: ${primary.label}.`, { interrupt: true });
+  app.say(`${count(run.stars, FORMS.stars)} из трёх. ${count(run.score, FORMS.points)}. ${rewards.length ? `${rewards.map(r => r.text).join('. ')}. ` : ''}${stopAdvice ?? advice[0] ?? ''} Дальше: ${primary.label}.`, { interrupt: true });
   return { node, tick: confirm };
 }
 
@@ -130,14 +135,14 @@ export function restScreen(app, { next }) {
   const go = () => app.startPlan();
   const node = h('div', { class: 'screen rest' },
     h('main', { class: 'scroll center' },
-      mioAvatar('rest', 64),
+      mioAvatar('rest', 88),
       h('h1', { class: 'eyebrow' }, 'Отдых'),
       h('div', { class: 'breath', 'aria-hidden': 'true' }),
       counter,
       h('p', {}, 'Полностью расслабьте руку. Дышите спокойно: вдох — круг растёт, выдох — сжимается.'),
       h('p', { class: 'note' }, 'Проверка покоя: обе полоски должны быть почти пустыми.'),
       meter.node,
-      h('section', { class: 'card' }, h('b', {}, `Дальше: ${g.icon} ${g.title}${next.retention ? ' — без подсказки' : ''}`), h('p', {}, g.tagline)),
+      h('section', { class: `card tinted g-${g.id}` }, h('b', { class: 'with-art' }, gameArt(g.id, 36), `Дальше: ${g.title}${next.retention ? ' — без подсказки' : ''}`), h('p', {}, g.tagline)),
       // The pause is the safety rule, not an obstacle (5.11): skipping it is a quiet option, the timer moves on itself.
       h('div', { class: 'sticky-actions' }, h('button', { class: 'btn ghost', onclick: go }, 'Дальше без отдыха'))));
   const pipeline = app.createPipeline(), source = app.signalSource();

@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.11.0',
+  version: '5.12.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -142,6 +142,21 @@ export const WELLBEING = {
   fatigueLight: 2,          // strong fatigue → light session
   scoreDropPoints: 20,      // in-session drop vs the first exercises → signs of fatigue
   fatigueMinMinutes: 6,
+};
+
+/**
+ * Жар-птица (5.12) — the pet the player raises from an egg. It grows with days of training (regularity, not force
+ * or scores), never sickens or leaves: on a rest day it rests too. Stages by training days (`trainingDays`).
+ */
+export const PET = {
+  defaultName: 'Искра',
+  stages: [
+    { id: 'egg', from: 0, name: 'Яйцо' },
+    { id: 'chick', from: 1, name: 'Птенец' },
+    { id: 'fledgling', from: 4, name: 'Подлёток' },
+    { id: 'young', from: 10, name: 'Юная жар-птица' },
+    { id: 'firebird', from: 21, name: 'Жар-птица' },
+  ],
 };
 
 export const STARS = [50, 70, 88]; // score thresholds for 1, 2, 3 stars

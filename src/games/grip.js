@@ -5,7 +5,7 @@ import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL } from '../config.js';
-import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge } from '../render/draw.js';
+import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
 
 /** Object catalog: force window [min,max], breakAt, grip, contact closure. Conditional units, not newtons. */
 export const OBJECTS = {
@@ -205,22 +205,29 @@ export class GripGame extends Game {
 
   render(ctx, view, hand) {
     const { w, h } = view;
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#1b2350'); g.addColorStop(1, '#0f1733');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    // Workshop: a light wall with soft brand glows by day, the night workshop in the dark theme.
+    backdrop(ctx, w, h, scene([[0, '#e6f7f0'], [0.6, '#f6f9fa'], [1, '#edf2f5']], [[0, '#0d1d2a'], [1, '#071019']]));
     const s = Math.min(w * 0.2, h * 0.15);
-    const beltY = h * 0.68, objY = beltY - s * 0.55;
-    // Conveyor belt.
-    fillRound(ctx, 0, beltY, w, s * 0.36, 8, '#2a3770');
-    ctx.fillStyle = '#3a4a8a';
+    const beltY = h * 0.68, objY = beltY - s * 0.55, beltH = s * 0.36;
+    circle(ctx, w * 0.12, h * 0.1, Math.min(w, h) * 0.22, scene('rgba(22,225,130,0.16)', 'rgba(22,225,130,0.08)'));
+    circle(ctx, w * 0.9, h * 0.3, Math.min(w, h) * 0.14, scene('rgba(59,130,246,0.12)', 'rgba(77,148,255,0.08)'));
+    // Floor and the conveyor belt of a prosthesis workshop: a light top, moving slats, a graphite edge, green rollers.
+    ctx.fillStyle = scene('#e4eaee', '#0b1822'); ctx.fillRect(0, beltY + beltH * 0.5, w, h - beltY);
+    fillRound(ctx, -10, beltY + beltH * 0.55, w + 20, beltH * 0.6, 8, scene('#1f2d38', '#05101a'));
+    fillRound(ctx, -10, beltY, w + 20, beltH, 10, scene('#cdd7de', '#1d2f3d'));
+    ctx.fillStyle = scene('#b3c1cc', '#28404f');
     const off = this.reduceMotion ? 0 : (this.time * 60) % 28; // a still belt with «Меньше движения» (5.11)
-    for (let x = -28 + off; x < w; x += 28) ctx.fillRect(x, beltY + 4, 12, s * 0.36 - 8);
-    // Basket.
+    for (let x = -28 + off; x < w; x += 28) ctx.fillRect(x, beltY + 4, 12, beltH - 8);
+    for (let x = 18; x < w; x += 64) { circle(ctx, x, beltY + beltH * 0.86, beltH * 0.2, scene('#0b151d', '#030a10')); circle(ctx, x, beltY + beltH * 0.86, beltH * 0.08, '#16e182'); }
+    // Basket: orange wicker with a rim.
     const bx = w * 0.82, by = beltY - s * 0.2;
-    ctx.fillStyle = '#7b5a3a'; roundRect(ctx, bx - s * 0.7, by - s * 0.55, s * 1.4, s * 0.75, 10); ctx.fill();
-    ctx.strokeStyle = '#a07a52'; ctx.lineWidth = 3;
+    fillRound(ctx, bx - s * 0.7, by - s * 0.55 + 4, s * 1.4, s * 0.75, 12, COLORS.shade);
+    fillRound(ctx, bx - s * 0.7, by - s * 0.55, s * 1.4, s * 0.75, 12, '#f59e0b');
+    ctx.strokeStyle = '#c96f05'; ctx.lineWidth = 3;
     for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(bx - s * 0.7 + i * s * 0.35, by - s * 0.55); ctx.lineTo(bx - s * 0.7 + i * s * 0.35, by + s * 0.2); ctx.stroke(); }
-    text(ctx, 'корзина', bx, by + s * 0.42, { size: 12, color: COLORS.muted });
+    ctx.beginPath(); ctx.moveTo(bx - s * 0.7, by - s * 0.2); ctx.lineTo(bx + s * 0.7, by - s * 0.2); ctx.stroke();
+    fillRound(ctx, bx - s * 0.78, by - s * 0.62, s * 1.56, s * 0.16, s * 0.08, '#b45309');
+    text(ctx, 'корзина', bx, by + s * 0.42, { size: 12, weight: 700, color: COLORS.muted, outline: true });
     const o = this.current;
     const startX = w * 0.42;
     let ox = startX, oy = objY, handX = startX;
@@ -243,16 +250,16 @@ export class GripGame extends Game {
     if (o && this.liveFeedback(this.results.length)) {
       drawGauge(ctx, { x: gx, y: gy, w: 22, h: gh, value: hand.force, min: o.min, max: o.max, danger: Math.min(1, o.breakAt), color: hand.force > o.max ? COLORS.bad : COLORS.accent, label: 'сила' });
     } else if (o) {
-      fillRound(ctx, gx, gy, 22, gh, 11, 'rgba(255,255,255,0.06)');
+      fillRound(ctx, gx, gy, 22, gh, 11, COLORS.track);
       text(ctx, '?', gx + 11, gy + gh / 2, { size: 18, color: COLORS.muted });
     }
     // Grip badge.
     const need = o ? GRIP_NAME[o.grip] : '';
-    fillRound(ctx, w - 150, 12, 138, 48, 10, 'rgba(255,255,255,0.07)');
-    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 81, 28, { size: 13, color: hand.grip === o?.grip ? COLORS.good : COLORS.warn, maxWidth: 128 });
+    panel(ctx, w - 150, 12, 138, 48, 14);
+    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 81, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 128 });
     text(ctx, o ? `Нужен: ${need}` : '', w - 81, 46, { size: 12, color: COLORS.muted, maxWidth: 128 });
-    text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 14, color: COLORS.muted });
-    if (o) text(ctx, o.name, ox, oy + s * 0.75, { size: 13, color: COLORS.text });
+    text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 14, weight: 700, color: COLORS.muted });
+    if (o) text(ctx, o.name, ox, oy + s * 0.75, { size: 13, weight: 700, color: COLORS.text, outline: true });
     this.renderParticles(ctx);
     if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, Math.max(52, h * 0.16), { size: 20, weight: 800, color: this.flash.color, outline: true, maxWidth: w - 24 }); // under the «1 / 6» counter
   }
@@ -262,18 +269,23 @@ export class GripGame extends Game {
 export function drawObject(ctx, o, x, y, s, squeeze = 0) {
   const broken = o.failed === 'crush';
   const sq = o.fragile || o.kind === 'apple' || o.kind === 'sponge' ? squeeze * 0.18 : 0;
-  ctx.save(); ctx.translate(x, y); ctx.scale(1 - sq, 1 + sq * 0.5);
   const r = s * 0.42;
+  ctx.save(); ctx.fillStyle = COLORS.shade; ctx.beginPath(); ctx.ellipse(x, y + r * 1.02, r * 0.75, r * 0.16, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(x, y); ctx.scale(1 - sq, 1 + sq * 0.5);
   switch (o.kind) {
     case 'egg':
       if (broken) { circle(ctx, 0, r * 0.5, r * 0.9, '#fff7e6'); circle(ctx, 0, r * 0.5, r * 0.4, '#ffb000'); break; }
-      ctx.fillStyle = o.color; ctx.beginPath(); ctx.ellipse(0, 0, r * 0.72, r * 0.95, 0, 0, Math.PI * 2); ctx.fill(); break;
+      ctx.fillStyle = o.color; ctx.beginPath(); ctx.ellipse(0, 0, r * 0.72, r * 0.95, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#d9b98a'; ctx.lineWidth = 2; ctx.stroke(); // a pale egg on a pale wall needs an edge
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.ellipse(-r * 0.25, -r * 0.35, r * 0.14, r * 0.26, 0.3, 0, Math.PI * 2); ctx.fill(); break;
     case 'apple':
       circle(ctx, 0, 0, r * 0.85, broken ? '#a33' : o.color);
+      if (!broken) circle(ctx, -r * 0.3, -r * 0.3, r * 0.2, 'rgba(255,255,255,0.45)');
       ctx.fillStyle = '#3fe0a0'; ctx.beginPath(); ctx.ellipse(r * 0.25, -r * 0.95, r * 0.25, r * 0.12, -0.5, 0, Math.PI * 2); ctx.fill(); break;
     case 'cup':
       ctx.fillStyle = broken ? '#9aa9c9' : o.color;
-      ctx.beginPath(); ctx.moveTo(-r * 0.7, -r); ctx.lineTo(r * 0.7, -r); ctx.lineTo(r * (broken ? 0.2 : 0.5), r); ctx.lineTo(-r * (broken ? 0.3 : 0.5), r); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-r * 0.7, -r); ctx.lineTo(r * 0.7, -r); ctx.lineTo(r * (broken ? 0.2 : 0.5), r); ctx.lineTo(-r * (broken ? 0.3 : 0.5), r); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#8fa3cf'; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = '#5ad1ff'; ctx.fillRect(-r * 0.62, -r * 0.3, r * 1.2, r * 0.25); break;
     case 'can':
       fillRound(ctx, -r * 0.6, -r, r * 1.2, r * 2, r * 0.25, o.color);

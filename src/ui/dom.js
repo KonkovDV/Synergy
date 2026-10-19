@@ -34,4 +34,3 @@ export function toast(text, kind = '') {
   setTimeout(() => el.remove(), 3100);
 }
 
-export function starsText(n, total = 3) { return '★'.repeat(n) + '☆'.repeat(total - n); }

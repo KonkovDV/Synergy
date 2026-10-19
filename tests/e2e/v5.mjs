@@ -144,6 +144,18 @@ await page.emulateMedia({ contrast: 'more' }); await page.reload(); await wait(5
 if (!(await page.evaluate(() => document.documentElement.classList.contains('hc')))) errors.push('prefers-contrast: more did not switch the contrast mode on');
 await page.emulateMedia({ contrast: 'no-preference' }); await page.reload(); await wait(500);
 
+// 5.11 — the dark theme of «Bloom» by the system setting: the same screens, no axe violations (contrast of every token).
+await page.emulateMedia({ colorScheme: 'dark' }); await page.reload(); await wait(500);
+if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'dark') errors.push('prefers-color-scheme: dark did not switch the theme');
+const darkRun = { id: 'd1', at: new Date().toISOString(), game: 'grip', level: 2, levelCount: 8, scheme: 'proportional', score: 74, stars: 2,
+  skills: { precision: 62, switching: 48, stability: 81 }, details: { delivered: 4, total: 5, difficulty: 0.5 }, durationS: 96 };
+for (const [name, params] of [['home'], ['progress'], ['levels', { game: 'rhythm' }], ['play', { game: 'flight', level: 1 }], ['checkin'], ['tutorial'],
+  ['rest', { next: { game: 'safe', level: 1, retention: false } }], ['results', { run: darkRun, report: { xp: 90, levelUp: true, level: 3, achievements: ['first_run'], skins: ['sky'], unlockedLevel: 3 } }], ['settings']]) {
+  await go(name, params); await wait(350); await audit(`dark-${name}`);
+  if (name === 'home') await shot('v5-13-home-dark');
+}
+await page.emulateMedia({ colorScheme: 'light' }); await page.reload(); await wait(400);
+
 // 5.7 — landscape (WCAG 1.3.4: orientation not locked): the pads fit, nothing is cut off, no axe violations.
 const land = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
 land.on('pageerror', e => errors.push(`landscape: ${e.message}`));

@@ -2,6 +2,7 @@
 // child at the screen, not a security boundary: anyone with the device storage can reset the app anyway.
 // The brake that matters is the attempt lockout (nextPinLock); the hash only avoids storing the PIN in plain text.
 import { h } from './dom.js';
+import { badgeArt } from './art.js';
 import { bottomNav } from './widgets.js';
 
 /** FNV-1a over a salted PIN — the PIN itself is not stored in plain text. */
@@ -50,7 +51,7 @@ export function pinGateScreen(app, { next = 'settings' } = {}) {
     fresh: true, // the screen behind it is mounted fresh after the right PIN (focus on its heading)
     node: h('div', { class: 'screen pin' },
       h('main', { class: 'scroll center' },
-        h('p', { class: 'big-emoji', 'aria-hidden': 'true' }, '🔒'),
+        h('div', { class: 'pin-art' }, badgeArt('lock', 88)),
         h('h1', {}, 'Для взрослых'),
         h('p', {}, 'Настройки защищены PIN-кодом родителя.'),
         // One submit per Enter or tap (5.6 listened to keydown and keyup: one wrong Enter cost two attempts).
