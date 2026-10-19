@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.12.1',
+  version: '5.13.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -157,6 +157,19 @@ export const PET = {
     { id: 'young', from: 10, name: 'Юная жар-птица' },
     { id: 'firebird', from: 21, name: 'Жар-птица' },
   ],
+};
+
+/**
+ * Goals from the Firebird (5.13, the sample's learning goals): the player picks one of a few offered goals, one at a
+ * time, measured by the runs themselves. Goal setting in rehabilitation is a choice, not an order (person-centred
+ * goals; Levack et al., Cochrane 2015, CD009727: very low-quality evidence, leaning to psychosocial outcomes — quality
+ * of life, self-efficacy — not to physical ones; no effect is promised), so a goal never expires, can be dropped at
+ * any time, and its reward never exceeds the whole daily plan's bonus.
+ */
+export const MISSIONS = {
+  offers: 3,        // goals offered at once
+  maxTarget: 3,     // runs a goal may ask for
+  xpPerStep: 20,    // reward = xpPerStep × target, so ≤ 60 XP (the whole daily plan gives 60)
 };
 
 export const STARS = [50, 70, 88]; // score thresholds for 1, 2, 3 stars

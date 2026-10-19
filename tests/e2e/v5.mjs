@@ -34,7 +34,27 @@ async function audit(screen) {
 await page.goto(base); await wait(500); await shot('v5-01-onboarding'); await audit('onboarding');
 await page.getByRole('button', { name: 'Дальше' }).click(); await wait(350);
 await page.getByRole('button', { name: 'Дальше' }).click(); await wait(350);
-await page.getByRole('button', { name: 'Пропустить обучение' }).click(); await wait(400);
+await page.getByRole('button', { name: 'Пропустить обучение' }).click(); await wait(700);
+// 5.13 — the hint tour of the home screen: a non-modal dialog with focus on its heading, a ring on the element it
+// explains; using that element counts as the step; Esc dismisses; a dismissed version never returns.
+const tourState = () => page.evaluate(() => ({ title: document.querySelector('.tour h2')?.textContent, focus: document.activeElement?.closest('.tour') ? 'tour' : document.activeElement?.tagName,
+  ring: document.querySelector('.tour-target')?.dataset.tour, tours: window.Synergy.state().settings.tours }));
+let t = await tourState();
+if (t.title !== 'Тренировка дня' || t.focus !== 'tour' || t.ring !== 'home.plan') errors.push(`home tour, step 1: ${JSON.stringify(t)}`);
+await shot('v5-14-tour'); await audit('home-tour');
+await page.locator('.tour').getByRole('button', { name: 'Дальше' }).click(); await wait(500);
+t = await tourState();
+if (t.ring !== 'home.pet') errors.push(`home tour, step 2: ${JSON.stringify(t)}`);
+await page.getByRole('button', { name: /Погладить/ }).click(); await wait(300); // the explained element used = the step done
+t = await tourState();
+if (t.ring !== 'nav.progress') errors.push(`using the explained element did not move the tour on: ${JSON.stringify(t)}`);
+const said = await page.locator('.pet-say').textContent();
+if (!/Тук-тук|Яйцо|вылуплюсь|слышу/.test(said)) errors.push(`a touch of the egg answered «${said}»`);
+await page.keyboard.press('Escape'); await wait(200);
+t = await tourState();
+if (t.title || t.tours.home?.status !== 'dismissed') errors.push(`Esc did not dismiss the tour: ${JSON.stringify(t)}`);
+await page.reload(); await wait(500);
+if (await page.locator('.tour').count()) errors.push('a dismissed tour came back after a reload');
 await shot('v5-02-home'); await audit('home');
 await go('tutorial'); await wait(800); await shot('v5-03-tutorial'); await audit('tutorial');
 await go('checkin'); await wait(300);
@@ -45,8 +65,27 @@ await shot('v5-04-checkin'); await audit('checkin');
 await go('settings'); await wait(300);
 await page.locator('summary', { hasText: 'Данные' }).click(); await wait(150); // folded section (progressive disclosure)
 await page.getByRole('button', { name: 'Демо-профиль для презентации' }).click(); await wait(600);
+await audit('progress-tour');
+if ((await tourState()).ring !== 'progress.skills') errors.push(`progress tour: ${JSON.stringify(await tourState())}`);
+await page.locator('.tour').getByRole('button', { name: 'Пропустить подсказки' }).click(); await wait(200);
 await shot('v5-05-progress', true); await audit('progress');
+// 5.13 — the outfit: a choice in a slot is worn at once (the demo bird has earned items).
+const headGroup = page.getByRole('radiogroup', { name: 'Наряд: на голову' });
+if (await headGroup.count()) {
+  await headGroup.getByRole('radio', { name: 'Без' }).click(); await wait(300);
+  if ((await page.evaluate(() => window.Synergy.state().profile.pet.head)) !== null) errors.push('«Без» did not take the head item off');
+} else errors.push('no outfit choice for the head in the demo profile');
 await go('home'); await wait(400); await shot('v5-06-home-showcase', true);
+// 5.13 — goals: the bird offers goals; one is taken and shows on its card with progress 0 of N.
+await go('goals'); await wait(300); await audit('goals');
+await page.getByRole('button', { name: 'Взять цель' }).first().click(); await wait(300);
+const mission = await page.evaluate(() => window.Synergy.state().profile.mission);
+if (!mission || mission.done !== 0) errors.push(`taking a goal: ${JSON.stringify(mission)}`);
+await audit('goals-active');
+await go('home'); await wait(300);
+if (!(await page.locator('.pet-goal [role=progressbar]').count())) errors.push('the taken goal is not on the bird\'s card');
+await page.evaluate(() => document.querySelector('.pet-card').scrollIntoView({ block: 'center' })); await wait(200);
+await shot('v5-15-pet-goal');
 await go('play', { game: 'check', level: 1, demo: true }); await wait(300); await shot('v5-07-check-intro'); await audit('play-intro');
 await page.getByRole('button', { name: 'Старт' }).click(); await wait(5000); await shot('v5-08-check-play'); await audit('play');
 // The demo layout let axe pass page-level rules while the play screen had no h1 and no main (found in 5.7): audit the player's screen too.

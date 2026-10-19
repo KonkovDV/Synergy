@@ -3,9 +3,9 @@
 import { fmtNum, fmtPct, fmtDay, plural, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { badgeArt, gameArt, firebird } from './art.js';
-import { petStageIndex } from '../core/pet.js';
+import { petStageIndex, petName, PET_SLOTS, PET_ITEMS, itemUnlocked, slotOpen, wornItems, equipItem } from '../core/pet.js';
 import { PET } from '../config.js';
-import { bottomNav, skillBar } from './widgets.js';
+import { bottomNav, skillBar, segmented } from './widgets.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
 import { skillProfile, ACHIEVEMENTS, SKINS, skinUnlocked, trainingDays, dayKey } from '../core/progress.js';
 import { COLORS, drawHand } from '../render/draw.js';
@@ -156,6 +156,22 @@ export function progressScreen(app) {
   }));
   const achievements = h('div', { class: 'badges' }, ...ACHIEVEMENTS.map(a => h('div', { class: `badge ${p.achievements[a.id] ? 'on' : ''}`, title: a.text },
     badgeArt(p.achievements[a.id] ? 'medal' : 'medal-off', 32), h('b', {}, a.name), h('span', { class: 'sr-only' }, p.achievements[a.id] ? ' — получено.' : ' — пока нет.'), h('small', {}, a.text))));
+  // 5.13 — what the bird wears (the sample's items in slots): one choice per open slot among the items earned; the rest
+  // says which achievement brings it. No shop and no currency: practice earns the things.
+  const stageId = PET.stages[petStageIndex(trainingDays(p))].id;
+  const locked = PET_ITEMS.filter(i => !itemUnlocked(p, i));
+  const outfit = h('section', { class: 'card outfit', 'data-tour': 'progress.outfit' }, h('h2', {}, 'Наряды Жар-птицы'),
+    h('div', { class: 'outfit-preview', 'aria-hidden': 'true' }, firebird(stageId, 'waiting', 128, { items: wornItems(p, stageId) })),
+    ...PET_SLOTS.map(slot => {
+      const earned = PET_ITEMS.filter(i => i.slot === slot.id && itemUnlocked(p, i));
+      const from = PET.stages.find(st => st.id === slot.from)?.name;
+      return h('div', { class: 'outfit-slot' }, h('p', { class: 'outfit-label' }, slot.name),
+        !slotOpen(slot.id, stageId) ? h('p', { class: 'note' }, `Откроется на стадии «${from}».${earned.length ? ` Уже ждёт: ${earned.map(i => i.name).join(', ')}.` : ''}`)
+          : earned.length ? segmented([{ value: '', label: 'Без' }, ...earned.map(i => ({ value: i.id, label: i.name }))], p.pet?.[slot.id] ?? '',
+            v => { equipItem(p, slot.id, v || null); app.save(); app.go('progress'); }, `Наряд: ${slot.name.toLowerCase()}`)
+            : h('p', { class: 'note' }, 'Пока пусто — подарки приходят за достижения.'));
+    }),
+    h('p', { class: 'note' }, locked.length ? `Ещё можно получить: ${locked.map(i => `${i.name} — за «${ACHIEVEMENTS.find(a => a.id === i.achievement)?.name}»`).join('; ')}.` : 'Все подарки собраны!'));
   const minutes = Math.round(p.totals.seconds / 60);
   const checks = assessmentHistory(runs, null, 6);
   const sameScheme = assessmentHistory(runs, app.settings.scheme, 6); // the trend: one scheme — a switch is not a change of skill (5.10)
@@ -185,14 +201,14 @@ export function progressScreen(app) {
           h('div', {}, h('b', {}, p.totals.runs), h('small', {}, plural(p.totals.runs, FORMS.exercises))),
           h('div', {}, h('b', {}, minutes), h('small', {}, plural(minutes, FORMS.minutes))),
           h('div', {}, h('b', {}, p.streak.best), h('small', {}, 'лучшая серия'))),
-        h('section', { class: 'card' }, h('h2', {}, 'Профиль навыков'),
+        h('section', { class: 'card', 'data-tour': 'progress.skills' }, h('h2', {}, 'Профиль навыков'),
           runs.length ? radar(profile) : h('p', { class: 'note' }, 'Сыграйте первое упражнение — здесь появится профиль.'),
           h('p', { class: 'note' }, 'Среднее за последние 12 упражнений. «Без подсказки» — игровая метрика удержания: насколько навык держится, когда шкалы нет.')),
         h('section', { class: 'card' }, h('h2', {}, 'Динамика'), ...trends),
         checkSection, confSection, wellSection,
         h('section', { class: 'card' }, h('h2', {}, 'Календарь'), calendar(p)),
         // The bird's path (5.12): a vertical journey — passed stages, the current one, the next ones as a promise in words.
-        h('section', { class: 'card' }, h('h2', {}, `Жар-птица ${app.settings.petName || PET.defaultName}`),
+        h('section', { class: 'card' }, h('h2', {}, `Жар-птица ${petName(app.settings)}`),
           h('ol', { class: 'pet-path' }, ...PET.stages.map((st, i) => {
             const days = trainingDays(p), now = petStageIndex(days);
             const state = i < now ? 'done' : i === now ? 'now' : 'next';
@@ -200,9 +216,10 @@ export function progressScreen(app) {
             return h('li', { class: state }, h('span', { class: 'pet-node' }, firebird(st.id, 'waiting', 48)), h('div', {}, h('b', {}, st.name), h('small', {}, note)));
           })),
           h('p', { class: 'note' }, `Растёт от дней с тренировкой: сейчас ${count(trainingDays(p), FORMS.days)}. День отдыха и пропуск рост не отнимают.`)),
+        outfit,
         h('section', { class: 'card' }, h('h2', {}, 'Достижения'), achievements),
         h('section', { class: 'card' }, h('h2', {}, 'Облик протеза'), skins),
-        h('section', { class: 'card' }, h('h2', {}, 'Для специалиста'),
+        h('section', { class: 'card', 'data-tour': 'progress.report' }, h('h2', {}, 'Для специалиста'),
           h('p', { class: 'note' }, 'Игровая статистика каждого упражнения — её можно показать протезисту или реабилитологу. Файл содержит ответы о самочувствии (сведения о здоровье): отправляйте его только тем, кому доверяете.'),
           h('button', { class: `btn ${runs.length ? 'primary' : 'ghost'}`, onclick: () => printHtml(`Синергия — отчёт ${dayKey()}`, reportHtml(app.state, id => GAME_BY_ID[id]?.title ?? id)) }, 'Отчёт для специалиста · PDF'),
           h('div', { class: 'row-actions' },

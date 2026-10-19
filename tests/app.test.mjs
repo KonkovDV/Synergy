@@ -108,3 +108,15 @@ test('leaving the demo profile reads what another window saved meanwhile (5.11 �
   app.save();
   assert.equal(JSON.parse(store.get('synergy.v4')).settings.name, 'Борис', 'not overwritten by the stale copy');
 });
+
+test('the demo profile keeps the person\'s settings and brings read hints back (5.13: it dropped them to defaults)', () => {
+  const app = fresh();
+  app.updateSettings({ textScale: 1.3, theme: 'dark', contrast: true, scheme: 'gesture', tours: { home: { v: 1, status: 'completed', step: 2 } } });
+  app.enterShowcase();
+  for (const [k, v] of Object.entries({ textScale: 1.3, theme: 'dark', contrast: true, scheme: 'gesture', source: 'touch' })) assert.equal(app.settings[k], v, k);
+  assert.equal(app.settings.tours.home.status, 'completed', 'hints read before the demo are not shown again in it');
+  app.updateSettings({ tours: { ...app.settings.tours, progress: { v: 1, status: 'dismissed', step: 0 } } });
+  app.exitShowcase();
+  assert.deepEqual(Object.keys(app.settings.tours).sort(), ['home', 'progress'], 'hints read in the demo stay read');
+  assert.equal(app.settings.textScale, 1.3);
+});

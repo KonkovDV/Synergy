@@ -36,7 +36,7 @@ function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
   const out = [];
   // The device width, not innerWidth: a mobile browser zooms out a page that is too wide and innerWidth grows with it.
   const vw = width;
-  const LAYERS = '.overlay, #toasts, .bottom-nav, .sticky-actions, .sheet-actions, .top-bar, .showcase-banner';
+  const LAYERS = '.overlay, #toasts, .bottom-nav, .sticky-actions, .sheet-actions, .top-bar, .showcase-banner, .tour';
   const visible = el => {
     for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
       const cs = getComputedStyle(n);
@@ -51,7 +51,7 @@ function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
     return `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : ''}«${t}»`;
   };
   const layerOf = el => el.closest(LAYERS);
-  const fixedLike = el => !!el.closest('.bottom-nav, .sticky-actions, .top-bar, #toasts, .showcase-banner, .play-top');
+  const fixedLike = el => !!el.closest('.bottom-nav, .sticky-actions, .top-bar, #toasts, .showcase-banner, .play-top, .tour');
   // Text in a region that scrolls sideways (a data table, WCAG 1.4.10 exception) is reachable if the region fits the screen.
   const inScroller = el => {
     for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
@@ -166,6 +166,14 @@ function reachable() {
     const b = btn.getBoundingClientRect();
     if (b.top < Math.max(0, s.top) - 1 || b.bottom > Math.min(vh, s.bottom) + 1) out.push({ kind: 'action', what: `«${label(btn)}» out of sight in the dialog (${Math.round(b.top)}…${Math.round(b.bottom)} of ${Math.round(Math.min(vh, s.bottom))})` });
   }
+  // 5.13 — a hint card: its buttons are on screen, and it leaves room for the element it explains.
+  const tour = document.querySelector('.tour');
+  if (tour) {
+    const t = tour.getBoundingClientRect(), btn = tour.querySelector('.btn.primary')?.getBoundingClientRect();
+    if (btn && (btn.top < Math.max(0, t.top) - 1 || btn.bottom > Math.min(vh, t.bottom) + 1 || btn.bottom > vh + 1)) out.push({ kind: 'action', what: `hint «${tour.querySelector('h2')?.textContent}»: its button is out of sight` });
+    const target = document.querySelector('.tour-target')?.getBoundingClientRect();
+    if (target && !document.querySelector('.tour-target').closest('.bottom-nav') && Math.min(target.bottom, t.top) - Math.max(target.top, 0) < 40) out.push({ kind: 'action', what: `hint «${tour.querySelector('h2')?.textContent}» covers the element it explains` });
+  }
   if (document.querySelector('.play-screen, .tutorial, .calibration')) {
     for (const pad of document.querySelectorAll('.pad, .gkey, .pad-co')) {
       const r = pad.getBoundingClientRect();
@@ -239,11 +247,11 @@ async function focusWalk(page) {
     const r = await page.evaluate(() => {
       const el = document.activeElement;
       if (!el || el === document.body || !document.querySelector('#app').contains(el)) return null;
-      if (el.closest('.bottom-nav, .sticky-actions, .top-bar, .play-top, .showcase-banner, .overlay')) return { skip: true, id: el.outerHTML.slice(0, 60) };
+      if (el.closest('.bottom-nav, .sticky-actions, .top-bar, .play-top, .showcase-banner, .overlay, .tour')) return { skip: true, id: el.outerHTML.slice(0, 60) };
       const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + Math.min(r.height / 2, 20);
       if (y < 0 || y > innerHeight) return { bad: `focused off-screen: ${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 30)}`, id: el.outerHTML.slice(0, 60) };
       const top = document.elementFromPoint(x, y);
-      const hidden = top && !el.contains(top) && !top.contains(el) && top.closest('.bottom-nav, .sticky-actions, .top-bar, .showcase-banner, #toasts');
+      const hidden = top && !el.contains(top) && !top.contains(el) && top.closest('.bottom-nav, .sticky-actions, .top-bar, .showcase-banner, #toasts, .tour');
       return { id: el.outerHTML.slice(0, 60), bad: hidden ? `focus under a bar: ${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 30)}` : null };
     });
     if (!r) break;
@@ -265,7 +273,10 @@ const STATES = [
   ['onboarding-1', async p => {}],
   ['onboarding-2', async p => { await p.waitForTimeout(350); await p.getByRole('button', { name: 'Дальше' }).click(); }],
   ['onboarding-3', async p => { await p.waitForTimeout(350); await p.getByRole('button', { name: 'Дальше' }).click(); }],
-  ['home-new', async p => { await p.getByRole('button', { name: 'Пропустить обучение' }).click(); }],
+  ['home-new', async p => { await p.getByRole('button', { name: 'Пропустить обучение' }).click(); await p.waitForTimeout(600); }], // with the first hint (5.13)
+  ['home-tour-2', async p => { await p.locator('.tour').getByRole('button', { name: 'Дальше' }).click(); await p.waitForTimeout(600); }],
+  ['home-tour-3', async p => { await p.locator('.tour').getByRole('button', { name: 'Дальше' }).click(); await p.waitForTimeout(300); }],
+  ['home-after-tour', async p => { await p.locator('.tour').getByRole('button', { name: 'Понятно' }).click(); }],
   ['tutorial', async p => go(p, 'tutorial')],
   ['checkin', async p => { await go(p, 'checkin'); await p.getByRole('radio', { name: /Умеренная/ }).click(); await p.getByRole('radio', { name: /Есть усталость/ }).click(); }],
   ['checkin-sensors', async p => { await p.evaluate(() => window.Synergy.useBridge('')); await go(p, 'checkin'); }],
@@ -278,7 +289,9 @@ const STATES = [
   ['results', async p => go(p, 'results', { run, report: { xp: 119, levelUp: false, achievements: [], skins: [], unlockedLevel: 3 }, planBonus: 0, calibrationNote: { recalibrate: true, stuckChannel: 0, shiftPct: 0 } })],
   ['results-check', async p => go(p, 'results', { run: check, report: { xp: 111, levelUp: false, achievements: [], skins: [], unlockedLevel: null } })],
   ['rest', async p => go(p, 'rest', { next: { game: 'flight', level: 2, retention: true } })],
-  ['progress-empty', async p => go(p, 'progress')],
+  ['progress-empty', async p => { await go(p, 'progress'); await p.waitForTimeout(600); }], // with its hint (5.13)
+  ['progress-no-tour', async p => { await p.keyboard.press('Escape'); }],
+  ['goals', async p => go(p, 'goals')],
   ['settings', async p => { await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
   ['calibration', async p => go(p, 'calibration')],
   ['audiosync', async p => go(p, 'audiosync')],
@@ -288,6 +301,12 @@ const STATES = [
   ['gesture-tutorial', async p => go(p, 'tutorial')],
   ['showcase-progress', async p => { await go(p, 'settings'); await p.locator('summary', { hasText: 'Данные' }).click(); await p.getByRole('button', { name: 'Демо-профиль для презентации' }).click(); }],
   ['showcase-home', async p => go(p, 'home')],
+  ['showcase-pet', async p => { await p.evaluate(() => document.querySelector('.pet-card').scrollIntoView({ block: 'start' })); await p.getByRole('button', { name: /Погладить/ }).click(); }],
+  ['showcase-goals', async p => go(p, 'goals')],
+  ['showcase-goal-taken', async p => { await p.getByRole('button', { name: 'Взять цель' }).first().click(); }],
+  ['showcase-outfit', async p => { await go(p, 'progress'); await p.evaluate(() => document.querySelector('.outfit').scrollIntoView({ block: 'start' })); }],
+  ['results-pet', async p => go(p, 'results', { run: { ...run, stars: 3, score: 92 }, report: { xp: 137, levelUp: true, level: 4, achievements: ['perfect', 'plan'], skins: [], items: ['star', 'wreath'], unlockedLevel: 3,
+    mission: { mission: { kind: 'weak', game: 'grip', minStars: 2, target: 3, done: 3 }, done: 3, target: 3, completed: true, xp: 60 } } })],
   // 5.9: the system asks for more contrast (the app follows it) and Windows forced colors — borders and outlines change.
   ['hc-home', async p => { await p.emulateMedia({ contrast: 'more' }); await go(p, 'home'); }],
   ['hc-play', async p => go(p, 'play', { game: 'flight', level: 1 })],
@@ -304,7 +323,7 @@ for (const [w, h] of VIEWPORTS) {
     page.on('pageerror', e => errors.push(`${w}×${h}@${scale}: ${e.message}`));
     await page.goto(base); await page.waitForTimeout(250);
     for (const [state, setup] of STATES) {
-      if (onlyStates && !onlyStates.includes(state) && !/^(home-new|onboarding)/.test(state)) continue;
+      if (onlyStates && !onlyStates.includes(state) && !/^(home-new|home-tour|home-after|onboarding)/.test(state)) continue;
       try { await setup(page); } catch (e) { errors.push(`${w}×${h}@${scale} ${state}: setup ${e.message.split('\n')[0]}`); continue; }
       await page.evaluate(s => { document.documentElement.style.setProperty('--text-scale', String(s)); document.querySelectorAll('.toast').forEach(t => t.remove()); }, scale);
       await page.waitForTimeout(state.startsWith('play') || state.startsWith('gesture') ? 350 : 150);

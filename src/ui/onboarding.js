@@ -3,6 +3,7 @@ import { h } from './dom.js';
 import { segmented } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
 import { mio, badgeArt, trails, coverScene } from './art.js';
+import { PET } from '../config.js';
 
 export function onboardingScreen(app) {
   let step = 0, shownAt = 0;
@@ -10,7 +11,7 @@ export function onboardingScreen(app) {
   const dots = h('div', { class: 'dots' });
   const next = h('button', { class: 'btn primary big' });
   // A draft, saved once through updateSettings (5.10: fields were written into the live settings one by one).
-  const s = { scheme: app.settings.scheme, side: app.settings.side, audience: app.settings.audience, name: app.settings.name };
+  const s = { scheme: app.settings.scheme, side: app.settings.side, audience: app.settings.audience, name: app.settings.name, petName: app.settings.petName };
 
   const pages = [
     // Each page opens with a cover (the sample's onboarding, the brand's dark cover with light trails): Мио, the title, one line.
@@ -40,7 +41,9 @@ export function onboardingScreen(app) {
       segmented([{ value: 'right', label: 'Правая' }, { value: 'left', label: 'Левая' }], s.side, v => { s.side = v; }, 'Рука с протезом'),
       h('p', {}, 'Кто будет заниматься?'),
       segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { s.audience = v; }, 'Кто занимается'),
-      h('label', { class: 'row' }, h('span', {}, 'Как к вам обращаться (необязательно)'), h('input', { type: 'text', maxlength: 24, value: s.name, oninput: e => { s.name = e.target.value.trim(); } }))],
+      h('label', { class: 'row' }, h('span', {}, 'Как к вам обращаться (необязательно)'), h('input', { type: 'text', maxlength: 24, value: s.name, oninput: e => { s.name = e.target.value.trim(); } })),
+      // 5.13 (the sample's naming screen): a name of one's own makes the bird one's own; the field is optional.
+      h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы (необязательно)'), h('input', { type: 'text', maxlength: 16, value: s.petName, placeholder: PET.defaultName, oninput: e => { s.petName = e.target.value.trim(); } }))],
   ];
 
   const render = () => {

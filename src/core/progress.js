@@ -2,6 +2,8 @@
 // Pure functions over plain data (easy to test and to persist).
 import { STARS, XP, SESSION, CHILD, SPACING, ARM_POSES } from '../config.js';
 import { SKILL, ACTIVE_GESTURE_IDS } from './vocabulary.js';
+import { emptyOutfit, autoEquip, itemsFor } from './pet.js';
+import { advanceMission } from './missions.js';
 
 /** Session rules for the audience: a child trains with a parent — shorter plan, rest and daily cap. */
 export function sessionRules(audience = 'adult') {
@@ -20,6 +22,8 @@ export const dayKey = (date = new Date()) => {
 // Calendar arithmetic in UTC (5.11): local noon is x.5 days in UTC±0 zones, and Math.round flipped at a DST change —
 // London: train 24.10, rest 25.10, train 26.10 gave a series of 1.
 const dayIndex = key => { const [y, m, d] = key.split('-').map(Number); return Date.UTC(y, m - 1, d) / 86400000; };
+/** Week number of a day (weeks start on Monday): 1970-01-01 was a Thursday. The goals offered change with it. */
+export const weekIndex = key => Math.floor((dayIndex(key) + 3) / 7);
 const weekStart = key => { const d = new Date(`${key}T12:00:00`); const shift = (d.getDay() + 6) % 7; d.setDate(d.getDate() - shift); return dayKey(d); };
 
 export function starsFor(score) { return STARS.filter(s => score >= s).length; }
@@ -68,8 +72,10 @@ export function createProfile() {
     streak: { current: 0, best: 0, lastDay: null },
     games: {},                                  // gameId → { unlocked, stars: {level: n}, best: {level: score}, played }
     achievements: {},                           // id → dayKey
-    totals: { runs: 0, switches: 0, plans: 0, seconds: 0 },
+    totals: { runs: 0, switches: 0, plans: 0, seconds: 0, missions: 0 },
     skin: 'graphite',
+    pet: emptyOutfit(),                         // what the Firebird wears: slot → item id (5.13)
+    mission: null,                              // the goal the player took (core/missions.js), or null
     plan: null,
     onboarded: false,
     tutorialDone: false,                        // the tutorial card left home (passed or finished early)
@@ -118,7 +124,7 @@ export function weeklyStatus(profile, goal, today) {
  * Demo (autopilot) runs never change progress.
  */
 export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION.weeklyGoalDefault } = {}) {
-  if (run.demo) return { xp: 0, levelUp: false, achievements: [], unlockedLevel: null, skins: [] };
+  if (run.demo) return { xp: 0, levelUp: false, achievements: [], unlockedLevel: null, skins: [], items: [], mission: null };
   const before = playerLevel(profile.xp);
   const gp = { ...gameProgress(profile, run.game) };
   gp.stars = { ...gp.stars, [run.level]: Math.max(gp.stars[run.level] ?? 0, run.stars) };
@@ -141,15 +147,21 @@ export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION
     switches: profile.totals.switches + (run.details?.switches ?? 0),
     seconds: profile.totals.seconds + run.durationS,
   };
+  // The goal the player took (5.13): its reward is part of this run's level-up, so it is added before the level.
+  const mission = advanceMission(profile, run, today);
   const after = playerLevel(profile.xp);
   const skins = SKINS.filter(s => s.level && s.level > before.level && s.level <= after.level).map(s => s.id);
   const achievements = unlockAchievements(profile, run, { weekly: weeklyStatus(profile, weeklyGoal, today) }, today);
-  return { xp, levelUp: after.level > before.level, level: after.level, achievements, unlockedLevel, skins };
+  return { xp, levelUp: after.level > before.level, level: after.level, achievements, unlockedLevel, skins, items: itemsFor(achievements).map(i => i.id), mission };
 }
 
+/** New achievements of this moment; the Firebird's items they earn go on into empty slots (5.13). */
 export function unlockAchievements(profile, run, ctx, today = dayKey()) {
   const fresh = ACHIEVEMENTS.filter(a => !profile.achievements[a.id] && a.test(profile, run, ctx));
-  if (fresh.length) profile.achievements = { ...profile.achievements, ...Object.fromEntries(fresh.map(a => [a.id, today])) };
+  if (fresh.length) {
+    profile.achievements = { ...profile.achievements, ...Object.fromEntries(fresh.map(a => [a.id, today])) };
+    autoEquip(profile, itemsFor(fresh.map(a => a.id)));
+  }
   return fresh.map(a => a.id);
 }
 

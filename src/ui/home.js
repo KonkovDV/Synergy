@@ -8,8 +8,10 @@ import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
 import { overDailyCap, capAdvice } from '../core/wellbeing.js';
 import { gameArt, badgeArt, starRow, trails, firebird } from './art.js';
-import { petState } from '../core/pet.js';
-import { SESSION, PET } from '../config.js';
+import { petState, petName, petTap, wornItems } from '../core/pet.js';
+import { missionText, missionXp } from '../core/missions.js';
+import { PLAN_CATALOG } from '../games/registry.js';
+import { SESSION } from '../config.js';
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
@@ -24,8 +26,11 @@ export function homeScreen(app) {
   const allDone = doneCount === plan.items.length;
   const resting = app.checkin()?.action === 'stop';
   // Жар-птица (5.12): grows with training days; fed when trained today, asleep on a declared rest day — never sad.
-  const petName = s.petName || PET.defaultName;
-  const pet = petState(trainingDays(p), { trainedToday: (p.days[today]?.runs ?? 0) > 0, restToday: resting, name: petName });
+  // 5.13: its line says why (the day's latest event), and it wears what the achievements earned.
+  const name = petName(s);
+  const pet = petState(trainingDays(p), { trainedToday: (p.days[today]?.runs ?? 0) > 0, restToday: resting, name,
+    planDone: !!(p.plan?.day === today && p.plan.rewarded), goalDone: !!p.days[today]?.goal });
+  const worn = wornItems(p, pet.stage.id);
   const streak = streakAlive(p.streak, today, painRestDays(p)) ? p.streak.current : 0;
   const tip = DAILY_TIPS[Math.floor(Date.now() / 86400000) % DAILY_TIPS.length];
   const overCap = overDailyCap(secondsToday(p, today), app.rules.softCapMin);
@@ -33,7 +38,7 @@ export function homeScreen(app) {
 
   const head = h('section', { class: 'hero' }, trails('light'),
     h('div', { class: 'hero-top' },
-      h('div', { class: 'avatar' }, firebird(pet.stage.id, pet.mood, 52)),
+      h('div', { class: 'avatar' }, firebird(pet.stage.id, pet.mood, 52, { items: worn })),
       h('div', {},
         h('p', { class: 'eyebrow' }, SCHEME_INFO[s.scheme].short),
         h('h1', {}, s.name ? `Привет, ${s.name}!` : 'Привет!')),
@@ -52,7 +57,7 @@ export function homeScreen(app) {
   const restText = app.checkin()?.reason === 'skin'
     ? 'Сегодня вы отметили раздражение кожи под датчиками — день без датчиков: серия не прерывается. Если покраснение не проходит, покажите кожу протезисту.'
     : 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.';
-  const planCard = h('section', { class: 'card plan' },
+  const planCard = h('section', { class: 'card plan', 'data-tour': 'home.plan' },
     h('div', { class: 'card-head' }, h('h2', {}, plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
     overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,
     resting ? h('p', { class: 'note warn' }, restText) : null,
@@ -88,16 +93,39 @@ export function homeScreen(app) {
         h('span', { class: 'game-meta' }, badgeArt('star', 16), h('span', {}, `${stars}/${g.Game.levels.length * 3}`, h('span', { class: 'sr-only' }, ' звёзд'), ` · ур. ${gp.unlocked}`)));
     })));
 
-  // The nest (5.12, the sample's pet): what the bird is now, how many training days to the next stage, its mood words.
-  const petCard = h('section', { class: 'card pet-card' },
-    h('div', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, pet.mood, 104)),
+  // The nest (5.12, the sample's pet): what the bird is now, how many training days to the next stage, its words.
+  // 5.13: the bird is a button — a touch makes it answer in its bubble (announced politely) with a small hop; the
+  // goal it offers appears after the first exercise (progressive disclosure: a first visit has enough to read).
+  const bird = firebird(pet.stage.id, pet.mood, 104, { items: worn, alive: true });
+  const say = h('p', { class: 'pet-say', 'aria-live': 'polite' }, pet.line);
+  const touch = () => {
+    const reply = petTap(pet, ++app.petTaps);
+    say.textContent = reply.line;
+    bird.classList.remove(...[...bird.classList].filter(c => c.startsWith('anim-')), 'alive');
+    void bird.getBoundingClientRect(); // restart the one-shot animation on every touch
+    bird.classList.add(`anim-${reply.animation}`);
+  };
+  const goal = p.mission ? missionText(p.mission, PLAN_CATALOG) : null;
+  const goalRow = !app.state.runs.some(r => !r.demo) ? null : p.mission
+    ? h('div', { class: 'pet-goal' },
+      h('p', { class: 'eyebrow' }, 'Цель недели'),
+      h('b', {}, goal.title),
+      h('div', { class: 'xp-track', role: 'progressbar', 'aria-label': `Цель: ${goal.title}`, 'aria-valuenow': p.mission.done, 'aria-valuemin': 0, 'aria-valuemax': p.mission.target, 'aria-valuetext': `${p.mission.done} из ${p.mission.target}` },
+        h('i', { style: { width: `${Math.round(100 * p.mission.done / p.mission.target)}%` } })),
+      h('small', {}, `${p.mission.done} из ${p.mission.target} · награда +${missionXp(p.mission)} XP`),
+      h('button', { class: 'btn ghost', onclick: () => app.go('goals') }, 'Все цели'))
+    : h('div', { class: 'pet-goal' }, h('p', {}, `${name} предлагает цели на неделю — по вашим навыкам. Без срока.`),
+      h('button', { class: 'btn ghost', onclick: () => app.go('goals') }, 'Выбрать цель'));
+  const petCard = h('section', { class: 'card pet-card', 'data-tour': 'home.pet' },
+    h('button', { class: 'pet-art', 'aria-label': `Погладить Жар-птицу ${name}`, onclick: touch }, bird),
     h('div', { class: 'pet-info' },
       h('p', { class: 'eyebrow' }, pet.stage.name),
-      h('h2', {}, petName),
+      h('h2', {}, name),
       pet.next ? h('div', { class: 'pet-progress' },
         h('div', { class: 'xp-track', role: 'progressbar', 'aria-label': `Рост до стадии «${pet.next.name}»`, 'aria-valuenow': Math.round(pet.progress * 100), 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: { width: `${Math.round(pet.progress * 100)}%` } })),
         h('small', {}, `${pet.next.name} — через ${count(pet.left, FORMS.days)} с тренировкой`)) : h('small', {}, 'Выросла! Каждая тренировка держит её в силе.'),
-      h('p', { class: 'pet-line' }, pet.line)));
+      say),
+    goalRow);
   return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, petCard, checkCard, tipCard, games), bottomNav(app, 'home')) };
 }
 
