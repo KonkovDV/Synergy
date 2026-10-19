@@ -13,6 +13,7 @@ import { audioSyncScreen } from './audiosync.js';
 import { goalsScreen } from './goals.js';
 import { nestScreen } from './nest.js';
 import { faqScreen } from './faq.js';
+import { primerScreen } from './primer.js';
 
 export const SCREENS = {
   home: homeScreen,
@@ -32,4 +33,5 @@ export const SCREENS = {
   goals: goalsScreen,
   nest: nestScreen,
   faq: faqScreen,
+  primer: primerScreen,
 };

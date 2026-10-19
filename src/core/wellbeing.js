@@ -36,6 +36,25 @@ export const EFFORT_LEVELS = [
 
 export const CHECKIN_ACTION = Object.freeze({ GO: 'go', LIGHT: 'light', STOP: 'stop' });
 
+/**
+ * The safety rules of the onboarding (5.15, the team's sample: its consent text has a version, a test fails when the
+ * wording changes without a new version, and a person who accepted an older version is asked again). One list for the
+ * onboarding page and for the one-time re-read when the rules change. A changed rule = SAFETY_VERSION + 1 and a new
+ * pinned fingerprint in tests/v515.test.mjs; every person who read an older version sees the new rules once, before
+ * the home screen. Version 1 is the list every onboarding since 5.7 showed.
+ */
+export const SAFETY_VERSION = 1;
+export const SAFETY_RULES = [
+  'Это тренажёр, а не медицинское изделие.',
+  'Напрягайте мышцы комфортно, без боли — максимум не нужен.',
+  'Устали — отдохните. Между упражнениями будет пауза.',
+  'Программу занятий согласуйте с реабилитологом. После операции — начинайте, когда разрешит лечащий врач.',
+  'Датчики — только на здоровую кожу. Покраснение, которое не проходит, или усиление фантомной боли — повод остановиться и сказать специалисту.',
+];
+
+/** The person finished the onboarding with an older list of the safety rules than the current one. */
+export const safetyOutdated = (profile, version = SAFETY_VERSION) => !!profile?.onboarded && (profile.safetySeen ?? 1) < version;
+
 /** What today's session should be, given the check-in answers (`skin` — only when real sensors are used). */
 export function checkInAdvice({ pain = 0, fatigue = 0, skin = 0 } = {}) {
   if (pain >= WELLBEING.painStop) {

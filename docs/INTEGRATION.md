@@ -38,34 +38,32 @@
 
 Пары путаниц (`GESTURE_CONFUSION`) с несуществующими жестами отбрасываются сами; хваты «Мастерской» и `HAND.twoChannelGrips` проверяет `tests/vocabulary.test.mjs` — при удалении хвата он подскажет, где править (шаги 3–4).
 
-## Встраивание в приложение заказчика (5.14)
+## Встраивание в приложение заказчика (5.14, 5.15)
 
-Организатор просит, чтобы решение было «подготовлено с учётом возможности дальнейшей интеграции в стороннее приложение» (страница кейса на Codenrock). Скорее всего, это Motorica Start или ATTILAN. «Синергия» встраивается как веб-модуль: в WebView (Android, iOS, Flutter, React Native) или в iframe. Сеть и сервер не нужны. Контракт описан в `src/services/host.js`, тесты — в `tests/host.test.mjs`.
+Организатор просит, чтобы решение было «подготовлено с учётом возможности дальнейшей интеграции в стороннее приложение» (страница кейса на Codenrock); скорее всего, это Motorica Start или ATTILAN. «Синергия» встраивается как офлайн-веб-модуль в WebView любого стека из кейса или в `iframe`.
 
-| Направление | Как | Что передаётся |
-|---|---|---|
-| Хост → игра: открыть упражнение | `index.html?game=grip&level=2` или `window.Synergy.start('grip', 2)` | `game` — id из `src/games/registry.js` (`grip`, `flight`, `rhythm`, `safe`, `check`); `level` — от 1 до числа уровней. Неизвестный id игнорируется, уровень вне диапазона заменяется первым. Без пройденного онбординга сначала открываются страницы о безопасности |
-| Хост → игра: сигнал | `window.Synergy.feed(frame)`, `postMessage`, WebSocket-мост (разделы ниже) | кадр `SignalFrame` |
-| Игра → хост: результат | `window.SynergyHost.onResult(json)`, если хост внедрил такой объект (Android: `addJavascriptInterface(obj, "SynergyHost")`) | JSON-сводка упражнения (ниже) |
-| Игра → страница | событие `synergy:result` на `document` (`detail` — та же сводка) | для хоста, который исполняет JS в WebView |
-| Игра → родительский iframe | `postMessage` в `window.parent` — **только** на origin из параметра `?host=https://…`; на `*` не отправляется никогда | та же сводка |
+**Полное руководство — [embed/README.md](embed/README.md):** контракт (протокол 1: `synergy:ready`, `synergy:result`, `synergy:close`; команды `synergy-start`, `synergy-frame`, `synergy-ping`), чек-лист и пример для Web, Android (Kotlin), iOS (Swift), Flutter, React Native и Unity, раздел «Как проверено».
+
+Коротко:
+- хост → игра: `index.html?game=grip&level=2` (после знакомства с безопасностью на первом запуске), `window.Synergy.start(game, level)`, `window.Synergy.feed(frame)`, а из страницы другого origin — `postMessage`;
+- игра → хост: нативный канал своего WebView без внедрённого скрипта (`SynergyHost.onMessage` / `.postMessage`, `webkit.messageHandlers.synergyHost`, `ReactNativeWebView`, `Unity.call`), событие на `document`, `postMessage` родителю — **только** на origin из `?host=https://…`. Хост 5.14 с `SynergyHost.onResult(json)` по-прежнему получает результаты.
 
 Сводка результата (протокол 1):
 
 ```json
-{ "type": "synergy:result", "protocol": 1, "version": "5.14.0", "at": "2026-10-19T09:12:03.000Z",
+{ "type": "synergy:result", "protocol": 1, "version": "5.15.0", "at": "2026-10-19T09:12:03.000Z",
   "game": "grip", "level": 2, "scheme": "proportional", "retention": false,
   "score": 84, "stars": 2, "durationS": 61, "skills": { "precision": 81, "switching": 77 } }
 ```
 
-В сводке нет ответов о самочувствии и имени. Сведения о здоровье покидают устройство только в отчёте, который человек сохраняет сам (Прогресс → «Для специалиста»). Демо-упражнения хосту не отправляются. Ошибка хоста не ломает игру: вызовы обёрнуты.
+В сообщениях нет ответов о самочувствии и имени. Сведения о здоровье покидают устройство только в отчёте, который человек сохраняет сам (Прогресс → «Для специалиста»). Демо-упражнения хосту не отправляются. Ошибка хоста не ломает игру.
 
-**Не проверено:** встраивание в реальный Motorica Start или ATTILAN (их SDK и формат данных не опубликованы). Если хост ждёт другой формат, правится одна функция — `resultMessage()`.
+**Не проверено:** встраивание в настоящий Motorica Start или ATTILAN (их SDK и формат данных не опубликованы). Если хост ждёт другой формат, правится одна функция — `resultMessage()`.
 
 ## Транспорты
 
-1. **WebSocket** — Настройки → Источник → «Внешний» → адрес `ws://IP:порт` → «Подключить».
-2. **postMessage** (игра в iframe/WebView): `iframe.contentWindow.postMessage({type:'synergy-frame', a, b}, '*')`. С 5.7 кадры принимаются только от встраивающей страницы (`window.parent`), самой страницы или нативного хоста (`WebMessage` без окна-источника): открывшая вкладка или дочернее окно подменить сигнал не могут (`trustedMessageSource`, RT-7).
+1. **WebSocket** — Настройки → Источник → «Внешний» → адрес `ws://IP:порт` → «Подключить». Соединение, которое не открылось за 6 с, сбрасывается и повторяется (5.15): статус «нет ответа, повторяем…» — пока мост ни разу не ответил, «переподключение…» — после обрыва.
+2. **postMessage** (игра в iframe/WebView): `iframe.contentWindow.postMessage({type:'synergy-frame', a, b}, '<origin игры>')`. С 5.15 первый такой кадр сам включает источник «Внешний» (как `Synergy.feed`), и WebSocket по сохранённому адресу при сигнале от хоста не набирается. С 5.7 кадры принимаются только от встраивающей страницы (`window.parent`), самой страницы или нативного хоста (`WebMessage` без окна-источника): открывшая вкладка или дочернее окно подменить сигнал не могут (`trustedMessageSource`, RT-7).
 3. **JS API**: `window.Synergy.feed({a, b, gesture})`; `window.Synergy.useBridge('ws://…')`; `window.Synergy.state()`.
 4. **Android**: в `MainActivity.pushFrame(a, b, gesture)` — вызвать из колбэка SDK/BLE протеза.
 

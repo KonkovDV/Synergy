@@ -105,6 +105,17 @@ await go('audiosync'); await wait(500); await audit('audiosync'); // no screensh
 await go('levels', { game: 'grip' }); await wait(300); await audit('levels');
 await go('rest', { next: { game: 'flight', level: 1, retention: false } }); await wait(300); await audit('rest');
 await go('pin'); await wait(300); await audit('pin');
+// 5.15 — «Азбука протеза» (topics, a turned card, an answered check, the result) and the safety re-read.
+await go('primer'); await wait(300); await audit('primer');
+for (let k = 0; k < 5; k++) { await go('primer', { deck: 'signal', card: k }); await wait(120); await page.locator('.flash-face').click(); await wait(120); }
+await audit('primer-card-open');
+await go('primer', { deck: 'signal', check: true }); await wait(300); await page.locator('.primer-options .option').nth(1).click(); await wait(200); await audit('primer-check');
+for (let k = 0; k < 3 && !(await page.locator('.primer-summary').count()); k++) {
+  if (!(await page.locator('.primer-why').count())) await page.locator('.primer-options .option').first().click();
+  await page.locator('.primer-check ~ .sticky-actions .btn.primary').click(); await wait(150);
+}
+await audit('primer-result');
+await go('onboarding', { safety: true }); await wait(300); await audit('safety-update');
 await page.evaluate(() => { document.documentElement.classList.add('hc'); document.documentElement.style.setProperty('--text-scale', '1.3'); });
 await go('home'); await wait(300); await shot('v5-11-home-contrast'); await audit('home-contrast');
 // Route change: the new screen's heading has focus and names the tab (screen readers hear the change).
@@ -196,7 +207,7 @@ if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'dar
 const darkRun = { id: 'd1', at: new Date().toISOString(), game: 'grip', level: 2, levelCount: 8, scheme: 'proportional', score: 74, stars: 2,
   skills: { precision: 62, switching: 48, stability: 81 }, details: { delivered: 4, total: 5, difficulty: 0.5 }, durationS: 96 };
 for (const [name, params] of [['home'], ['progress'], ['levels', { game: 'rhythm' }], ['play', { game: 'flight', level: 1 }], ['checkin'], ['tutorial'],
-  ['rest', { next: { game: 'safe', level: 1, retention: false } }], ['results', { run: darkRun, report: { xp: 90, levelUp: true, level: 3, achievements: ['first_run'], skins: ['sky'], unlockedLevel: 3 } }], ['settings']]) {
+  ['rest', { next: { game: 'safe', level: 1, retention: false } }], ['results', { run: darkRun, report: { xp: 90, levelUp: true, level: 3, achievements: ['first_run'], skins: ['sky'], unlockedLevel: 3 } }], ['settings'], ['primer', { deck: 'grip', card: 0 }]]) {
   await go(name, params); await wait(350); await audit(`dark-${name}`);
   if (name === 'home') await shot('v5-13-home-dark');
 }

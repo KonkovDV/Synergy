@@ -9,21 +9,21 @@ import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessi
 import { missionOffers } from './core/missions.js';
 import { guidanceFor } from './core/guidance.js';
 import { FpsGuard } from './core/fps.js';
-import { CHECKIN_ACTION, needsCheckin } from './core/wellbeing.js';
+import { CHECKIN_ACTION, needsCheckin, safetyOutdated } from './core/wellbeing.js';
 import { exportState, importState } from './core/storage.js';
 import { buildShowcaseState } from './core/showcase.js';
 import { EmgEmulator } from './input/emulator.js';
-import { BridgeSource } from './input/bridge.js';
+import { BridgeSource, trustedMessageSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard, setPadMode } from './ui/controls.js';
-import { createGame, GAME_BY_ID, PLAN_CATALOG } from './games/registry.js';
+import { createGame, GAME_BY_ID, GAMES, PLAN_CATALOG } from './games/registry.js';
 import { GameRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
 import { setSoundEnabled, unlockAudio } from './services/audio.js';
 import { setVoiceEnabled, say, stopVoice } from './services/voice.js';
 import { setRenderOptions } from './render/draw.js';
 import { mount, toast, h } from './ui/dom.js';
-import { parseLaunch, resultMessage, notifyHost } from './services/host.js';
+import { parseLaunch, parseHostCommand, readyMessage, resultMessage, closeMessage, notifyHost, isEmbedded, hostChannel, HOST_PROTOCOL } from './services/host.js';
 import { SCREENS } from './ui/screens.js';
 import { startTour } from './ui/tour.js';
 import { mergeTours } from './core/tours.js';
@@ -37,6 +37,8 @@ const PIN_RELOCK_MS = 120000;
 const THEME_COLOR = { light: '#f3f5f7', dark: '#071019' };
 /** Game catalog for the stored-state check (core does not import games): id → number of levels. */
 const CATALOG = Object.fromEntries(Object.entries(GAME_BY_ID).map(([id, g]) => [id, g.Game.levels.length]));
+/** A game id → its number of levels, for the launch parameters and the host's commands (services/host.js). */
+const gameInfo = id => (GAME_BY_ID[id] ? { levels: GAME_BY_ID[id].Game.levels.length } : null);
 
 /** What a same-screen re-render keeps (5.10): scroll, open sections, the focused choice group or button. */
 function captureView(root) {
@@ -138,11 +140,27 @@ export class App {
     // scrolled a freshly shown hint back to the top (5.13).
     if (typeof history !== 'undefined' && 'scrollRestoration' in history) history.scrollRestoration = 'manual';
     // 5.14 — embedding (services/host.js): a host may name a game to open and its own origin for result messages.
-    this.launch = parseLaunch(typeof location !== 'undefined' ? location.search : '', id => (GAME_BY_ID[id] ? { levels: GAME_BY_ID[id].Game.levels.length } : null));
+    this.launch = parseLaunch(typeof location !== 'undefined' ? location.search : '', gameInfo);
+    // 5.15 — the exercise a host asked for waits for the safety onboarding (and «Первые шаги», if taken) and opens on
+    // the way home; before, it was lost when the onboarding came first.
+    this.pendingLaunch = this.launch.game ? { game: this.launch.game, level: this.launch.level } : null;
+    this.launchEmbedded = isEmbedded(this.launch);
+    // Started by a host: the host gives the signal, so a stored «Внешний» source does not dial its WebSocket address
+    // until the person types one (hostSource). Before the first host frame the game simply waits for frames.
+    this.hostFed = this.launchEmbedded;
+    // 5.15 — a host in another origin cannot call window.Synergy: it posts commands (start, ping, signal frames).
+    window.addEventListener('message', e => this.onHostCommand(e));
     this.exposeApi();
     this.applySource();
     requestAnimationFrame(t => this.frame(t));
   }
+
+  /**
+   * Inside the customer's app: started by a host, or a native channel is there now — a plugin may inject it after the
+   * page started (gree/unity-webview on iOS). Tests may set it.
+   */
+  get embedded() { return this.forceEmbedded ?? (this.launchEmbedded || !!hostChannel()); }
+  set embedded(v) { this.forceEmbedded = v; }
 
   get state() { return this.store.state; }
   get settings() { return this.state.settings; }
@@ -157,6 +175,7 @@ export class App {
 
   updateSettings(patch) {
     const before = this.settings.source;
+    if (patch.wsUrl !== undefined || patch.source === 'touch') this.hostFed = false; // the person chose the source
     Object.assign(this.settings, patch);
     this.emulator.realism = this.settings.realism;
     this.applyPresentation();
@@ -220,37 +239,81 @@ export class App {
   exposeApi() {
     window.Synergy = {
       version: APP.version,
-      feed: frame => { if (this.settings.source !== 'bridge') this.updateSettings({ source: 'bridge' }); return this.bridge.feed(frame); },
+      feed: frame => { this.hostSource(); return this.bridge.feed(frame); },
       useBridge: (url = '') => this.updateSettings({ source: 'bridge', wsUrl: url }),
       useTouch: () => this.updateSettings({ source: 'touch' }),
       state: () => JSON.parse(JSON.stringify({ settings: this.settings, profile: this.profile, runs: this.state.runs.length, screen: this.screen?.name, bridge: this.bridge?.status ?? null })),
       go: (name, params) => this.go(name, params),
       /** 5.14 — a host opens a given exercise (unknown ids and levels are ignored; the safety onboarding comes first). */
       start: (game, level = 1) => {
-        const l = parseLaunch(`?game=${encodeURIComponent(game)}&level=${encodeURIComponent(level)}`, id => (GAME_BY_ID[id] ? { levels: GAME_BY_ID[id].Game.levels.length } : null));
+        const l = parseLaunch(`?game=${encodeURIComponent(game)}&level=${encodeURIComponent(level)}`, gameInfo);
         if (!l.game) return false;
-        if (!this.profile.onboarded) { this.go('onboarding'); return false; }
+        // Not onboarded yet, or the safety rules changed: those pages first, then this exercise (5.15 — it was dropped).
+        if (!this.profile.onboarded || safetyOutdated(this.profile)) { this.pendingLaunch = { game: l.game, level: l.level }; this.go(this.profile.onboarded ? 'home' : 'onboarding'); return false; }
         this.go('play', { game: l.game, level: l.level });
         return true;
       },
+      protocol: HOST_PROTOCOL,
       /** Android back button: returns false when already home (the host may close the app). */
       back: () => this.handleBack(),
     };
   }
 
   applySource({ force = true } = {}) {
-    const key = `${this.settings.source}|${this.settings.wsUrl}`;
+    const url = this.hostFed ? '' : this.settings.wsUrl;
+    const key = `${this.settings.source}|${url}`;
     if (!force && key === this.appliedSource) return;
     this.appliedSource = key;
     if (this.settings.source === 'bridge') {
       this.ble?.disconnect(); this.ble = null;
       this.bridge?.stop();
-      this.bridge = new BridgeSource({ url: this.settings.wsUrl, onStatus: s => this.screen?.onBridgeStatus?.(s) });
+      this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s) });
       this.bridge.start();
     } else if (this.bridge) {
       this.ble?.disconnect(); this.ble = null;
       this.bridge.stop(); this.bridge = null;
     }
+  }
+
+  /**
+   * A command from the host (5.15): only from the embedding frame, the page itself or a native WebMessage
+   * (trustedMessageSource, RT-7). A signal frame switches to the external source like `Synergy.feed` does — before,
+   * frames posted by an iframe host were dropped until the person chose «Внешний» in the settings; once the source is
+   * external, BridgeSource hears the frames itself (no frame is fed twice).
+   */
+  onHostCommand(e) {
+    if (!trustedMessageSource(e, window)) return;
+    const cmd = parseHostCommand(e.data, gameInfo);
+    if (!cmd) return;
+    if (cmd.kind === 'ping') { this.notifyReady(); return; }
+    if (cmd.kind === 'start') { window.Synergy.start(cmd.game, cmd.level); return; }
+    if (this.hostSource()) this.bridge?.feed(cmd.frame);
+  }
+
+  /**
+   * The host gives the signal itself (Synergy.feed, posted frames): the external source without a WebSocket (5.15 — it
+   * kept dialling the stored ws:// address, by default 127.0.0.1:8765, while the frames came from the host). Returns
+   * true when the source was (re)started now — then BridgeSource did not hear the frame that caused it.
+   */
+  hostSource() {
+    if (this.settings.source === 'bridge' && this.hostFed) return false;
+    this.hostFed = true;
+    if (this.settings.source !== 'bridge') this.updateSettings({ source: 'bridge' });
+    else this.applySource();
+    return true;
+  }
+
+  /** «Ready» for the host (5.15, the handshake of the sample's scene bridge): after the first screen, and on a ping. */
+  notifyReady() {
+    const games = GAMES.map(g => ({ id: g.id, title: g.title, levels: g.Game.levels.length }));
+    notifyHost(readyMessage({ version: APP.version, onboarded: this.profile.onboarded, games }), { hostOrigin: this.launch?.hostOrigin ?? null });
+  }
+
+  /** Hands control back to the host (5.15): «Вернуться в приложение» after an exercise, or back on the home screen. */
+  closeToHost(reason) {
+    if (!this.embedded) return false;
+    notifyHost(closeMessage(reason, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
+    return true;
   }
 
   /** Bluetooth EMG sensor (Nordic UART Service): its text lines go through the same parser. */
@@ -413,6 +476,10 @@ export class App {
 
   go(name, params = {}) {
     if (!SCREENS[name]) name = 'home';
+    // The exercise a host asked for opens instead of the first home screen after the onboarding (5.15).
+    if (name === 'home' && this.pendingLaunch && this.profile.onboarded && !safetyOutdated(this.profile) && !this.showcase) {
+      params = { ...this.pendingLaunch }; this.pendingLaunch = null; name = 'play';
+    }
     if (!PIN_SCREENS.includes(name)) this.pinOk = false; // leaving the settings locks them again
     // The same screen redrawn (a setting changed) keeps scroll, open sections and focus (5.10: an arrow key in
     // «Схема управления» changed the scheme and sent focus to the heading, an opened section closed).
@@ -458,11 +525,11 @@ export class App {
   handleBack() {
     if (this.tour) { this.tour.dismiss(); return true; } // a hint on screen: back closes the hint, not the screen
     const own = this.screen?.onBack?.();
-    if (own === 'exit') return false; // the screen lets the host close the app (first onboarding page)
+    if (own === 'exit') { this.closeToHost('back'); return false; } // the screen lets the host close the app (first onboarding page)
     if (own) return true;
     const arrow = this.root.querySelector('.top-bar .back-btn');
     if (arrow) { arrow.click(); return true; }
-    if (this.screen?.name === 'home') return false;
+    if (this.screen?.name === 'home') { this.closeToHost('back'); return false; }
     this.go('home');
     return true;
   }

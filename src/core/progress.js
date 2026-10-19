@@ -4,6 +4,7 @@ import { STARS, XP, SESSION, CHILD, SPACING, ARM_POSES } from '../config.js';
 import { SKILL, ACTIVE_GESTURE_IDS } from './vocabulary.js';
 import { emptyOutfit, autoEquip, itemsFor } from './pet.js';
 import { advanceMission } from './missions.js';
+import { primerMastered } from './primer.js';
 
 /** Session rules for the audience: a child trains with a parent — shorter plan, rest and daily cap. */
 export function sessionRules(audience = 'adult') {
@@ -63,6 +64,8 @@ export const ACHIEVEMENTS = [
   { id: 'all_games', name: 'Универсал', text: 'Сыграйте во все четыре игры', test: (p) => Object.values(p.games).filter(g => g.played && !g.assessment).length >= 4 },
   { id: 'tutorial', name: 'Первые шаги', text: 'Пройдите обучение: покой, A, B, сила, коактивация', test: (p) => !!p.tutorialPassed },
   { id: 'check', name: 'Самопроверка', text: 'Пройдите проверку навыка', test: (p, run) => !!run?.details?.assessment },
+  // 5.15 — «Азбука протеза» (core/primer.js): every check answered right at least once; a retake is always open.
+  { id: 'primer', name: 'Знаток протеза', text: 'Ответьте верно на все вопросы «Азбуки протеза»', test: (p) => primerMastered(p) },
 ];
 
 export function createProfile() {
@@ -76,8 +79,10 @@ export function createProfile() {
     skin: 'graphite',
     pet: emptyOutfit(),                         // what the Firebird wears: slot → item id (5.13)
     mission: null,                              // the goal the player took (core/missions.js), or null
+    primer: {},                                 // «Азбука протеза»: deckId → { seen: [cardId], best, at } (5.15)
     plan: null,
     onboarded: false,
+    safetySeen: 1,                              // the version of the safety rules read (core/wellbeing.js SAFETY_VERSION, 5.15)
     tutorialDone: false,                        // the tutorial card left home (passed or finished early)
     tutorialPassed: false,                      // every step done — the «Первые шаги» achievement
   };

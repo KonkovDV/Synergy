@@ -241,6 +241,12 @@ const BADGES = {
     path('M12 2.8 L22 20.2 H2 Z', { fill: `url(#${id}w)`, stroke: '#d98200', 'stroke-width': 1.4, 'stroke-linejoin': 'round' }),
     rect(10.9, 8.6, 2.2, 6.4, 1.1, '#5a3300'), circle(12, 17.4, 1.3, '#5a3300')],
   done: id => [sphere(id, 'd', 12, 12, 10, ['#b8ffde', '#16e182', '#0a8a52']), line('M7.4 12.4 l3.2 3.2 l6 -6.6', '#05101a', 2.8)],
+  // 5.15 — «Азбука протеза»: an open book (the entry, and «look at the card again» beside an answer to re-read).
+  book: id => [s('defs', {}, lin(`${id}k`, [[0, '#8f7bff'], [1, '#5b3fd6']], [0, 0, 0, 1])),
+    path('M2.5 6 Q 7 4.2 12 6.4 Q 17 4.2 21.5 6 V 19.6 Q 17 18 12 20 Q 7 18 2.5 19.6 Z', { fill: `url(#${id}k)` }),
+    path('M4 6.6 Q 7.8 5.4 11.3 7.2 V 18.6 Q 7.8 17 4 18 Z', { fill: '#fffaf0' }), path('M20 6.6 Q 16.2 5.4 12.7 7.2 V 18.6 Q 16.2 17 20 18 Z', { fill: '#fff6e0' }),
+    line('M5.8 9.4 Q 8 8.8 9.8 9.8 M5.8 12.2 Q 8 11.6 9.8 12.6 M14.2 9.8 Q 16 8.8 18.2 9.4 M14.2 12.6 Q 16 11.6 18.2 12.2', '#b9ab95', 0.9),
+    path('M15.6 5.6 H17.6 V10.4 L16.6 9.4 L15.6 10.4 Z', { fill: '#16e182' })],
 };
 
 /** A small colour picture by name (see BADGES). */
@@ -516,6 +522,17 @@ function petItemsArt(id, stage, items) {
         path(`M${lx - 4.5} -16 L ${lx + 4.5} -16 L ${lx + 3} -18 L ${lx - 3} -18 Z`, { fill: '#2a3442' }),
         rect(lx - 4.5, -16, 9, 13, 2.2, '#2a3442'), rect(lx - 3, -14.4, 6, 9.8, 1.4, '#ffd27a'), rect(lx - 1.4, -13.4, 2.8, 7.6, 1, '#fff6c2'),
         rect(lx - 5, -3.4, 10, 2.4, 1, '#2a3442')]));
+    } else if (items.nest === 'book') {
+      // 5.15 — «Азбука»: an open book leaning on the nest's rim (the gift for «Знаток протеза», core/primer.js).
+      const bx = -rx + 8;
+      const page = side => `M${bx} -9 Q ${bx + side * 4.5} -11 ${bx + side * 9} -9.5 L ${bx + side * 9} -1.5 Q ${bx + side * 4.5} -3 ${bx} -1 Z`;
+      out.nestFront.push(place([
+        path(`M${bx - 10} -9 L ${bx + 10} -9 L ${bx + 10} -0.4 Q ${bx} 1.2 ${bx - 10} -0.4 Z`, { fill: '#b8324a' }),
+        path(page(-1), { fill: '#fff6e0' }), path(page(1), { fill: '#fffaf0' }),
+        line(`M${bx} -9 L ${bx} -1`, '#c9a46a', 0.8),
+        ...[-7.5, -5.5, -3.5].flatMap(y => [line(`M${bx - 7.4} ${y} Q ${bx - 4.5} ${y - 1} ${bx - 1.6} ${y + 0.3}`, '#c4b8a4', 0.6),
+          line(`M${bx + 1.6} ${y + 0.3} Q ${bx + 4.5} ${y - 1} ${bx + 7.4} ${y}`, '#c4b8a4', 0.6)]),
+        path(`M${bx + 4.4} -10.4 L ${bx + 6} -10.4 L ${bx + 6} -6.2 L ${bx + 5.2} -7 L ${bx + 4.4} -6.2 Z`, { fill: '#16e182' })]));
     }
   }
   return out;

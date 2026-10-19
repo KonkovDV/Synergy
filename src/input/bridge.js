@@ -108,6 +108,12 @@ export function trustedMessageSource(event, win) {
   return src === null || src === undefined || src === win || (win.parent !== win && src === win.parent);
 }
 
+/**
+ * A WebSocket that has not opened in this time is given up and retried (5.15, the team's sample: «a request with no
+ * answer waits forever» behind a VPN). A wrong address on Wi-Fi black-holes the connection for tens of seconds.
+ */
+export const CONNECT_TIMEOUT_MS = 6000;
+
 export class BridgeSource {
   constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {} } = {}) {
     this.url = url;
@@ -138,6 +144,7 @@ export class BridgeSource {
 
   start() {
     this.stopped = false;
+    this.everOpen = false; // never opened since start → «нет ответа», not «переподключение» (5.15)
     if (typeof window !== 'undefined') window.addEventListener('message', this.onMessage);
     if (this.url) this.connect();
     else this.setStatus('waiting');
@@ -149,15 +156,19 @@ export class BridgeSource {
     let socket;
     try { socket = new WebSocket(this.url); } catch { this.setStatus('error'); return; }
     this.socket = socket;
-    socket.onopen = () => { this.retryMs = 500; this.setStatus('waiting'); };
+    socket.onopen = () => { clearTimeout(this.openTimer); this.everOpen = true; this.retryMs = 500; this.setStatus('waiting'); };
     socket.onmessage = e => this.feed(e.data);
     socket.onclose = () => {
+      clearTimeout(this.openTimer);
       if (this.stopped) return;
-      this.setStatus('reconnecting');
+      this.setStatus(this.everOpen ? 'reconnecting' : 'unreachable');
       this.timer = setTimeout(() => this.connect(), this.retryMs);
       this.retryMs = Math.min(5000, this.retryMs * 2);
     };
-    socket.onerror = () => socket.close();
+    // 5.15: the handler is dropped before close() — closing a socket that failed to connect fires «error» again in
+    // some engines (Node's undici: unbounded recursion, found by the 5.15 App test), the close event still follows.
+    socket.onerror = () => { socket.onerror = null; try { socket.close(); } catch { /* already closed */ } };
+    this.openTimer = setTimeout(() => { if (socket.readyState === 0) socket.onerror?.(); }, CONNECT_TIMEOUT_MS);
   }
 
   /** Lets a bidirectional lab (bridge/ws_bridge.py --lab) know what the pads ask for. */
@@ -168,6 +179,7 @@ export class BridgeSource {
   stop() {
     this.stopped = true;
     clearTimeout(this.timer);
+    clearTimeout(this.openTimer);
     if (typeof window !== 'undefined') window.removeEventListener('message', this.onMessage);
     if (this.socket) { this.socket.onclose = null; this.socket.close(); this.socket = null; }
     this.setStatus('idle');

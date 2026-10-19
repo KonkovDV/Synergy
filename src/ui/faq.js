@@ -21,6 +21,8 @@ export function faqScreen(app, { topic = null, from = 'home' } = {}) {
       h('main', { class: 'scroll' },
         h('section', { class: 'card faq-intro' }, mioAvatar('support', 56),
           h('p', {}, 'Ответы работают без интернета. Если вопрос о здоровье — главный совет один: остановиться и спросить врача или протезиста.')),
+        // 5.15 — the same knowledge as cards to read in order, with a check: «Азбука протеза».
+        h('button', { class: 'btn ghost', onclick: () => app.go('primer', { from: 'faq' }) }, 'Азбука протеза: карточки и проверка'),
         ...groups)),
     focus: target?.querySelector('summary') ?? null,
   };

@@ -123,6 +123,7 @@ export const PET_ITEMS = [
   { id: 'kokoshnik', slot: 'head', name: 'Кокошник', achievement: 'streak7' },
   { id: 'amulet', slot: 'chest', name: 'Оберег', achievement: 'check' },
   { id: 'beads', slot: 'chest', name: 'Бусы', achievement: 'week_goal' },
+  { id: 'book', slot: 'nest', name: 'Азбука', achievement: 'primer' }, // 5.15 — «Азбука протеза» (core/primer.js)
 ];
 export const PET_ITEM_BY_ID = Object.assign(Object.create(null), Object.fromEntries(PET_ITEMS.map(i => [i.id, i])));
 
