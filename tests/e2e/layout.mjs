@@ -11,7 +11,9 @@
 //   broken      — a word split mid-word across lines at the default text size, phones ≥ 360 px (5.9: «Пропорциональны / й»);
 //   fold        — the day's «Начать» is below the fold of the home screen (portrait phones);
 //   action      — the main button of an open dialog is out of sight (5.10);
-//   reach       — a pad of a game, tutorial or calibration screen is off screen at the default text size (5.10).
+//   reach       — a pad of a game, tutorial or calibration screen is off screen at the default text size (5.10);
+//   see-through — a control of a fixed/sticky bar sits on the bar's transparent fade, so the text scrolling under the
+//                 bar shows through around it (5.12.1, found on a device: the onboarding dots over a half-visible line).
 // Usage: npm run build && npm run audit:layout [-- baseUrl] [-- --quick] [-- --view=568x320 --state=a,b]   (no URL — serves dist/ itself)
 import { createRequire } from 'node:module';
 import { baseUrl } from '../../tools/static-server.mjs';
@@ -194,6 +196,40 @@ function coveredAtEnd() {
   return out;
 }
 
+/** Fixed and sticky bars: whatever is in them sits on the opaque part of their background, not on the fade above it. */
+function seeThrough() {
+  const out = [];
+  const name = el => `${el.tagName.toLowerCase()}${typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : ''}`;
+  const alpha = c => { const m = c.match(/rgba?\(([^)]*)\)/); if (!m) return c === 'transparent' ? 0 : 1; const v = m[1].split(/[ ,/]+/).filter(Boolean); return v.length > 3 ? parseFloat(v[3]) : 1; };
+  const opaque = el => { const cs = getComputedStyle(el); return alpha(cs.backgroundColor) >= 0.99 || (cs.backgroundImage !== 'none' && !/gradient\([^)]*rgba?\([^)]*,\s*0\)/.test(cs.backgroundImage)); };
+  for (const bar of document.querySelectorAll('#app *')) {
+    const cs = getComputedStyle(bar);
+    if (!/fixed|sticky/.test(cs.position) || bar.closest('.overlay')) continue;
+    const box = bar.getBoundingClientRect();
+    if (!box.height || box.bottom < 0 || box.top > innerHeight) continue;
+    let solidFrom = 0; // px from the top of the bar where the background turns opaque
+    if (alpha(cs.backgroundColor) < 0.99) {
+      const m = cs.backgroundImage.match(/^linear-gradient\((.*)\)$/);
+      if (!m) continue; // no background at all — a bar without a fade is drawn by its own items
+      const stops = [...m[1].matchAll(/(rgba?\([^)]*\)|transparent)(?:\s+(-?[\d.]+)(px|%))?/g)];
+      if (/^\s*(to |-?[\d.]+deg)/.test(m[1]) && !/^\s*to bottom/.test(m[1]) && !/^\s*180deg/.test(m[1])) continue; // only top → bottom fades
+      let last = 0;
+      stops.forEach(([, c, n, u], i) => {
+        const at = n === undefined ? (i === stops.length - 1 ? box.height : last) : u === '%' ? box.height * n / 100 : +n;
+        if (alpha(c) < 0.99) solidFrom = Math.max(solidFrom, at); else if (i > 0 && alpha(stops[i - 1][1]) < 0.99) solidFrom = Math.max(solidFrom, at);
+        last = at;
+      });
+    }
+    if (solidFrom < 1) continue;
+    for (const item of bar.children) {
+      const r = item.getBoundingClientRect();
+      if (!r.width || !r.height || opaque(item)) continue;
+      if (r.top - box.top < solidFrom - 0.5) out.push({ kind: 'see-through', what: `${name(item)} in ${name(bar)}: ${Math.round(r.top - box.top)} px from the top, the background is solid from ${Math.round(solidFrom)} px` });
+    }
+  }
+  return out;
+}
+
 /** Tab through the screen: each focused control must be visible, not under a fixed or sticky bar. */
 async function focusWalk(page) {
   const out = [];
@@ -274,7 +310,7 @@ for (const [w, h] of VIEWPORTS) {
       await page.waitForTimeout(state.startsWith('play') || state.startsWith('gesture') ? 350 : 150);
       // Whole words at the default text size on phones from 360 px; at 320 px (the WCAG reflow width) and at 130–200 %
       // text a split is the lesser evil than text past the edge.
-      const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...(scale === 1 ? await page.evaluate(reachable) : []), ...await page.evaluate(coveredAtEnd)];
+      const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...(scale === 1 ? await page.evaluate(reachable) : []), ...await page.evaluate(coveredAtEnd), ...await page.evaluate(seeThrough)];
       if (scale === 1 && w < 700) found.push(...await focusWalk(page));
       // The day's main action is visible on the home screen without scrolling (portrait phones, default text).
       if (/home/.test(state) && scale === 1 && h > w && w < 700) {
