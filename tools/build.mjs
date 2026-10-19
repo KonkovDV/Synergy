@@ -19,16 +19,21 @@ const result = await build({
 });
 const js = result.outputFiles[0].text;
 const css = readFileSync(join(root, 'styles/app.css'), 'utf8');
+// Brand fonts (5.12, SIL OFL — public/fonts/OFL.txt): files next to app.css in dist/, data URIs in the standalone file.
+const fonts = readdirSync(join(root, 'public/fonts'));
+const distCss = css.replaceAll('../public/fonts/', 'fonts/');
+const inlineCss = css.replace(/url\("\.\.\/public\/fonts\/([\w.-]+\.woff2)"\)/g, (_, f) => `url("data:font/woff2;base64,${readFileSync(join(root, 'public/fonts', f)).toString('base64')}")`);
+const preload = prefix => fonts.filter(f => f.endsWith('-cyr.woff2')).map(f => `<link rel="preload" href="${prefix}${f}" as="font" type="font/woff2" crossorigin>`).join('\n');
 
 // Content-Security-Policy: no network except WebSocket bridges, no foreign scripts, no plugins.
-const csp = inline => `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'${inline ? " 'unsafe-inline'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">`;
+const csp = inline => `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'${inline ? " 'unsafe-inline'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">`;
 const page = ({ head, body, inline = false }) => `<!doctype html>
 <html lang="ru" data-build="dist">
 <head>
 <meta charset="utf-8">
 ${csp(inline)}
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0d1530">
+<meta name="theme-color" content="#f3f5f7">
 <meta name="description" content="Синергия — мобильная игра-тренажёр управления бионическим протезом по ЭМГ">
 <title>Синергия — тренажёр протеза</title>
 ${head}
@@ -42,14 +47,16 @@ ${body}
 `;
 
 writeFileSync(join(dist, 'app.js'), js);
-writeFileSync(join(dist, 'app.css'), css);
+writeFileSync(join(dist, 'app.css'), distCss);
+mkdirSync(join(dist, 'fonts'), { recursive: true });
+for (const f of fonts) copyFileSync(join(root, 'public/fonts', f), join(dist, 'fonts', f));
 writeFileSync(join(dist, 'index.html'), page({
-  head: '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon.svg" type="image/svg+xml">\n<link rel="apple-touch-icon" href="icons/icon-180.png">\n<link rel="stylesheet" href="app.css">',
+  head: '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon.svg" type="image/svg+xml">\n<link rel="apple-touch-icon" href="icons/icon-180.png">\n' + preload('fonts/') + '\n<link rel="stylesheet" href="app.css">',
   body: '<script src="app.js"></script>',
 }));
 for (const f of readdirSync(join(root, 'public/icons'))) copyFileSync(join(root, 'public/icons', f), join(dist, 'icons', f));
 copyFileSync(join(root, 'public/manifest.webmanifest'), join(dist, 'manifest.webmanifest'));
-const shell = ['./', './index.html', './app.js', './app.css', './manifest.webmanifest', ...readdirSync(join(root, 'public/icons')).map(f => `./icons/${f}`)];
+const shell = ['./', './index.html', './app.js', './app.css', './manifest.webmanifest', ...readdirSync(join(root, 'public/icons')).map(f => `./icons/${f}`), ...fonts.filter(f => f.endsWith('.woff2')).map(f => `./fonts/${f}`)];
 writeFileSync(join(dist, 'sw.js'), `// App-shell cache: the game works offline after the first visit.
 const CACHE = 'synergy-${pkg.version}';
 const SHELL = ${JSON.stringify(shell)};
@@ -67,7 +74,7 @@ self.addEventListener('fetch', e => {
 `);
 const icon = readFileSync(join(root, 'public/icons/icon.svg'), 'utf8');
 const standalone = page({
-  head: `<link rel="icon" href="data:image/svg+xml;base64,${Buffer.from(icon).toString('base64')}">\n<style>${css}</style>`,
+  head: `<link rel="icon" href="data:image/svg+xml;base64,${Buffer.from(icon).toString('base64')}">\n<style>${inlineCss}</style>`,
   body: `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`,
   inline: true,
 });

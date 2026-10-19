@@ -2,6 +2,9 @@
 // collection, and the report for a prosthetist / rehabilitation specialist.
 import { fmtNum, fmtPct, fmtDay, plural, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
+import { badgeArt, gameArt, firebird } from './art.js';
+import { petStageIndex } from '../core/pet.js';
+import { PET } from '../config.js';
 import { bottomNav, skillBar } from './widgets.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
 import { skillProfile, ACHIEVEMENTS, SKINS, skinUnlocked, trainingDays, dayKey } from '../core/progress.js';
@@ -57,14 +60,14 @@ function radar(profile) {
   canvas.setAttribute('role', 'img');
   canvas.setAttribute('aria-label', 'Профиль навыков: ' + keys.map(k => `${SKILL_NAME[k]} ${profile[k] ?? 'нет данных'}`).join(', '));
   const { pt, R } = L;
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+  ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1;
   for (const f of [0.25, 0.5, 0.75, 1]) { ctx.beginPath(); keys.forEach((_, i) => ctx.lineTo(...pt(i, R * f))); ctx.closePath(); ctx.stroke(); }
   ctx.beginPath();
   keys.forEach((k, i) => ctx.lineTo(...pt(i, R * (profile[k] ?? 0) / 100)));
-  ctx.closePath(); ctx.fillStyle = 'rgba(90,209,255,0.22)'; ctx.fill(); ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 2; ctx.stroke();
+  ctx.closePath(); ctx.fillStyle = COLORS.accentSoft; ctx.fill(); ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
   keys.forEach((k, i) => {
     const [x, y] = pt(i, R * (profile[k] ?? 0) / 100);
-    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fillStyle = COLORS.accent; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fillStyle = COLORS.panel; ctx.fill(); ctx.lineWidth = 2.5; ctx.stroke();
     const l = L.labels[i];
     ctx.font = font; ctx.fillStyle = COLORS.muted; ctx.textAlign = l.align; ctx.textBaseline = 'middle';
     ctx.fillText(SKILL_NAME[k], l.x, l.y);
@@ -152,13 +155,13 @@ export function progressScreen(app) {
       canvas, h('small', {}, open ? sk.name : sk.level ? `ур. ${sk.level}` : '7 дней'));
   }));
   const achievements = h('div', { class: 'badges' }, ...ACHIEVEMENTS.map(a => h('div', { class: `badge ${p.achievements[a.id] ? 'on' : ''}`, title: a.text },
-    h('span', { 'aria-hidden': 'true' }, p.achievements[a.id] ? '🏅' : '○'), h('b', {}, a.name), h('span', { class: 'sr-only' }, p.achievements[a.id] ? ' — получено.' : ' — пока нет.'), h('small', {}, a.text))));
+    badgeArt(p.achievements[a.id] ? 'medal' : 'medal-off', 32), h('b', {}, a.name), h('span', { class: 'sr-only' }, p.achievements[a.id] ? ' — получено.' : ' — пока нет.'), h('small', {}, a.text))));
   const minutes = Math.round(p.totals.seconds / 60);
   const checks = assessmentHistory(runs, null, 6);
   const sameScheme = assessmentHistory(runs, app.settings.scheme, 6); // the trend: one scheme — a switch is not a change of skill (5.10)
   const conf = confusionMatrix(runs);
   const log = wellbeingLog(p, 7);
-  const checkSection = h('section', { class: 'card' }, h('h2', {}, '📋 Проверка навыка'),
+  const checkSection = h('section', { class: 'card' }, h('h2', {}, gameArt('check', 28), 'Проверка навыка'),
     checks.length
       ? dataTable('Последние проверки (стандартный набор)', ['Дата', 'Выполн., %', 'Выбор, мс', 'Точн., %', 'ПС, бит/с'],
         checks.map(c => [`${fmtDay(c.at)} · ${SCHEME_INFO[c.scheme]?.abbr ?? ''}`, c.completionRate, c.selectionMs, c.accuracy, fmtNum(c.throughputBps)]))
@@ -188,6 +191,15 @@ export function progressScreen(app) {
         h('section', { class: 'card' }, h('h2', {}, 'Динамика'), ...trends),
         checkSection, confSection, wellSection,
         h('section', { class: 'card' }, h('h2', {}, 'Календарь'), calendar(p)),
+        // The bird's path (5.12): a vertical journey — passed stages, the current one, the next ones as a promise in words.
+        h('section', { class: 'card' }, h('h2', {}, `Жар-птица ${app.settings.petName || PET.defaultName}`),
+          h('ol', { class: 'pet-path' }, ...PET.stages.map((st, i) => {
+            const days = trainingDays(p), now = petStageIndex(days);
+            const state = i < now ? 'done' : i === now ? 'now' : 'next';
+            const note = { done: 'Пройдено', now: 'Сейчас' }[state] ?? `Через ${count(st.from - days, FORMS.days)} с тренировкой`;
+            return h('li', { class: state }, h('span', { class: 'pet-node' }, firebird(st.id, 'waiting', 48)), h('div', {}, h('b', {}, st.name), h('small', {}, note)));
+          })),
+          h('p', { class: 'note' }, `Растёт от дней с тренировкой: сейчас ${count(trainingDays(p), FORMS.days)}. День отдыха и пропуск рост не отнимают.`)),
         h('section', { class: 'card' }, h('h2', {}, 'Достижения'), achievements),
         h('section', { class: 'card' }, h('h2', {}, 'Облик протеза'), skins),
         h('section', { class: 'card' }, h('h2', {}, 'Для специалиста'),

@@ -175,6 +175,13 @@ test('report: HTML escaping and CSV formula guard', () => {
   assert.equal(escapeHtml(`"'&`), '&quot;&#39;&amp;');
 });
 
+// 5.10.1: the heading read «(с, последние 0 упражнений)» — «с» for seconds, a count even without gesture runs.
+test('report: the gesture errors heading reads as a phrase', () => {
+  const html = reportHtml(buildShowcaseState(undefined, '2026-10-17', PLAN_CATALOG));
+  assert.ok(!html.includes('(с, последние'));
+  assert.match(html, /<h2>Ошибки распознавания жестов( \(в секундах; упражнений в режиме жестов: \d+\))?<\/h2>/);
+});
+
 test('reminder .ics follows RFC 5545: UID and DTSTAMP in the event, lines ≤ 75 octets, CRLF', () => {
   const ics = reminderIcs('07:05');
   const lines = ics.split('\r\n');

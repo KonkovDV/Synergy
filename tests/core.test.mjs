@@ -239,3 +239,24 @@ test('store (5.11): a failed save says so — the app warns instead of showing �
   assert.equal(store.persisted, false);
   assert.equal(new Store(memoryStorage()).save(), true);
 });
+
+// 5.12 — Жар-птица: grows with training days, never punishes rest or a pause.
+test('pet: stages by training days, progress to the next one, mood never blames', async () => {
+  const { petStageIndex, petState, petStageUp } = await import('../src/core/pet.js');
+  const { PET } = await import('../src/config.js');
+  assert.equal(petStageIndex(0), 0);
+  for (const [k, s] of PET.stages.entries()) assert.equal(petStageIndex(s.from), k, s.id);
+  const egg = petState(0);
+  assert.equal(egg.stage.id, 'egg'); assert.equal(egg.left, 1); assert.match(egg.line, /вылупится/);
+  const mid = petState(6, { trainedToday: true });
+  assert.equal(mid.stage.id, 'fledgling'); assert.equal(mid.next.id, 'young'); assert.equal(mid.left, 4);
+  assert.ok(mid.progress > 0 && mid.progress < 1); assert.equal(mid.mood, 'fed');
+  const rest = petState(6, { restToday: true });
+  assert.equal(rest.mood, 'rest'); assert.equal(rest.stage.id, 'fledgling', 'a rest day keeps the stage');
+  for (const s of [petState(6), rest, egg]) assert.doesNotMatch(s.line, /грустит|голодает|болеет|уйдёт|потеря/i);
+  const top = petState(500);
+  assert.equal(top.stage.id, 'firebird'); assert.equal(top.next, null); assert.equal(top.progress, 1);
+  assert.equal(petStageUp(1, true)?.id, 'chick', 'the first training day hatches the egg');
+  assert.equal(petStageUp(2, true), null);
+  assert.equal(petStageUp(4, false), null, 'a second run of the day adds no day');
+});

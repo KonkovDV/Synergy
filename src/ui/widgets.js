@@ -2,7 +2,7 @@
 import { h, longestWord } from './dom.js';
 import { fmtSec } from '../core/format.js';
 import { COMMAND_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
-import { drawMio } from '../render/draw.js';
+import { mio } from './art.js';
 
 /**
  * Line icons drawn in SVG (5.8): emoji and symbols (⌂ 📈 ⚙ ← ✕ Ⅱ) render differently on every platform —
@@ -15,6 +15,16 @@ const ICONS = {
   back: ['M19 12H5', 'M11 6l-6 6 6 6'],
   close: ['M6 6l12 12', 'M18 6 6 18'],
   pause: ['M9 5v14', 'M15 5v14'],
+  // Section glyphs of the settings (5.11), drawn on tinted tiles.
+  hand: ['M8 13V6a1.5 1.5 0 0 1 3 0v5', 'M11 11V4.5a1.5 1.5 0 0 1 3 0V11', 'M14 11V5.5a1.5 1.5 0 0 1 3 0V12', 'M17 12V9a1.5 1.5 0 0 1 3 0v4.5A7.5 7.5 0 0 1 12.5 21h-1a6.5 6.5 0 0 1-5.2-2.6L3.6 14.8a1.6 1.6 0 0 1 2.5-2L8 15'],
+  signal: ['M2 12h3.5l2-5 3.5 10 3-13 2.5 8H22'],
+  gauge: ['M4 18a8 8 0 1 1 16 0', 'M12 18l4.5-5.5', { circle: [12, 18, 1.5] }],
+  dumbbell: ['M6.5 6.5v11', 'M17.5 6.5v11', 'M3.5 9v6', 'M20.5 9v6', 'M6.5 12h11'],
+  access: [{ circle: [12, 4.5, 2] }, 'M5 8.5l7 1.5 7-1.5', 'M12 10v4.5', 'M9 21l3-6.5 3 6.5'],
+  bell: ['M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z', 'M10 20.5a2 2 0 0 0 4 0'],
+  data: ['M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z', 'M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6', 'M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3'],
+  info: [{ circle: [12, 12, 9] }, 'M12 11v6', 'M12 7.5v.01'],
+  sound: ['M4 9.5h3.5L12 6v12l-4.5-3.5H4z', 'M15.5 9.5a3.5 3.5 0 0 1 0 5', 'M18 7a7 7 0 0 1 0 10'],
 };
 const SVG = 'http://www.w3.org/2000/svg';
 export function icon(name) {
@@ -120,13 +130,8 @@ export function skillBar(name, value) {
 
 /** Coach «Мио» as a small decorative picture (the advice itself is always text next to it). */
 export function mioAvatar(mood = 'support', size = 48) {
-  const canvas = h('canvas', { width: size * 2, height: size * 2, class: `mio mio-${mood}`, 'aria-hidden': 'true', style: { width: `${size}px`, height: `${size}px` } });
-  const ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
-  drawMio(ctx, { x: size / 2, y: size * 0.58, size: size * 0.72, mood });
-  return canvas;
+  return mio(mood, size);
 }
-
 
 /**
  * The hands-free hint (start, «дальше»): what to hold depends on the scheme — there is no «A» in the gesture scheme,

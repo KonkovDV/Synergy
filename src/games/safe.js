@@ -6,7 +6,7 @@
 import { fmtFixed } from '../core/format.js';
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES } from '../core/vocabulary.js';
-import { COLORS, text, circle, fillRound, drawHand } from '../render/draw.js';
+import { COLORS, text, circle, fillRound, drawHand, panel, backdrop, scene } from '../render/draw.js';
 import { reachableBand } from '../core/signal.js';
 
 /** Prompt pools per scheme; `from` = level where the prompt is introduced (gestures: GESTURES[].introducedAt). */
@@ -148,9 +148,8 @@ export class SafeGame extends Game {
 
   render(ctx, view, hand, intent) {
     const { w, h } = view;
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, '#101a3a'); g.addColorStop(1, '#1d1240');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    // Vault room: sky to lavender by day, the night vault in the dark theme.
+    backdrop(ctx, w, h, scene([[0, '#e2f6f4'], [1, '#eef3f6']], [[0, '#071a22'], [1, '#0b1420']]));
     // Layout top-down (5.8): card → code lamps → door in the room that is left → «Протез видит». Positioned from the
     // door centre, the lamps used to overlap the card on short fields (landscape, small phones).
     const n = this.code.length, lw = Math.min(34, (w - 40) / n), lampR = lw * 0.32;
@@ -159,28 +158,31 @@ export class SafeGame extends Game {
     const R = Math.max(16, Math.min(w * 0.32, (h - lampY - lampR - 12 - footer) / 2.3));
     const cx = w / 2, cy = lampY + lampR + 10 + R * 1.15;
     const open = this.openedAt !== undefined ? Math.min(1, (this.time - this.openedAt) * 2) : 0;
-    fillRound(ctx, cx - R * 1.15, cy - R * 1.15, R * 2.3, R * 2.3, 22, '#2b3a6e');
+    // The safe: a teal box with a round door and a dial (the game's picture on the home screen).
+    panel(ctx, cx - R * 1.15, cy - R * 1.15, R * 2.3, R * 2.3, 24, scene('#19c9b8', '#0f5e5a'));
+    fillRound(ctx, cx - R * 1.05, cy - R * 1.05, R * 2.1, R * 2.1, 18, scene('#0e9f8f', '#0b4744'));
     if (open > 0) {
-      circle(ctx, cx, cy, R * 0.9, '#0b0f24');
-      for (let i = 0; i < 9; i++) circle(ctx, cx - R * 0.5 + (i % 3) * R * 0.5, cy + R * 0.2 - Math.floor(i / 3) * R * 0.3, R * 0.14, i === 4 ? '#5affd8' : '#ffc93c');
+      circle(ctx, cx, cy, R * 0.9, scene('#134e4a', '#0b0f24'));
+      for (let i = 0; i < 9; i++) circle(ctx, cx - R * 0.5 + (i % 3) * R * 0.5, cy + R * 0.2 - Math.floor(i / 3) * R * 0.3, R * 0.14, i === 4 ? '#16e182' : '#ffc93c');
     }
     ctx.save(); ctx.translate(cx - R * open * 1.6, cy); ctx.scale(1 - 0.5 * open, 1);
-    circle(ctx, 0, 0, R, '#3d4f8f'); circle(ctx, 0, 0, R * 0.82, '#2b3a6e');
+    circle(ctx, 0, 0, R, scene('#2dd4bf', '#13786f')); circle(ctx, 0, 0, R * 0.82, scene('#f0fdfa', '#0f4f4a'));
     const dialAngle = this.index * (Math.PI * 2 / Math.max(1, this.code.length)) + this.holdFor * 2;
     ctx.save(); ctx.rotate(dialAngle);
-    for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.fillStyle = '#7f93d6'; ctx.fillRect(R * 0.62, -2, R * 0.14, 4); }
+    for (let i = 0; i < 12; i++) { ctx.rotate(Math.PI / 6); ctx.fillStyle = scene('#0f766e', '#5eead4'); ctx.fillRect(R * 0.62, -2, R * 0.14, 4); }
     ctx.restore();
-    circle(ctx, 0, 0, R * 0.3, '#7f93d6');
+    circle(ctx, 0, 0, R * 0.3, '#f59e0b'); circle(ctx, -R * 0.08, -R * 0.08, R * 0.1, 'rgba(255,255,255,0.5)');
     ctx.restore();
     // Code lamps.
     this.code.forEach((c, i) => {
       const x = w / 2 - (n - 1) * lw / 2 + i * lw, y = lampY;
-      circle(ctx, x, y, lampR, c.state === 'ok' ? COLORS.good : c.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : 'rgba(255,255,255,0.15)');
+      circle(ctx, x, y, lampR, c.state === 'ok' ? COLORS.good : c.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : scene('#d5dde3', 'rgba(255,255,255,0.15)'));
     });
     // Target card.
     const card = this.card;
     if (card) {
-      fillRound(ctx, x0, y0, cw, ch, 16, this.phase === 'rest' ? 'rgba(255,255,255,0.06)' : '#24336b');
+      if (this.phase === 'rest') fillRound(ctx, x0, y0, cw, ch, 18, scene('rgba(255,255,255,0.55)', 'rgba(255,255,255,0.06)'));
+      else panel(ctx, x0, y0, cw, ch, 18);
       if (this.phase === 'rest') {
         text(ctx, 'Покой', w / 2, y0 + ch * 0.42, { size: 26, weight: 800, color: COLORS.muted });
         text(ctx, 'расслабьтесь перед следующей цифрой', w / 2, y0 + ch * 0.7, { size: 12, color: COLORS.muted, maxWidth: cw - 16 });
@@ -195,7 +197,7 @@ export class SafeGame extends Game {
           text(ctx, label, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
         }
         const left = Math.max(0, this.limit - this.cardTime);
-        text(ctx, `${fmtFixed(left)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, color: left < 1.5 ? COLORS.warn : COLORS.muted }); // amber: red #ff6b6b was 4.3:1 on the card
+        text(ctx, `${fmtFixed(left)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, weight: 700, color: left < 1.5 ? COLORS.warnInk : COLORS.muted }); // amber ink: ≥ 4.5:1 on the card in every theme
         if (this.liveFeedback(this.index)) {
           ctx.strokeStyle = COLORS.good; ctx.lineWidth = 5; ctx.lineCap = 'round';
           ctx.beginPath(); ctx.arc(w / 2 - cw * 0.22, y0 + ch * 0.5, ch * 0.42, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(this.holdFor / this.level.hold)); ctx.stroke();

@@ -26,6 +26,8 @@ import { SCREENS } from './ui/screens.js';
 
 const TAP_GUARD_MS = 350;
 const PIN_SCREENS = ['settings', 'calibration', 'pin', 'audiosync', 'tutorial']; // sub-screens of the settings keep them open
+/** Browser bar colour of each theme (the page background at the top). */
+const THEME_COLOR = { light: '#f3f5f7', dark: '#071019' };
 /** Game catalog for the stored-state check (core does not import games): id → number of levels. */
 const CATALOG = Object.fromEntries(Object.entries(GAME_BY_ID).map(([id, g]) => [id, g.Game.levels.length]));
 
@@ -92,7 +94,7 @@ export class App {
     root.addEventListener('click', e => {
       if (this.lastPointer === 'touch' && performance.now() - (this.mountedAt ?? 0) < TAP_GUARD_MS) { e.preventDefault(); e.stopImmediatePropagation(); }
     }, true);
-    for (const q of ['(prefers-contrast: more)', '(forced-colors: active)', '(prefers-reduced-motion: reduce)']) globalThis.matchMedia?.(q).addEventListener?.('change', () => this.applyPresentation());
+    for (const q of ['(prefers-contrast: more)', '(forced-colors: active)', '(prefers-reduced-motion: reduce)', '(prefers-color-scheme: dark)']) globalThis.matchMedia?.(q).addEventListener?.('change', () => this.applyPresentation());
     // Back in a browser or an installed PWA: one history entry stands for «inside the app», so the back gesture
     // comes here instead of closing the app (an SPA without history entries is left by the first back).
     window.addEventListener('popstate', () => {
@@ -176,9 +178,15 @@ export class App {
     // The system's «reduce motion» counts too (5.11): only the app's own switch did, and the canvas kept moving.
     this.reduceMotion = !!s.reduceMotion || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
     root.classList.toggle('rm', this.reduceMotion);
+    // Theme (5.12): light by default, dark by the system setting or by choice; high contrast above both.
+    // The APK's WebView (target API 29) always reports a light scheme: the native bridge tells the system's night mode.
+    const systemDark = (typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches) || !!globalThis.SynergyNative?.nightMode?.();
+    const theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : systemDark ? 'dark' : 'light';
+    root.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', contrast ? '#000000' : THEME_COLOR[theme]);
     // Canvas text follows the system font size as well (Android WebView scales the root font), up to the tuned +25 %.
     const rootPx = typeof getComputedStyle === 'function' ? parseFloat(getComputedStyle(root).fontSize) || 16 : 16;
-    setRenderOptions({ scale: Math.max(s.textScale, rootPx / 16), highContrast: contrast });
+    setRenderOptions({ scale: Math.max(s.textScale, rootPx / 16), highContrast: contrast, theme: contrast ? 'dark' : theme });
     setPadMode({ sticky: s.stickyPads });
   }
 

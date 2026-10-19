@@ -1,6 +1,6 @@
 // Specialist report (JSON, CSV, printable HTML) and a calendar reminder (.ics) — no server, no account.
 // Every string that reaches the HTML report is escaped: names and stored data are untrusted input.
-import { count, fmtNum, FORMS } from '../core/format.js';
+import { fmtNum } from '../core/format.js';
 import { APP, ARM_POSES } from '../config.js';
 import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabulary.js';
 import { skillProfile, playerLevel } from '../core/progress.js';
@@ -124,7 +124,7 @@ ${table(['Поза руки', 'Попыток', 'Игр', 'Разница с о�
 ${table(['Дата', 'Схема', 'Выполнено, %', 'Выбор, мс', 'Выполнение, мс', 'Точность, %', 'Перелёты', 'ПС, бит/с', 'Эфф. пути, %'],
   checks.map(c => [ruDate(c.at), SCHEME_INFO[c.scheme]?.name ?? c.scheme, c.completionRate, c.selectionMs, c.completionMs, c.accuracy, c.overshoots, fmtNum(c.throughputBps) ?? '—', c.pathEfficiency ?? '—']))}
 <p class="muted">ПС — игровая пропускная способность по мотивам теста Фиттса (пропорциональная схема; аналогия наведения, не классический эксперимент Фиттса): log₂(D/W + 1) / время движения, среднее по попыткам; эффективность пути — расстояние до цели / пройденный путь сигнала. Сравнивайте с прошлыми неделями этого же человека: с цифрами из статей не сравнимо (другие задачи и устройства).</p>
-<h2>Ошибки распознавания жестов (с, последние ${count(conf.runs, FORMS.exercises)})</h2>
+<h2>Ошибки распознавания жестов${conf.runs ? ` (в секундах; упражнений в режиме жестов: ${conf.runs})` : ''}</h2>
 ${conf.top.length ? table(['Нужен жест', 'Распознан как', 'Секунд'], conf.top.map(t => [gname(t.wanted), gname(t.seen), t.seconds]))
   + `<p class="muted">Чаще всего: ${escapeHtml(gname(conf.top[0].wanted))} → ${escapeHtml(gname(conf.top[0].seen))}. Если пара повторяется неделями, её стоит проверить при настройке распознавания протеза (запись жеста заново, положение датчиков).</p>` : '<p class="muted">нет данных в режиме жестов</p>'}
 <h2>Самочувствие (14 последних записей)</h2>

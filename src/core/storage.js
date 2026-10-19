@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS = {
   wsUrl: 'ws://127.0.0.1:8765',
   reminder: '19:00',
   name: '',
+  petName: '',              // имя Жар-птицы (пусто — «Искра»)
   // Training
   adaptive: true,           // адаптивная сложность внутри упражнения
   fadedFeedback: true,      // затухающие подсказки: опытный игрок видит шкалу не в каждой попытке
@@ -32,6 +33,7 @@ export const DEFAULT_SETTINGS = {
   // Accessibility (Game Accessibility Guidelines, WCAG 2.2 / ГОСТ Р 52872-2019)
   voice: false,             // озвучивание подсказок
   textScale: 1,             // 1 · 1.15 · 1.3
+  theme: 'auto',            // auto | light | dark — тема оформления (auto — как в системе)
   contrast: false,          // высокий контраст
   reduceMotion: false,      // без частиц, вспышек и параллакса
   gameSpeed: 1,             // темп игрового мира 0.6–1
@@ -52,6 +54,7 @@ export const SETTINGS_RULES = {
   source: oneOf('touch', 'bridge', 'demo'),
   side: oneOf('right', 'left'),
   audience: oneOf('adult', 'child'),
+  theme: oneOf('auto', 'light', 'dark'),
   sensitivity: range(SETTINGS_RANGES.sensitivity.min, SETTINGS_RANGES.sensitivity.max),
   coThreshold: range(SETTINGS_RANGES.coThreshold.min, SETTINGS_RANGES.coThreshold.max),
   realism: range(SETTINGS_RANGES.realism.min, SETTINGS_RANGES.realism.max),
@@ -63,6 +66,7 @@ export const SETTINGS_RULES = {
   wsUrl: v => v.length <= 200 && (v === '' || /^(wss?|https?):\/\//i.test(v)),
   reminder: v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
   name: v => v.length <= 24,
+  petName: v => v.length <= 16,
   parentPin: v => v === '' || /^[0-9a-f]{8}$/.test(v),
   pinLock: v => isObject(v) && Number.isFinite(v.fails) && Number.isFinite(v.until),
 };

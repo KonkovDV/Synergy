@@ -1,13 +1,98 @@
-/* Синергия — mobile-first, one-handed, high-contrast dark UI.
-   Solid surfaces (no translucency behind text), ≥48px targets, primary actions in the thumb zone. */
-:root {
+/* Синергия — дизайн 5.12 «Моторика × ФинФениксы»: mobile-first, one-handed.
+   Layout and components follow the team's sample (ФинФениксы: gradient header with the mascot, cards, tinted tiles,
+   onboarding covers, a bottom bar with the current section in a filled square); colour, type and graphic language
+   follow the corporate style of «Моторика» (IR brochure 2025): white and light-grey surfaces, the green → teal → blue →
+   violet gradient, near-black ink, Unbounded for titles and numbers, Inter for text, light trails on dark covers.
+   No logo or name of the brand is used: the product is «Синергия».
+   Rules kept from 5.x: solid surfaces under text (every token pair ≥ 4.5:1 — tests/design.test.mjs), decoration only
+   behind content, ≥ 48 px targets, primary actions in the thumb zone, motion off with .rm / prefers-reduced-motion,
+   gradients flattened by .hc and forced colours. Channels: A — coral, B — blue, A+B — violet; text uses «-ink». */
 
-  --text: #f2f5ff; --muted: #a9b8e3; --accent: #5ad1ff; --a: #ffb547; --b: #5ad1ff;
-  --good: #3fe0a0; --warn: #ffcc4d; --bad: #ff6b6b; --violet: #9b7bff;
-                  --tap: 52px;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
-  color-scheme: dark
+/* Fonts (SIL OFL 1.1, subsets — public/fonts/OFL.txt). Preloaded by index.html; inlined in the standalone file. */
+@font-face { font-family: "Unbounded"; src: url("../public/fonts/unbounded-cyr.woff2") format("woff2"); font-weight: 500 800; font-display: block; unicode-range: U+0400-045F, U+2116 }
+@font-face { font-family: "Unbounded"; src: url("../public/fonts/unbounded-lat.woff2") format("woff2"); font-weight: 500 800; font-display: block; unicode-range: U+0020-007E, U+00A0-00FF, U+2009, U+2013-2026, U+202F, U+20BD, U+2190-2192, U+2212, U+2248, U+2264-2265 }
+@font-face { font-family: "Inter"; src: url("../public/fonts/inter-cyr.woff2") format("woff2"); font-weight: 400 800; font-display: block; unicode-range: U+0400-045F, U+2116 }
+@font-face { font-family: "Inter"; src: url("../public/fonts/inter-lat.woff2") format("woff2"); font-weight: 400 800; font-display: block; unicode-range: U+0020-007E, U+00A0-00FF, U+2009, U+2013-2026, U+202F, U+20BD, U+2190-2192, U+2212, U+2248, U+2264-2265 }
+
+/* ===== Tokens ===== */
+:root {
+  color-scheme: light;
+  --bg: #f3f5f7; --bg2: #e8edf0; --card: #ffffff; --card2: #f3f5f7; --line: #e1e6ea; --line-strong: #c6d0d8;
+  --text: #05101a; --muted: #56616d; --accent: #16e182; --accent-ink: #0a7a47; --on-accent: #05101a;
+  --a: #ff7a45; --a-ink: #b53d0d; --b: #3b82f6; --b-ink: #1d5fbf; --violet: #6d4ef0; --co-ink: #5b3fd6;
+  --good: #16e182; --good-ink: #0a7a47; --warn: #f5a524; --warn-ink: #8a4f00; --bad: #ef4444; --bad-ink: #c21b2e;
+  --track: #e6ebef; --star-empty: #d0d9e0; --switch-off: #e8edf0; --switch-edge: #6f7b87; --switch-knob: #56616d;
+  --tint-green: #e3faef; --tint-teal: #ddf6f3; --tint-blue: #e4eefc; --tint-violet: #ece8fd; --tint-coral: #fde9e3; --tint-yellow: #fdf3d8;
+  --deco-green: #c7f3df; --deco-teal: #bfeee8; --deco-blue: #d3e4fb; --deco-violet: #e2dcfc; --deco-coral: #fcdccf; --deco-yellow: #fae6b0;
+  --ico-green: #0a7047; --ico-teal: #0b6b63; --ico-blue: #1d5fbf; --ico-violet: #5b3fd6; --ico-coral: #b53d0d; --ico-yellow: #7a5200;
+  --heat-0: #e8edf0; --heat-1: #c2f3dc; --heat-2: #7fe9b8; --heat-3: #2fd88f; --heat-4: #0aa865;
+  --grad-primary: linear-gradient(120deg, #16e182 0%, #1fd0a6 55%, #25c2c4 100%);
+  --grad-hero: linear-gradient(125deg, #16e182 0%, #1fd0a6 38%, #25c2c4 66%, #2fa6e0 100%);
+  --grad-cover: radial-gradient(120% 90% at 85% 0%, #1b4e8f 0%, transparent 55%), radial-gradient(90% 80% at 0% 100%, #0f6b55 0%, transparent 60%), linear-gradient(160deg, #0b1d2b 0%, #071019 100%);
+  --grad-good: linear-gradient(90deg, #16e182 0%, #25c2c4 100%);
+  --grad-a: linear-gradient(0deg, #f2622e 0%, #ffa06b 100%);
+  --grad-b: linear-gradient(0deg, #2f6fe0 0%, #7fb0ff 100%);
+  --hero-text: #05101a; --hero-muted: #0b2a2a; --hero-track: #ffffff; --hero-ring: #05101a; --cover-text: #ffffff; --cover-muted: #d6e2ea;
+  --shadow-1: 0 1px 2px rgba(5, 16, 26, .05), 0 6px 18px rgba(5, 16, 26, .06);
+  --shadow-2: 0 2px 6px rgba(5, 16, 26, .06), 0 18px 40px rgba(5, 16, 26, .12);
+  --glow-accent: 0 8px 22px rgba(22, 225, 130, .32);
+  --backdrop: rgba(5, 16, 26, .55);
+  --spring: cubic-bezier(.2, .9, .25, 1.25);
+  --radius: 22px; --tap: 52px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-display: "Unbounded", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
+/* Dark: by the system setting (unless light is chosen) or by choice — the brand's dark covers. Two copies, one set of values. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #071019; --bg2: #0e1a24; --card: #101c27; --card2: #15232f; --line: #213140; --line-strong: #34495a;
+    --text: #eef3f6; --muted: #a3b3c0; --accent-ink: #3ef0a0;
+    --a: #ff8a52; --a-ink: #ffb084; --b: #4d94ff; --b-ink: #8ab8ff; --violet: #8a6dff; --co-ink: #c3b3ff;
+    --good-ink: #4cf0a6; --warn-ink: #ffd27a; --bad-ink: #ff9aa4;
+    --track: #1b2a37; --star-empty: #34495a; --switch-off: #15232f; --switch-edge: #8a9caa; --switch-knob: #a3b3c0;
+    --tint-green: #0d2a22; --tint-teal: #0c2829; --tint-blue: #0f2238; --tint-violet: #1a1838; --tint-coral: #2e1a17; --tint-yellow: #2b2414;
+    --deco-green: #12382c; --deco-teal: #113637; --deco-blue: #152d4a; --deco-violet: #231f4a; --deco-coral: #3d221d; --deco-yellow: #3a301a;
+    --ico-green: #4cf0a6; --ico-teal: #5fe3d4; --ico-blue: #8ab8ff; --ico-violet: #c3b3ff; --ico-coral: #ffb084; --ico-yellow: #ffd27a;
+    --heat-0: #15232f; --heat-1: #0f4a35; --heat-2: #0e7a52; --heat-3: #12b36f; --heat-4: #3ef0a0;
+    --shadow-1: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 6px 18px rgba(0, 0, 0, .35);
+    --shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 16px 36px rgba(0, 0, 0, .5);
+    --backdrop: rgba(2, 6, 10, .72);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #071019; --bg2: #0e1a24; --card: #101c27; --card2: #15232f; --line: #213140; --line-strong: #34495a;
+  --text: #eef3f6; --muted: #a3b3c0; --accent-ink: #3ef0a0;
+  --a: #ff8a52; --a-ink: #ffb084; --b: #4d94ff; --b-ink: #8ab8ff; --violet: #8a6dff; --co-ink: #c3b3ff;
+  --good-ink: #4cf0a6; --warn-ink: #ffd27a; --bad-ink: #ff9aa4;
+  --track: #1b2a37; --star-empty: #34495a; --switch-off: #15232f; --switch-edge: #8a9caa; --switch-knob: #a3b3c0;
+  --tint-green: #0d2a22; --tint-teal: #0c2829; --tint-blue: #0f2238; --tint-violet: #1a1838; --tint-coral: #2e1a17; --tint-yellow: #2b2414;
+  --deco-green: #12382c; --deco-teal: #113637; --deco-blue: #152d4a; --deco-violet: #231f4a; --deco-coral: #3d221d; --deco-yellow: #3a301a;
+  --ico-green: #4cf0a6; --ico-teal: #5fe3d4; --ico-blue: #8ab8ff; --ico-violet: #c3b3ff; --ico-coral: #ffb084; --ico-yellow: #ffd27a;
+  --heat-0: #15232f; --heat-1: #0f4a35; --heat-2: #0e7a52; --heat-3: #12b36f; --heat-4: #3ef0a0;
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 6px 18px rgba(0, 0, 0, .35);
+  --shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 16px 36px rgba(0, 0, 0, .5);
+  --backdrop: rgba(2, 6, 10, .72);
+}
+/* High contrast (Settings → Доступность, or the system asks for more contrast): black, white, yellow — above any theme. */
+:root.hc {
+  color-scheme: dark;
+  --bg: #000; --bg2: #000; --card: #000; --card2: #101010; --line: #ffffff; --line-strong: #ffffff;
+  --text: #ffffff; --muted: #e8ecff; --accent: #ffe14d; --accent-ink: #ffe14d; --on-accent: #000;
+  --a: #ffb547; --a-ink: #ffb547; --b: #5ad1ff; --b-ink: #5ad1ff; --violet: #e879f9; --co-ink: #f0abfc;
+  --good: #3fe0a0; --good-ink: #3fe0a0; --warn: #ffcc4d; --warn-ink: #ffcc4d; --bad: #ff6b6b; --bad-ink: #ff8a8a;
+  --track: #333; --star-empty: #555; --switch-off: #000; --switch-edge: #fff; --switch-knob: #fff;
+  --tint-green: #000; --tint-teal: #000; --tint-blue: #000; --tint-violet: #000; --tint-coral: #000; --tint-yellow: #000;
+  --deco-green: #000; --deco-teal: #000; --deco-blue: #000; --deco-violet: #000; --deco-coral: #000; --deco-yellow: #000;
+  --ico-green: #fff; --ico-teal: #fff; --ico-blue: #fff; --ico-violet: #fff; --ico-coral: #fff; --ico-yellow: #fff;
+  --heat-0: #222; --heat-1: #3c6e5a; --heat-2: #2f9e72; --heat-3: #3fe0a0; --heat-4: #b6ffe0;
+  --grad-primary: #ffe14d; --grad-hero: #000; --grad-cover: #000; --grad-good: #3fe0a0; --grad-a: #ffb547; --grad-b: #5ad1ff;
+  --hero-text: #fff; --hero-muted: #e8ecff; --hero-track: #333; --hero-ring: #fff; --cover-text: #fff; --cover-muted: #e8ecff;
+  --shadow-1: none; --shadow-2: none; --glow-accent: none; --backdrop: rgba(0, 0, 0, .85);
+}
+
+/* ===== Base: layout and structure (5.x) ===== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent }
 html { font-size: calc(16px * var(--text-scale, 1)) }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text) }
@@ -30,7 +115,8 @@ button { font: inherit; color: inherit }
 .lead { font-size: 1.188rem; font-weight: 600 }
 
 .card { padding: 16px; margin: 14px 0; text-align: left }
-.card-head { display: flex; justify-content: space-between; align-items: center }
+.card-head { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: space-between; align-items: center } /* the pill wraps under the title at 200 % on 320 px */
+.card-head > h2 { min-width: 0 }
 .pill { background: var(--card2); border-radius: 99px; padding: 2px 10px; font-weight: 700; font-size: 0.875rem }
 
 .btn { min-height: var(--tap);                      border: 1px solid var(--line); background: var(--card2); padding: 12px 18px; font-weight: 700; cursor: pointer }
@@ -239,14 +325,6 @@ output { color: var(--accent); font-weight: 700 }
 .toast.bad { border-color: var(--bad) }
 .toast.out { opacity: 0 }
 
-/* Accessibility modes (Settings → Доступность). */
-:root.hc { --bg: #000; --bg2: #000; --card: #000; --card2: #101010; --line: #ffffff; --text: #ffffff; --muted: #e8ecff }
-:root.hc .card, :root.hc .btn, :root.hc .seg, :root.hc .game-card, :root.hc .level, :root.hc .pad, :root.hc .gkey, :root.hc .badge { border: 2px solid var(--line) }
-:root.hc .hero, :root.hc .g-grip, :root.hc .g-flight, :root.hc .g-rhythm, :root.hc .g-safe, :root.hc .g-check, :root.hc .celebrate { background: #000; border: 2px solid var(--line) }
-
-:root.hc .note, :root.hc small { color: var(--muted) }
-:root.rm *, :root.rm *::before, :root.rm *::after { animation: none !important; transition: none !important }
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important }
 }
@@ -273,126 +351,256 @@ table.data th[scope="row"] { text-align: left; font-weight: 700 }
 td.heat.h1 { background: rgba(255,107,107,.18) } td.heat.h2 { background: rgba(255,107,107,.35) }
 td.heat.h3 { background: rgba(255,107,107,.55) } td.heat.h4 { background: rgba(255,107,107,.8); color: #fff }
 
-/* ===== v5 design layer — «Aurora»: dark-first, bento, soft tactile depth, expressive type, spring motion.
-   Rules: solid surfaces under text (contrast ≥ 4.5:1), decoration only behind content, every motion
-   disabled by .rm / prefers-reduced-motion, every gradient flattened by .hc. ===== */
-:root {
-  --bg: #0a1027; --bg2: #0f1734; --card: #141d40; --card2: #1b2753; --line: #27366b;
-  --grad-accent: linear-gradient(135deg, #5ad1ff 0%, #7b8cff 55%, #a77bff 100%);
-  --grad-warm: linear-gradient(135deg, #ffcf6b 0%, #ff9f5a 100%);
-  --grad-good: linear-gradient(135deg, #3fe0a0 0%, #2bc2d6 100%);
-  --shadow-1: 0 1px 0 rgba(255,255,255,.06) inset, 0 6px 18px rgba(0,0,0,.28);
-  --shadow-2: 0 1px 0 rgba(255,255,255,.08) inset, 0 14px 34px rgba(0,0,0,.38);
-  --glow-accent: 0 8px 26px rgba(90,209,255,.35);
-  --spring: cubic-bezier(.2,.9,.25,1.25);
-  --radius: 22px
-}
+
+/* ===== 5.12 design layer — «Моторика × ФинФениксы». The base rules above hold layout; this layer is the look.
+   Rules: solid surfaces under text, decoration only behind content, every motion off with .rm / prefers-reduced-motion,
+   every gradient flattened by .hc (tokens) and forced colours. ===== */
 body {
   background:
-    radial-gradient(900px 520px at 85% -10%, rgba(123,140,255,.20), transparent 60%),
-    radial-gradient(700px 480px at -10% 30%, rgba(90,209,255,.12), transparent 60%),
-    radial-gradient(800px 600px at 50% 120%, rgba(167,123,255,.14), transparent 60%),
+    radial-gradient(560px 340px at 108% -8%, var(--deco-green), transparent 70%),
+    radial-gradient(520px 380px at -14% 22%, var(--deco-blue), transparent 70%),
     var(--bg);
-  background-attachment: fixed
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
 }
 .app { background: transparent }
-h1 { font-size: 1.875rem; font-weight: 850; letter-spacing: -0.6px }
+h1 { font-family: var(--font-display); font-size: 1.625rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15 }
+/* Screen titles: the brochure's upper-case Unbounded with a short green bar under it. */
+.scroll > h1:not(.sr-only):not(.eyebrow), .onb-hero h1 { text-transform: uppercase; letter-spacing: 0.01em }
+.scroll > h1:not(.sr-only):not(.eyebrow)::after { content: ''; display: block; width: 44px; height: 4px; margin-top: 10px; border-radius: 2px; background: var(--grad-primary) }
 h2 { font-weight: 800; letter-spacing: -0.2px }
 .stats b, .big-score, .score, .streak b, .pill, output, .rest-count, table.data td { font-variant-numeric: tabular-nums }
-.eyebrow { letter-spacing: 1.4px; background: var(--grad-accent); -webkit-background-clip: text; background-clip: text; color: transparent }
+.big-score, .score, .stats b, .rest-count, .level b, .sync-value, .streak b { font-family: var(--font-display); font-weight: 700 }
+.eyebrow { font-weight: 800; letter-spacing: 1px; color: var(--accent-ink) }
+.note.warn { color: var(--warn-ink); font-weight: 600 }
+.art { display: block; flex: none }
 
-/* Surfaces: soft tactile depth, light top edge. */
-.card { background: linear-gradient(180deg, var(--card2) 0%, var(--card) 100%); border: 1px solid var(--line); box-shadow: var(--shadow-1); border-radius: var(--radius) }
+/* Surfaces: white cards on the light-grey page (the sample), flat with a soft shadow (the brochure). */
+.card { background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-1); border-radius: var(--radius) }
 .card h2 { display: flex; align-items: center; gap: 8px }
+.pill { background: var(--tint-green); color: var(--accent-ink); font-weight: 800; padding: 3px 11px }
+.with-art { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px } /* the text column shrinks and wraps */
+.with-art .art { width: 1.75rem; height: 1.75rem }
+.tinted { position: relative; overflow: hidden; background: var(--tint); border-color: transparent }
+.tinted::after { content: ''; position: absolute; right: -36px; bottom: -48px; width: 128px; height: 128px; border-radius: 50%; background: var(--deco); pointer-events: none }
+.tinted > * { position: relative; z-index: 1 }
+.t-green, .g-check { --tint: var(--tint-green); --deco: var(--deco-green); --ico: var(--ico-green) }
+.t-teal, .g-safe { --tint: var(--tint-teal); --deco: var(--deco-teal); --ico: var(--ico-teal) }
+.t-blue, .g-flight { --tint: var(--tint-blue); --deco: var(--deco-blue); --ico: var(--ico-blue) }
+.t-violet, .g-rhythm { --tint: var(--tint-violet); --deco: var(--deco-violet); --ico: var(--ico-violet) }
+.t-coral, .g-grip { --tint: var(--tint-coral); --deco: var(--deco-coral); --ico: var(--ico-coral) }
+.t-yellow, .g-tutorial, .tutorial-card { --tint: var(--tint-yellow); --deco: var(--deco-yellow); --ico: var(--ico-yellow) }
 
-/* Buttons: oversized, pill-shaped, gradient primary with glow (M3 Expressive). */
-.btn { border-radius: 999px; transition: transform .18s var(--spring), box-shadow .18s ease, filter .18s ease }
-.btn:hover { filter: brightness(1.06) }
+/* Buttons: pill-shaped (M3 Expressive, the sample); the primary one in the brand green with near-black text (11:1). */
+.btn { border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--card); color: var(--text); font-weight: 800; transition: transform .18s var(--spring), box-shadow .18s ease, filter .18s ease }
+.btn:hover { filter: brightness(1.03) }
 .btn:active { transform: scale(.96) }
-.btn.primary { background: var(--grad-accent); color: #061233; box-shadow: var(--glow-accent) }
+.btn.primary { background: var(--grad-primary); color: var(--on-accent); border-color: transparent; box-shadow: var(--glow-accent) }
 .btn.primary:disabled { box-shadow: none; filter: saturate(.4) }
-.btn.big { min-height: 64px; font-size: 1.15rem; letter-spacing: .2px }
-.btn.ghost { border-color: var(--line); background: rgba(255,255,255,.03) }
+.btn.big { min-height: 64px; font-size: 1.125rem; letter-spacing: .1px }
+.btn.ghost { background: var(--card) }
+.btn.danger { background: var(--card); border-color: var(--bad-ink); color: var(--bad-ink) }
+.top-bar .icon-btn, .play-top .icon-btn { background: var(--card); box-shadow: var(--shadow-1); border-radius: 50%; color: var(--text) }
+.top-bar h1 { font-size: 1.0625rem; font-weight: 700 }
 
-/* Home hero: aurora panel with decorative orbs behind the content. */
-.hero { position: relative; overflow: hidden; background: linear-gradient(150deg, #20307a 0%, #2a2272 55%, #3a1f6e 100%); box-shadow: var(--shadow-2); border: 1px solid rgba(255,255,255,.08) }
-.hero::before, .hero::after { content: ''; position: absolute; border-radius: 50%; filter: blur(2px); pointer-events: none }
-.hero::before { width: 220px; height: 220px; right: -70px; top: -90px; background: radial-gradient(circle, rgba(90,209,255,.35), transparent 70%) }
-.hero::after { width: 180px; height: 180px; left: -60px; bottom: -90px; background: radial-gradient(circle, rgba(255,181,71,.25), transparent 70%) }
+/* Home hero: the brand gradient tile (green → teal → blue) with near-black text, Мио on a white tile, light trails. */
+.hero { position: relative; overflow: hidden; background: var(--grad-hero); color: var(--hero-text); border-radius: 28px; padding: 18px 16px 16px; box-shadow: var(--shadow-2) }
 .hero > * { position: relative }
-.avatar { background: var(--grad-accent); box-shadow: var(--glow-accent) }
-.streak { background: var(--grad-warm); color: #2b1600; font-weight: 800; box-shadow: 0 6px 18px rgba(255,159,90,.35) }
-.xp-track, .skill-track { height: 12px; background: rgba(255,255,255,.09) }
-.xp-track i, .skill-track i { background: var(--grad-good); box-shadow: 0 0 12px rgba(63,224,160,.45) }
+.hero > .trails { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.hero h1 { color: var(--hero-text) }
+.hero .eyebrow { color: var(--hero-muted) }
+.avatar { background: #ffffff; border-radius: 20px; box-shadow: 0 6px 16px rgba(5, 16, 26, .18) }
+.avatar .art { width: 88%; height: 88% }
+.streak { background: #05101a; color: #ffffff; font-weight: 850; padding: 6px 12px 6px 8px }
+.streak .art { width: 1.5rem; height: 1.5rem }
+.xp-track, .skill-track { height: 12px; background: var(--track) }
+.xp-track i, .skill-track i { background: var(--grad-good) }
+.hero .xp-track { background: var(--hero-track) }
+.hero .xp-track i { background: #05101a }
+.hero .xp small, .hero .week-note, .hero .day small { color: var(--hero-muted) }
+.day i { width: 30px; height: 30px; border-color: var(--hero-ring); position: relative }
+.day.done i { background: #05101a; border-color: #05101a }
+.day.done i::after { content: ''; position: absolute; left: 32%; top: 20%; width: 26%; height: 44%; border: solid #16e182; border-width: 0 3px 3px 0; transform: rotate(40deg) }
+.day.today i { border-width: 3px; border-color: #ffffff; box-shadow: 0 0 0 2px #05101a }
+.day small { font-weight: 700 }
 
-.day.done i { background: var(--grad-good); border-color: transparent; box-shadow: 0 0 10px rgba(63,224,160,.5) }
-.day.today i { border-width: 3px }
+/* Plan: a stepper of game rows, each with its picture on a tinted tile. */
+.plan-list li { background: var(--card2); border: 1px solid var(--line); border-radius: 18px; gap: 12px }
+.plan-list li.done { background: var(--tint-green); border-color: transparent }
+.plan-icon { display: grid; place-items: center; border-radius: 14px; background: var(--tint) }
+.plan-icon .art { width: 82%; height: 82% }
+.tip.card { background: var(--tint-green); border-color: transparent }
+.tip p { color: var(--text) }
+.coach-head b { font-size: 1.0625rem }
 
-/* Plan: stepper look. */
-.plan-list li { background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 18px }
-.plan-list li.done { opacity: .55 }
-.plan-icon { display: grid; place-items: center; border-radius: 14px; background: rgba(90,209,255,.12); font-size: 1.3rem }
-.plan-list li.done .plan-icon { background: var(--grad-good); color: #04261a; font-weight: 900 }
-
-/* Games: bento grid — the first card spans two columns. */
+/* Games: bento grid of tinted cards with an illustrated tile; the first card spans two columns. */
 .game-grid { grid-template-columns: 1fr 1fr; gap: 12px }
-.game-card { position: relative; overflow: hidden; border-radius: 24px; box-shadow: var(--shadow-1); transition: transform .2s var(--spring); min-height: 160px }
+.game-card { position: relative; overflow: hidden; border: 1px solid transparent; border-radius: 24px; background: var(--tint); color: var(--text); box-shadow: var(--shadow-1); transition: transform .2s var(--spring); min-height: 160px }
 .game-card:first-child { grid-column: 1 / -1; min-height: 150px }
-.game-card::after { content: ''; position: absolute; right: -30px; bottom: -40px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.12), transparent 70%); pointer-events: none }
+.game-card::after { content: ''; position: absolute; right: -34px; bottom: -46px; width: 130px; height: 130px; border-radius: 50%; background: var(--deco); pointer-events: none }
+.game-card > * { position: relative; z-index: 1 }
 .game-card:active { transform: scale(.97) }
-.game-icon { display: grid; place-items: center; border-radius: 18px; background: rgba(255,255,255,.1); font-size: 1.75rem }
-.g-grip { background: linear-gradient(150deg, #2b4bb3 0%, #1b2a66 100%) }
-.g-flight { background: linear-gradient(150deg, #4a3bb5 0%, #221c63 100%) }
-.g-rhythm { background: linear-gradient(150deg, #7a2f9e 0%, #2c1559 100%) }
-.g-safe { background: linear-gradient(150deg, #126a8a 0%, #12305a 100%) }
-.g-check { background: linear-gradient(150deg, #13586e 0%, #14284f 100%) }
-.game-meta { color: #ffe08a }
+.game-card b { font-size: 1.0625rem }
+.game-icon { display: grid; place-items: center; border-radius: 18px; background: var(--card); box-shadow: var(--shadow-1) }
+.game-icon .art { width: 84%; height: 84% }
+.game-meta { color: var(--ico); font-weight: 800; display: flex; align-items: center; gap: 4px; flex-wrap: wrap }
+.game-meta .art { width: 1rem; height: 1rem }
+.g-check.card, .tutorial-card.card { position: relative; overflow: hidden; background: var(--tint); border-color: transparent }
+.g-check.card::after, .tutorial-card.card::after { content: ''; position: absolute; right: -40px; top: -50px; width: 130px; height: 130px; border-radius: 50%; background: var(--deco); pointer-events: none }
+.g-check.card > *, .tutorial-card.card > * { position: relative; z-index: 1 }
+.g-check.due { box-shadow: 0 0 0 2px var(--accent-ink), var(--shadow-1) }
 
 /* Levels. */
-.level { border-radius: 20px; background: linear-gradient(180deg, var(--card2), var(--card)); box-shadow: var(--shadow-1) }
-.level.rec { border: 2px solid transparent; background: linear-gradient(var(--card2), var(--card)) padding-box, var(--grad-accent) border-box }
+.game-hero { width: 96px; height: 96px; margin: 0 auto 6px; border-radius: 30px; display: grid; place-items: center; background: var(--tint); box-shadow: var(--shadow-1) }
+.game-hero .art { width: 80%; height: 80% }
+.how li::marker { color: var(--accent-ink) }
+.level { border-radius: 22px; background: var(--card); color: var(--text); box-shadow: var(--shadow-1); gap: 4px; transition: transform .18s var(--spring) }
+.level:active { transform: scale(.95) }
+.level b { font-size: 1.5rem }
+.level .star-row .art { width: 1rem; height: 1rem }
+.level.locked { background: var(--bg2); border-color: transparent; box-shadow: none; cursor: default; opacity: 1 }
+.level.locked .art { width: 1.75rem; height: 1.75rem }
+.level.rec { background: var(--grad-primary); color: var(--on-accent); border-color: transparent; box-shadow: var(--glow-accent) }
+.star-row { display: inline-flex; gap: 2px; justify-content: center; color: var(--star-empty) }
+.level.rec .star-row { color: #0b5c43 }
 
-/* Bottom navigation: floating pill with an active indicator (M3). */
-.bottom-nav { bottom: calc(10px + env(safe-area-inset-bottom)); width: calc(100% - 24px); max-width: 536px; border: 1px solid var(--line); border-radius: 26px; background: rgba(15,23,52,.96); box-shadow: var(--shadow-2); padding-bottom: 0 }
-.nav-item { min-height: 64px; gap: 2px }
-.nav-item .nav-icon { padding: 4px 18px; border-radius: 999px; transition: background .2s ease }
-.nav-item.active .nav-icon { background: rgba(90,209,255,.18) }
+/* Bottom navigation: a floating white pill; the current section in a filled rounded square (the sample). */
+.bottom-nav { bottom: calc(10px + env(safe-area-inset-bottom)); width: calc(100% - 24px); max-width: 536px; border: 1px solid var(--line); border-radius: 26px; background: var(--card); box-shadow: var(--shadow-2); padding-bottom: 0 }
+.nav-item { min-height: 64px; gap: 2px; color: var(--muted); font-weight: 700 }
+.nav-item.active { color: var(--accent-ink); font-weight: 800 }
+.nav-item .nav-icon { padding: 5px 18px; border-radius: 16px; transition: background .2s ease }
+.nav-item.active .nav-icon { background: var(--grad-primary); color: var(--on-accent); box-shadow: var(--glow-accent) }
 
-/* Segmented control and toggles. */
-.segmented { background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 20px }
-.seg { border-radius: 16px; transition: background .2s ease, transform .18s var(--spring) }
-.seg.active { background: var(--grad-accent); color: #061233; box-shadow: var(--glow-accent) }
+/* Segmented control: white chips on a grey track; the chosen one in the brand green. */
+.segmented { background: var(--bg2); border: 0; border-radius: 20px }
+.seg { border-radius: 16px; color: var(--muted); transition: background .2s ease, transform .18s var(--spring) }
+.seg.active { background: var(--grad-primary); color: var(--on-accent); box-shadow: var(--glow-accent) }
 
 /* Play: HUD and meters. */
-.play-top { background: rgba(10,16,39,.9) }
-.play-progress i { background: var(--grad-accent); box-shadow: 0 0 10px rgba(90,209,255,.6) }
-.meter { background: rgba(15,23,52,.98) }
-.meter-bar.a .fill { background: linear-gradient(90deg, #ff9f5a, #ffcf6b); box-shadow: 0 0 10px rgba(255,181,71,.5) }
-.meter-bar.b .fill { background: linear-gradient(90deg, #2bb6e6, #8be3ff); box-shadow: 0 0 10px rgba(90,209,255,.5) }
-.pad { border-radius: 26px; box-shadow: var(--shadow-1) }
-.pad.on { box-shadow: 0 0 0 2px #fff, 0 0 24px rgba(255,255,255,.25) }
-.sheet { border-radius: 28px; box-shadow: var(--shadow-2); background: linear-gradient(180deg, var(--card2), var(--card)) }
-.confirm-ring, .cal-ring { background: conic-gradient(#ffcf6b calc(var(--p) * 360deg), rgba(255,255,255,.12) 0) }
+.play-top { background: var(--card); border-bottom: 1px solid var(--line) }
+.play-title h1 { font-family: var(--font); letter-spacing: 0 }
+.play-title small { color: var(--warn-ink) }
+.score { color: var(--accent-ink) }
+.play-progress { background: var(--track) }
+.play-progress i { background: var(--grad-primary) }
+.overlay { background: var(--backdrop) }
+.play-screen.lost .stage-hint { background: var(--bad-ink); color: #ffffff }
+.meter { background: var(--card) }
+.meter-label.a { color: var(--a-ink) } .meter-label.b { color: var(--b-ink) }
+.meter-bar { background: var(--track) }
+.meter-bar.a .fill { background: linear-gradient(90deg, #f2622e, #ffa06b) }
+.meter-bar.b .fill { background: linear-gradient(90deg, #2f6fe0, #7fb0ff) }
+.mark.on { background: var(--text); opacity: .55 }
+.meter-chip { background: var(--bg2); color: var(--text) }
+.meter-chip[data-cmd="close"] { background: var(--a); color: #2a1000 }
+.meter-chip[data-cmd="open"] { background: var(--b); color: #05101a }
+.meter-chip[data-cmd="switch"] { background: var(--violet); color: #ffffff }
+.meter-chip[data-cmd="lost"] { background: var(--bad-ink); color: #ffffff }
+.controls { background: var(--bg) }
+.pad { border-radius: 26px; background: var(--card); box-shadow: var(--shadow-1) }
+.pad.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--card), var(--shadow-2) }
+.pad-a .pad-fill { background: var(--grad-a) }
+.pad-b .pad-fill { background: var(--grad-b) }
+.pad-ticks { background: repeating-linear-gradient(0deg, transparent 0 calc(25% - 1px), var(--line) calc(25% - 1px) 25%) }
+/* Labels sit on their own chips: readable over the channel colour that fills the pad. */
+.pad-label { background: var(--card); border-radius: 12px; padding: 2px 8px 3px; justify-self: start; align-self: flex-start; max-width: 100% }
+.pad-a .pad-label b { color: var(--a-ink) } .pad-b .pad-label b { color: var(--b-ink) }
+.pad-label b { font-family: var(--font-display); font-weight: 800 }
+.pad-value { background: var(--card); border-radius: 99px; padding: 0 8px }
+.pad-co { background: var(--card); color: var(--co-ink); border-color: var(--violet) }
+.pad-co.on { background: var(--violet); border-style: solid; color: #ffffff }
+.gkey { background: var(--card); box-shadow: var(--shadow-1); color: var(--text); border-radius: 18px }
+.gkey.on { border-color: var(--a); background: var(--tint-coral) }
+.sheet { border-radius: 28px; box-shadow: var(--shadow-2); background: var(--card) }
+.sheet-title { display: flex; align-items: center; gap: 12px }
+.sheet-title .tile { width: 52px; height: 52px; flex: none; border-radius: 18px; display: grid; place-items: center; background: var(--tint) }
+.sheet-title .tile .art { width: 84%; height: 84% }
+.legend { background: var(--bg2); border-radius: 14px }
+.confirm-ring, .cal-ring { background: conic-gradient(var(--a) calc(var(--p) * 360deg), var(--track) 0) }
 
-/* Results: celebratory hierarchy. */
-.big-stars { text-shadow: 0 6px 24px rgba(255,204,77,.45) }
-.big-score { font-weight: 900; letter-spacing: -1px }
-.xp-gain { display: inline-block; padding: 4px 14px; border-radius: 999px; background: rgba(63,224,160,.14) }
-.celebrate { background: linear-gradient(150deg, #11624d, #14284f) }
-.stats div { background: linear-gradient(180deg, var(--card2), var(--card)); border: 1px solid var(--line); box-shadow: var(--shadow-1); border-radius: 18px }
-.stats b { font-size: 1.5rem; font-weight: 850 }
-.badge.on { background: linear-gradient(150deg, rgba(255,204,77,.18), rgba(255,159,90,.08)); border: 1px solid rgba(255,204,77,.6) }
+/* Results: stars as a picture, the score in Unbounded, rewards as chips. */
+.big-stars { display: flex; justify-content: center; gap: 6px; margin: 4px 0; color: var(--star-empty) }
+.big-stars .art { width: min(4.5rem, 21vw, 26vh); height: min(4.5rem, 21vw, 26vh); filter: drop-shadow(0 6px 10px rgba(245, 165, 36, .35)) }
+.big-stars .art:nth-child(2) { transform: translateY(-10px) scale(1.12) }
+.big-stars.s0 .art { filter: none }
+.big-score { font-size: min(3rem, 15vw); letter-spacing: -1px; color: var(--text) }
+.xp-gain { display: inline-block; padding: 4px 14px; border-radius: 999px; background: var(--tint-green); color: var(--good-ink); font-weight: 800 }
+.celebrate { text-align: center; --tint: var(--tint-green); --deco: var(--deco-green) }
+.celebrate .with-art { text-align: left }
+.coach.card { background: var(--tint-green); border-color: transparent }
+.coach p { color: var(--text) }
+.breath { background: radial-gradient(circle at 35% 30%, #ffffff 0%, #9ff5cd 30%, #25c2c4 70%, #2f80ed 100%); box-shadow: 0 0 0 14px var(--tint-teal), var(--glow-accent) }
+.rest-count { font-size: 3rem; color: var(--accent-ink) }
+.rest .meter { border-radius: 16px; border: 1px solid var(--line) }
+.rest .mio { display: block; margin: 0 auto 4px }
 
-/* Onboarding art. */
-.onb-art canvas { filter: drop-shadow(0 12px 30px rgba(90,209,255,.45)) }
+/* Progress: the brochure's stacked gradient tiles — green, teal, cyan with dark text; blue, violet with white text. */
+.stats div { border-radius: 18px; border: 0; box-shadow: var(--shadow-1); background: #16e182; color: #05101a }
+.stats div:nth-child(5n + 2) { background: #1fd0a6 }
+.stats div:nth-child(5n + 3) { background: #2fa6e0 }
+.stats div:nth-child(5n + 4) { background: #2f6fe0; color: #ffffff }
+.stats div:nth-child(5n) { background: #5b4fd6; color: #ffffff }
+.stats div small { color: inherit; opacity: 1 }
+.stats b { font-size: 1.5rem }
+.cal { border-radius: 8px; background: var(--heat-0) }
+.cal.l1 { background: var(--heat-1) } .cal.l2 { background: var(--heat-2) }
+.cal.l3 { background: var(--heat-3) } .cal.l4 { background: var(--heat-4) }
+.cal.future { background: transparent; border: 1.5px dashed var(--line-strong); opacity: 1 }
+.badge { background: var(--card2); border: 1px solid var(--line); border-radius: 16px; opacity: 1; color: var(--muted); align-content: start }
+.badge .art { width: 2rem; height: 2rem; margin-bottom: 2px; color: var(--star-empty) } /* above the name: «Переключатель» needs the whole width */
+.badge.on { background: var(--tint-yellow); border-color: var(--warn); color: var(--text) }
+.skin { background: var(--card2); border-radius: 16px; color: var(--text) }
+.skin.active { border-color: var(--accent-ink); background: var(--tint-green); box-shadow: var(--glow-accent) }
 
-/* High contrast and reduced motion always win over decoration. */
-:root.hc body { background: #000 }
-:root.hc .hero::before, :root.hc .hero::after, :root.hc .game-card::after { display: none }
-:root.hc .btn.primary, :root.hc .seg.active, :root.hc .avatar, :root.hc .streak { background: #ffe14d; color: #000; box-shadow: none }
-:root.hc .eyebrow { background: none; color: #ffe14d }
-:root.hc .card, :root.hc .stats div, :root.hc .level, :root.hc .sheet { background: #000; box-shadow: none }
-:root.hc .bottom-nav { background: #000; border: 2px solid #fff }
+/* Settings: section glyphs on tinted tiles; the switch is outlined when off, green when on (M3). */
+.sec-ico { width: 40px; height: 40px; flex: none; border-radius: 13px; display: grid; place-items: center; background: var(--tint); color: var(--ico) }
+.sec-ico .ico { width: 1.375rem; height: 1.375rem }
+.fold > summary .sec-head { display: flex; align-items: center; gap: 12px; min-width: 0 }
+.row > span { font-weight: 600 }
+.row small { font-weight: 400 }
+.row input[type=text], .row input[type=url], .row input[type=time], .row input[type=password] { border-radius: 14px; border: 1.5px solid var(--line-strong); background: var(--card); color: var(--text) }
+.row input:focus-visible { border-color: var(--accent-ink) }
+input[type=range] { accent-color: #0aa865 }
+input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 52px; height: 32px; margin: 0; flex: none; border-radius: 99px; background: var(--switch-off); border: 2px solid var(--switch-edge); position: relative; cursor: pointer; transition: background .2s ease, border-color .2s ease }
+input[type=checkbox]::before { content: ''; position: absolute; left: 4px; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: var(--switch-knob); transform: translateY(-50%); transition: left .2s var(--spring), width .2s ease, height .2s ease, background .2s ease }
+input[type=checkbox]:checked { background: var(--grad-primary); border-color: transparent }
+input[type=checkbox]:checked::before { left: 22px; width: 24px; height: 24px; background: #05101a }
+output { color: var(--accent-ink); font-weight: 800 }
+.cal-ring::after { background: var(--bg) }
+.cal-ring[data-step="a"] { background: conic-gradient(var(--a) calc(var(--p) * 360deg), var(--track) 0) }
+.cal-ring[data-step="b"] { background: conic-gradient(var(--b) calc(var(--p) * 360deg), var(--track) 0) }
+
+/* Onboarding: a dark brand cover with light trails (the brochure's cover), the rest on the light page. */
+.onboarding .scroll { padding-top: 16px }
+.onb-hero { position: relative; overflow: hidden; background: var(--grad-cover); color: var(--cover-text); border-radius: 32px; padding: 22px 18px 20px; margin-bottom: 12px; box-shadow: var(--shadow-2) }
+.onb-hero > * { position: relative }
+.onb-hero > .trails { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.onb-hero h1 { color: var(--cover-text); margin: 6px 0 4px }
+.onb-hero .lead { color: var(--cover-muted); margin: 0 }
+.onb-art { margin: 4px auto 6px }
+.onb-art .art { width: 132px; height: 132px; filter: drop-shadow(0 14px 20px rgba(0, 0, 0, .4)); animation: float 4s ease-in-out infinite }
+.onb-art.small .art { width: 84px; height: 84px }
+.onb-art.scene .art { width: min(230px, 100%); height: auto; aspect-ratio: 5 / 4 }
+@keyframes float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+.how.onb-card { padding: 14px 16px 14px 34px }
+.dots i { background: var(--line-strong); transition: width .25s var(--spring) }
+.dots i.on { background: #0aa865; width: 24px }
+
+/* Toasts, tables, PIN, check-in. */
+.toast { background: var(--card); color: var(--text); border-left: 5px solid var(--accent); border-radius: 16px; font-weight: 800; box-shadow: var(--shadow-2) }
+.toast.good { border-left-color: var(--good) }
+.toast.bad { border-left-color: var(--bad) }
+table.data thead th { background: var(--bg2) }
+td.heat.h1 { background: #fde2e2 } td.heat.h2 { background: #fbc4c4 }
+td.heat.h3 { background: #f59a9a } td.heat.h4 { background: #c21b2e; color: #fff }
+:root[data-theme="dark"] td.heat.h1 { background: #4a2235 } :root[data-theme="dark"] td.heat.h2 { background: #6e2a3f }
+:root[data-theme="dark"] td.heat.h3 { background: #9b3048 }
+.pin-art { display: grid; place-items: center; margin: 8px auto }
+.pin-art .art { width: 88px; height: 88px }
+.pin-input { border-radius: 16px; border: 2px solid var(--line-strong); background: var(--card) }
+.checkin-hero { display: flex; align-items: center; gap: 12px; text-align: left }
+.tut-canvas { border-radius: 20px }
+.showcase-banner .btn { background: #ffd27a }
 
 /* Coach «Мио» next to its advice (5.4) */
 .coach-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px }
@@ -503,7 +711,7 @@ table.data { margin: 0 }
 
 /* The game hint is a bar under the field (5.8): over the canvas it hid what games draw at the bottom and, on a short
    screen with large text, climbed over the header. Two lines are reserved so the layout does not jump. */
-.stage-hint { position: static; margin: 0; border-radius: 0; background: var(--bg2); border-top: 1px solid var(--line);                                 display: grid; place-items: center }
+.stage-hint { position: static; margin: 0; border-radius: 0; background: var(--card); border-top: 1px solid var(--line);                                 display: grid; place-items: center }
 .play-side > :first-child { margin-top: auto } /* landscape column: overflow scrolls instead of escaping upwards */
 
 /* Short landscape screens: sticky footers would cover half of the page — they scroll with it. */
@@ -569,6 +777,10 @@ html { scroll-padding-top: calc(3rem + 24px) } /* sticky top bar / showcase bann
   .seg.active, .nav-item.active, .level.rec, .skin.active, .pad.on, .gkey.on, .pad-co.on { outline: 3px solid Highlight; outline-offset: -3px }
   .meter-bar .fill, .pad-fill, .xp-track i, .skill-track i, .play-progress i, .day.done i, .confirm-ring, .cal-ring { forced-color-adjust: none }
   .btn, .seg, .card, .pad, .gkey { border: 1px solid CanvasText }
+  /* The drawn switch is a native checkbox again: system colours draw its state (5.12). */
+  input[type=checkbox] { appearance: auto; -webkit-appearance: auto; width: 28px; height: 28px; border: 0; background: none }
+  input[type=checkbox]::before { display: none }
+  .hero > .trails, .onb-hero > .trails, .game-card::after, .tinted::after, .g-check.card::after, .tutorial-card.card::after { display: none }
 }
 
 /* ===== 5.9 — words are never split mid-word at the default text size on a phone ≥ 360 px (layout linter «broken»;
@@ -576,7 +788,7 @@ html { scroll-padding-top: calc(3rem + 24px) } /* sticky top bar / showcase bann
 /* The longest word of a group (`--word`, letters; segmented() and createGesturePads() set it) sets the narrowest
    column: «Пропорциональный» stacks the options on a phone, «Правая рука / Левая рука» stay side by side.
    Measured: bold 14 px Cyrillic ≈ 0.56 rem per letter; + padding. */
-.segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8.5rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)) }
+.segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(5.75rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)) } /* 5.12: three short options in a row */
 .checkin .segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)) }
 /* Gesture pads: icon + name; never fewer than two columns (seven pads in one column would push the field away).
    bold 13 px ≈ 0.52 rem per letter + icon 36 px + gaps and padding. */
@@ -640,7 +852,8 @@ table.data th { font-size: 0.75rem }
 @media (orientation: landscape) and (max-height: 540px) { .app:has(> .showcase-banner) .play-screen .pads.two { min-height: clamp(110px, 38dvh, 220px) } }
 /* Rewards of a run (5.10): on the screen, not in toasts over the score. */
 .rewards { list-style: none; margin: 4px auto 10px; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px }
-.rewards li { background: var(--card2); border: 1px solid var(--warn); border-radius: 99px; padding: 6px 12px; font-size: 0.875rem; font-weight: 700 }
+.rewards li { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1.5px solid var(--warn); border-radius: 99px; padding: 5px 12px 5px 6px; font-size: 0.875rem; font-weight: 800; box-shadow: var(--shadow-1) }
+.rewards li .art { width: 1.5rem; height: 1.5rem }
 
 /* 5.11 — «Синхронизация звука»: the dot reaches the line on every click (transform only: no layout per frame). */
 .sync-stage { position: relative; height: 10rem; margin: 1rem 0; border-radius: 16px; background: var(--card); border: 1px solid var(--line); overflow: hidden }
@@ -661,15 +874,21 @@ table.data th { font-size: 0.75rem }
   .frame .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 }
 /* 5.11 — design review. Warning cards look like warnings (the later `.card` border used to win). */
-.card.warn-card { border-color: var(--warn); background: linear-gradient(180deg, rgba(255,204,77,.12), var(--card)) }
-.warn-card > b { color: var(--warn) }
+.card.warn-card { border: 1.5px solid var(--warn); background: var(--tint-yellow) }
+.warn-card > b { color: var(--warn-ink) }
 :root.hc .card.warn-card { border-color: #ffe14d; background: #000 }
 /* Home hero on 320–380 px: the greeting keeps whole words, the series goes under it instead of squeezing it. */
-.hero h1, .hero .eyebrow { overflow-wrap: normal }
-.hero h1 { font-size: clamp(1.375rem, 7.5vw, 1.875rem) }
+.hero h1, .hero .eyebrow { overflow-wrap: anywhere } /* 5.12: whole words when they fit; Unbounded at 200 % text on 320–360 px breaks rather than overflows */
+.hero h1 { font-size: clamp(1.25rem, 6.4vw, 1.625rem) } /* Unbounded (5.12) is wider than the system font */
 @media (max-width: 380px) {
   .hero-top { grid-template-columns: 3.5rem minmax(0, 1fr) }
   .hero-top .streak { grid-column: 2; justify-self: start }
+}
+/* Short portrait phones (568 px, iPhone SE 1st gen): the day's first action stays above the bar in high contrast too. */
+@media (orientation: portrait) and (max-height: 600px) {
+  .hero { padding: 14px 14px 12px }
+  .hero-top { gap: 8px }
+  .week { margin-top: 8px }
 }
 /* 5.11 — landscape phone (a wheelchair holder): a navigation rail on the left (Material 3) instead of a bar over a
    third of a 390 px high screen, and every screen's main action stays on screen in one compact sticky row (it was
@@ -690,9 +909,9 @@ table.data th { font-size: 0.75rem }
 /* 5.11 — two lines of the game hint fit the reserve exactly (border included): a 1 px jump resized the canvas. */
 .stage-hint { min-height: calc(2.9em + 14px); line-height: 1.45 }
 /* 5.11 — design review, second part. Unselected options look tappable; the game grid has no lonely cell. */
-.seg:not(.active) { background: rgba(255,255,255,.04); box-shadow: inset 0 0 0 1px var(--line) }
+.seg:not(.active) { background: var(--card); box-shadow: inset 0 0 0 1px var(--line) }
 :root.hc .seg:not(.active) { background: #000; box-shadow: inset 0 0 0 2px #fff }
-.game-card:last-child:nth-child(odd) { grid-column: 1 / -1 }
+.game-card:last-child:nth-child(even) { grid-column: 1 / -1; min-height: 150px } /* the first card spans the row: an even last one would stand alone */
 /* Seven gesture pads on a short phone (320×568): three columns, the field keeps room for the hand. */
 @media (max-height: 640px) and (orientation: portrait) {
   .play-screen .pads.gestures { grid-template-columns: repeat(3, minmax(0, 1fr)) }
@@ -702,3 +921,54 @@ table.data th { font-size: 0.75rem }
 }
 /* 320 px with 200 % text: a split inside a word is the lesser evil than text past the edge (the linter's rule). */
 @media (max-width: 359px) { .hero h1, .btn { overflow-wrap: anywhere } }
+
+/* Жар-птица (5.12): the nest card — a dark brand cover with the glowing bird, the progress to the next stage. */
+.pet-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; background: var(--grad-cover); color: var(--cover-text); border-color: transparent; position: relative; overflow: hidden }
+.pet-card .pet-art .art { width: 96px; height: 96px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
+.pet-card h2 { color: var(--cover-text); font-family: var(--font-display); font-size: 1.25rem; margin: 2px 0 6px }
+.pet-card .eyebrow { color: var(--cover-muted) }
+.pet-card small, .pet-card .pet-line { color: var(--cover-muted) }
+.pet-card .pet-line { margin: 6px 0 0; font-size: 0.875rem }
+.pet-card .xp-track { background: #1b2a37; margin: 2px 0 4px }
+.pet-progress small { display: block; font-size: 0.8125rem }
+@media (max-width: 359px) { .pet-card { grid-template-columns: 1fr } }
+/* The bird's path: a vertical journey with a rail through the stage nodes (Finch / Duolingo-like), any text size. */
+.pet-path { list-style: none; margin: 0; padding: 0; display: grid }
+.pet-path li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 12px 6px 6px; border-radius: 20px; position: relative }
+.pet-path li::before { content: ""; position: absolute; left: 33px; top: 0; bottom: 0; width: 2px; background: var(--line-strong) }
+.pet-path li:first-child::before { top: 50% }
+.pet-path li:last-child::before { bottom: 50% }
+.pet-path li.done::before, .pet-path li.now::before { background: var(--accent) }
+.pet-path li.now::before { bottom: 50% }
+.pet-path li.now:first-child::before { display: none }
+.pet-path li.now:not(:last-child)::after { content: ""; position: absolute; left: 33px; top: 50%; bottom: 0; width: 2px; background: var(--line-strong) }
+.pet-path .pet-node { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--card2); box-shadow: 0 0 0 2px var(--line-strong) }
+.pet-path li.done .pet-node, .pet-path li.now .pet-node { background: var(--tint-green); box-shadow: 0 0 0 2px var(--accent) }
+.pet-path li.now { background: var(--tint-green) }
+.pet-path li.next .art { filter: grayscale(1) opacity(.45) }
+.pet-path b { display: block; line-height: 1.25 }
+.pet-path small { display: block; color: var(--muted); font-size: 0.875rem }
+.pet-path li.now small { color: var(--accent-ink); font-weight: 700 }
+.pet-promise { color: var(--text) }
+
+/* ===== Modes: high contrast and reduced motion always win over decoration ===== */
+:root.hc body { background: #000 }
+:root.hc .card, :root.hc .btn, :root.hc .seg, :root.hc .level, :root.hc .pad, :root.hc .gkey, :root.hc .badge, :root.hc .sheet,
+:root.hc .plan-list li, :root.hc .skin, :root.hc .legend, :root.hc .pad-label, :root.hc .pad-value, :root.hc .rewards li { border: 2px solid var(--line) }
+:root.hc .hero, :root.hc .onb-hero, :root.hc .game-card, :root.hc .g-check.card, :root.hc .tutorial-card.card, :root.hc .celebrate, :root.hc .tinted,
+:root.hc .card.warn-card, :root.hc .tip.card, :root.hc .coach.card, :root.hc .game-hero, :root.hc .plan-icon, :root.hc .sheet-title .tile, :root.hc .sec-ico,
+:root.hc .stats div, :root.hc .pet-card { background: #000; color: #fff; border: 2px solid var(--line); box-shadow: none }
+:root.hc .hero > .trails, :root.hc .onb-hero > .trails, :root.hc .game-card::after, :root.hc .tinted::after, :root.hc .g-check.card::after, :root.hc .tutorial-card.card::after { display: none }
+:root.hc .btn.primary, :root.hc .seg.active, :root.hc .level.rec, :root.hc .nav-item.active .nav-icon { background: #ffe14d; color: #000; box-shadow: none }
+:root.hc .avatar, :root.hc .streak, :root.hc .game-icon { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none }
+:root.hc .hero .xp-track i, :root.hc .day.done i { background: #3fe0a0; border-color: #3fe0a0 }
+:root.hc .day.today i { box-shadow: none }
+:root.hc .note, :root.hc small { color: var(--muted) }
+:root.hc .eyebrow { color: #ffe14d }
+:root.hc .card.warn-card { border-color: #ffe14d; background: #000 }
+:root.hc .bottom-nav { background: #000; border: 2px solid #fff }
+:root.hc .breath { background: #ffe14d; box-shadow: none }
+:root.hc .big-stars .art { filter: none }
+:root.hc .level.rec .star-row { color: #555 }
+:root.hc .scroll > h1::after { background: #ffe14d }
+:root.rm *, :root.rm *::before, :root.rm *::after { animation: none !important; transition: none !important }

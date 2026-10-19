@@ -12,7 +12,7 @@
 import { fmtFixed } from '../core/format.js';
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURE_IDS } from '../core/vocabulary.js';
-import { COLORS, text, circle, fillRound, drawHand, drawGauge } from '../render/draw.js';
+import { COLORS, text, circle, fillRound, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
 import { createRng } from '../core/rng.js';
 import { reachableBand } from '../core/signal.js';
 
@@ -221,18 +221,19 @@ export class AssessmentGame extends Game {
 
   render(ctx, view, hand, intent) {
     const { w, h } = view;
-    ctx.fillStyle = '#0f1a36'; ctx.fillRect(0, 0, w, h);
+    backdrop(ctx, w, h, scene([[0, '#e8f6f1'], [1, '#f6f8fa']], [[0, '#0d1d2a'], [1, '#071019']]));
     // Trial lamps.
     const n = this.trials.length, lw = Math.min(30, (w - 40) / n);
     this.trials.forEach((t, i) => {
       const x = w / 2 - (n - 1) * lw / 2 + i * lw;
-      circle(ctx, x, 22, lw * 0.3, t.state === 'ok' ? COLORS.good : t.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : 'rgba(255,255,255,0.15)');
+      circle(ctx, x, 22, lw * 0.3, t.state === 'ok' ? COLORS.good : t.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : scene('#d5dde3', 'rgba(255,255,255,0.15)'));
     });
-    text(ctx, `Попытка ${Math.min(this.index + 1, n)} из ${n}`, w / 2, 46, { size: 13, color: COLORS.muted });
+    text(ctx, `Попытка ${Math.min(this.index + 1, n)} из ${n}`, w / 2, 46, { size: 13, weight: 700, color: COLORS.muted });
     const t = this.trial;
     if (!t) return;
     const cw = Math.min(w - 32, 320), ch = Math.min(h * 0.5, 230), x0 = w / 2 - cw / 2, y0 = 64;
-    fillRound(ctx, x0, y0, cw, ch, 18, this.phase === 'rest' ? 'rgba(255,255,255,0.05)' : '#1f2d5e');
+    if (this.phase === 'rest') fillRound(ctx, x0, y0, cw, ch, 20, scene('rgba(255,255,255,0.6)', 'rgba(255,255,255,0.05)'));
+    else panel(ctx, x0, y0, cw, ch, 20);
     if (this.phase === 'rest') {
       text(ctx, 'Покой', w / 2, y0 + ch * 0.45, { size: 28, weight: 800, color: COLORS.muted });
       text(ctx, 'расслабьтесь', w / 2, y0 + ch * 0.62, { size: 13, color: COLORS.muted });

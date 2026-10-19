@@ -4,4 +4,5 @@ public abstract class Context {
   public abstract Object getSystemService(String name);
   public abstract void startActivity(Intent intent);
   public abstract ContentResolver getContentResolver();
+  public android.content.res.Resources getResources() { return null; }
 }

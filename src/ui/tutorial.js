@@ -7,7 +7,7 @@ import { TutorialRun } from '../core/tutorial.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME } from '../core/vocabulary.js';
 import { ACHIEVEMENTS } from '../core/progress.js';
-import { drawHand, drawGauge, COLORS } from '../render/draw.js';
+import { drawHand, drawGauge, circle, COLORS } from '../render/draw.js';
 
 export function tutorialScreen(app, { from = 'home' } = {}) {
   const s = app.settings;
@@ -23,7 +23,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
   const pads = s.source === 'touch' ? (s.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator) : createTwoChannelPads(app.emulator)) : null;
   const finish = () => {
     const fresh = app.completeTutorial(run.passed);
-    fresh.forEach(id => toast(`🏅 ${ACHIEVEMENTS.find(a => a.id === id).name}`, 'good'));
+    fresh.forEach(id => toast(`Достижение: ${ACHIEVEMENTS.find(a => a.id === id).name}`, 'good'));
     app.go(from, from === 'settings' ? { back: 'tutorial' } : {}); // go() stops the previous screen's speech: say it after (5.11 — it was cut at once)
     app.say(run.passed ? 'Обучение пройдено. Отлично!' : 'Обучение завершено. Шаги можно пройти снова в настройках.', { interrupt: true });
   };
@@ -59,7 +59,10 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       const tipText = s.source === 'touch' ? run.step.tip : 'Не получается? Проверьте, что датчики плотно прилегают к коже, или пройдите калибровку в настройках.';
       if (run.showTip && !tip.textContent) { tip.textContent = tipText; app.say(tipText); }
       // Live picture: the prosthesis follows the signal; the force band of the «level» step is drawn.
-      ctx.clearRect(0, 0, 320, 240);
+      const bg = ctx.createLinearGradient(0, 0, 0, 240);
+      bg.addColorStop(0, COLORS.sceneTop); bg.addColorStop(1, COLORS.sceneBottom);
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, 320, 240);
+      circle(ctx, 150, 150, 96, COLORS.accentSoft); // a soft spotlight behind the hand
       drawHand(ctx, { x: 150, y: 228, size: 92, pose: hand.pose(), skin: app.profile.skin, glow: intent.intensity, mirror: s.side === 'left' });
       const band = run.step?.band;
       // The channel of the step: B on «Раскрытие» (5.11 — the gauge always showed A, empty while B was working).
