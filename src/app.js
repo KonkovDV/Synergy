@@ -5,7 +5,8 @@ import { SignalPipeline } from './core/signal.js';
 import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
-import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile } from './core/progress.js';
+import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile, assessmentStatus, weekIndex } from './core/progress.js';
+import { missionOffers } from './core/missions.js';
 import { guidanceFor } from './core/guidance.js';
 import { FpsGuard } from './core/fps.js';
 import { CHECKIN_ACTION, needsCheckin } from './core/wellbeing.js';
@@ -23,6 +24,8 @@ import { setVoiceEnabled, say, stopVoice } from './services/voice.js';
 import { setRenderOptions } from './render/draw.js';
 import { mount, toast, h } from './ui/dom.js';
 import { SCREENS } from './ui/screens.js';
+import { startTour } from './ui/tour.js';
+import { mergeTours } from './core/tours.js';
 
 const TAP_GUARD_MS = 350;
 const PIN_SCREENS = ['settings', 'calibration', 'pin', 'audiosync', 'tutorial']; // sub-screens of the settings keep them open
@@ -59,8 +62,9 @@ function safeStorage() {
  * does not scroll an element that is already partly on screen, even with scroll-padding. Pointer focus is left alone.
  */
 function keepFocusVisible(el) {
-  if (!(el instanceof Element) || !el.matches(':focus-visible') || el.closest('.bottom-nav, .sticky-actions, .top-bar, .play-top')) return;
-  const bars = [...document.querySelectorAll('.bottom-nav, .sticky-actions')]
+  if (!(el instanceof Element) || !el.matches(':focus-visible') || el.closest('.bottom-nav, .sticky-actions, .top-bar, .play-top, .tour')) return;
+  // A hint card (5.13) floats over the page like the bars: what gets focus moves above it, not under it.
+  const bars = [...document.querySelectorAll('.bottom-nav, .sticky-actions, .tour')]
     .filter(b => /fixed|sticky/.test(getComputedStyle(b).position)).map(b => b.getBoundingClientRect().top).filter(top => top > 0);
   const limit = Math.min(innerHeight, ...bars);
   const top = Math.max(0, ...[...document.querySelectorAll('.top-bar, .showcase-banner')].map(t => t.getBoundingClientRect().bottom));
@@ -82,6 +86,8 @@ export class App {
     this.lastTime = performance.now();
     this.ble = null;
     this.fps = new FpsGuard(); // one per visit: a weak phone stays in simple graphics for every game
+    this.petTaps = -1;         // touches of the Firebird this visit: its answers go in turn (core/pet.js petTap)
+    this.tour = null;          // the hint tour on screen (ui/tour.js), or null
     this.applyPresentation();
     bindKeyboard(this.emulator, () => this.settings.scheme);
     window.addEventListener('pointerdown', unlockAudio, { once: true });
@@ -118,6 +124,9 @@ export class App {
     window.addEventListener('pagehide', flush);
     document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.target.closest?.('input, textarea, select')) { e.preventDefault(); this.handleBack(); } });
+    // The app sets the scroll of every screen itself (go, restoreView); the browser's own restoration on history.back()
+    // scrolled a freshly shown hint back to the top (5.13).
+    if (typeof history !== 'undefined' && 'scrollRestoration' in history) history.scrollRestoration = 'manual';
     this.exposeApi();
     this.applySource();
     requestAnimationFrame(t => this.frame(t));
@@ -240,18 +249,25 @@ export class App {
   /** Showcase profile (pitch / demo to a specialist): synthetic data in memory, real data untouched. */
   enterShowcase() {
     if (this.showcase) return;
+    // The person's settings come along (text size, theme, contrast, scheme, hints read). Taken before the store is
+    // swapped (5.13: `this.settings` was read from the new, empty store — the demo dropped them all to defaults).
+    const settings = { ...this.settings, source: 'touch', tours: { ...this.settings.tours } };
+    if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; this.save(); } // a change of the last 300 ms is kept
     this.realStore = this.store;
     this.store = new Store(memoryStorage(), { catalog: CATALOG });
-    this.store.replace(buildShowcaseState({ ...this.settings, source: 'touch' }, dayKey(), PLAN_CATALOG));
+    this.store.replace(buildShowcaseState(settings, dayKey(), PLAN_CATALOG));
     this.showcase = true;
     this.refreshFromState();
   }
 
   exitShowcase() {
     if (!this.showcase) return;
+    const seen = this.settings.tours; // hints read in the demo are not shown again (5.13: the sample's idempotent merge)
     this.store = this.realStore; this.realStore = null; this.showcase = false;
     // Another window may have saved meanwhile (its storage events are ignored in the demo): read, don't overwrite (5.11).
     this.store.state = this.store.load();
+    this.settings.tours = mergeTours(this.settings.tours, seen);
+    this.save();
     this.refreshFromState();
   }
 
@@ -363,6 +379,14 @@ export class App {
     return s.recalibrate || s.keep ? { recalibrate: s.recalibrate, shiftPct: Math.round(100 * s.shift), stuckChannel: s.stuckChannel } : null;
   }
 
+  /** Goals the Firebird offers this week (5.13): from the training skills, the games played longest ago, the weekly check. */
+  missionOffers() {
+    const today = dayKey(), runs = this.state.runs.filter(r => !r.demo);
+    const lastPlayed = Object.fromEntries(PLAN_CATALOG.map(g => [g.id, runs.filter(r => r.game === g.id).reduce((m, r) => (r.at > m ? r.at : m), '')]));
+    return missionOffers({ skills: skillProfile(runs), lastPlayed, catalog: PLAN_CATALOG, scheme: this.settings.scheme, week: weekIndex(today),
+      checkDue: assessmentStatus(runs, this.settings.scheme, today).due });
+  }
+
   /** Next unfinished item of today's plan, or null. */
   nextPlanItem() { return this.dailyPlan().items.find(i => !i.done) ?? null; }
 
@@ -373,6 +397,7 @@ export class App {
     // «Схема управления» changed the scheme and sent focus to the heading, an opened section closed).
     // `fresh`: the next screen of the same name mounts anew (after the PIN gate; a replay of the game — 5.11).
     const view = this.screen?.name === name && !this.screen.fresh ? captureView(this.root) : null;
+    this.tour?.pause(); // a hint tour keeps its step and comes back with its screen
     this.screen?.cleanup?.();
     stopVoice(); // the previous screen's long phrase must not run over the next one
     // A pad latched on the previous screen (pads without holding) must not keep «contracting» on the next one.
@@ -393,6 +418,7 @@ export class App {
       this.announce(screen.node, { focus: !view });
       if (!view) screen.focus?.focus({ preventScroll: true }); // a dialog's main button, a control to return to
     }
+    this.tour = startTour(this, name, { quiet: !!view });
     this.syncHistory(name);
   }
 
@@ -409,6 +435,7 @@ export class App {
    * else its top-bar arrow, else home. Returns false at home (the host may close the app).
    */
   handleBack() {
+    if (this.tour) { this.tour.dismiss(); return true; } // a hint on screen: back closes the hint, not the screen
     const own = this.screen?.onBack?.();
     if (own === 'exit') return false; // the screen lets the host close the app (first onboarding page)
     if (own) return true;

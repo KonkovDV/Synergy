@@ -2,16 +2,17 @@
 import { count, fmtNum, fmtPct, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { gameArt, badgeArt, starRow, firebird } from './art.js';
-import { petStageUp } from '../core/pet.js';
+import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID } from '../core/pet.js';
+import { missionText } from '../core/missions.js';
 import { skillBar, handsFreeText } from './widgets.js';
-import { GAME_BY_ID } from '../games/registry.js';
+import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays } from '../core/progress.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
 import { coachFeedback, coachMood } from './coach.js';
-import { CALIBRATION_ADAPT, HANDS_FREE, PET } from '../config.js';
+import { CALIBRATION_ADAPT, HANDS_FREE } from '../config.js';
 import { signalMeter, segmented, mioAvatar } from './widgets.js';
 
 /** Hands-free confirm of the primary action (results and rest): the same rule as the game start, a bit longer. */
@@ -49,10 +50,14 @@ export function resultsAction({ run, plan, demo, next, stopAdvice, restS, titleO
 /** Rewards of a run, shown on the screen (5.10): toasts covered the stars and the score and vanished in 3 s. */
 function rewardList(report) {
   if (!report) return [];
+  const goal = report.mission;
   return [
+    ...(goal?.completed ? [{ art: 'trophy', text: `Цель выполнена: ${missionText(goal.mission, PLAN_CATALOG).title} · +${goal.xp} XP` }] : []),
     ...report.achievements.map(id => ({ art: 'medal', text: `Достижение: ${ACHIEVEMENTS.find(a => a.id === id)?.name ?? id}` })),
+    ...(report.items ?? []).map(id => ({ art: 'gift', text: `Подарок Жар-птице: ${PET_ITEM_BY_ID[id]?.name ?? id}` })),
     ...report.skins.map(id => ({ art: 'palette', text: `Новый облик: ${SKINS.find(sk => sk.id === id)?.name ?? id}` })),
     ...(report.levelUp ? [{ art: 'levelup', text: `Уровень игрока: ${report.level}` }] : []),
+    ...(goal && !goal.completed ? [{ art: 'done', text: `Цель: ${goal.done} из ${goal.target}` }] : []),
   ];
 }
 
@@ -61,10 +66,22 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const advice = coachFeedback(run.game, run, app.state.runs);
   const next = plan && !demo ? app.nextPlanItem() : null;
   const planDone = plan && !demo && !next;
+  const name = petName(app.settings);
   const rewards = rewardList(report);
   // Жар-птица (5.12): the first run of a day is a training day — it may move the bird to its next stage.
   const grown = report && !demo ? petStageUp(trainingDays(app.profile), app.runsToday().length === 1) : null;
-  if (grown) rewards.unshift({ art: 'pet', stage: grown.id, text: grown.id === 'chick' ? `${app.settings.petName || PET.defaultName} вылупилась из яйца!` : `${app.settings.petName || PET.defaultName} выросла: ${grown.name}` });
+  // 5.13: the bird reacts to what this run did (the sample's animations): a new stage — it grows before your eyes;
+  // a goal, a gift or a good result — a little celebration. Shown only for those moments, wearing its things.
+  const moment = report && !demo && (grown || report.items?.length || report.mission?.completed);
+  const petCard = moment ? (() => {
+    const pet = petState(trainingDays(app.profile), { trainedToday: true, name });
+    const play = petReaction({ grown, stars: run.stars, planDone, goalDone: !!report.mission?.completed, items: report.items?.length ?? 0 });
+    const words = grown ? (grown.id === 'chick' ? `${name} вылупилась из яйца!` : `${name} выросла: ${grown.name}`)
+      : report.items?.length ? `${name} примеряет подарок. Выбрать наряд — в «Прогрессе».` : `${name} радуется выполненной цели.`;
+    return h('section', { class: 'card pet-moment', role: 'status' },
+      h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, 'fed', 96, { items: wornItems(app.profile, pet.stage.id), play })),
+      h('p', {}, h('b', {}, words)));
+  })() : null;
   const ring = h('i', { class: 'confirm-ring' });
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
@@ -103,9 +120,10 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       h('p', { class: 'eyebrow' }, `${g.title}${g.assessment ? '' : ` · уровень ${run.level}`}${run.retention ? ' · без подсказки' : ''}${demo ? ' · демо' : ''}`),
       h('div', { class: `big-stars s${run.stars}`, role: 'img', 'aria-label': `${count(run.stars, FORMS.stars)} из 3` }, starRow(run.stars, 3, 72)),
       h('p', { class: 'big-score' }, run.score, h('small', {}, ' / 100')),
-      report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel} игры` : ''}`)
+      report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus + (report.mission?.xp ?? 0)} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel} игры` : ''}`)
         : h('p', { class: 'note' }, 'Так играет автопилот. Демо не влияет на прогресс.'),
-      rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, r.art === 'pet' ? firebird(r.stage, 'fed', 30) : badgeArt(r.art, 24), r.text))) : null,
+      petCard,
+      rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, badgeArt(r.art, 24), r.text))) : null,
       difficulty,
       calibrationCard,
       planDone ? h('div', { class: 'card celebrate tinted' }, h('b', { class: 'with-art' }, badgeArt('trophy', 30), 'Тренировка дня выполнена'), h('p', {}, 'Отличная работа! День отдыха серию не прерывает.')) : null,

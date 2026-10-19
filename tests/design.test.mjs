@@ -97,3 +97,18 @@ test('design: the interface draws pictures, not emoji (src/ui, src/games)', () =
   }
   assert.deepEqual(offenders, []);
 });
+
+// 5.13 (the sample's art test: «points only at pictures that exist»): badgeArt() falls back to a star for an unknown
+// name, so a typo would draw a wrong picture silently. Every badge named in the interface is in the catalog.
+test('design: every badge named in the interface exists in the catalog (no silent star)', () => {
+  const art = readFileSync('src/ui/art.js', 'utf8');
+  const block = art.slice(art.indexOf('const BADGES = {'), art.indexOf('\n};', art.indexOf('const BADGES = {')));
+  const known = new Set([...block.matchAll(/^ {2}'?([a-z-]+)'?: (?:id|\(\))/gm)].map(m => m[1]));
+  assert.ok(known.size >= 14, `badges parsed: ${[...known]}`);
+  const ui = readdirSync('src/ui').filter(f => f.endsWith('.js')).map(f => readFileSync(`src/ui/${f}`, 'utf8')).join('\n');
+  const named = new Set([...[...ui.matchAll(/badgeArt\(([^,)]+)/g)].flatMap(m => [...m[1].matchAll(/'([a-z-]+)'/g)].map(x => x[1])),
+    ...[...ui.matchAll(/\{ art: '([a-z-]+)'/g)].map(m => m[1])]);
+  assert.ok(named.size >= 10);
+  assert.deepEqual([...named].filter(n => !known.has(n)), []);
+});
+

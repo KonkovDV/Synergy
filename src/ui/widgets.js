@@ -39,7 +39,7 @@ export function icon(name) {
 }
 
 export function bottomNav(app, active) {
-  const item = (id, glyph, label) => h('button', { class: `nav-item ${active === id ? 'active' : ''}`, 'aria-current': active === id ? 'page' : null, onclick: () => app.go(id) }, h('span', { class: 'nav-icon', 'aria-hidden': 'true' }, icon(glyph)), h('span', { class: 'nav-label' }, label));
+  const item = (id, glyph, label) => h('button', { class: `nav-item ${active === id ? 'active' : ''}`, 'aria-current': active === id ? 'page' : null, 'data-tour': `nav.${id}`, onclick: () => app.go(id) }, h('span', { class: 'nav-icon', 'aria-hidden': 'true' }, icon(glyph)), h('span', { class: 'nav-label' }, label));
   return h('nav', { class: 'bottom-nav', 'aria-label': 'Разделы' }, item('home', 'home', 'Главная'), item('progress', 'progress', 'Прогресс'), item('settings', 'settings', 'Настройки'));
 }
 

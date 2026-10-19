@@ -10,6 +10,7 @@ import { tutorialScreen } from './tutorial.js';
 import { pinGateScreen } from './pin.js';
 import { recoveryScreen } from './recovery.js';
 import { audioSyncScreen } from './audiosync.js';
+import { goalsScreen } from './goals.js';
 
 export const SCREENS = {
   home: homeScreen,
@@ -26,4 +27,5 @@ export const SCREENS = {
   pin: pinGateScreen,
   recovery: recoveryScreen,
   audiosync: audioSyncScreen,
+  goals: goalsScreen,
 };

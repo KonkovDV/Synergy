@@ -5,6 +5,9 @@ const POSE_IDS = ARM_POSES.map(p => p.id);
 import { createProfile, SKINS } from './progress.js';
 import { defaultCalibration } from './signal.js';
 import { SCHEME, GESTURE_BY_ID } from './vocabulary.js';
+import { cleanOutfit } from './pet.js';
+import { validMission } from './missions.js';
+import { validTourState } from './tours.js';
 
 export const DEFAULT_SETTINGS = {
   scheme: 'proportional',
@@ -40,6 +43,7 @@ export const DEFAULT_SETTINGS = {
   dwellS: HANDS_FREE.confirmS, // время удержания A для «без касания»
   hapticBeat: false,        // вибро-метроном в «Ритме» (для слабослышащих)
   stickyPads: false,        // площадки без удержания: касание включает, второе выключает (тремор, слабость)
+  tours: {},                // подсказки-туры (5.13): ключ → { v, status, step }; «Показать подсказки снова» очищает
 };
 
 const oneOf = (...values) => v => values.includes(v);
@@ -69,6 +73,7 @@ export const SETTINGS_RULES = {
   petName: v => v.length <= 16,
   parentPin: v => v === '' || /^[0-9a-f]{8}$/.test(v),
   pinLock: v => isObject(v) && Number.isFinite(v.fails) && Number.isFinite(v.until),
+  tours: v => isObject(v) && Object.keys(v).length <= 32 && Object.values(v).every(validTourState),
 };
 
 const MAX_RUNS = 2000;
@@ -99,6 +104,8 @@ export function sanitizeProgress(state, catalog) {
     p.plan.items = p.plan.items.filter(i => known(i.game)).map(i => ({ ...i, level: Math.max(1, Math.min(catalog[i.game], i.level)), done: !!i.done, retention: !!i.retention, pose: POSE_IDS.includes(i.pose) ? i.pose : undefined }));
     if (!p.plan.items.length) p.plan = null;
   }
+  // The goal the player took (5.13): a known kind about a known game, a bounded target — else no goal.
+  p.mission = validMission(p.mission, Object.keys(catalog).map(id => ({ id })));
   return state; // runs of an unknown game stay: history is never deleted silently, and no screen needs their game
 }
 
@@ -155,7 +162,7 @@ function validRun(r) {
 
 export function emptyState() {
   // Calibration is per source: the on-screen emulator is already normalized, an external one is not.
-  return { version: 4, profile: createProfile(), settings: { ...DEFAULT_SETTINGS }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration() }, runs: [] };
+  return { version: 4, profile: createProfile(), settings: { ...DEFAULT_SETTINGS, tours: {} }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration() }, runs: [] };
 }
 
 /** Merges stored JSON over defaults so that new fields appear after updates; `catalog` checks nested progress. */
@@ -192,9 +199,11 @@ export function parseState(raw, catalog = null) {
     lastDay: typeof profile.streak.lastDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(profile.streak.lastDay) ? profile.streak.lastDay : null };
   if (!validPlan(profile.plan)) profile.plan = null;
   if (!SKINS.some(s => s.id === profile.skin)) profile.skin = base.profile.skin;
+  profile.pet = cleanOutfit(profile.pet);
   // Only known settings with the expected type and an allowed value survive (a backup file is untrusted input).
   const stored = isObject(data.settings) ? data.settings : {};
   const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, validSetting(k, stored[k], v) ? stored[k] : v]));
+  settings.tours = Object.fromEntries(Object.entries(settings.tours)); // own copy, never the shared default
   const pair = v => Array.isArray(v) && v.length === 2 && v.every(Number.isFinite);
   // A calibration that maps nothing to a command is not kept (5.11: `touch: {rest:[5,5], max:[6,6]}` made the
   // on-screen pads dead across restarts): rest below max on both channels; the screen emulator works in 0..1.

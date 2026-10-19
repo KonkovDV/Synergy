@@ -12,7 +12,7 @@ let seq = 0;
 function s(tag, attrs = {}, ...children) {
   const el = document.createElementNS(NS, tag);
   for (const [k, v] of Object.entries(attrs)) if (v !== null && v !== undefined) el.setAttribute(k, v);
-  for (const c of children.flat()) if (c) el.append(c);
+  for (const c of children.flat(Infinity)) if (c) el.append(c); // nested parts of a picture (5.13: one level dropped the apples)
   return el;
 }
 
@@ -223,6 +223,11 @@ const BADGES = {
   palette: id => [path('M12 3 C6.4 3 3 7 3 11.5 C3 16.2 6.6 20.4 11 20.4 C12.6 20.4 13.1 19.2 12.6 18 C12.1 16.7 13 15.6 14.4 15.6 H16.2 C19 15.6 21 13.6 21 10.6 C21 6.4 17 3 12 3 Z', { fill: '#fff8ee', stroke: '#e0a24a', 'stroke-width': 1.4 }),
     sphere(id, 'p1', 7.8, 11.2, 1.9, ['#ffd0d4', '#ef4444', '#a01818']), sphere(id, 'p2', 10.4, 7.4, 1.9, ['#fff2c4', '#f5a524', '#b06a00']),
     sphere(id, 'p3', 14.6, 7.2, 1.9, ['#c8ffe6', '#16e182', '#0a8a52']), sphere(id, 'p4', 17.4, 10.8, 1.9, ['#dbe9ff', '#3b82f6', '#1a46a8'])],
+  // A gift for the Firebird (5.13): a coral box with a green ribbon and a bow.
+  gift: id => [s('defs', {}, lin(`${id}g`, [[0, '#ffb38a'], [0.55, '#ff7a45'], [1, '#d4441a']], [0, 0, 0, 1])),
+    rect(4, 10, 16, 11, 2.2, `url(#${id}g)`), rect(3, 7.2, 18, 4.4, 1.6, '#ff9a6b'), rect(4, 10, 16, 11, 2.2, `url(#${id}-under)`),
+    rect(10.6, 7.2, 2.8, 13.8, 0.6, '#16e182'), path('M12 7.2 C9.4 2.6 5.2 4.4 7.4 7.2 Z', { fill: '#0aa865' }), path('M12 7.2 C14.6 2.6 18.8 4.4 16.6 7.2 Z', { fill: '#0aa865' }),
+    gloss(id, 7.4, 13, 1.6, 2.4, 0)],
   levelup: id => [sphere(id, 'u', 12, 12, 10, ['#b8ffde', '#16e182', '#0a8a52']), line('M12 17 V7.4 M7.6 11.6 L12 7.2 L16.4 11.6', '#05101a', 2.6)],
   trophy: id => [s('defs', {}, lin(`${id}t`, [[0, '#ffe680'], [0.6, '#f5a524'], [1, '#c46a00']], [0, 0, 0, 1])),
     line('M7 5.5 H4.4 a2.6 2.6 0 0 0 2.8 4.4 M17 5.5 h2.6 a2.6 2.6 0 0 1 -2.8 4.4', '#e0a24a', 1.8),
@@ -316,10 +321,13 @@ function plume(x, y, len, width, angle, bend, fill) {
  * Жар-птица (5.12) — the pet the player raises from an egg: egg → chick → fledgling → young → firebird. Plumage in the
  * brand gradient (green → teal → blue → violet) with the warm «fire» of the folk tale (coral and amber crest, eye spots
  * on the tail). Moods: fed (trained today — happy eyes), waiting (round eyes), rest (asleep, a rest day). Never sad.
+ * 5.13: `items` — what it wears (slot → item id, see core/pet.js), drawn at the anchors of each stage (the sample's
+ * slot anchors); `alive` — a short idle (breathing, a blink, the tail swaying) that stops by itself within 5 s
+ * (WCAG 2.2.2); `play` — a one-shot animation of PET_ANIMATIONS. Every motion is off with «Меньше движения».
  */
-export function firebird(stage = 'egg', mood = 'waiting', size = 96) {
+export function firebird(stage = 'egg', mood = 'waiting', size = 96, { items = {}, alive = false, play = null } = {}) {
   const id = `fb${++seq}`;
-  const svg = root('0 0 120 120', size, `firebird firebird-${stage} firebird-${mood}`);
+  const svg = root('0 0 120 120', size, `firebird firebird-${stage} firebird-${mood}${alive ? ' alive' : ''}${play ? ` anim-${play}` : ''}`);
   const g = (key, stops, dir) => lin(`${id}-${key}`, stops, dir);
   const defs = s('defs', {},
     g('green', [[0, '#7dffc4'], [0.5, '#16e182'], [1, '#0aa865']], [0, 0, 0, 1]),
@@ -342,73 +350,158 @@ export function firebird(stage = 'egg', mood = 'waiting', size = 96) {
       : happy
         ? [line(`M${cx - ex - 3.5 * k} ${cy + 1} q${3.5 * k} ${-5 * k} ${7 * k} 0`, '#05101a', 2.4 * k), line(`M${cx + ex - 3.5 * k} ${cy + 1} q${3.5 * k} ${-5 * k} ${7 * k} 0`, '#05101a', 2.4 * k)]
         : [circle(cx - ex, cy, er, '#05101a'), circle(cx + ex, cy, er, '#05101a'), circle(cx - ex - 1.4 * k, cy - 1.6 * k, 1.5 * k, '#fff'), circle(cx + ex - 1.4 * k, cy - 1.6 * k, 1.5 * k, '#fff')];
-    return [eyes,
+    return [s('g', { class: 'fb-eyes' }, eyes),
       path(`M${cx - 3.4 * k} ${cy + 6 * k} L${cx + 3.4 * k} ${cy + 6 * k} L${cx} ${cy + 11 * k} Z`, { fill: `url(#${id}-fire)`, 'stroke-linejoin': 'round' }),
       ellipse(cx - ex - 4 * k, cy + 7 * k, 3.6 * k, 2.2 * k, '#ff8fa3', { opacity: 0.75 }), ellipse(cx + ex + 4 * k, cy + 7 * k, 3.6 * k, 2.2 * k, '#ff8fa3', { opacity: 0.75 })];
   };
   const zz = asleep ? [line('M92 22 h8 l-8 9 h8', '#25c2c4', 2.6), line('M104 10 h6 l-6 7 h6', '#7fd8e8', 2.2)] : [];
   const sparkles = happy ? [path('M18 30 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z', { fill: '#ffd27a' }), path('M100 44 l1.4 3.6 3.6 1.4 -3.6 1.4 -1.4 3.6 -1.4 -3.6 -3.6 -1.4 3.6 -1.4z', { fill: '#7dffc4' })] : [];
   // The tail opens behind the body like a peacock's (the bird faces us): outer plumes first, curling outwards.
-  const fan = (x, y, angles, len, width, bend, key = 'plume') => [...angles].sort((p, q) => Math.abs(q) - Math.abs(p))
-    .map(a => plume(x, y, len, width, a, a < 0 ? -bend : bend, `url(#${id}-${key})`));
+  const fan = (x, y, angles, len, width, bend, key = 'plume') => s('g', { class: 'fb-tail' }, [...angles].sort((p, q) => Math.abs(q) - Math.abs(p))
+    .map(a => plume(x, y, len, width, a, a < 0 ? -bend : bend, `url(#${id}-${key})`)));
   const wing = (x, y, angles, len, width, fill) => angles.map(a => feather(x, y, len, width, a, fill));
   const crest = (x, y, specs) => specs.map(([a, len, w]) => [feather(x, y, len, w, a, `url(#${id}-fire)`), circle(...tipOf(x, y, len, a), 1.6, '#ffe680')]);
-  let parts;
+  // Each stage: a glow and a contact shadow on the ground, what is behind the body (tail, wings), the body and face.
+  let ground, behind, body;
   if (stage === 'egg') {
-    parts = [
-      circle(60, 62, 46, `url(#${id}-aura)`, { opacity: happy ? 1 : asleep ? 0.35 : 0.7 }),
-      contact(id, 60, 106, 24, 4.5),
+    ground = [circle(60, 62, 46, `url(#${id}-aura)`, { opacity: happy ? 1 : asleep ? 0.35 : 0.7 }), contact(id, 60, 106, 24, 4.5)];
+    behind = [];
+    body = [
       path('M60 20 C 82 20 92 52 92 72 C 92 92 78 104 60 104 C 42 104 28 92 28 72 C 28 52 38 20 60 20 Z', { fill: `url(#${id}-egg)` }),
       path('M30 66 L38 60 L46 68 L54 60 L62 68 L70 60 L78 68 L86 60 L91 64 L91 74 L86 70 L78 78 L70 70 L62 78 L54 70 L46 78 L38 70 L30 76 Z', { fill: `url(#${id}-tail)`, opacity: 0.95 }),
       circle(44, 46, 3.6, '#ff7a45', { opacity: 0.85 }), circle(74, 40, 2.6, '#16e182', { opacity: 0.85 }), circle(70, 90, 3, '#6d4ef0', { opacity: 0.8 }), circle(46, 88, 2.2, '#ffb02e'),
       path('M60 20 C 82 20 92 52 92 72 C 92 92 78 104 60 104 C 42 104 28 92 28 72 C 28 52 38 20 60 20 Z', { fill: `url(#${id}-under)` }),
-      gloss(id, 47, 40, 9, 15, -22), circle(44, 34, 2.4, '#fff', { opacity: 0.9 }),
-      zz, sparkles];
+      gloss(id, 47, 40, 9, 15, -22), circle(44, 34, 2.4, '#fff', { opacity: 0.9 })];
   } else if (stage === 'chick') {
-    parts = [
-      contact(id, 60, 108, 28, 4.5),
-      wing(36, 70, [-118], 16, 12, `url(#${id}-chick)`), wing(84, 70, [118], 16, 12, `url(#${id}-chick)`),
+    ground = [contact(id, 60, 108, 28, 4.5)];
+    behind = [wing(36, 70, [-118], 16, 12, `url(#${id}-chick)`), wing(84, 70, [118], 16, 12, `url(#${id}-chick)`)];
+    body = [
       circle(60, 64, 28, `url(#${id}-chick)`), circle(60, 64, 28, `url(#${id}-under)`),
       feather(60, 38, 15, 7, 0, `url(#${id}-green)`), feather(58, 39, 11, 6, -28, `url(#${id}-fire)`),
       gloss(id, 48, 50, 8, 5, -28),
       face(60, 62, 1),
       path('M30 80 Q30 106 60 106 Q90 106 90 80 L83 85 L76 78 L68 86 L60 78 L52 86 L44 78 L37 85 Z', { fill: `url(#${id}-egg)` }),
       path('M30 80 Q30 106 60 106 Q90 106 90 80', { fill: `url(#${id}-under)` }),
-      line('M36 94 L46 88 L54 96 L62 88 L72 96 L82 90', `url(#${id}-tail)`, 2.6), zz, sparkles];
+      line('M36 94 L46 88 L54 96 L62 88 L72 96 L82 90', `url(#${id}-tail)`, 2.6)];
   } else if (stage === 'fledgling') {
-    parts = [
-      contact(id, 60, 100, 26, 4.5),
-      fan(60, 74, [-60, -30, 30, 60], 40, 13, 4),
-      wing(38, 70, [-112, -128, -144], 20, 9, `url(#${id}-green)`), wing(82, 70, [112, 128, 144], 20, 9, `url(#${id}-green)`),
+    ground = [contact(id, 60, 100, 26, 4.5)];
+    behind = [fan(60, 74, [-60, -30, 30, 60], 40, 13, 4),
+      wing(38, 70, [-112, -128, -144], 20, 9, `url(#${id}-green)`), wing(82, 70, [112, 128, 144], 20, 9, `url(#${id}-green)`)];
+    body = [
       ellipse(60, 68, 25, 27, `url(#${id}-body)`), ellipse(60, 68, 25, 27, `url(#${id}-under)`),
       ellipse(60, 79, 14, 14, '#eafff6', { opacity: 0.9 }),
       crest(60, 43, [[-26, 14, 6], [0, 18, 7], [26, 14, 6]]),
       gloss(id, 49, 52, 8, 4.6, -28),
-      face(60, 63, 1), zz, sparkles];
+      face(60, 63, 1)];
   } else if (stage === 'young') {
-    parts = [
-      circle(60, 62, 52, `url(#${id}-aura)`, { opacity: 0.55 }),
-      contact(id, 60, 98, 24, 4),
-      fan(60, 74, [-66, -42, -18, 18, 42, 66], 47, 14, 5),
-      wing(40, 68, [-108, -124, -140, -156], 22, 9, `url(#${id}-green)`), wing(80, 68, [108, 124, 140, 156], 22, 9, `url(#${id}-green)`),
+    ground = [circle(60, 62, 52, `url(#${id}-aura)`, { opacity: 0.55 }), contact(id, 60, 98, 24, 4)];
+    behind = [fan(60, 74, [-66, -42, -18, 18, 42, 66], 47, 14, 5),
+      wing(40, 68, [-108, -124, -140, -156], 22, 9, `url(#${id}-green)`), wing(80, 68, [108, 124, 140, 156], 22, 9, `url(#${id}-green)`)];
+    body = [
       ellipse(60, 66, 22, 26, `url(#${id}-body)`), ellipse(60, 66, 22, 26, `url(#${id}-under)`),
       ellipse(60, 77, 12, 13, '#e6fff5', { opacity: 0.9 }),
       crest(60, 42, [[-22, 18, 6.5], [0, 24, 7.5], [22, 18, 6.5]]),
       gloss(id, 50, 51, 7, 4.2, -28),
-      face(60, 61, 0.92), zz, sparkles];
+      face(60, 61, 0.92)];
   } else {
-    parts = [
-      circle(60, 60, 60, `url(#${id}-heat)`),
-      contact(id, 60, 98, 22, 4),
-      fan(60, 76, [-76, -56, -36, -16, 16, 36, 56, 76], 54, 15, 6, 'plume2'),
+    ground = [circle(60, 60, 60, `url(#${id}-heat)`), contact(id, 60, 98, 22, 4)];
+    behind = [fan(60, 76, [-76, -56, -36, -16, 16, 36, 56, 76], 54, 15, 6, 'plume2'),
       wing(40, 66, [-104, -120, -136, -152], 26, 10, `url(#${id}-teal)`), wing(80, 66, [104, 120, 136, 152], 26, 10, `url(#${id}-teal)`),
-      wing(42, 68, [-112, -132, -152], 17, 8, `url(#${id}-green)`), wing(78, 68, [112, 132, 152], 17, 8, `url(#${id}-green)`),
+      wing(42, 68, [-112, -132, -152], 17, 8, `url(#${id}-green)`), wing(78, 68, [112, 132, 152], 17, 8, `url(#${id}-green)`)];
+    body = [
       ellipse(60, 66, 20, 25, `url(#${id}-royal)`), ellipse(60, 66, 20, 25, `url(#${id}-under)`),
       ellipse(60, 77, 11, 12, '#e9fff6', { opacity: 0.9 }),
       crest(60, 43, [[-40, 15, 5.5], [-20, 20, 6], [0, 25, 7], [20, 20, 6], [40, 15, 5.5]]),
       gloss(id, 51, 50, 6.5, 4, -28),
-      face(60, 61, 0.88), zz, sparkles];
+      face(60, 61, 0.88)];
   }
-  svg.append(...[light(id, 2.2), defs, parts].flat(4));
+  const worn = petItemsArt(id, stage, items);
+  // The bird moves as one (with what it wears); the ground, the nest and its things stay.
+  const bird = s('g', { class: 'fb-bird' }, [behind, worn.headBack, body, worn.headFront, worn.chest].flat(4));
+  svg.append(...[light(id, 2.2), defs, worn.defs, ground, worn.nestBack, bird, worn.nestFront, zz, sparkles].flat(4));
   return svg;
+}
+
+/**
+ * Anchors of the worn things per stage (5.13, the sample's SlotAnchors): head — the top of the head [x, y, scale];
+ * chest — the middle of the chest; nest — the ground under the bird [x, y, half-width]. A slot that a stage has not
+ * opened has no anchor (core/pet.js decides; the drawing only follows).
+ */
+const ANCHORS = {
+  head: { chick: [60, 39, 0.85], fledgling: [60, 44, 0.9], young: [60, 43, 0.85], firebird: [60, 44, 0.8] },
+  chest: { fledgling: [60, 84, 1], young: [60, 81, 0.92], firebird: [60, 81, 0.88] },
+  nest: { egg: [60, 104, 32], chick: [60, 104, 36], fledgling: [60, 97, 32], young: [60, 95, 30], firebird: [60, 95, 30] },
+};
+
+/** The worn things of the pet, as layers: behind the head, in front of it, on the chest, the nest behind and in front. */
+function petItemsArt(id, stage, items) {
+  const out = { defs: [], headBack: [], headFront: [], chest: [], nestBack: [], nestFront: [] };
+  if (!Object.values(items).some(Boolean)) return out;
+  const at = (anchor, children) => s('g', { transform: `translate(${anchor[0]} ${anchor[1]}) scale(${anchor[2]})` }, children);
+  const gold = `${id}-gold`;
+  out.defs.push(s('defs', {},
+    rad(gold, [[0, '#fff6c2'], [0.45, '#ffd27a'], [1, '#d98200']], 0.35, 0.3, 0.85),
+    lin(`${id}-bow`, [[0, '#ffb38a'], [0.5, '#ff7a45'], [1, '#e2501f']], [0, 0, 0, 1]),
+    lin(`${id}-wood`, [[0, '#d9a066'], [1, '#7a4a22']], [0, 0, 0, 1]),
+    rad(`${id}-enamel`, [[0, '#9ff5e2'], [0.5, '#1fd0a6'], [1, '#1f6fd0']], 0.35, 0.3, 0.85),
+    rad(`${id}-gem`, [[0, '#d8ccff'], [0.5, '#6d4ef0'], [1, '#3b2aa8']], 0.35, 0.3, 0.85)));
+  const head = ANCHORS.head[stage], chest = ANCHORS.chest[stage], nest = ANCHORS.nest[stage];
+  const star5 = (cx, cy, r, ri) => path(Array.from({ length: 10 }, (_, i) => {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? ri : r;
+    return `${i ? 'L' : 'M'}${(cx + rr * Math.cos(a)).toFixed(2)} ${(cy + rr * Math.sin(a)).toFixed(2)}`;
+  }).join(' ') + ' Z', { fill: `url(#${gold})`, stroke: '#c27a12', 'stroke-width': 0.6, 'stroke-linejoin': 'round' });
+  if (head && items.head) {
+    const art = {
+      bow: () => ['front', s('g', { transform: 'translate(9 1) rotate(18)' },
+        path('M0 0 C -4 -7 -11 -6 -10 0 C -11 6 -4 7 0 0 Z', { fill: `url(#${id}-bow)` }), path('M0 0 C 4 -7 11 -6 10 0 C 11 6 4 7 0 0 Z', { fill: `url(#${id}-bow)` }),
+        path('M0 0 L -4 8 L -1.2 7 Z', { fill: '#e2501f' }), path('M0 0 L 4 8 L 1.2 7 Z', { fill: '#e2501f' }),
+        circle(0, 0, 2.4, '#c2410c'), ellipse(-6, -2.4, 2.4, 1.2, '#fff', { opacity: 0.55 }))],
+      wreath: () => ['front', s('g', {},
+        Array.from({ length: 9 }, (_, i) => { const x = -16 + i * 4, y = (x / 16) ** 2 * 5 - 1, a = Math.atan(x * 10 / 256) * 180 / Math.PI;
+          return ellipse(x, y, 3.6, 1.8, i % 2 ? '#0aa865' : '#16e182', { transform: `rotate(${(a + (i % 2 ? 24 : -24)).toFixed(1)} ${x} ${y.toFixed(2)})` }); }),
+        [[-9, '#ff7a45'], [0, '#ffffff'], [9, '#8b6cf0']].map(([x, c]) => { const y = (x / 16) ** 2 * 5 - 2;
+          return [0, 72, 144, 216, 288].map(a => circle(x + 1.7 * Math.cos(a * Math.PI / 180), y + 1.7 * Math.sin(a * Math.PI / 180), 1.5, c)).concat(circle(x, y, 1.2, '#ffd27a')); }))],
+      star: () => ['front', s('g', {}, glow(id, 0, 9, 6.5, '#ffd27a', 0.55), star5(0, 9, 5.4, 2.3), circle(-1.4, 7.2, 0.9, '#fff', { opacity: 0.9 }))],
+      kokoshnik: () => ['back', s('g', {},
+        path('M-19 6 C-19 -7 -10 -21 0 -24 C 10 -21 19 -7 19 6 Z', { fill: `url(#${gold})`, stroke: '#c27a12', 'stroke-width': 0.8 }),
+        path('M-14.5 5 C-14.5 -5 -8 -15.5 0 -18.5 C 8 -15.5 14.5 -5 14.5 5 Z', { fill: `url(#${id}-gem)` }),
+        ellipse(0, -9, 3, 3.8, '#ff7a45'), circle(-8, -3, 2, '#16e182'), circle(8, -3, 2, '#2fa6e0'), circle(-0.9, -10.4, 0.9, '#fff', { opacity: 0.85 }),
+        [[-18, 0], [-16.4, -8], [-11.6, -15.2], [-4.8, -21.2], [4.8, -21.2], [11.6, -15.2], [16.4, -8], [18, 0]].map(([x, y]) => circle(x, y, 1.3, '#fffdf6')))],
+    }[items.head]?.();
+    if (art) (art[0] === 'back' ? out.headBack : out.headFront).push(at(head, art[1]));
+  }
+  if (chest && items.chest) {
+    const art = {
+      amulet: () => s('g', {}, line('M-10 -9 Q -6 -1 0 0 Q 6 -1 10 -9', '#c58a1c', 1.3),
+        circle(0, 4, 4.8, `url(#${gold})`), circle(0, 4, 3.3, `url(#${id}-enamel)`),
+        rect(-1.5, 2.5, 3, 3, 0.4, '#ffe680'), rect(-1.5, 2.5, 3, 3, 0.4, '#ffe680', { transform: 'rotate(45 0 4)' }), circle(-1.6, 2.4, 0.8, '#fff', { opacity: 0.8 })),
+      beads: () => s('g', {}, Array.from({ length: 9 }, (_, i) => { const t = -1 + i / 4, x = 11 * t, y = 1 - 9 * t * t;
+        return [circle(x, y, i === 4 ? 2.3 : 1.8, ['#ff7a45', `url(#${gold})`, '#6d4ef0', '#16e182'][i % 4]), circle(x - 0.6, y - 0.6, 0.55, '#fff', { opacity: 0.7 })]; })),
+    }[items.chest]?.();
+    if (art) out.chest.push(at(chest, art));
+  }
+  if (nest && items.nest) {
+    const [x, y, rx] = nest;
+    const place = (children, k = 1) => s('g', { transform: `translate(${x} ${y}) scale(${k})` }, children);
+    if (items.nest === 'twigs') {
+      out.nestBack.push(place([ellipse(0, -6, rx, 5.5, '#8a5a2b'), ellipse(0, -6, rx - 3, 3.4, '#5c3a1a')]));
+      out.nestFront.push(place([
+        path(`M${-rx} -6 C ${-rx} 4 ${-rx * 0.55} 9 0 9 C ${rx * 0.55} 9 ${rx} 4 ${rx} -6 C ${rx * 0.6} -2 ${-rx * 0.6} -2 ${-rx} -6 Z`, { fill: `url(#${id}-wood)` }),
+        line(`M${-rx + 3} -2 Q ${-rx * 0.3} 6 ${rx * 0.5} 1`, '#e0a868', 1.2), line(`M${-rx * 0.6} 4 Q 0 0 ${rx - 4} -1`, '#6b4220', 1.1),
+        line(`M${-rx * 0.2} 7 Q ${rx * 0.3} 3 ${rx - 2} 2`, '#e0a868', 1), line(`M${-rx + 1} -5 L ${-rx - 4} -9`, '#7a4a22', 1.1),
+        ellipse(rx - 2, -7, 3.4, 1.6, '#16e182', { transform: `rotate(-30 ${rx - 2} -7)` }), ellipse(-rx + 3, -8, 3, 1.4, '#0aa865', { transform: `rotate(28 ${-rx + 3} -8)` })]));
+    } else if (items.nest === 'apples') {
+      const apple = (ax, ay, r) => [circle(ax, ay, r, `url(#${gold})`), circle(ax, ay, r, `url(#${id}-under)`), ellipse(ax - r * 0.35, ay - r * 0.4, r * 0.3, r * 0.18, '#fff', { opacity: 0.8 }),
+        line(`M${ax} ${ay - r} q 0.5 -2.4 1.6 -3`, '#7a4a22', 1), ellipse(ax + 2.6, ay - r - 2.2, 2.2, 1.1, '#16e182', { transform: `rotate(-24 ${ax + 2.6} ${ay - r - 2.2})` })];
+      out.nestFront.push(place([apple(-rx + 1, -3, 5), apple(-rx + 10, 0, 4.2), apple(rx - 3, -2, 4.8)]));
+    } else if (items.nest === 'lantern') {
+      const lx = rx - 1;
+      out.nestFront.push(place([glow(id, lx, -9, 9, '#ffd27a', 0.55),
+        line(`M${lx - 3.5} -17 Q ${lx} -22 ${lx + 3.5} -17`, '#2a3442', 1.2),
+        path(`M${lx - 4.5} -16 L ${lx + 4.5} -16 L ${lx + 3} -18 L ${lx - 3} -18 Z`, { fill: '#2a3442' }),
+        rect(lx - 4.5, -16, 9, 13, 2.2, '#2a3442'), rect(lx - 3, -14.4, 6, 9.8, 1.4, '#ffd27a'), rect(lx - 1.4, -13.4, 2.8, 7.6, 1, '#fff6c2'),
+        rect(lx - 5, -3.4, 10, 2.4, 1, '#2a3442')]));
+    }
+  }
+  return out;
 }

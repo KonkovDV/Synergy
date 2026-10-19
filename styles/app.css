@@ -927,8 +927,7 @@ table.data th { font-size: 0.75rem }
 .pet-card .pet-art .art { width: 96px; height: 96px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
 .pet-card h2 { color: var(--cover-text); font-family: var(--font-display); font-size: 1.25rem; margin: 2px 0 6px }
 .pet-card .eyebrow { color: var(--cover-muted) }
-.pet-card small, .pet-card .pet-line { color: var(--cover-muted) }
-.pet-card .pet-line { margin: 6px 0 0; font-size: 0.875rem }
+.pet-card small { color: var(--cover-muted) }
 .pet-card .xp-track { background: #1b2a37; margin: 2px 0 4px }
 .pet-progress small { display: block; font-size: 0.8125rem }
 @media (max-width: 359px) { .pet-card { grid-template-columns: 1fr } }
@@ -950,6 +949,92 @@ table.data th { font-size: 0.75rem }
 .pet-path small { display: block; color: var(--muted); font-size: 0.875rem }
 .pet-path li.now small { color: var(--accent-ink); font-weight: 700 }
 .pet-promise { color: var(--text) }
+
+
+/* ===== 5.13 — the living Firebird, its things, goals and hint tours (ideas of the team's sample ФинФениксы).
+   Motion: short one-shots and an idle that stops by itself within 5 s (WCAG 2.2.2); all of it off with .rm and
+   prefers-reduced-motion (the rules at the end of the file). No flashes: the «evolve» glow changes slowly. ===== */
+.pet-card .pet-art { display: grid; place-items: center; padding: 0; margin: 0; border: 0; background: transparent; border-radius: 24px; cursor: pointer; min-width: 48px; min-height: 48px; color: inherit }
+.pet-card .pet-art:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.pet-card .pet-art .art { width: 104px; height: 104px }
+.pet-say { position: relative; margin: 10px 0 0; padding: 8px 12px; border-radius: 16px; background: #ffffff; color: #05101a; font-size: 0.875rem; font-weight: 600; line-height: 1.4 }
+.pet-say::before { content: ""; position: absolute; left: -7px; top: 14px; border: 7px solid transparent; border-left: 0; border-right-color: #ffffff }
+@media (max-width: 359px) { .pet-say::before { left: 24px; top: -7px; border: 7px solid transparent; border-top: 0; border-bottom-color: #ffffff } }
+.pet-goal { grid-column: 1 / -1; display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .18) }
+.pet-goal p { margin: 0; color: var(--cover-muted) }
+.pet-goal b { color: var(--cover-text) }
+.pet-goal .btn { justify-self: start }
+.pet-moment { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; background: var(--grad-cover); color: var(--cover-text); border-color: transparent; text-align: left }
+.pet-moment .art { width: 96px; height: 96px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
+.pet-moment p { margin: 0 }
+.outfit-preview { display: grid; place-items: center; margin: 4px 0 8px; padding: 8px; border-radius: 22px; background: var(--grad-cover) }
+.outfit-preview .art { width: 128px; height: 128px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
+.outfit-slot { margin: 10px 0 }
+.outfit-label { margin: 0 0 6px; font-weight: 800 }
+.outfit-slot .note { margin: 0 }
+.goal-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; background: var(--grad-cover); color: var(--cover-text); border-color: transparent }
+.goal-intro p { margin: 0 }
+.goal h2, .goal h3 { margin: 2px 0 6px; font-size: 1.0625rem }
+.goal.active { border: 2px solid var(--accent) }
+.goal .xp-track { margin: 6px 0 4px }
+.goal small { display: block; color: var(--muted); margin-bottom: 10px }
+.goal .note { margin: 0 0 8px }
+@media (max-width: 359px) { .pet-moment, .goal-intro { grid-template-columns: 1fr; justify-items: center; text-align: center } }
+
+/* The bird moves as one group from its feet; the eyes blink from their middle; the tail sways from its base. */
+.firebird .fb-bird, .firebird .fb-eyes, .firebird .fb-tail { transform-box: fill-box }
+.firebird .fb-bird { transform-origin: 50% 100% }
+.firebird .fb-eyes { transform-origin: 50% 50% }
+.firebird .fb-tail { transform-origin: 50% 100% }
+.firebird.alive .fb-bird { animation: fb-breathe 2.4s ease-in-out 2 }
+.firebird-fed.alive .fb-bird { animation: fb-bounce 1.6s ease-in-out 3 }
+.firebird-rest.alive .fb-bird, .firebird.anim-sleep .fb-bird { animation: fb-sleep 4.4s ease-in-out 1 }
+.firebird.alive .fb-eyes { animation: fb-blink 2.4s ease-in-out 2 }
+.firebird.alive .fb-tail { animation: fb-sway 2.4s ease-in-out 2 }
+.firebird.anim-hop .fb-bird { animation: fb-hop .6s cubic-bezier(.3, .7, .4, 1) 1 }
+.firebird.anim-wave .fb-bird { animation: fb-wave .8s ease-in-out 1 }
+.firebird.anim-celebrate .fb-bird { animation: fb-hop .55s cubic-bezier(.3, .7, .4, 1) 2 }
+.firebird.anim-celebrate .fb-tail { animation: fb-sway .55s ease-in-out 2 }
+.firebird.anim-evolve .fb-bird { animation: fb-evolve 1.4s cubic-bezier(.2, .8, .3, 1.2) 1 }
+.firebird.anim-evolve { animation: fb-warm 1.4s ease-out 1 }
+@keyframes fb-breathe { 0%, 100% { transform: none } 50% { transform: translateY(-1.5px) scaleY(1.02) } }
+@keyframes fb-bounce { 0%, 100% { transform: none } 40% { transform: translateY(-3px) scaleY(1.03) } 70% { transform: translateY(0) scaleY(.98) } }
+@keyframes fb-sleep { 0%, 100% { transform: none } 50% { transform: scaleY(.97) scaleX(1.02) } }
+@keyframes fb-blink { 0%, 44%, 52%, 100% { transform: none } 48% { transform: scaleY(.1) } }
+@keyframes fb-sway { 0%, 100% { transform: none } 30% { transform: rotate(-2.5deg) } 70% { transform: rotate(2.5deg) } }
+@keyframes fb-hop { 0%, 100% { transform: none } 30% { transform: translateY(-9px) scale(.97, 1.04) } 60% { transform: translateY(0) scale(1.04, .95) } 80% { transform: scale(.99, 1.01) } }
+@keyframes fb-wave { 0%, 100% { transform: none } 25% { transform: rotate(-6deg) } 50% { transform: rotate(5deg) } 75% { transform: rotate(-3deg) } }
+@keyframes fb-evolve { 0% { transform: scale(.55); opacity: .2 } 60% { transform: scale(1.08); opacity: 1 } 100% { transform: none } }
+@keyframes fb-warm { 0% { filter: drop-shadow(0 0 0 rgba(255, 210, 122, 0)) } 50% { filter: drop-shadow(0 0 14px rgba(255, 210, 122, .85)) } 100% { filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) } }
+
+/* Hint tours: a card above the bottom bar (beside the rail in landscape) and a ring around the element it explains. */
+.tour { position: fixed; z-index: 25; left: 12px; right: 12px; bottom: 96px; max-width: 520px; margin: 0 auto; max-height: 48vh; display: flex; flex-direction: column;
+  background: var(--card); color: var(--text); border: 2px solid var(--accent); border-radius: 24px; padding: 14px 16px 12px; box-shadow: var(--shadow-2); animation: rise .25s ease }
+/* The text scrolls inside the card, the buttons stay (a 390 px high landscape screen at 200 % text). */
+.tour-text { overflow: auto; min-height: 0; flex: 1 1 auto }
+.tour-count { margin: 0; color: var(--muted); font-size: 0.8125rem; font-weight: 700 }
+.tour h2 { margin: 2px 0 6px; font-size: 1.125rem }
+.tour p.tour-body { margin: 0 0 10px }
+.tour .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; flex: 0 0 auto }
+.tour .row-actions .btn { flex: 1 1 9rem; margin: 0 }
+.tour-target { outline: 3px solid var(--accent) !important; outline-offset: 4px; box-shadow: 0 0 0 9px var(--deco-green, rgba(22, 225, 130, .25)) !important; scroll-margin-top: 72px; animation: tour-ring 1.6s ease-in-out 3 }
+@keyframes tour-ring { 0%, 100% { outline-offset: 4px } 50% { outline-offset: 7px } }
+/* Short screens (a 568 × 320 phone in landscape): a smaller card and the explained element right under the top (or the
+   demo banner), so both are on screen at once — the full layout run found the card over the element. */
+@media (max-height: 540px) { .tour { max-height: 40vh; padding: 10px 12px 8px } .tour h2 { margin: 0 0 4px } .tour-target { scroll-margin-top: 52px } }
+/* The demo banner above a game screen: the screen takes the height that is left, not the whole viewport. Found once the
+   demo profile kept the person's gesture scheme (5.13): «Ключ» was below a 568 × 320 screen under the banner. */
+.app:has(> .showcase-banner):has(> .play-screen) { height: 100dvh; min-height: 0; display: flex; flex-direction: column }
+.app:has(> .showcase-banner) > .play-screen { height: auto; flex: 1 1 0; min-height: 0 }
+/* …and on a short landscape game screen there is no room for the banner and six gesture pads: the pads win («что нажимать —
+   всегда на экране», 5.10); every other screen of the demo still shows the banner. */
+@media (orientation: landscape) and (max-height: 540px) { .app:has(> .play-screen) > .showcase-banner { display: none } }
+:root.hc .tour { background: #000; border-color: #ffe14d }
+:root.hc .tour-target { outline-color: #ffe14d !important; box-shadow: none !important }
+:root.hc .pet-say { background: #000; color: #fff; border: 2px solid #fff }
+:root.hc .pet-say::before { display: none }
+:root.hc .pet-moment, :root.hc .goal-intro, :root.hc .outfit-preview { background: #000; color: #fff; border: 2px solid var(--line); box-shadow: none }
+@media (forced-colors: active) { .tour-target { outline: 3px solid Highlight !important } .tour { border-color: Highlight } }
 
 /* ===== Modes: high contrast and reduced motion always win over decoration ===== */
 :root.hc body { background: #000 }

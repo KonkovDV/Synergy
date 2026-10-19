@@ -18,7 +18,7 @@ try {
   for (const dir of ['src', 'tests', 'public', 'styles']) cpSync(join(root, dir), join(tmp, dir), { recursive: true }); // styles: the design tokens test (5.12)
   // Tests of the servers and the build read tools/ and index.html (5.10–5.11); the tool cache (131 MB, a key) stays out.
   cpSync(join(root, 'tools'), join(tmp, 'tools'), { recursive: true, filter: src => !src.includes(`${join('tools', '.cache')}`) });
-  for (const file of ['package.json', 'index.html']) cpSync(join(root, file), join(tmp, file));
+  for (const file of ['package.json', 'index.html', 'docs/GAME_RULES.md']) cpSync(join(root, file), join(tmp, file)); // the rules document is checked against the code (5.13)
   if (existsSync(join(root, 'node_modules'))) symlinkSync(join(root, 'node_modules'), join(tmp, 'node_modules'), 'dir'); // esbuild for the bundle test
   const file = join(tmp, 'src/core/vocabulary.js');
   const before = readFileSync(file, 'utf8');

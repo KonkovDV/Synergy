@@ -14,7 +14,7 @@ import { fmtOffset } from './audiosync.js';
 import { hashPin, validPin, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { MAX_BACKUP_BYTES } from '../core/storage.js';
-import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD } from '../config.js';
+import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
 /** Section glyph and its tile tint (5.12): the sections are told apart at a glance, the title stays the name. */
@@ -129,7 +129,9 @@ export function settingsScreen(app, { back = null } = {}) {
           h('input', { type: 'time', value: s.reminder, onchange: e => app.updateSettings({ reminder: e.target.value }) })),
         h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder, new Date(), s.weeklyGoal), 'text/calendar') }, 'Добавить в календарь (.ics)'),
         h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) })),
-        h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы'), h('input', { type: 'text', value: s.petName, maxlength: 16, placeholder: 'Искра', onchange: e => app.updateSettings({ petName: e.target.value.trim() }) }))),
+        h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы'), h('input', { type: 'text', value: s.petName, maxlength: 16, placeholder: PET.defaultName, onchange: e => app.updateSettings({ petName: e.target.value.trim() }) })),
+        // 5.13: the hint tours once more — for a new person on this device, or before a demo.
+        h('button', { class: 'btn ghost', disabled: !Object.keys(s.tours ?? {}).length, onclick: () => { app.updateSettings({ tours: {} }); toast('Подсказки появятся на главной и в «Прогрессе»'); app.go('settings'); } }, 'Показать подсказки снова')),
       // Sound and vibration have their own section (5.11, design review: they sat under «Привычка»).
       section('Звук и вибрация',
         toggleRow('Звук', s.sound, v => app.updateSettings({ sound: v })),
