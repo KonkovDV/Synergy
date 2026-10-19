@@ -275,3 +275,39 @@ export function secondsToday(profile, today = dayKey()) { return profile.days[to
  * a missed week (ethical gamification; streak vs tally is an open question, so the series stays, second).
  */
 export const trainingDays = profile => Object.values(profile.days ?? {}).filter(d => (d?.runs ?? 0) > 0).length;
+
+/** A day key `n` days from `key` (calendar arithmetic in UTC, like `dayIndex`). */
+export function shiftDay(key, n) {
+  const d = new Date((dayIndex(key) + n) * 86400000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Calendar days since the last training day before `today` (5.14, the «welcome back» moment), or null if there was
+ * none. Today's own runs do not count: the greeting is for the return, not for the second exercise of the day.
+ */
+export function daysSinceTraining(profile, today = dayKey()) {
+  const last = Object.keys(profile.days ?? {}).filter(d => d < today && (profile.days[d]?.runs ?? 0) > 0).sort().pop();
+  return last ? dayIndex(today) - dayIndex(last) : null;
+}
+
+/**
+ * This week against the week before (5.14, the brochure's «год к году» bars): the last 7 days including today and the
+ * 7 days before them. Training days, minutes, exercises and the mean score of the exercises (demo runs excluded).
+ * A missing week is zeros, not an error; the mean score of a week without exercises is null («нет данных»).
+ */
+export function weekCompare(profile, runs, today = dayKey()) {
+  const range = from => Array.from({ length: 7 }, (_, i) => shiftDay(today, from + i));
+  const sum = (keys, f) => keys.reduce((a, k) => a + f(profile.days?.[k] ?? {}), 0);
+  const week = keys => {
+    const set = new Set(keys);
+    const scores = runs.filter(r => !r.demo && Number.isFinite(r.score) && set.has(dayKey(new Date(r.at)))).map(r => r.score);
+    return {
+      days: keys.filter(k => (profile.days?.[k]?.runs ?? 0) > 0).length,
+      minutes: Math.round(sum(keys, d => d.seconds ?? 0) / 60),
+      exercises: sum(keys, d => d.runs ?? 0),
+      score: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
+    };
+  };
+  return { now: week(range(-6)), before: week(range(-13)) };
+}

@@ -11,6 +11,9 @@ import { mio } from './art.js';
 const ICONS = {
   home: ['M3 11.5 12 4l9 7.5', 'M5.5 10v10h13V10', 'M10 20v-5h4v5'],
   progress: ['M5 20v-6', 'M12 20V9', 'M19 20V4', 'M3 20h18'],
+  // 5.14 — the Firebird's section: a flame-shaped feather.
+  bird: ['M12 21c-4.2-2.6-6.3-6.6-4.6-11.4.9 1.8 2.1 2.8 3.6 3-.9-3.2.1-6.3 3.2-9.1-.1 3.9 3.2 6 3.2 10 0 3.9-2.2 6.4-5.4 7.5z', 'M12 21v-7'],
+  question: [{ circle: [12, 12, 9] }, 'M9.5 9.5a2.6 2.6 0 1 1 3.6 2.4c-.8.4-1.1.9-1.1 1.6v.5', 'M12 17v.01'],
   settings: ['M4 7h8', 'M18 7h2', 'M4 17h2', 'M12 17h8', { circle: [15, 7, 2.5] }, { circle: [9, 17, 2.5] }],
   back: ['M19 12H5', 'M11 6l-6 6 6 6'],
   close: ['M6 6l12 12', 'M18 6 6 18'],
@@ -40,7 +43,7 @@ export function icon(name) {
 
 export function bottomNav(app, active) {
   const item = (id, glyph, label) => h('button', { class: `nav-item ${active === id ? 'active' : ''}`, 'aria-current': active === id ? 'page' : null, 'data-tour': `nav.${id}`, onclick: () => app.go(id) }, h('span', { class: 'nav-icon', 'aria-hidden': 'true' }, icon(glyph)), h('span', { class: 'nav-label' }, label));
-  return h('nav', { class: 'bottom-nav', 'aria-label': 'Разделы' }, item('home', 'home', 'Главная'), item('progress', 'progress', 'Прогресс'), item('settings', 'settings', 'Настройки'));
+  return h('nav', { class: 'bottom-nav', 'aria-label': 'Разделы' }, item('home', 'home', 'Главная'), item('nest', 'bird', 'Жар-птица'), item('progress', 'progress', 'Прогресс'), item('settings', 'settings', 'Настройки'));
 }
 
 /** The arrow is the screen's «back»: the Android button, the browser back gesture and Esc press it too (App.handleBack). */

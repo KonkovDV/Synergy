@@ -23,12 +23,16 @@ import { setSoundEnabled, unlockAudio } from './services/audio.js';
 import { setVoiceEnabled, say, stopVoice } from './services/voice.js';
 import { setRenderOptions } from './render/draw.js';
 import { mount, toast, h } from './ui/dom.js';
+import { parseLaunch, resultMessage, notifyHost } from './services/host.js';
 import { SCREENS } from './ui/screens.js';
 import { startTour } from './ui/tour.js';
 import { mergeTours } from './core/tours.js';
 
 const TAP_GUARD_MS = 350;
 const PIN_SCREENS = ['settings', 'calibration', 'pin', 'audiosync', 'tutorial']; // sub-screens of the settings keep them open
+// 5.14 (the sample's parentLock): the PIN-opened settings lock again after two minutes in the background — a phone left
+// on the settings is not left open for a child.
+const PIN_RELOCK_MS = 120000;
 /** Browser bar colour of each theme (the page background at the top). */
 const THEME_COLOR = { light: '#f3f5f7', dark: '#071019' };
 /** Game catalog for the stored-state check (core does not import games): id → number of levels. */
@@ -91,7 +95,13 @@ export class App {
     this.applyPresentation();
     bindKeyboard(this.emulator, () => this.settings.scheme);
     window.addEventListener('pointerdown', unlockAudio, { once: true });
-    document.addEventListener('visibilitychange', () => { if (document.hidden) this.screen?.onHidden?.(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { this.hiddenAt = Date.now(); this.hiddenDay = dayKey(); this.screen?.onHidden?.(); return; }
+      const away = this.hiddenAt ? Date.now() - this.hiddenAt : 0;
+      if (this.pinOk && away > PIN_RELOCK_MS) { this.pinOk = false; if (PIN_SCREENS.includes(this.screen?.name)) { this.go('settings'); return; } }
+      // Midnight passed while the app was hidden (5.14): the day's screens show the new day — plan, the bird's words.
+      if (this.hiddenDay && this.hiddenDay !== dayKey() && ['home', 'nest', 'progress'].includes(this.screen?.name)) this.go(this.screen.name);
+    });
     document.addEventListener('focusin', e => keepFocusVisible(e.target));
     // A double tap must not land on the next screen (5.11): the second tap after «Отдых 20 с → Ритм» hit «Пропустить
     // отдых», after «Начать» it chose a pain level. Touch only — a mouse or keyboard click is deliberate.
@@ -117,7 +127,7 @@ export class App {
       if (e.key !== APP.storageKey || this.showcase) return;
       this.store.state = this.store.load();
       this.refreshFromState();
-      if (['home', 'progress'].includes(this.screen?.name)) this.go(this.screen.name);
+      if (['home', 'nest', 'progress'].includes(this.screen?.name)) this.go(this.screen.name);
     });
     // Settings are saved shortly after the last change (a slider fires dozens of inputs), and at once when hidden.
     const flush = () => { if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; this.save(); } };
@@ -127,6 +137,8 @@ export class App {
     // The app sets the scroll of every screen itself (go, restoreView); the browser's own restoration on history.back()
     // scrolled a freshly shown hint back to the top (5.13).
     if (typeof history !== 'undefined' && 'scrollRestoration' in history) history.scrollRestoration = 'manual';
+    // 5.14 — embedding (services/host.js): a host may name a game to open and its own origin for result messages.
+    this.launch = parseLaunch(typeof location !== 'undefined' ? location.search : '', id => (GAME_BY_ID[id] ? { levels: GAME_BY_ID[id].Game.levels.length } : null));
     this.exposeApi();
     this.applySource();
     requestAnimationFrame(t => this.frame(t));
@@ -213,6 +225,14 @@ export class App {
       useTouch: () => this.updateSettings({ source: 'touch' }),
       state: () => JSON.parse(JSON.stringify({ settings: this.settings, profile: this.profile, runs: this.state.runs.length, screen: this.screen?.name, bridge: this.bridge?.status ?? null })),
       go: (name, params) => this.go(name, params),
+      /** 5.14 — a host opens a given exercise (unknown ids and levels are ignored; the safety onboarding comes first). */
+      start: (game, level = 1) => {
+        const l = parseLaunch(`?game=${encodeURIComponent(game)}&level=${encodeURIComponent(level)}`, id => (GAME_BY_ID[id] ? { levels: GAME_BY_ID[id].Game.levels.length } : null));
+        if (!l.game) return false;
+        if (!this.profile.onboarded) { this.go('onboarding'); return false; }
+        this.go('play', { game: l.game, level: l.level });
+        return true;
+      },
       /** Android back button: returns false when already home (the host may close the app). */
       back: () => this.handleBack(),
     };
@@ -368,6 +388,7 @@ export class App {
     const calibrationNote = this.adoptRest(session.runner.pipeline.restTracker);
     this.save();
     if (report.levelUp) this.feedback.event({ name: 'levelup' });
+    notifyHost(resultMessage(run, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
     return { run, report, planBonus, calibrationNote };
   }
 

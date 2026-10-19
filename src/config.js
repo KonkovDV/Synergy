@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.13.0',
+  version: '5.14.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -133,6 +133,13 @@ export const SETTINGS_RANGES = {
 };
 export const TEXT_SCALES = [1, 1.15, 1.3];
 
+/**
+ * Prosthesis lock (5.14 — the customer's Motorica Start: «блокировка протеза», both sensors above the threshold for a
+ * set time of 0.1–10 s; users ask for it against false triggers when the arm moves). «Первые шаги» teach locking and
+ * unlocking with a co-contraction held this long; the time is the player's setting, to match their prosthesis.
+ */
+export const LOCK = { holdDefaultS: 1, minS: 0.3, maxS: 3, stepS: 0.1 };
+
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 
 /** Wellbeing check-in thresholds (numeric rating scale categories 0 / 1–3 / 4–6 / 7–10). */
@@ -150,13 +157,18 @@ export const WELLBEING = {
  */
 export const PET = {
   defaultName: 'Искра',
+  // 5.14 — each stage has a character (the sample's «Spark / Ember / Finny» descriptions): one line in the nest and at
+  // the growth ceremony, so a new stage is a new personality, not only a bigger drawing.
   stages: [
-    { id: 'egg', from: 0, name: 'Яйцо' },
-    { id: 'chick', from: 1, name: 'Птенец' },
-    { id: 'fledgling', from: 4, name: 'Подлёток' },
-    { id: 'young', from: 10, name: 'Юная жар-птица' },
-    { id: 'firebird', from: 21, name: 'Жар-птица' },
+    { id: 'egg', from: 0, name: 'Яйцо', character: 'Тёплое и тихое: внутри кто-то ждёт первой тренировки.' },
+    { id: 'chick', from: 1, name: 'Птенец', character: 'Любопытный птенец: всё в мире — впервые.' },
+    { id: 'fledgling', from: 4, name: 'Подлёток', character: 'Учится держать равновесие — так же, как вы учитесь держать силу.' },
+    { id: 'young', from: 10, name: 'Юная жар-птица', character: 'Перья уже светятся: каждый день с тренировкой добавляет огня.' },
+    { id: 'firebird', from: 21, name: 'Жар-птица', character: 'Свет, который вы вырастили сами. Он не гаснет в дни отдыха.' },
   ],
+  // 5.14 — after this many days without training the bird greets the player back (no reproach, growth kept): the
+  // «comeback» moment of SOTA streak design (self-compassion after a lapse predicts a better return).
+  comebackDays: 3,
 };
 
 /**

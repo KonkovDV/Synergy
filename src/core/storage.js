@@ -1,5 +1,5 @@
 // Versioned local persistence. Never throws to the UI; corrupt data is backed up, not overwritten.
-import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES, ARM_POSES } from '../config.js';
+import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES, ARM_POSES, LOCK } from '../config.js';
 
 const POSE_IDS = ARM_POSES.map(p => p.id);
 import { createProfile, SKINS } from './progress.js';
@@ -8,6 +8,7 @@ import { SCHEME, GESTURE_BY_ID } from './vocabulary.js';
 import { cleanOutfit } from './pet.js';
 import { validMission } from './missions.js';
 import { validTourState } from './tours.js';
+import { validEverydayId } from './everyday.js';
 
 export const DEFAULT_SETTINGS = {
   scheme: 'proportional',
@@ -26,6 +27,8 @@ export const DEFAULT_SETTINGS = {
   reminder: '19:00',
   name: '',
   petName: '',              // имя Жар-птицы (пусто — «Искра»)
+  prosthesis: 'yes',        // yes | waiting — протез уже есть или человек ждёт его и учится заранее (5.14)
+  lockHoldS: LOCK.holdDefaultS, // удержание A+B для блокировки, как в приложении протеза (5.14)
   // Training
   adaptive: true,           // адаптивная сложность внутри упражнения
   fadedFeedback: true,      // затухающие подсказки: опытный игрок видит шкалу не в каждой попытке
@@ -58,6 +61,8 @@ export const SETTINGS_RULES = {
   source: oneOf('touch', 'bridge', 'demo'),
   side: oneOf('right', 'left'),
   audience: oneOf('adult', 'child'),
+  prosthesis: oneOf('yes', 'waiting'),
+  lockHoldS: range(LOCK.minS, LOCK.maxS),
   theme: oneOf('auto', 'light', 'dark'),
   sensitivity: range(SETTINGS_RANGES.sensitivity.min, SETTINGS_RANGES.sensitivity.max),
   coThreshold: range(SETTINGS_RANGES.coThreshold.min, SETTINGS_RANGES.coThreshold.max),
@@ -149,8 +154,9 @@ const validPlan = p => p === null || (isObject(p) && typeof p.day === 'string' &
 function cleanDays(days) {
   const count = v => (Number.isFinite(v) && v >= 0 ? v : 0);
   return Object.fromEntries(Object.entries(days).filter(([k, d]) => /^\d{4}-\d{2}-\d{2}$/.test(k) && isObject(d)).map(([k, d]) => {
-    const { checkin, ...rest } = d;
-    return [k, { ...rest, seconds: count(d.seconds), runs: count(d.runs), ...(isObject(checkin) ? { checkin } : {}) }];
+    const { checkin, everyday, ...rest } = d;
+    // 5.14 — «дело дня» is a self-report: only a known task id is kept (a backup is untrusted input).
+    return [k, { ...rest, seconds: count(d.seconds), runs: count(d.runs), ...(isObject(checkin) ? { checkin } : {}), ...(validEverydayId(everyday) ? { everyday } : {}) }];
   }));
 }
 

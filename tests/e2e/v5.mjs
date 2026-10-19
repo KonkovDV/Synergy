@@ -47,7 +47,7 @@ t = await tourState();
 if (t.ring !== 'home.pet') errors.push(`home tour, step 2: ${JSON.stringify(t)}`);
 await page.getByRole('button', { name: /Погладить/ }).click(); await wait(300); // the explained element used = the step done
 t = await tourState();
-if (t.ring !== 'nav.progress') errors.push(`using the explained element did not move the tour on: ${JSON.stringify(t)}`);
+if (t.ring !== 'nav.nest') errors.push(`using the explained element did not move the tour on: ${JSON.stringify(t)}`);
 const said = await page.locator('.pet-say').textContent();
 if (!/Тук-тук|Яйцо|вылуплюсь|слышу/.test(said)) errors.push(`a touch of the egg answered «${said}»`);
 await page.keyboard.press('Escape'); await wait(200);
@@ -66,15 +66,22 @@ await go('settings'); await wait(300);
 await page.locator('summary', { hasText: 'Данные' }).click(); await wait(150); // folded section (progressive disclosure)
 await page.getByRole('button', { name: 'Демо-профиль для презентации' }).click(); await wait(600);
 await audit('progress-tour');
-if ((await tourState()).ring !== 'progress.skills') errors.push(`progress tour: ${JSON.stringify(await tourState())}`);
+if ((await tourState()).ring !== 'progress.week') errors.push(`progress tour: ${JSON.stringify(await tourState())}`); // 5.14: week to week first
 await page.locator('.tour').getByRole('button', { name: 'Пропустить подсказки' }).click(); await wait(200);
 await shot('v5-05-progress', true); await audit('progress');
+// 5.14 — the nest: the bird's own section, with its short hint; the outfit lives here now.
+await go('nest'); await wait(600); await audit('nest-tour');
+if ((await tourState()).ring !== 'nest.bird') errors.push(`nest tour: ${JSON.stringify(await tourState())}`);
+await page.locator('.tour').getByRole('button', { name: 'Пропустить подсказки' }).click(); await wait(200);
+await shot('v5-16-nest'); await audit('nest');
 // 5.13 — the outfit: a choice in a slot is worn at once (the demo bird has earned items).
 const headGroup = page.getByRole('radiogroup', { name: 'Наряд: на голову' });
 if (await headGroup.count()) {
   await headGroup.getByRole('radio', { name: 'Без' }).click(); await wait(300);
   if ((await page.evaluate(() => window.Synergy.state().profile.pet.head)) !== null) errors.push('«Без» did not take the head item off');
 } else errors.push('no outfit choice for the head in the demo profile');
+await go('faq', { topic: 'false' }); await wait(300); await audit('faq');
+if (!(await page.locator('#faq-false[open]').count())) errors.push('«Вопросы к Мио»: the asked topic is not open');
 await go('home'); await wait(400); await shot('v5-06-home-showcase', true);
 // 5.13 — goals: the bird offers goals; one is taken and shows on its card with progress 0 of N.
 await go('goals'); await wait(300); await audit('goals');

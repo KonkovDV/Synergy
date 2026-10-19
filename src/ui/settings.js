@@ -14,7 +14,7 @@ import { fmtOffset } from './audiosync.js';
 import { hashPin, validPin, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { MAX_BACKUP_BYTES } from '../core/storage.js';
-import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET } from '../config.js';
+import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
 /** Section glyph and its tile tint (5.12): the sections are told apart at a glance, the title stays the name. */
@@ -87,7 +87,11 @@ export function settingsScreen(app, { back = null } = {}) {
         segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { app.updateSettings({ scheme: v }); refreshPreview(); app.go('settings'); }, 'Схема управления'),
         h('p', { class: 'note' }, SCHEME_INFO[s.scheme].text),
         h('div', { class: 'row' }, h('span', {}, 'Протез'),
-          segmented([{ value: 'right', label: 'Правая рука' }, { value: 'left', label: 'Левая рука' }], s.side, v => app.updateSettings({ side: v }), 'Рука с протезом'))),
+          segmented([{ value: 'right', label: 'Правая рука' }, { value: 'left', label: 'Левая рука' }], s.side, v => app.updateSettings({ side: v }), 'Рука с протезом')),
+        // 5.14 — people wait 3–6 months for a prosthesis (the customer's annual report): «жду протез» trains the control
+        // on the emulator and shows the path to the prosthesis instead of tasks that need one.
+        h('div', { class: 'row' }, h('span', {}, 'Протез уже есть?'),
+          segmented([{ value: 'yes', label: 'Есть' }, { value: 'waiting', label: 'Жду протез', sub: 'учусь заранее' }], s.prosthesis, v => app.updateSettings({ prosthesis: v }), 'Протез уже есть?'))),
       section('Источник сигнала',
         segmented([{ value: 'touch', label: 'Эмулятор на экране', sub: 'без датчиков' }, { value: 'bridge', label: 'Внешний', sub: 'эмулятор / датчики / протез' }], s.source, v => {
           app.updateSettings({ source: v }); bridgeBox.hidden = v !== 'bridge'; refreshPreview();
@@ -97,6 +101,10 @@ export function settingsScreen(app, { back = null } = {}) {
       section('Чувствительность',
         sliderRow('Порог включения канала', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); meter.setThresholds(); } }),
         sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); meter.setThresholds(); } }),
+        // 5.14 — the lock of the prosthesis (Motorica Start: both sensors held for 0.1–10 s): «Первые шаги» teach it
+        // with the same hold as the person's prosthesis.
+        sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }) }),
+        h('p', { class: 'note' }, 'Время удержания для блокировки — как в приложении вашего протеза; его настраивает протезист.'),
         h('p', { class: 'note' }, 'Проверка вживую — напрягите мышцы или используйте площадки ниже:'),
         meter.node,
         s.source === 'touch' && s.scheme !== 'gesture' ? createTwoChannelPads(app.emulator) : null,
@@ -158,7 +166,8 @@ export function settingsScreen(app, { back = null } = {}) {
         h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ (2 канала: пороговый и пропорциональный режимы; 7 жестов).`),
         h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
         h('p', { class: 'note' }, `Возрастная категория: ${APP.ageRating} (436-ФЗ). Детям — с родителем.`),
-        h('p', { class: 'note' }, 'Код создан командой с помощью ИИ-ассистента; что именно и как проверено — docs/AI_USAGE.md.'))),
+        h('p', { class: 'note' }, 'Код создан командой с помощью ИИ-ассистента; что именно и как проверено — docs/AI_USAGE.md.'),
+        h('button', { class: 'btn ghost', 'data-return': 'faq', onclick: () => app.go('faq', { from: 'settings' }) }, 'Вопросы и ответы'))),
     bottomNav(app, 'settings'));
 
   // Back from a sub-screen (calibration, sound sync, tutorial): its section is open and focus is on the button that

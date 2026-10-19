@@ -96,8 +96,11 @@ test('tutorial: the «Первые шаги» achievement needs every step done 
   const p = createProfile();
   assert.deepEqual(unlockAchievements({ ...p, tutorialDone: true }, null, {}, '2026-10-18'), [], 'card hidden, no medal');
   const done = new TutorialRun('threshold');
-  const want = { rest: 'rest', relax: 'rest', relax2: 'rest', close: 'close', open: 'open', switch: 'switch' };
-  for (let i = 0; i < 2000 && !done.done; i++) done.update({ valid: true, command: want[done.step.id], relaxed: want[done.step.id] === 'rest', intensity: 0.5 }, 0.05);
+  const want = { rest: 'rest', relax: 'rest', relax2: 'rest', relax3: 'rest', relax4: 'rest', close: 'close', open: 'open', switch: 'switch', lock: 'switch', unlock: 'switch' };
+  for (let i = 0; i < 2000 && !done.done; i++) {
+    const cmd = want[done.step.id], both = cmd === 'switch';
+    done.update({ valid: true, command: cmd, relaxed: cmd === 'rest', intensity: 0.5, aOn: both, bOn: both }, 0.05);
+  }
   assert.ok(done.done && done.passed);
   assert.ok(unlockAchievements({ ...createProfile(), tutorialDone: true, tutorialPassed: true }, null, {}, '2026-10-18').includes('tutorial'));
 });

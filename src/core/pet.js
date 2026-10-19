@@ -21,10 +21,13 @@ export function petStageIndex(days) {
  * declared rest day: pain, skin), `waiting` (not yet today). The line names the reason (5.13, the sample's «why it
  * feels this way»): the day's latest event first — a new stage, the whole plan, a goal reached — else the day itself.
  * It never blames.
+ * 5.14: after `PET.comebackDays` and more without training it greets the player back — growth kept, no reproach,
+ * a short start suggested (self-compassion after a lapse predicts a better return; the sample has no such moment).
  * @param {number} days training days so far
- * @param {{ trainedToday?: boolean, restToday?: boolean, planDone?: boolean, goalDone?: boolean, name?: string }} today
+ * @param {{ trainedToday?: boolean, restToday?: boolean, planDone?: boolean, goalDone?: boolean, name?: string, daysSince?: number|null }} today
+ *   `daysSince` — calendar days since the last training day before today (null: never trained)
  */
-export function petState(days, { trainedToday = false, restToday = false, planDone = false, goalDone = false, name = PET.defaultName } = {}) {
+export function petState(days, { trainedToday = false, restToday = false, planDone = false, goalDone = false, name = PET.defaultName, daysSince = null } = {}) {
   const i = petStageIndex(days);
   const stage = PET.stages[i], next = PET.stages[i + 1] ?? null;
   const left = next ? next.from - days : 0;
@@ -32,8 +35,9 @@ export function petState(days, { trainedToday = false, restToday = false, planDo
   const mood = restToday ? 'rest' : trainedToday ? 'fed' : 'waiting';
   // Today's training day is the one that reached this stage: the stage begins exactly at today's count.
   const grewToday = trainedToday && i > 0 && days === stage.from;
+  const back = !trainedToday && stage.id !== 'egg' && Number.isFinite(daysSince) && daysSince >= PET.comebackDays;
   const reason = restToday ? 'rest' : grewToday ? 'grew' : trainedToday && goalDone ? 'goal' : trainedToday && planDone ? 'plan'
-    : trainedToday ? 'fed' : stage.id === 'egg' ? 'egg' : 'waiting';
+    : trainedToday ? 'fed' : stage.id === 'egg' ? 'egg' : back ? 'back' : 'waiting';
   const who = stage.id === 'egg' ? `Яйцо ${name}` : name;
   const line = {
     rest: `${who} отдыхает вместе с вами. Отдых — тоже забота: рост не теряется.`,
@@ -42,10 +46,19 @@ export function petState(days, { trainedToday = false, restToday = false, planDo
     plan: `${name} сияет: тренировка дня пройдена целиком.`,
     fed: `${name} сыта и довольна: сегодня вы тренировались.`,
     egg: 'Первая тренировка согреет яйцо — и из него вылупится птенец.',
+    back: `${name} рада вас видеть! Всё, что выросло, на месте. Начнём с одного спокойного упражнения.`,
     waiting: `${name} ждёт короткую тренировку — хватит одного упражнения.`,
   }[reason];
   return { stage, index: i, next, left, progress: Math.max(0, Math.min(1, progress)), mood, reason, line };
 }
+
+/**
+ * How loudly a moment is celebrated (5.14, a ladder instead of the sample's one «celebrate» for everything): micro —
+ * a short sign next to what changed (≤ 0.3 s); medium — the bird's hop and words (≤ 1.2 s); macro — only a new stage,
+ * the growth ceremony (1.2 s, a cross-fade with «Меньше движения»). One event, one level; nothing flashes (WCAG 2.3.1).
+ */
+export const CELEBRATION = Object.freeze({ xp: 'micro', tap: 'micro', stars: 'medium', plan: 'medium', goal: 'medium', gift: 'medium', stage: 'macro' });
+export const celebrationLevel = event => (Object.hasOwn(CELEBRATION, event) ? CELEBRATION[event] : null);
 
 /** The stage reached by this run, if it moved the pet to a new one (the first run of a day adds a training day). */
 export function petStageUp(daysAfter, firstRunToday) {

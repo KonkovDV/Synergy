@@ -163,22 +163,25 @@ test('tours: every tour is well-formed and every anchor exists in the UI code', 
 });
 
 test('tours: a session skips missing anchors, resumes, completes or is dismissed; a new version returns', () => {
-  const tour = TOURS.find(t => t.key === 'home');
+  const tour = TOURS.find(t => t.key === 'home'), v = tour.version;
   assert.equal(pendingTour({}, { screen: 'home' }).tour.key, 'home');
   assert.equal(pendingTour({}, { screen: 'settings' }), null);
   const s = new TourSession(tour, a => a !== 'home.pet');
   assert.deepEqual(s.steps.map(x => x.position), [0, 2], 'a step without its anchor is skipped');
   assert.equal(s.current.anchor, 'home.plan');
-  s.next(); assert.equal(s.current.anchor, 'nav.progress'); assert.deepEqual(s.state(), { v: 1, status: 'in_progress', step: 2 });
+  s.next(); assert.equal(s.current.anchor, 'nav.nest'); assert.deepEqual(s.state(), { v, status: 'in_progress', step: 2 });
   s.next(); assert.equal(s.finished, true); assert.equal(s.current, null); assert.equal(s.state().status, 'completed');
   assert.equal(pendingTour({ home: s.state() }, { screen: 'home' }), null, 'a finished tour never returns');
-  assert.equal(pendingTour({ home: { v: 1, status: 'in_progress', step: 1 } }, { screen: 'home' }).resume, 1, 'resumes where the player left off');
+  assert.equal(pendingTour({ home: { v, status: 'in_progress', step: 1 } }, { screen: 'home' }).resume, 1, 'resumes where the player left off');
   const resumed = new TourSession(tour, () => true, 1);
   assert.equal(resumed.current.anchor, 'home.pet');
-  resumed.skip(); assert.deepEqual(resumed.state(), { v: 1, status: 'dismissed', step: 1 });
-  assert.equal(pendingTour({ home: { v: 0, status: 'completed', step: 2 } }, { screen: 'home' }).resume, 0, 'changed content (a new version) shows again');
+  resumed.skip(); assert.deepEqual(resumed.state(), { v, status: 'dismissed', step: 1 });
+  assert.equal(pendingTour({ home: { v: v - 1, status: 'completed', step: 2 } }, { screen: 'home' }).resume, 0, 'changed content (a new version) shows again');
   assert.equal(new TourSession(tour, () => false).showable, false, 'no anchor on screen — the tour is not shown');
-  assert.equal(pendingTour({ home: { v: 1, status: 'bogus', step: 0 } }, { screen: 'home' }).resume, 0, 'a broken record starts over');
+  assert.equal(pendingTour({ home: { v, status: 'bogus', step: 0 } }, { screen: 'home' }).resume, 0, 'a broken record starts over');
+  // 5.14: the nest has its own short tour; a tour per screen, never two on one.
+  assert.equal(pendingTour({}, { screen: 'nest' }).tour.key, 'nest');
+  assert.equal(new Set(TOURS.map(t => t.trigger.screen)).size, TOURS.length);
 });
 
 test('tours: merging keeps the further-along record; stored state is validated', () => {

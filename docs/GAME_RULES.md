@@ -165,6 +165,10 @@
 | Коактивация: порог | `0.4` | `src/config.js:SIGNAL.coThreshold` |
 | Коактивация: окно включений, мс | `350` | `src/config.js:SIGNAL.coOnsetWindowMs` |
 | Коактивация: гистерезис | `0.05` | `src/config.js:SIGNAL.coHysteresis` |
+| Блокировка протеза: удержание A+B по умолчанию, с | `1` | `src/config.js:LOCK.holdDefaultS` |
+| Блокировка: удержание, минимум в настройке, с | `0.3` | `src/config.js:LOCK.minS` |
+| Блокировка: удержание, максимум в настройке, с | `3` | `src/config.js:LOCK.maxS` |
+| Блокировка: шаг настройки, с | `0.1` | `src/config.js:LOCK.stepS` |
 | Порог включения канала | `0.22` | `src/config.js:SIGNAL.onThreshold` |
 | Жар-птица: имя по умолчанию | `"Искра"` | `src/config.js:PET.defaultName` |
 | Жар-птица: яйцо, дней | `0` | `src/config.js:PET.stages[0].from` |
@@ -172,6 +176,7 @@
 | Жар-птица: подлёток, дней | `4` | `src/config.js:PET.stages[2].from` |
 | Жар-птица: юная, дней | `10` | `src/config.js:PET.stages[3].from` |
 | Жар-птица: взрослая, дней | `21` | `src/config.js:PET.stages[4].from` |
+| Жар-птица: «с возвращением» после перерыва, дней | `3` | `src/config.js:PET.comebackDays` |
 | Цели: предложений сразу | `3` | `src/config.js:MISSIONS.offers` |
 | Цели: шагов, максимум | `3` | `src/config.js:MISSIONS.maxTarget` |
 | Цели: XP за шаг | `20` | `src/config.js:MISSIONS.xpPerStep` |
