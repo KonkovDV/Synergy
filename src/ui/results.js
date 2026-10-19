@@ -1,8 +1,8 @@
 // Results (knowledge of results + coach advice + rewards) and the rest break between plan items.
 import { count, fmtNum, fmtPct, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
-import { gameArt, badgeArt, starRow, firebird } from './art.js';
-import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID } from '../core/pet.js';
+import { gameArt, badgeArt, starRow, firebird, evolution } from './art.js';
+import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, PET_SLOTS } from '../core/pet.js';
 import { missionText } from '../core/missions.js';
 import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
@@ -12,7 +12,7 @@ import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
 import { coachFeedback, coachMood } from './coach.js';
-import { CALIBRATION_ADAPT, HANDS_FREE } from '../config.js';
+import { CALIBRATION_ADAPT, HANDS_FREE, PET } from '../config.js';
 import { signalMeter, segmented, mioAvatar } from './widgets.js';
 
 /** Hands-free confirm of the primary action (results and rest): the same rule as the game start, a bit longer. */
@@ -76,11 +76,18 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const petCard = moment ? (() => {
     const pet = petState(trainingDays(app.profile), { trainedToday: true, name });
     const play = petReaction({ grown, stars: run.stars, planDone, goalDone: !!report.mission?.completed, items: report.items?.length ?? 0 });
-    const words = grown ? (grown.id === 'chick' ? `${name} вылупилась из яйца!` : `${name} выросла: ${grown.name}`)
-      : report.items?.length ? `${name} примеряет подарок. Выбрать наряд — в «Прогрессе».` : `${name} радуется выполненной цели.`;
-    return h('section', { class: 'card pet-moment', role: 'status' },
-      h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, 'fed', 96, { items: wornItems(app.profile, pet.stage.id), play })),
-      h('p', {}, h('b', {}, words)));
+    const words = grown ? (grown.id === 'chick' ? `${name} вылупилась из яйца!` : `${name} растёт: ${grown.name}!`)
+      : report.items?.length ? `${name} примеряет подарок. Выбрать наряд — в гнезде, вкладка «Жар-птица».` : `${name} радуется выполненной цели.`;
+    const items = wornItems(app.profile, pet.stage.id);
+    // 5.14 — a new stage is the one «macro» moment (core/pet.js CELEBRATION): the growth ceremony, the stage's
+    // character, and the place for things it opens. Everything else stays a small reaction of the bird.
+    const from = grown ? PET.stages[PET.stages.findIndex(st => st.id === grown.id) - 1] : null;
+    const opened = grown ? PET_SLOTS.find(sl => sl.from === grown.id) : null;
+    return h('section', { class: `card pet-moment${grown ? ' grown' : ''}`, role: 'status' },
+      grown && from ? evolution(from.id, grown.id, 112, { items }) : h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, 'fed', 96, { items, play })),
+      h('div', {}, h('p', {}, h('b', {}, words)),
+        grown ? h('p', { class: 'nest-character' }, grown.character) : null,
+        opened ? h('p', { class: 'note' }, `Открылось место для наряда: «${opened.name}».`) : null));
   })() : null;
   const ring = h('i', { class: 'confirm-ring' });
   const today = dayKey();

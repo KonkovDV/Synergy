@@ -39,6 +39,7 @@ const PAIRS = [
   ['accent-ink', 'bg'], ['accent-ink', 'card'], ['accent-ink', 'tint-green'],
   ['a-ink', 'card'], ['b-ink', 'card'], ['co-ink', 'card'], ['good-ink', 'card'], ['good-ink', 'tint-green'],
   ['warn-ink', 'bg'], ['warn-ink', 'card'], ['warn-ink', 'tint-yellow'], ['bad-ink', 'bg'], ['bad-ink', 'card'],
+  ['accent-ink', 'tint-yellow'], ['accent-ink', 'card2'], // 5.14: the gift line on an earned / not yet earned achievement
   ...['green', 'teal', 'blue', 'violet', 'coral', 'yellow'].flatMap(t => [['text', `tint-${t}`], ['muted', `tint-${t}`], ['muted', `deco-${t}`], ['ico', `tint-${t}`]]),
 ];
 
@@ -53,6 +54,13 @@ for (const [name, theme] of [['light', LIGHT], ['dark', DARK], ['high contrast',
     assert.deepEqual(low, []);
   });
 }
+
+// 5.14 (the sample's contrast gate checks that it can fail): the same check on a broken token reports it.
+test('design: the contrast gate itself catches a broken token', () => {
+  const broken = { ...LIGHT, muted: '#b8c0c8' };
+  const low = PAIRS.filter(([fg, bg]) => fg !== 'ico' && contrast(broken[fg], broken[bg]) < 4.5);
+  assert.ok(low.some(([fg]) => fg === 'muted'), 'a pale muted text must fail the gate');
+});
 
 test('design: text on the brand gradients reads at ≥ 4.5:1 — near-black on the green tiles, white on the dark cover', () => {
   const stops = g => g.match(/#[0-9a-f]{6}/gi);

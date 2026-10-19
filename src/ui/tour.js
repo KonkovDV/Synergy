@@ -35,7 +35,7 @@ export function startTour(app, screenName, { quiet = false } = {}) {
   };
   const close = () => {
     store();
-    unmark(); card.remove(); removeEventListener('resize', place);
+    unmark(); card.remove(); removeEventListener('resize', place); navWatch?.disconnect();
     if (app.tour === controller) app.tour = null;
   };
   const render = () => {
@@ -72,6 +72,10 @@ export function startTour(app, screenName, { quiet = false } = {}) {
   };
   app.root.append(card);
   addEventListener('resize', place);
+  // 5.14 — the bar also grows without a window resize: four sections at a larger text wrap their labels.
+  const navEl = app.root.querySelector('.bottom-nav');
+  const navWatch = navEl && typeof ResizeObserver === 'function' ? new ResizeObserver(() => { if (card.isConnected) place(); }) : null;
+  navWatch?.observe(navEl);
   app.tour = controller; // set before the first render: a click on the explained element checks it
   store(); // «in progress» from the first step: a reload resumes here
   render();

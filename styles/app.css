@@ -695,7 +695,7 @@ small { font-size: max(0.75rem, 0.83em) }
 /* 5.8 — second pass of the layout audit. */
 .top-bar { grid-template-columns: 52px minmax(0, 1fr) 52px }
 .top-bar h1 { overflow-wrap: anywhere }
-.bottom-nav { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+.bottom-nav { grid-template-columns: repeat(4, minmax(0, 1fr)) } /* 5.14: four sections — the nest joined */
 .level-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 4.25rem), 1fr)) }
 .skins { grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr)) }
 .skin { min-width: 0 }
@@ -1057,3 +1057,106 @@ table.data th { font-size: 0.75rem }
 :root.hc .level.rec .star-row { color: #555 }
 :root.hc .scroll > h1::after { background: #ffe14d }
 :root.rm *, :root.rm *::before, :root.rm *::after { animation: none !important; transition: none !important }
+
+/* ===== 5.14 — the nest (the Firebird's own section), the growth ceremony, the XP fill, week to week =====
+   Motion: a spring through CSS linear() (Material 3 Expressive physics, Baseline since 12.2023) with a cubic fallback;
+   overshoot only on the hero moment, never on navigation. «Меньше движения» keeps a cross-fade, not nothing (WebKit
+   2025): no turn, no growth, no swelling light. No flashes (WCAG 2.3.1). */
+:root { --spring-pop: cubic-bezier(.2, .9, .25, 1.25) }
+@supports (animation-timing-function: linear(0, 1)) {
+  :root { --spring-pop: linear(0, 0.043, 0.151, 0.294, 0.45, 0.602, 0.738, 0.853, 0.944, 1.011, 1.056, 1.082, 1.094, 1.094, 1.086, 1.074, 1.059, 1.045, 1.031, 1.019, 1.009, 1.002, 0.997, 0.993, 0.992, 0.991, 0.991, 0.992, 1) }
+}
+
+/* The nest: the brand's dark cover with light trails; the bird in the middle on a warm aura whose strength is the way to
+   the next stage (it never fades back). Text sits below the aura on the solid cover. */
+.nest-hero { position: relative; overflow: hidden; display: grid; justify-items: center; text-align: center; gap: 4px; background: var(--grad-cover); color: var(--cover-text); border-radius: 32px; padding: 16px 18px 18px; margin-bottom: 12px; box-shadow: var(--shadow-2) }
+.nest-hero > * { position: relative }
+.nest-hero > .trails { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.nest-aura { position: absolute !important; top: 0; left: 50%; width: 240px; height: 240px; margin-left: -120px; border-radius: 50%; pointer-events: none; opacity: var(--aura, .5);
+  background: radial-gradient(circle, rgba(255, 210, 122, .6) 0%, rgba(255, 154, 82, .28) 40%, rgba(109, 78, 240, .16) 60%, transparent 72%) }
+.nest-bird { display: grid; place-items: center; padding: 0; margin: 0; border: 0; background: transparent; border-radius: 50%; cursor: pointer; color: inherit; min-width: 48px; min-height: 48px }
+.nest-bird:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px }
+.nest-bird .art { width: min(196px, 54vw); height: auto; filter: drop-shadow(0 16px 24px rgba(0, 0, 0, .5)) }
+.nest-info { display: grid; gap: 4px; justify-items: center; width: 100%; max-width: 30rem }
+.nest-info h1 { color: var(--cover-text); margin: 0; font-size: clamp(1.5rem, 7vw, 2rem); overflow-wrap: anywhere }
+.nest-info .eyebrow { color: var(--cover-muted); margin: 0 }
+.nest-character { margin: 0; color: var(--cover-muted); font-size: 0.9375rem; line-height: 1.4 }
+.nest-info .pet-progress { width: 100%; text-align: left; margin-top: 6px }
+.nest-info .xp-track { background: #1b2a37; margin: 4px 0 }
+.nest-info small { color: var(--cover-muted) }
+.nest-hero .pet-say { justify-self: stretch; text-align: left; margin-top: 10px }
+.nest-hero .pet-say::before { left: 50%; top: -7px; margin-left: -7px; border: 7px solid transparent; border-top: 0; border-bottom-color: #ffffff }
+.pet-card .nest-link { justify-self: start; margin-top: 10px }
+.badges.collection { list-style: none; margin: 0; padding: 0 }
+.badge .gift { color: var(--accent-ink); font-weight: 700 }
+
+/* The growth ceremony: the old stage turns half-way and shrinks away, the light swells, the new stage grows out of it. */
+span.evo { position: relative; display: inline-grid; place-items: center; flex: none }
+.evo > span { grid-area: 1 / 1; display: grid; place-items: center; width: 100%; height: 100% }
+.evo .art { filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
+.evo-glow { border-radius: 50%; background: radial-gradient(circle, rgba(255, 210, 122, .9) 0%, rgba(255, 154, 82, .35) 45%, transparent 70%); opacity: .35; animation: evo-glow 1.2s ease-out both }
+.evo-from { animation: evo-out .6s cubic-bezier(.55, 0, .8, .2) both }
+.evo-to { animation: evo-in .7s var(--spring-pop) .5s both }
+@keyframes evo-out { to { transform: scale(.15) rotate(160deg); opacity: 0 } }
+@keyframes evo-in { from { transform: scale(.15); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes evo-glow { 0% { transform: scale(.3); opacity: 0 } 45% { transform: scale(1.1); opacity: .95 } 100% { transform: none; opacity: .35 } }
+@keyframes evo-fade-out { to { opacity: 0 } }
+@keyframes evo-fade-in { from { opacity: 0 } to { opacity: 1 } }
+:root.rm .evo-from { animation: evo-fade-out .45s ease both !important }
+:root.rm .evo-to { animation: evo-fade-in .45s ease .3s both !important }
+:root.rm .evo-glow { animation: none !important }
+@media (prefers-reduced-motion: reduce) {
+  .evo-from { animation: evo-fade-out .45s ease both !important }
+  .evo-to { animation: evo-fade-in .45s ease .3s both !important }
+  .evo-glow { animation: none !important }
+}
+.pet-moment.grown { grid-template-columns: auto minmax(0, 1fr) }
+.pet-moment .nest-character { color: var(--cover-muted); margin: 4px 0 0 }
+.pet-moment .note { color: var(--cover-muted); margin: 4px 0 0 }
+
+/* The XP fill on return from an exercise: the bar grows to the new value, «+N XP» rises and fades under it — in the
+   flow (a row of its own), so it never covers the header at a large text size. */
+.xp-float { grid-column: 1 / -1; justify-self: center; padding: 2px 10px; border-radius: 99px; background: #05101a; color: #ffffff; font-weight: 800; font-size: 0.8125rem; pointer-events: none; animation: xp-float 2.2s ease-out .25s both }
+@keyframes xp-float { 0% { transform: translateY(6px); opacity: 0 } 15% { transform: none; opacity: 1 } 80% { transform: none; opacity: 1 } 100% { transform: translateY(-6px); opacity: 0 } }
+:root.rm .xp-float { animation: none }
+@media (prefers-reduced-motion: reduce) { .xp-float { animation: none !important } }
+
+/* Week to week (the organiser's IR brochure: the current period in green, the previous one in grey, an outlined chip). */
+.wk-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px }
+.wk-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700 }
+.delta { flex: none; border: 1.5px solid var(--line-strong); border-radius: 99px; padding: 1px 10px; font-size: 0.8125rem; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums }
+.delta.up { border-color: var(--accent); color: var(--accent-ink) }
+.delta.down { color: var(--text) } /* less is not a failure: no red */
+.wk-bar { height: 10px; border-radius: 99px; background: var(--track); overflow: hidden; margin-top: 5px }
+.wk-bar i { display: block; height: 100%; border-radius: 99px }
+.wk-bar.now i { background: var(--grad-good) }
+.wk-bar.before i { background: var(--line-strong) }
+.wk-text { margin: 4px 0 0; font-size: 0.8125rem; color: var(--muted) }
+.empty-state { display: grid; justify-items: center; text-align: center; gap: 6px }
+.empty-state .btn { justify-self: stretch }
+:root.hc .nest-hero { background: #000; border: 2px solid #fff; box-shadow: none }
+:root.hc .nest-aura { display: none }
+:root.hc .delta.up { border-color: #3fe0a0; color: #3fe0a0 }
+@media (forced-colors: active) { .nest-aura, .evo-glow { display: none } .delta { border-color: CanvasText } }
+
+/* «Вопросы к Мио» (5.14): questions as buttons (≥ 48 px), answers open in place; a chevron turns. */
+.faq-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center }
+.faq-intro p { margin: 0 }
+.faq-group h2 { margin-bottom: 4px }
+.faq-item { border-top: 1px solid var(--line) }
+.faq-item:first-of-type { border-top: 0 }
+.faq-item > summary { list-style: none; position: relative; display: block; min-height: 48px; padding: 13px 36px 13px 0; font-weight: 700; cursor: pointer; border-radius: 12px; overflow-wrap: anywhere }
+.faq-item > summary::-webkit-details-marker { display: none }
+.faq-item > summary::after { content: ""; position: absolute; right: 10px; top: 50%; width: 9px; height: 9px; margin-top: -7px; border-right: 2.5px solid var(--muted); border-bottom: 2.5px solid var(--muted); transform: rotate(45deg); transition: transform .2s ease }
+.faq-item[open] > summary::after { transform: rotate(225deg); margin-top: -2px }
+.faq-item > summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.faq-item > p { margin: 0 0 10px; color: var(--text) }
+.faq-item > p + p { color: var(--muted) }
+:root.rm .faq-item > summary::after { transition: none }
+@media (forced-colors: active) { .faq-item > summary::after { border-color: CanvasText } }
+
+/* «Дело дня в быту» and «Пока протез делают» (5.14). */
+.everyday h2, .waiting-card h2 { margin: 0 }
+.everyday.done { background: var(--tint-green); border-color: var(--accent) }
+.everyday .btn, .waiting-card .btn { justify-self: start }
+.note.comeback { color: var(--text); font-weight: 600 }

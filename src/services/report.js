@@ -3,7 +3,8 @@
 import { fmtNum } from '../core/format.js';
 import { APP, ARM_POSES } from '../config.js';
 import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabulary.js';
-import { skillProfile, playerLevel } from '../core/progress.js';
+import { skillProfile, playerLevel, shiftDay, dayKey } from '../core/progress.js';
+import { everydayDays } from '../core/everyday.js';
 import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS } from '../core/wellbeing.js';
 
@@ -29,12 +30,41 @@ export function wellbeingLog(profile, days = 28) {
     .map(([day, d]) => ({ day, pain: d.checkin?.pain ?? null, fatigue: d.checkin?.fatigue ?? null, skin: d.checkin?.skin ?? null, action: d.checkin?.action ?? (d.checkin?.skipped ? 'skipped' : null), effort: d.effort ?? null, minutes: Math.round((d.seconds ?? 0) / 60) }));
 }
 
-export function buildReport(state) {
-  const runs = realRuns(state);
+/**
+ * The report's period (5.14 — the coordinator calls about every three months in the first year, the customer's annual
+ * report; the sample's day/week/month periods): the last N days including today, or everything (null).
+ */
+export const REPORT_PERIODS = [7, 30, 90, null];
+
+/** Day keys of a period, newest first; «everything» starts at the first day on record. */
+export function periodKeys(profile, periodDays, today = dayKey()) {
+  const first = Object.keys(profile.days ?? {}).sort()[0];
+  if (!periodDays && !first) return [];
+  const span = periodDays ?? Math.max(1, Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${first}T12:00:00Z`)) / 86400000) + 1);
+  return Array.from({ length: span }, (_, i) => shiftDay(today, -i));
+}
+
+/**
+ * How complete the period is (the sample's «incomplete summary is marked»): days with training, declared rest days
+ * (pain or skin) without training, days without data — and the self-reported «дела в быту».
+ */
+export function periodSummary(profile, keys) {
+  const day = k => profile.days?.[k] ?? {};
+  const trained = keys.filter(k => (day(k).runs ?? 0) > 0).length;
+  const rest = keys.filter(k => !(day(k).runs > 0) && day(k).checkin?.action === 'stop').length;
+  return { days: keys.length, trained, rest, empty: keys.length - trained - rest, everyday: everydayDays(profile, keys) };
+}
+
+const inPeriod = (runs, keys) => { const set = new Set(keys); return keys.length ? runs.filter(r => set.has(dayKey(new Date(r.at)))) : []; };
+
+export function buildReport(state, { periodDays = null, today = dayKey() } = {}) {
+  const keys = periodKeys(state.profile, periodDays, today);
+  const runs = periodDays ? inPeriod(realRuns(state), keys) : realRuns(state);
   return {
     app: APP.name, version: APP.version, exported_at: new Date().toISOString(),
     disclaimer: DISCLAIMER,
-    settings: { scheme: state.settings.scheme, source: state.settings.source, side: state.settings.side, sensitivity: state.settings.sensitivity, coThreshold: state.settings.coThreshold, adaptive: state.settings.adaptive, audience: state.settings.audience },
+    settings: { scheme: state.settings.scheme, source: state.settings.source, side: state.settings.side, sensitivity: state.settings.sensitivity, coThreshold: state.settings.coThreshold, adaptive: state.settings.adaptive, audience: state.settings.audience, prosthesis: state.settings.prosthesis },
+    period: { days: periodDays, ...periodSummary(state.profile, keys) },
     calibration: state.calibrations,
     summary: { runs: runs.length, minutes: Math.round(state.profile.totals.seconds / 60), streak: state.profile.streak, skills: skillProfile(runs, 30) },
     assessments: assessmentHistory(runs, null, 52),
@@ -94,8 +124,11 @@ const label = (list, id) => (id === null || id === undefined ? '—' : list.find
  * Printable one-page report for a prosthetist or rehabilitation specialist (save as PDF from print).
  * @param gameTitle id → title (the catalog lives in the games layer; services depend on core only)
  */
-export function reportHtml(state, gameTitle = id => id) {
-  const runs = realRuns(state), p = state.profile, s = state.settings;
+export function reportHtml(state, gameTitle = id => id, { periodDays = null, today = dayKey() } = {}) {
+  const p = state.profile, s = state.settings;
+  const keys = periodKeys(p, periodDays, today);
+  const runs = periodDays ? inPeriod(realRuns(state), keys) : realRuns(state);
+  const period = periodSummary(p, keys);
   const skills = skillProfile(runs, 30);
   const checks = assessmentHistory(runs, null, 8);
   const conf = confusionMatrix(runs);
@@ -111,9 +144,10 @@ table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border:1px solid #9
 <h1>Синергия — отчёт для специалиста</h1>
 <p class="muted">${name} · сформирован ${escapeHtml(new Date().toLocaleString('ru-RU'))} · ${escapeHtml(APP.name)} ${escapeHtml(APP.version)}</p>
 <p class="warn">${escapeHtml(DISCLAIMER)}</p>
-<h2>Сводка</h2>
-${table(['Схема управления', 'Сторона', 'Упражнений', 'Минут', 'Уровень игрока', 'Серия (лучшая)'],
-  [[SCHEME_INFO[s.scheme]?.name ?? s.scheme, s.side === 'left' ? 'левая' : 'правая', runs.length, Math.round(p.totals.seconds / 60), playerLevel(p.xp).level, `${p.streak.current} (${p.streak.best})`]])}
+<h2>Сводка${periodDays ? ` за ${periodDays} дн.` : ' за всё время'}</h2>
+${table(['Схема управления', 'Сторона', 'Протез', 'Упражнений', 'Минут (всего)', 'Уровень игрока', 'Серия (лучшая)'],
+  [[SCHEME_INFO[s.scheme]?.name ?? s.scheme, s.side === 'left' ? 'левая' : 'правая', s.prosthesis === 'waiting' ? 'ожидает' : 'есть', runs.length, Math.round(p.totals.seconds / 60), playerLevel(p.xp).level, `${p.streak.current} (${p.streak.best})`]])}
+<p class="muted">Полнота периода: дней — ${period.days}; с тренировкой — ${period.trained}; день отдыха (боль, кожа) — ${period.rest}; без данных — ${period.empty}. «Дело дня в быту» отмечено в ${period.everyday} дн. — это самоотчёт человека, не измерение.</p>
 <h2>Профиль навыков (последние 30 упражнений, 0–100)</h2>
 ${table(Object.values(SKILL_NAME), [Object.keys(SKILL_NAME).map(k => skills[k] ?? '—')])}
 <p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью. Игровая метрика удержания навыка (по мотивам тренировки с отсроченной обратной связью, Dupan et al., 2025); клинической валидации у этой игры нет.</p>

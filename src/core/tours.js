@@ -15,19 +15,29 @@ const FINAL = [TOUR_STATUS.COMPLETED, TOUR_STATUS.DISMISSED];
  */
 export const TOURS = [
   {
-    key: 'home', version: 1, trigger: { screen: 'home' },
+    // 5.14 — version 2: the bird got its own section (the nest), so the third step points there.
+    key: 'home', version: 2, trigger: { screen: 'home' },
     steps: [
       { anchor: 'home.plan', title: 'Тренировка дня', body: 'Начинайте отсюда: упражнения по самым слабым навыкам и короткое испытание без подсказки. Перед планом — вопрос о самочувствии.' },
       { anchor: 'home.pet', title: 'Жар-птица', body: 'Растёт от дней с тренировкой, а не от очков. Пропуск и отдых ничего не отнимают. Нажмите на птицу — она ответит.' },
-      { anchor: 'nav.progress', title: 'Прогресс', body: 'Навыки, проверки, календарь, наряды птицы и отчёт для специалиста.' },
+      { anchor: 'nav.nest', title: 'Гнездо', body: 'Путь роста птицы, её наряды и подарки за достижения.' },
     ],
   },
   {
-    key: 'progress', version: 1, trigger: { screen: 'progress' },
+    // 5.14 — version 2: outfits moved to the nest; the week-to-week bars came in.
+    key: 'progress', version: 2, trigger: { screen: 'progress' },
     steps: [
+      { anchor: 'progress.week', title: 'Неделя к неделе', body: 'Эти 7 дней рядом с прошлыми: дни, минуты, упражнения и средний счёт. Сравнение только с собой.' },
       { anchor: 'progress.skills', title: 'Профиль навыков', body: 'Среднее за последние упражнения. Чем шире фигура, тем увереннее управление.' },
-      { anchor: 'progress.outfit', title: 'Наряды Жар-птицы', body: 'Каждое достижение дарит птице вещь. Выберите, что ей надеть.' },
       { anchor: 'progress.report', title: 'Для специалиста', body: 'Отчёт с игровой статистикой и дневником самочувствия — для протезиста или реабилитолога.' },
+    ],
+  },
+  {
+    key: 'nest', version: 1, trigger: { screen: 'nest' },
+    steps: [
+      { anchor: 'nest.bird', title: 'Жар-птица', body: 'Нажмите на птицу — она ответит. Свечение вокруг неё — сколько осталось до следующей стадии.' },
+      { anchor: 'nest.outfit', title: 'Наряды', body: 'Каждое достижение дарит птице вещь. Выберите, что ей надеть.' },
+      { anchor: 'nest.gifts', title: 'Достижения и подарки', body: 'Что уже получено и как получить остальное. Ни монет, ни магазина — только тренировки.' },
     ],
   },
 ];

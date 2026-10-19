@@ -423,6 +423,21 @@ export function firebird(stage = 'egg', mood = 'waiting', size = 96, { items = {
 }
 
 /**
+ * The growth ceremony (5.14 — the sample's evolution choreography, `ProceduralAnimator` «shrink with a spin → the new
+ * look at the midpoint → grow with an overshoot», without its white flash and pulsing rings): the old stage turns
+ * half-way and shrinks away, a warm light swells on the same spot, the new stage grows out of it with a soft spring —
+ * 1.2 s, once. «Меньше движения» keeps only a cross-fade (styles/app.css). Decorative: the words next to it say it.
+ */
+export function evolution(fromStage, toStage, size = 120, { items = {} } = {}) {
+  const layer = (cls, child) => { const el = document.createElement('span'); el.className = cls; if (child) el.append(child); return el; };
+  const box = layer('evo');
+  box.setAttribute('aria-hidden', 'true');
+  box.style.width = box.style.height = `${size}px`;
+  box.append(layer('evo-glow'), layer('evo-from', firebird(fromStage, 'fed', size, { items })), layer('evo-to', firebird(toStage, 'fed', size, { items })));
+  return box;
+}
+
+/**
  * Anchors of the worn things per stage (5.13, the sample's SlotAnchors): head — the top of the head [x, y, scale];
  * chest — the middle of the chest; nest — the ground under the bird [x, y, half-width]. A slot that a stage has not
  * opened has no anchor (core/pet.js decides; the drawing only follows).

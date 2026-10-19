@@ -42,6 +42,8 @@ function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
       const cs = getComputedStyle(n);
       if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0 || n.hidden) return false;
       if (n.classList?.contains('sr-only')) return false;
+      // The content of a closed <details> is not shown, but Chromium still gives it a box (5.14, «Вопросы к Мио»).
+      if (n.parentElement?.tagName === 'DETAILS' && !n.parentElement.open && n.tagName !== 'SUMMARY') return false;
     }
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
@@ -291,6 +293,11 @@ const STATES = [
   ['rest', async p => go(p, 'rest', { next: { game: 'flight', level: 2, retention: true } })],
   ['progress-empty', async p => { await go(p, 'progress'); await p.waitForTimeout(600); }], // with its hint (5.13)
   ['progress-no-tour', async p => { await p.keyboard.press('Escape'); }],
+  // 5.14 — the nest (the bird's own section) with its hint, «Вопросы к Мио», the lock steps of «Первые шаги».
+  ['nest-new', async p => { await go(p, 'nest'); await p.waitForTimeout(600); }],
+  ['nest-no-tour', async p => { await p.keyboard.press('Escape'); }],
+  ['faq', async p => { await go(p, 'faq', { topic: 'path' }); await p.waitForTimeout(150); }],
+  ['tutorial-lock', async p => { await go(p, 'tutorial'); for (let i = 0; i < 12 && !(await p.getByRole('heading', { name: /Замок/ }).count()); i++) await p.getByRole('button', { name: 'Пропустить шаг' }).click(); }],
   ['goals', async p => go(p, 'goals')],
   ['settings', async p => { await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
   ['calibration', async p => go(p, 'calibration')],
@@ -304,10 +311,12 @@ const STATES = [
   ['showcase-pet', async p => { await p.evaluate(() => document.querySelector('.pet-card').scrollIntoView({ block: 'start' })); await p.getByRole('button', { name: /Погладить/ }).click(); }],
   ['showcase-goals', async p => go(p, 'goals')],
   ['showcase-goal-taken', async p => { await p.getByRole('button', { name: 'Взять цель' }).first().click(); }],
-  ['showcase-outfit', async p => { await go(p, 'progress'); await p.evaluate(() => document.querySelector('.outfit').scrollIntoView({ block: 'start' })); }],
+  ['showcase-nest', async p => { await go(p, 'nest'); await p.waitForTimeout(600); const skip = p.locator('.tour').getByRole('button', { name: 'Пропустить подсказки' }); if (await skip.count()) await skip.click(); }],
+  ['showcase-outfit', async p => { await go(p, 'nest'); await p.evaluate(() => document.querySelector('.outfit').scrollIntoView({ block: 'start' })); }],
   ['results-pet', async p => go(p, 'results', { run: { ...run, stars: 3, score: 92 }, report: { xp: 137, levelUp: true, level: 4, achievements: ['perfect', 'plan'], skins: [], items: ['star', 'wreath'], unlockedLevel: 3,
     mission: { mission: { kind: 'weak', game: 'grip', minStars: 2, target: 3, done: 3 }, done: 3, target: 3, completed: true, xp: 60 } } })],
   // 5.9: the system asks for more contrast (the app follows it) and Windows forced colors — borders and outlines change.
+  ['home-waiting', async p => { await go(p, 'settings'); await p.getByRole('radiogroup', { name: 'Протез уже есть?' }).getByRole('radio', { name: /Жду протез/ }).click(); await go(p, 'home'); }],
   ['hc-home', async p => { await p.emulateMedia({ contrast: 'more' }); await go(p, 'home'); }],
   ['hc-play', async p => go(p, 'play', { game: 'flight', level: 1 })],
   ['forced-colors-settings', async p => { await p.emulateMedia({ contrast: 'no-preference', forcedColors: 'active' }); await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],

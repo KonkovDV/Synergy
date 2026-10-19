@@ -9,9 +9,19 @@ import { SCHEME } from '../core/vocabulary.js';
 import { ACHIEVEMENTS } from '../core/progress.js';
 import { drawHand, drawGauge, circle, COLORS } from '../render/draw.js';
 
+/** A padlock on the tutorial canvas (5.14): the prosthesis is locked — signals do not move it. */
+function padlock(ctx, x, y, color) {
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(x, y - 6, 11, Math.PI, 0); ctx.lineTo(x + 11, y + 2); ctx.moveTo(x - 11, y - 6); ctx.lineTo(x - 11, y + 2); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect?.(x - 17, y, 34, 26, 6) ?? ctx.rect(x - 17, y, 34, 26); ctx.fill();
+  ctx.restore();
+}
+
 export function tutorialScreen(app, { from = 'home' } = {}) {
   const s = app.settings;
-  const run = new TutorialRun(s.scheme);
+  const run = new TutorialRun(s.scheme, { lockHoldS: s.lockHoldS });
+  let locked = false; // 5.14: between «Замок» and «Открыть замок» the drawn prosthesis holds still, a padlock shows it
   const pipeline = app.createPipeline(), source = app.signalSource(), hand = app.createHand();
   const title = h('h2', {}), text = h('p', { class: 'lead' }), tip = h('p', { class: 'note warn' });
   const counter = h('p', { class: 'eyebrow' });
@@ -43,7 +53,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
     topBar('Первые шаги', () => app.go(from, from === 'settings' ? { back: 'tutorial' } : {})),
     h('main', { class: 'frame-body center' }, counter, canvas, ring, title, text, tip, live,
       h('div', { class: 'row-actions' },
-        h('button', { class: 'btn ghost', onclick: () => { run.skipStep(); if (run.done) finish(); else showStep(); } }, 'Пропустить шаг'),
+        h('button', { class: 'btn ghost', onclick: () => { if (run.step?.lock === 'off') locked = false; run.skipStep(); if (run.done) finish(); else showStep(); } }, 'Пропустить шаг'),
         h('button', { class: 'btn ghost', onclick: finish }, 'Завершить обучение'))),
     h('div', { class: 'frame-dock' }, meter.node, pads ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, pads) : null));
 
@@ -52,8 +62,12 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
     tick(now, dt) {
       const intent = pipeline.process(source?.sample(now) ?? null, now);
       meter.update(intent);
-      hand.update(intent, dt);
-      if (run.update(intent, dt)) { app.feedback.event({ name: 'ring' }); if (run.done) { finish(); return; } showStep(); }
+      if (!locked) hand.update(intent, dt); // a locked prosthesis ignores the signals of a moving arm
+      const before = run.step;
+      if (run.update(intent, dt)) {
+        if (before?.lock) locked = before.lock === 'on';
+        app.feedback.event({ name: 'ring' }); if (run.done) { finish(); return; } showStep();
+      }
       ring.style.setProperty('--p', String(run.stepProgress));
       // Pad tips are for the on-screen emulator; with sensors the usual cause is contact or calibration.
       const tipText = s.source === 'touch' ? run.step.tip : 'Не получается? Проверьте, что датчики плотно прилегают к коже, или пройдите калибровку в настройках.';
@@ -63,7 +77,8 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       bg.addColorStop(0, COLORS.sceneTop); bg.addColorStop(1, COLORS.sceneBottom);
       ctx.fillStyle = bg; ctx.fillRect(0, 0, 320, 240);
       circle(ctx, 150, 150, 96, COLORS.accentSoft); // a soft spotlight behind the hand
-      drawHand(ctx, { x: 150, y: 228, size: 92, pose: hand.pose(), skin: app.profile.skin, glow: intent.intensity, mirror: s.side === 'left' });
+      drawHand(ctx, { x: 150, y: 228, size: 92, pose: hand.pose(), skin: app.profile.skin, glow: locked ? 0 : intent.intensity, mirror: s.side === 'left' });
+      if (locked) padlock(ctx, 214, 70, COLORS.goodInk);
       const band = run.step?.band;
       // The channel of the step: B on «Раскрытие» (5.11 — the gauge always showed A, empty while B was working).
       const ch = run.step?.id === 'open' ? 'b' : 'a';

@@ -2,15 +2,15 @@
 // collection, and the report for a prosthetist / rehabilitation specialist.
 import { fmtNum, fmtPct, fmtDay, plural, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
-import { badgeArt, gameArt, firebird } from './art.js';
-import { petStageIndex, petName, PET_SLOTS, PET_ITEMS, itemUnlocked, slotOpen, wornItems, equipItem } from '../core/pet.js';
+import { gameArt, firebird } from './art.js';
+import { petStageIndex } from '../core/pet.js';
 import { PET } from '../config.js';
 import { bottomNav, skillBar, segmented } from './widgets.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
-import { skillProfile, ACHIEVEMENTS, SKINS, skinUnlocked, trainingDays, dayKey } from '../core/progress.js';
-import { COLORS, drawHand } from '../render/draw.js';
-import { gestureName as name, COMMAND_POSE } from '../core/vocabulary.js';
-import { buildReport, reportCsv, reportHtml, printHtml, download, wellbeingLog } from '../services/report.js';
+import { skillProfile, trainingDays, dayKey, weekCompare } from '../core/progress.js';
+import { COLORS } from '../render/draw.js';
+import { gestureName as name } from '../core/vocabulary.js';
+import { buildReport, reportCsv, reportHtml, printHtml, download, wellbeingLog, REPORT_PERIODS } from '../services/report.js';
 import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS } from '../core/wellbeing.js';
 import { GAME_BY_ID } from '../games/registry.js';
@@ -137,6 +137,36 @@ function confusionTable(conf) {
   return dataTable('Нужен жест (строка) → распознан как (столбец), секунды', ['', ...conf.cols.map(c => name(c).slice(0, 4))], rows, heat);
 }
 
+/**
+ * This week against the week before (5.14, the bars of the organiser's IR brochure: the current period in the brand
+ * green, the previous one in grey, an outlined chip with the change). Words carry the numbers; the bars are pictures.
+ */
+function weekCard(p, runs) {
+  const { now, before } = weekCompare(p, runs);
+  const rows = [
+    ['Дни с тренировкой', now.days, before.days, v => count(v, FORMS.days)],
+    ['Минуты', now.minutes, before.minutes, v => `${v} мин`],
+    ['Упражнения', now.exercises, before.exercises, v => String(v)],
+    ['Средний счёт', now.score, before.score, v => (v === null ? 'нет данных' : String(v))],
+  ];
+  const chip = (a, b) => {
+    if (a === null || b === null) return h('span', { class: 'delta' }, 'новое');
+    const d = a - b;
+    return h('span', { class: `delta ${d > 0 ? 'up' : d < 0 ? 'down' : ''}` }, d > 0 ? `+${d}` : d < 0 ? `−${-d}` : '=');
+  };
+  return h('section', { class: 'card week-compare', 'data-tour': 'progress.week' },
+    h('h2', {}, 'Неделя к неделе'),
+    h('ul', { class: 'wk-rows' }, ...rows.map(([label, a, b, fmt]) => {
+      const max = Math.max(a ?? 0, b ?? 0, 1);
+      return h('li', {},
+        h('div', { class: 'wk-head' }, h('span', {}, label), chip(a, b)),
+        h('div', { class: 'wk-bar now', 'aria-hidden': 'true' }, h('i', { style: { width: `${Math.round(100 * (a ?? 0) / max)}%` } })),
+        h('div', { class: 'wk-bar before', 'aria-hidden': 'true' }, h('i', { style: { width: `${Math.round(100 * (b ?? 0) / max)}%` } })),
+        h('p', { class: 'wk-text' }, `Эти 7 дней: ${fmt(a)} · прошлые 7: ${fmt(b)}`));
+    })),
+    h('p', { class: 'note' }, 'Сравнение с собой, а не с другими. Меньше — тоже нормально: отдых и самочувствие важнее цифр.'));
+}
+
 export function progressScreen(app) {
   const runs = app.state.runs.filter(r => !r.demo);
   const profile = skillProfile(runs);
@@ -146,33 +176,9 @@ export function progressScreen(app) {
     const values = runs.filter(r => !r.details?.assessment).map(r => r.skills?.[k]).filter(Number.isFinite).slice(-12);
     return h('div', { class: 'trend' }, skillBar(SKILL_NAME[k], profile[k]), sparkline(values));
   });
-  const skins = h('div', { class: 'skins' }, ...SKINS.map(sk => {
-    const open = skinUnlocked(p, sk);
-    const { canvas, ctx } = hiDpiCanvas(56, 56, 'skin-icon');
-    drawHand(ctx, { x: 28, y: 50, size: 22, pose: COMMAND_POSE.open, skin: sk.id, sleeve: false });
-    return h('button', { class: `skin ${p.skin === sk.id ? 'active' : ''}`, disabled: !open, 'aria-pressed': String(p.skin === sk.id),
-      onclick: () => { p.skin = sk.id; app.save(); app.go('progress'); } },
-      canvas, h('small', {}, open ? sk.name : sk.level ? `ур. ${sk.level}` : '7 дней'));
-  }));
-  const achievements = h('div', { class: 'badges' }, ...ACHIEVEMENTS.map(a => h('div', { class: `badge ${p.achievements[a.id] ? 'on' : ''}`, title: a.text },
-    badgeArt(p.achievements[a.id] ? 'medal' : 'medal-off', 32), h('b', {}, a.name), h('span', { class: 'sr-only' }, p.achievements[a.id] ? ' — получено.' : ' — пока нет.'), h('small', {}, a.text))));
-  // 5.13 — what the bird wears (the sample's items in slots): one choice per open slot among the items earned; the rest
-  // says which achievement brings it. No shop and no currency: practice earns the things.
-  const stageId = PET.stages[petStageIndex(trainingDays(p))].id;
-  const locked = PET_ITEMS.filter(i => !itemUnlocked(p, i));
-  const outfit = h('section', { class: 'card outfit', 'data-tour': 'progress.outfit' }, h('h2', {}, 'Наряды Жар-птицы'),
-    h('div', { class: 'outfit-preview', 'aria-hidden': 'true' }, firebird(stageId, 'waiting', 128, { items: wornItems(p, stageId) })),
-    ...PET_SLOTS.map(slot => {
-      const earned = PET_ITEMS.filter(i => i.slot === slot.id && itemUnlocked(p, i));
-      const from = PET.stages.find(st => st.id === slot.from)?.name;
-      return h('div', { class: 'outfit-slot' }, h('p', { class: 'outfit-label' }, slot.name),
-        !slotOpen(slot.id, stageId) ? h('p', { class: 'note' }, `Откроется на стадии «${from}».${earned.length ? ` Уже ждёт: ${earned.map(i => i.name).join(', ')}.` : ''}`)
-          : earned.length ? segmented([{ value: '', label: 'Без' }, ...earned.map(i => ({ value: i.id, label: i.name }))], p.pet?.[slot.id] ?? '',
-            v => { equipItem(p, slot.id, v || null); app.save(); app.go('progress'); }, `Наряд: ${slot.name.toLowerCase()}`)
-            : h('p', { class: 'note' }, 'Пока пусто — подарки приходят за достижения.'));
-    }),
-    h('p', { class: 'note' }, locked.length ? `Ещё можно получить: ${locked.map(i => `${i.name} — за «${ACHIEVEMENTS.find(a => a.id === i.achievement)?.name}»`).join('; ')}.` : 'Все подарки собраны!'));
   const minutes = Math.round(p.totals.seconds / 60);
+  if (app.reportPeriod === undefined) app.reportPeriod = 30;
+  const period = app.reportPeriod ?? 'all';
   const checks = assessmentHistory(runs, null, 6);
   const sameScheme = assessmentHistory(runs, app.settings.scheme, 6); // the trend: one scheme — a switch is not a change of skill (5.10)
   const conf = confusionMatrix(runs);
@@ -194,36 +200,31 @@ export function progressScreen(app) {
       h('main', { class: 'scroll' },
         h('h1', {}, 'Прогресс'),
         // Before the first exercise: one way forward instead of empty bars and a report with nothing in it (5.11).
-        runs.length ? null : h('section', { class: 'card' }, h('p', {}, 'Здесь появятся навыки, проверки и календарь — после первого упражнения.'),
+        runs.length ? null : h('section', { class: 'card empty-state', role: 'status' },
+          h('span', { class: 'empty-art', 'aria-hidden': 'true' }, firebird(PET.stages[petStageIndex(days)].id, 'waiting', 72)),
+          h('p', {}, 'Здесь появятся навыки, проверки и календарь — после первого упражнения.'),
           h('button', { class: 'btn primary', onclick: () => app.startPlan() }, 'К тренировке дня')),
         h('section', { class: 'stats' },
           h('div', {}, h('b', {}, days), h('small', {}, `${plural(days, FORMS.days)} с занятиями`)),
           h('div', {}, h('b', {}, p.totals.runs), h('small', {}, plural(p.totals.runs, FORMS.exercises))),
           h('div', {}, h('b', {}, minutes), h('small', {}, plural(minutes, FORMS.minutes))),
           h('div', {}, h('b', {}, p.streak.best), h('small', {}, 'лучшая серия'))),
+        runs.length ? weekCard(p, runs) : null,
         h('section', { class: 'card', 'data-tour': 'progress.skills' }, h('h2', {}, 'Профиль навыков'),
           runs.length ? radar(profile) : h('p', { class: 'note' }, 'Сыграйте первое упражнение — здесь появится профиль.'),
           h('p', { class: 'note' }, 'Среднее за последние 12 упражнений. «Без подсказки» — игровая метрика удержания: насколько навык держится, когда шкалы нет.')),
         h('section', { class: 'card' }, h('h2', {}, 'Динамика'), ...trends),
         checkSection, confSection, wellSection,
         h('section', { class: 'card' }, h('h2', {}, 'Календарь'), calendar(p)),
-        // The bird's path (5.12): a vertical journey — passed stages, the current one, the next ones as a promise in words.
-        h('section', { class: 'card' }, h('h2', {}, `Жар-птица ${petName(app.settings)}`),
-          h('ol', { class: 'pet-path' }, ...PET.stages.map((st, i) => {
-            const days = trainingDays(p), now = petStageIndex(days);
-            const state = i < now ? 'done' : i === now ? 'now' : 'next';
-            const note = { done: 'Пройдено', now: 'Сейчас' }[state] ?? `Через ${count(st.from - days, FORMS.days)} с тренировкой`;
-            return h('li', { class: state }, h('span', { class: 'pet-node' }, firebird(st.id, 'waiting', 48)), h('div', {}, h('b', {}, st.name), h('small', {}, note)));
-          })),
-          h('p', { class: 'note' }, `Растёт от дней с тренировкой: сейчас ${count(trainingDays(p), FORMS.days)}. День отдыха и пропуск рост не отнимают.`)),
-        outfit,
-        h('section', { class: 'card' }, h('h2', {}, 'Достижения'), achievements),
-        h('section', { class: 'card' }, h('h2', {}, 'Облик протеза'), skins),
         h('section', { class: 'card', 'data-tour': 'progress.report' }, h('h2', {}, 'Для специалиста'),
           h('p', { class: 'note' }, 'Игровая статистика каждого упражнения — её можно показать протезисту или реабилитологу. Файл содержит ответы о самочувствии (сведения о здоровье): отправляйте его только тем, кому доверяете.'),
-          h('button', { class: `btn ${runs.length ? 'primary' : 'ghost'}`, onclick: () => printHtml(`Синергия — отчёт ${dayKey()}`, reportHtml(app.state, id => GAME_BY_ID[id]?.title ?? id)) }, 'Отчёт для специалиста · PDF'),
+          // 5.14 — a period for the visit or the coordinator's call (about every three months in the first year).
+          h('p', { class: 'outfit-label' }, 'Период отчёта'),
+          segmented(REPORT_PERIODS.map(d => ({ value: String(d ?? 'all'), label: d ? `${d} дн.` : 'Всё' })), String(period),
+            v => { app.reportPeriod = v === 'all' ? null : Number(v); }, 'Период отчёта'),
+          h('button', { class: `btn ${runs.length ? 'primary' : 'ghost'}`, onclick: () => printHtml(`Синергия — отчёт ${dayKey()}`, reportHtml(app.state, id => GAME_BY_ID[id]?.title ?? id, { periodDays: app.reportPeriod })) }, 'Отчёт для специалиста · PDF'),
           h('div', { class: 'row-actions' },
-            h('button', { class: 'btn ghost', onclick: () => download(`synergy-report-${dayKey()}.json`, JSON.stringify(buildReport(app.state), null, 2), 'application/json') }, 'Отчёт JSON'),
+            h('button', { class: 'btn ghost', onclick: () => download(`synergy-report-${dayKey()}.json`, JSON.stringify(buildReport(app.state, { periodDays: app.reportPeriod }), null, 2), 'application/json') }, 'Отчёт JSON'),
             h('button', { class: 'btn ghost', onclick: () => download(`synergy-runs-${dayKey()}.csv`, '﻿' + reportCsv(app.state), 'text/csv') }, 'Таблица CSV')))),
       bottomNav(app, 'progress')),
   };
