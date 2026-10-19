@@ -120,3 +120,69 @@ test('the demo profile keeps the person\'s settings and brings read hints back (
   assert.deepEqual(Object.keys(app.settings.tours).sort(), ['home', 'progress'], 'hints read in the demo stay read');
   assert.equal(app.settings.textScale, 1.3);
 });
+
+test('5.15 embedding: a host\'s exercise waits for the onboarding; posted frames switch to the external source once; back at home hands control back', async () => {
+  const { SCREENS } = await import('../src/ui/screens.js');
+  const shown = [];
+  const keep = { home: SCREENS.home, play: SCREENS.play, onboarding: SCREENS.onboarding };
+  const stub = name => (app, params) => { shown.push([name, params]); return { node: { ...el(), querySelector: () => null } }; };
+  for (const name of Object.keys(keep)) SCREENS[name] = stub(name);
+  window.scrollTo = noop;
+  const ws = globalThis.WebSocket;
+  globalThis.WebSocket = undefined; // no real connection from a unit test
+  let app;
+  try {
+    store.clear();
+    app = new App({ ...el(), querySelector: () => null, querySelectorAll: () => [] });
+    const sent = [];
+    window.ReactNativeWebView = { postMessage: json => sent.push(JSON.parse(json)) };
+    app.embedded = true;
+    assert.equal(window.Synergy.start('grip', 2), false, 'not onboarded: the safety pages first');
+    assert.deepEqual(shown.at(-1), ['onboarding', {}]);
+    app.profile.onboarded = true;
+    app.go('home', { from: 'home' });
+    assert.deepEqual(shown.at(-1), ['play', { game: 'grip', level: 2 }], 'the asked exercise opens on the way home');
+    app.go('home');
+    assert.equal(shown.at(-1)[0], 'home', 'once only');
+    // The safety rules changed since this person read them: the re-read comes before the host's exercise.
+    app.profile.safetySeen = 0; app.pendingLaunch = { game: 'safe', level: 1 };
+    app.go('home');
+    assert.equal(shown.at(-1)[0], 'home', 'home shows the safety re-read first (ui/home.js)');
+    app.profile.safetySeen = 1;
+    app.go('home');
+    assert.deepEqual(shown.at(-1), ['play', { game: 'safe', level: 1 }]);
+    app.profile.safetySeen = 0;
+    assert.equal(window.Synergy.start('rhythm', 2), false, 'Synergy.start does not skip the re-read either');
+    assert.equal(shown.at(-1)[0], 'home');
+    app.profile.safetySeen = 1; app.go('home');
+    assert.deepEqual(shown.at(-1), ['play', { game: 'rhythm', level: 2 }]);
+    // A frame posted by the embedding frame switches the source like Synergy.feed and is not lost.
+    assert.equal(app.settings.source, 'touch');
+    app.onHostCommand({ source: null, data: { type: 'synergy-frame', a: 0.6, b: 0 } });
+    assert.equal(app.settings.source, 'bridge');
+    assert.equal(app.bridge.received, 1, 'the first frame is fed');
+    app.onHostCommand({ source: null, data: { type: 'synergy-frame', a: 0.6, b: 0 } });
+    assert.equal(app.bridge.received, 1, 'then BridgeSource hears frames itself — none fed twice');
+    assert.equal(app.bridge.url, '', 'the host gives the signal: no WebSocket to the stored address');
+    app.updateSettings({ wsUrl: 'ws://192.168.1.5:8765' });
+    assert.equal(app.bridge.url, 'ws://192.168.1.5:8765', 'an address the person typed is used again');
+    app.onHostCommand({ source: { other: 'tab' }, data: { type: 'synergy-start', game: 'flight' } });
+    assert.notDeepEqual(shown.at(-1), ['play', { game: 'flight', level: 1 }], 'an opener tab is not the host (RT-7)');
+    app.onHostCommand({ source: null, data: { type: 'synergy-start', game: 'flight' } });
+    assert.deepEqual(shown.at(-1), ['play', { game: 'flight', level: 1 }]);
+    app.onHostCommand({ source: null, data: { type: 'synergy-ping' } });
+    assert.equal(sent.at(-1).type, 'synergy:ready');
+    assert.equal(sent.at(-1).onboarded, true);
+    app.go('home');
+    assert.equal(app.handleBack(), false);
+    assert.deepEqual([sent.at(-1).type, sent.at(-1).reason], ['synergy:close', 'back']);
+    app.embedded = false;
+    const before = sent.length;
+    app.handleBack();
+    assert.equal(sent.length, before, 'the app on its own (the APK, a browser) sends nothing on back');
+  } finally {
+    Object.assign(SCREENS, keep);
+    delete window.ReactNativeWebView;
+    app?.bridge?.stop(); globalThis.WebSocket = ws;
+  }
+});

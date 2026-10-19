@@ -6,7 +6,7 @@ import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
 import { trainingDays, playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, daysSinceTraining, recordDayNote } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
-import { overDailyCap, capAdvice } from '../core/wellbeing.js';
+import { overDailyCap, capAdvice, safetyOutdated } from '../core/wellbeing.js';
 import { gameArt, badgeArt, starRow, trails, firebird } from './art.js';
 import { touchableBird } from './petcard.js';
 import { petState, petName, wornItems } from '../core/pet.js';
@@ -19,6 +19,7 @@ const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 export function homeScreen(app) {
   if (!app.profile.onboarded) { queueMicrotask(() => app.go('onboarding')); return { node: h('div') }; }
+  if (safetyOutdated(app.profile)) { queueMicrotask(() => app.go('onboarding', { safety: true })); return { node: h('div') }; } // 5.15
   const today = dayKey();
   const p = app.profile, s = app.settings;
   const lvl = playerLevel(p.xp);
@@ -90,7 +91,10 @@ export function homeScreen(app) {
     })));
 
   const tipCard = h('section', { class: 'card tip' }, h('div', { class: 'coach-head' }, mioAvatar('support', 44), h('b', {}, 'Совет Мио')), h('p', {}, tip),
-    h('button', { class: 'btn ghost', onclick: () => app.go('faq', { from: 'home' }) }, 'Спросить Мио'));
+    h('div', { class: 'row-actions' },
+      h('button', { class: 'btn ghost', onclick: () => app.go('faq', { from: 'home' }) }, 'Спросить Мио'),
+      // 5.15 — «Азбука протеза» (the sample's flashcards): short cards and a check without time.
+      h('button', { class: 'btn ghost', onclick: () => app.go('primer', { from: 'home' }) }, 'Азбука протеза')));
   // 5.14 — «дело дня в быту»: one light two-handed task of daily life with the prosthesis, ticked by the player
   // (transfer of game skill to the prosthesis is weakly shown; daily use starts with practice — core/everyday.js).
   // Not on a rest day; for someone still waiting for the prosthesis — the path to it instead.

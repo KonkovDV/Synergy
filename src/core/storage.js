@@ -9,6 +9,8 @@ import { cleanOutfit } from './pet.js';
 import { validMission } from './missions.js';
 import { validTourState } from './tours.js';
 import { validEverydayId } from './everyday.js';
+import { cleanPrimer } from './primer.js';
+import { SAFETY_VERSION } from './wellbeing.js';
 
 export const DEFAULT_SETTINGS = {
   scheme: 'proportional',
@@ -206,6 +208,9 @@ export function parseState(raw, catalog = null) {
   if (!validPlan(profile.plan)) profile.plan = null;
   if (!SKINS.some(s => s.id === profile.skin)) profile.skin = base.profile.skin;
   profile.pet = cleanOutfit(profile.pet);
+  profile.primer = cleanPrimer(profile.primer); // 5.15 — known decks and cards only, a bounded result
+  // 5.15 — the safety rules read: 1 … current (a copy from a newer app counts as the current; nonsense as version 1).
+  profile.safetySeen = Number.isInteger(profile.safetySeen) && profile.safetySeen >= 1 ? Math.min(profile.safetySeen, SAFETY_VERSION) : 1;
   // Only known settings with the expected type and an allowed value survive (a backup file is untrusted input).
   const stored = isObject(data.settings) ? data.settings : {};
   const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, validSetting(k, stored[k], v) ? stored[k] : v]));

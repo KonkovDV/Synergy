@@ -105,7 +105,7 @@ test('tutorial: the prosthesis lock — hold A+B as long as the person\'s prosth
 
 test('host: launch parameters are validated; results go only to a host that asked, without health notes', () => {
   const info = id => ({ grip: { levels: 8 }, check: { levels: 1 } }[id] ?? null);
-  assert.deepEqual(parseLaunch('?game=grip&level=3', info), { game: 'grip', level: 3, hostOrigin: null });
+  assert.deepEqual(parseLaunch('?game=grip&level=3', info), { game: 'grip', level: 3, hostOrigin: null, embed: false });
   assert.equal(parseLaunch('?game=grip&level=99', info).level, 1, 'a level out of range starts at 1');
   assert.equal(parseLaunch('?game=__proto__', info).game, null);
   assert.equal(parseLaunch('?game=nope', info).game, null);
@@ -225,7 +225,7 @@ test('property: restoring a backup is idempotent on random, partly broken data',
 });
 
 test('docs: relative links between the documents point to files that exist', () => {
-  const files = [...readdirSync('.').filter(f => f.endsWith('.md')), ...readdirSync('docs').filter(f => f.endsWith('.md')).map(f => join('docs', f))];
+  const files = [...readdirSync('.').filter(f => f.endsWith('.md')), ...['docs', 'docs/embed'].flatMap(d => readdirSync(d).filter(f => f.endsWith('.md')).map(f => join(d, f)))];
   const broken = [];
   for (const f of files) {
     for (const [, target] of readFileSync(f, 'utf8').matchAll(/\]\(([^)\s]+)\)/g)) {

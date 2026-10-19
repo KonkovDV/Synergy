@@ -1,9 +1,10 @@
 import { App } from './app.js';
 
 const app = new App(document.getElementById('app'));
-// 5.14 — a host may open a given exercise (?game=…&level=…); without a finished onboarding the safety pages come first.
-if (app.launch?.game && app.profile.onboarded) app.go('play', { game: app.launch.game, level: app.launch.level });
-else app.go('home');
+// A host may open a given exercise (?game=…&level=…, 5.14): `go('home')` opens it — after the safety onboarding when
+// that comes first (App.pendingLaunch, 5.15). Then the host hears «ready».
+app.go('home');
+app.notifyReady();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:' && document.documentElement.dataset.build === 'dist') {
   navigator.serviceWorker.register('sw.js').catch(() => {});

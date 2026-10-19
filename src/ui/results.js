@@ -145,6 +145,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
         h('div', { class: 'row-actions' },
           stopAdvice && next ? h('button', { class: 'btn ghost', onclick: () => app.go('rest', { next }) }, 'Всё равно продолжить') : null,
           action.label === 'Ещё раз' || demo ? null : h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: run.game, level: run.level, retention: run.retention, plan, pose: run.pose ?? pose }) }, 'Повторить'),
+          // 5.15 — embedded in the customer's app: hand control back to it (synergy:close, docs/embed/README.md).
+          app.embedded && !demo ? h('button', { class: 'btn ghost', onclick: () => { app.closeToHost('done'); app.go('home'); } }, 'Вернуться в приложение') : null,
           h('button', { class: 'btn ghost', onclick: () => app.go('home') }, 'Домой')))));
   const confirm = handsFree ? muscleConfirm(app, ring, primary.go) : null;
   app.say(`${count(run.stars, FORMS.stars)} из трёх. ${count(run.score, FORMS.points)}. ${rewards.length ? `${rewards.map(r => r.text).join('. ')}. ` : ''}${stopAdvice ?? advice[0] ?? ''} Дальше: ${primary.label}.`, { interrupt: true });

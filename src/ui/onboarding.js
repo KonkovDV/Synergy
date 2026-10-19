@@ -4,8 +4,12 @@ import { segmented } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
 import { mio, badgeArt, trails, coverScene } from './art.js';
 import { PET } from '../config.js';
+import { SAFETY_RULES, SAFETY_VERSION } from '../core/wellbeing.js';
 
-export function onboardingScreen(app) {
+export function onboardingScreen(app, { safety = false } = {}) {
+  // 5.15 — the safety rules changed since this person read them (core/wellbeing.js SAFETY_VERSION): only that page,
+  // once, then home. The sample asks for its consent again when the text changes.
+  if (safety) return safetyUpdate(app);
   let step = 0, shownAt = 0;
   const body = h('div', { class: 'onboarding-body' });
   const dots = h('div', { class: 'dots' });
@@ -24,12 +28,7 @@ export function onboardingScreen(app) {
     () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art small' }, badgeArt('shield', 84)),
       h('h1', {}, 'Безопасно'),
       h('p', { class: 'lead' }, 'Комфорт и самочувствие важнее очков.')),
-      h('ul', { class: 'how card onb-card' },
-        h('li', {}, 'Это тренажёр, а не медицинское изделие.'),
-        h('li', {}, 'Напрягайте мышцы комфортно, без боли — максимум не нужен.'),
-        h('li', {}, 'Устали — отдохните. Между упражнениями будет пауза.'),
-        h('li', {}, 'Программу занятий согласуйте с реабилитологом. После операции — начинайте, когда разрешит лечащий врач.'),
-        h('li', {}, 'Датчики — только на здоровую кожу. Покраснение, которое не проходит, или усиление фантомной боли — повод остановиться и сказать специалисту.')),
+      safetyList(),
       h('p', { class: 'note' }, 'Нет датчиков? Встроенный эмулятор ЭМГ на экране: удерживайте площадки A и B, высота пальца — сила.')],
     () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art small' }, mio('focus', 84)),
       h('h1', {}, 'Ваш протез'),
@@ -55,7 +54,7 @@ export function onboardingScreen(app) {
     skip.hidden = step < pages.length - 1;
     shownAt = performance.now();
   };
-  const done = target => { app.profile.onboarded = true; app.updateSettings({ ...s }); app.go(target, { from: 'home' }); };
+  const done = target => { app.profile.onboarded = true; app.profile.safetySeen = SAFETY_VERSION; app.updateSettings({ ...s }); app.go(target, { from: 'home' }); };
   next.onclick = () => {
     // A double tap must not skip «Безопасно» (5.10): the second tap of the same gesture is ignored.
     if (performance.now() - shownAt < 300) return;
@@ -70,5 +69,25 @@ export function onboardingScreen(app) {
     // Back goes to the previous page; on the first page the app may close (5.10: back restarted the onboarding
     // forever, so the APK could not be closed with back on the first launch).
     onBack() { if (step === 0) return 'exit'; step--; render(); return true; },
+  };
+}
+
+/** The safety rules (one list: core/wellbeing.js) — the onboarding page and the re-read after a change. */
+function safetyList() {
+  return h('ul', { class: 'how card onb-card' }, ...SAFETY_RULES.map(rule => h('li', {}, rule)));
+}
+
+function safetyUpdate(app) {
+  const ok = h('button', { class: 'btn primary big', onclick: () => { app.profile.safetySeen = SAFETY_VERSION; app.save(); app.go('home'); } }, 'Понятно');
+  return {
+    node: h('div', { class: 'screen onboarding' },
+      h('main', { class: 'scroll center' }, h('div', { class: 'onboarding-body' },
+        h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art small' }, badgeArt('shield', 84)),
+          h('h1', {}, 'Безопасно'),
+          h('p', { class: 'lead' }, 'Правила безопасности обновились — прочитайте, пожалуйста.')),
+        safetyList())),
+      h('div', { class: 'sticky-actions' }, ok)),
+    focus: ok,
+    onBack: () => 'exit', // not skipped by back: the app may close, the page comes back on the next start
   };
 }

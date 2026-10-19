@@ -6,6 +6,7 @@ import { createProfile, recordRun, recordDayNote, starsFor, dayKey } from './pro
 import { DEFAULT_SETTINGS } from './storage.js';
 import { defaultCalibration } from './signal.js';
 import { confusionPairs } from './confusion.js';
+import { SAFETY_VERSION } from './wellbeing.js';
 
 
 
@@ -20,7 +21,7 @@ export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey()
   const GAMES = catalog.map(g => ({ id: g.id, levels: g.levelCount, skills: g.skills }));
   const rng = createRng(42);
   const profile = createProfile();
-  profile.onboarded = true; profile.tutorialDone = true; profile.tutorialPassed = true;
+  profile.onboarded = true; profile.tutorialDone = true; profile.tutorialPassed = true; profile.safetySeen = SAFETY_VERSION;
   const runs = [];
   const end = new Date(`${today}T18:30:00`);
   const level = { grip: 1, flight: 1, rhythm: 1, safe: 1 };

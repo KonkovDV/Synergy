@@ -180,3 +180,31 @@
 - **«Стекло» iOS 26 — только декор**: под текстом контраст падал до 1,5:1 ([Infinum](https://infinum.com/blog/apples-ios-26-liquid-glass-sleek-shiny-and-questionably-accessible/)). → у нас сплошные подложки под текстом.
 - **Длина сессии**: игровые элементы удлиняют тренировку, а останавливает усталость ([Garske 2022](https://doaj.org/article/d28a93a856cb4f4f8be58bbc83b3ffc4)). → дневной мягкий предел и вопрос о самочувствии остаются.
 - **Доступность**: EN 301 549 V4.1.1 (WCAG 2.2) опубликован 02.09.2026 ([Deque](https://www.deque.com/blog/en-301-549-v4-1-1-is-final-what-changed-what-it-means-and-what-you-should-do/)).
+
+## 10. Обновление 19.10.2026 (5.15): донор, третий проход; встраивание в стеки кейса
+
+### Донор: что осталось после §8 и `docs/AUDIT.md` §12–13
+
+Пройдены все 62 изменения `openspec/changes/archive`, экраны `ParentScreen`, `MiniGamesScreen`, `SessionGames`, `SavingsScreen`, мост сцены `front/src/phoenix/bridge.ts` и руководства `docs/onboarding` (Web, Android, iOS, Unity, `wire-contract.md`). Новое для «Синергии»:
+- **руководства по платформам с разделом «Как проверено»** (что выполнено, что только скомпилировано, что не компилировалось) — образец честной интеграционной документации → `docs/embed/`;
+- **рукопожатие «готов» с версией контракта** у моста 3D-сцены (`phoenix:ready {version}`, при чужой версии — запасной вид) → `synergy:ready` и `protocol` в каждом сообщении;
+- **учебные карточки и проверка** (`add-learning-flashcards`: тема → колода → «прочитано, когда видели каждую» → проверка) → «Азбука протеза»; проверку свободных ответов ИИ не берём (офлайн);
+- **версия текста согласия и ворота ревью** (`add-consent-review-gate`: текст без новой версии менять нельзя, принявший старую версию соглашается снова) → правила безопасности с версией;
+- **«запрос без ответа ждёт вечно»** (`fix-names-hangs-and-resume`: 20 с и сообщение) → таймаут WebSocket-моста.
+
+### Стеки кейса: как каждый слушает страницу
+
+| Стек | Канал из страницы к хосту | Источник |
+|---|---|---|
+| Android (Kotlin/Java) | `addJavascriptInterface(obj, "SynergyHost")` + `@JavascriptInterface`; вызывается в потоке binder | документация Android `WebView`; так же устроен `MainActivity` APK |
+| iOS (Swift) | `WKUserContentController.add(_:name:)` → `window.webkit.messageHandlers.<name>.postMessage`; контроллер держит обработчик сильной ссылкой — снимать в `dismantleUIView` | документация Apple WebKit |
+| Flutter | `webview_flutter` 4.x `addJavaScriptChannel(name)` → `window.<name>.postMessage(string)` | документация пакета |
+| React Native | `react-native-webview`: `window.ReactNativeWebView.postMessage(string)` → `onMessage`; в 14.0.1 при `strict` `useRef<WebView>` даёт `never` — нужен `WebView<object>` (найдено `tsc`) | типы пакета 14.0.1, проверка `npm run verify:embed` |
+| Unity | своего WebView на Android и iOS нет; плагин gree/unity-webview: `WebViewObject.Init(cb: …)`, из страницы — `Unity.call(text)`; в части версий на iOS `Unity.call` определяется скриптом — пример делает это сам | README плагина и примеры сообщества; версию сверять |
+| Unreal | WebBrowser: `ExecuteJavascript` — команды; обратный путь `BindUObject` есть не на всех платформах | документация Unreal; не проверено |
+
+### Наука
+
+| Работа | Вывод для нас |
+|---|---|
+| Ha Dinh et al. 2016, JBI Database of Systematic Reviews and Implementation Reports 14(1):210–247 ([DOI](https://doi.org/10.11124/jbisrir-2016-2296)) | teach-back в обучении взрослых с хроническими заболеваниями улучшал знания о болезни, приверженность и самоэффективность; остальные исходы — неоднородно; о протезировании работ нет → «Азбука» с проверкой, эффект для управления не обещаем (сверено по аннотации поиском, полный текст не читали) |

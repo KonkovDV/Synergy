@@ -297,6 +297,20 @@ const STATES = [
   ['nest-new', async p => { await go(p, 'nest'); await p.waitForTimeout(600); }],
   ['nest-no-tour', async p => { await p.keyboard.press('Escape'); }],
   ['faq', async p => { await go(p, 'faq', { topic: 'path' }); await p.waitForTimeout(150); }],
+  // 5.15 — «Азбука протеза»: the topics, a card before and after turning (the grips card is the longest), its check.
+  ['safety-update', async p => go(p, 'onboarding', { safety: true })], // 5.15: the re-read after the rules change
+  ['primer', async p => go(p, 'primer')],
+  ['primer-card', async p => go(p, 'primer', { deck: 'grip', card: 0 })],
+  ['primer-card-open', async p => { await go(p, 'primer', { deck: 'grip', card: 4 }); await p.locator('.flash-face').click(); }],
+  ['primer-check', gripCheck],
+  ['primer-check-answered', async p => { if (!(await p.locator('.primer-options').count())) await gripCheck(p); await p.locator('.primer-options .option').first().click(); }],
+  ['primer-result', async p => {
+    if (!(await p.locator('.primer-options').count())) await gripCheck(p);
+    for (let k = 0; k < 6 && !(await p.locator('.primer-summary').count()); k++) {
+      if (!(await p.locator('.primer-why').count())) await p.locator('.primer-options .option').first().click();
+      await p.locator('.primer-check ~ .sticky-actions .btn.primary').click();
+    }
+  }],
   ['tutorial-lock', async p => { await go(p, 'tutorial'); for (let i = 0; i < 12 && !(await p.getByRole('heading', { name: /Замок/ }).count()); i++) await p.getByRole('button', { name: 'Пропустить шаг' }).click(); }],
   ['goals', async p => go(p, 'goals')],
   ['settings', async p => { await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
@@ -320,8 +334,18 @@ const STATES = [
   ['hc-home', async p => { await p.emulateMedia({ contrast: 'more' }); await go(p, 'home'); }],
   ['hc-play', async p => go(p, 'play', { game: 'flight', level: 1 })],
   ['forced-colors-settings', async p => { await p.emulateMedia({ contrast: 'no-preference', forcedColors: 'active' }); await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
+  // 5.15 — embedded in the customer's app (?embed=1, docs/embed/README.md): «Вернуться в приложение» among the actions.
+  ['results-embedded', async p => { await p.emulateMedia({ forcedColors: 'none' }); await p.goto(`${base}${base.includes('?') ? '&' : '?'}embed=1`); await p.waitForTimeout(400); await go(p, 'results', { run: { ...run, stars: 3, score: 92 }, report: { xp: 137, levelUp: false, achievements: [], skins: [], unlockedLevel: null } }); }],
 ];
 const go = (p, name, params = {}) => p.evaluate(([n, q]) => window.Synergy.go(n, q), [name, params]);
+/** «Азбука протеза» (5.15): every card of «Сила и хват» turned, then its check. */
+async function gripCheck(p) {
+  for (let k = 0; k < 5; k++) {
+    await go(p, 'primer', { deck: 'grip', card: k });
+    if ((await p.locator('.flash-face').getAttribute('aria-expanded')) !== 'true') await p.locator('.flash-face').click();
+  }
+  await go(p, 'primer', { deck: 'grip', check: true });
+}
 
 const browser = await playwright.chromium.launch();
 const issues = [];
