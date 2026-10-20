@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { SignalPipeline, readFrame, normalize } from '../src/core/signal.js';
 import { BionicHand } from '../src/core/hand.js';
 import { CalibrationRecorder } from '../src/core/calibration.js';
-import { createProfile, recordRun, updateStreak, buildDailyPlan, completePlanItem, playerLevel, recommendedLevel, starsFor, weeklyStatus } from '../src/core/progress.js';
+import { createProfile, recordRun, updateStreak, buildDailyPlan, completePlanItem, playerLevel, recommendedLevel, starsFor, weeklyStatus, weekOutlook, weekOutlookText } from '../src/core/progress.js';
 import { Store, memoryStorage, parseState } from '../src/core/storage.js';
 import { parseExternal } from '../src/input/bridge.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
@@ -127,6 +127,27 @@ test('progress: stars, levels, unlocks, rest day keeps the series', () => {
   assert.ok(report.achievements.includes('first_run'));
   assert.equal(recordRun(p, { ...run, demo: true }, { today: '2026-10-17' }).xp, 0, 'demo never counts');
   assert.equal(weeklyStatus(p, 4, '2026-10-17').done, 1);
+});
+
+test('week outlook: remaining days can hold the goal, or they cannot and nothing is owed', () => {
+  const open = weeklyStatus(createProfile(), 4, '2026-10-19'); // Monday, nothing trained
+  assert.deepEqual(weekOutlook(open), { kind: 'fits', need: 4, room: 7 });
+  assert.match(weekOutlookText(open), /4 дня с тренировкой/);
+  const p = createProfile();
+  recordRun(p, { game: 'grip', level: 1, levelCount: 8, score: 80, stars: 2, durationS: 60, skills: {}, details: {} }, { today: '2026-10-19' });
+  recordRun(p, { game: 'grip', level: 1, levelCount: 8, score: 80, stars: 2, durationS: 60, skills: {}, details: {} }, { today: '2026-10-20' });
+  recordRun(p, { game: 'grip', level: 1, levelCount: 8, score: 80, stars: 2, durationS: 60, skills: {}, details: {} }, { today: '2026-10-21' });
+  recordRun(p, { game: 'grip', level: 1, levelCount: 8, score: 80, stars: 2, durationS: 60, skills: {}, details: {} }, { today: '2026-10-22' });
+  const met = weeklyStatus(p, 4, '2026-10-22');
+  assert.equal(weekOutlook(met).kind, 'met');
+  assert.equal(weekOutlookText(met), 'Цель недели есть.');
+  const late = weeklyStatus(createProfile(), 4, '2026-10-25'); // Sunday
+  assert.equal(weekOutlook(late).kind, 'short');
+  assert.match(weekOutlookText(late), /Догонять не нужно/);
+  // Saturday, goal 2: today and Sunday would fit, but a declared rest closes today and one day is not enough.
+  const saturday = weeklyStatus(createProfile(), 2, '2026-10-24');
+  assert.equal(weekOutlook(saturday).kind, 'fits');
+  assert.equal(weekOutlook(saturday, { restDays: ['2026-10-24'] }).kind, 'short');
 });
 
 test('challenge point: two failures step back one level', () => {

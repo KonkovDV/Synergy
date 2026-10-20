@@ -1,6 +1,7 @@
 // Meta-game: XP, levels, training-day series, weekly goal, achievements, skins, daily plan.
 // Pure functions over plain data (easy to test and to persist).
 import { STARS, XP, SESSION, CHILD, SPACING, ARM_POSES } from '../config.js';
+import { count } from './format.js';
 import { SKILL, ACTIVE_GESTURE_IDS } from './vocabulary.js';
 import { emptyOutfit, autoEquip, itemsFor } from './pet.js';
 import { advanceMission } from './missions.js';
@@ -124,6 +125,32 @@ export function weeklyStatus(profile, goal, today) {
   for (let i = 0; i < 7; i++) { const d = new Date(`${start}T12:00:00`); d.setDate(d.getDate() + i); days.push(dayKey(d)); }
   const trained = days.map(d => (profile.days[d]?.runs ?? 0) > 0);
   return { goal, days, trained, done: trained.filter(Boolean).length, todayIndex: days.indexOf(today) };
+}
+
+/**
+ * What is left of the weekly goal, said the way the sample said «days until the goal»: remaining training days,
+ * and whether the days still left in this week can hold them. No coins and no pace to catch up. A week that cannot
+ * hold the goal says so. Loss-framed points (the 2021–2025 activity trials) are not used: a missed day here is rest.
+ * @returns {{ kind: 'met'|'fits'|'short', need: number, room: number }}
+ */
+export function weekOutlook(status, { restDays = [] } = {}) {
+  const need = Math.max(0, (status.goal ?? 0) - (status.done ?? 0));
+  const trained = status.trained ?? [];
+  const from = status.todayIndex >= 0 ? status.todayIndex : trained.length;
+  const closed = new Set(restDays);
+  const days = status.days ?? [];
+  // A declared rest day (severe pain or irritated skin) is closed: it is not a slot the person can still use.
+  const room = trained.slice(from).filter((done, i) => !done && !closed.has(days[from + i])).length;
+  if (need === 0) return { kind: 'met', need, room };
+  return { kind: need <= room ? 'fits' : 'short', need, room };
+}
+
+/** One sentence for the home week line. The count stays in front of it. */
+export function weekOutlookText(status, options) {
+  const o = weekOutlook(status, options);
+  if (o.kind === 'met') return 'Цель недели есть.';
+  if (o.kind === 'fits') return `До цели ещё ${count(o.need, ['день с тренировкой', 'дня с тренировкой', 'дней с тренировкой'])}, и в неделе есть место.`;
+  return 'Дней недели меньше, чем до цели. Догонять не нужно.';
 }
 
 /**

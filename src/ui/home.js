@@ -3,7 +3,7 @@ import { fmtPct, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { bottomNav, topBar, mioAvatar } from './widgets.js';
 import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
-import { trainingDays, playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, daysSinceTraining, recordDayNote, quickStart } from '../core/progress.js';
+import { trainingDays, playerLevel, weeklyStatus, weekOutlookText, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, daysSinceTraining, recordDayNote, quickStart } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
 import { overDailyCap, capAdvice, safetyOutdated } from '../core/wellbeing.js';
@@ -72,7 +72,7 @@ export function homeScreen(app) {
     h('div', { class: 'week' },
       ...week.days.map((d, i) => h('div', { class: `day ${week.trained[i] ? 'done' : ''} ${i === week.todayIndex ? 'today' : ''}` }, h('i'), h('small', {}, WEEKDAYS[i]),
         h('span', { class: 'sr-only' }, week.trained[i] ? ': занимались' : i === week.todayIndex ? ': сегодня' : ''))),
-      h('p', { class: 'week-note' }, `${week.done} из ${week.goal} дней в неделю`)));
+      h('p', { class: 'week-note' }, `${week.done} из ${week.goal}. ${weekOutlookText(week, { restDays: painRestDays(p) })}`)));
 
   // The day's main action comes right under the title (5.8): at the end of the card it sat under the bottom bar
   // on a 390 × 844 phone and was not visible without scrolling. The list below says what is inside.
