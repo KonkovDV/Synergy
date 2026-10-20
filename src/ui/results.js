@@ -8,7 +8,7 @@ import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
 import { SKILL_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest } from '../core/progress.js';
-import { RestMotion } from '../core/restmotion.js';
+import { RestMotion, REST_MOTION } from '../core/restmotion.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
@@ -284,8 +284,11 @@ export function restScreen(app, { next }) {
   const more = h('button', { class: 'btn ghost', onclick: () => { left = Math.min(left + app.rules.restS, app.rules.restS * 10); counter.textContent = Math.ceil(left); } }, `Отдохнуть ещё ${app.rules.restS} с`);
   let breathT = 0;
   // 5.20 — with real sensors the rest is also «покой в движении»: raise, turn and lower the arm while both channels
-  // stay off. The on-screen emulator has no arm to move, so it is not asked. The result is kept on the day.
-  const motion = app.sourceKind() === 'bridge' ? new RestMotion() : null;
+  // stay off. Not on the on-screen emulator (there is no arm to move), not for a child, and not when the rest is
+  // shorter than the three prompts: a child's pause is 15 s and the prompts take 18, so the last one was cut off
+  // and nothing was saved.
+  const motionS = REST_MOTION.prompts.reduce((sum, p) => sum + p.s, 0);
+  const motion = app.sourceKind() === 'bridge' && app.settings.audience !== 'child' && app.rules.restS >= motionS ? new RestMotion() : null;
   const motionLine = motion ? h('p', { class: 'note' }, motion.prompt.text) : null;
   let motionSaved = false;
   const node = h('div', { class: 'screen rest' },

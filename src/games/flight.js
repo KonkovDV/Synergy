@@ -50,9 +50,9 @@ export function tracePhase(t, t0) {
 
 /**
  * The three numbers of a finished profile, from the running sums (no sample list is kept).
- * nRMSE — root mean square error divided by the height of the ramp; inCorridor — share of samples inside the
+ * nRMSE — root mean square error divided by the height of the ramp; inCorridor — share of time inside the
  * level's own tolerance (not the adapted one); overshoot — how far the hold rose above the target, as a share
- * of the ramp height.
+ * of the ramp height. `n`, `sse` and `inside` are in seconds (`sse` is the time-weighted sum of squared errors).
  */
 export function traceMetrics({ n, sse, inside, holdPeak }, { goal = TRACE.goal, tol }) {
   if (!n) return null;
@@ -154,8 +154,8 @@ export class FlightGame extends Game {
     if (target?.kind === 'trace' && this.time > target.at && this.time < target.end) {
       const want = traceTarget(this.time, target.at, target.goal);
       const err = this.alt - want;
-      target.n++; target.sse += err * err;
-      if (Math.abs(err) <= this.level.tol) target.inside++;
+      target.n += dt; target.sse += err * err * dt;
+      if (Math.abs(err) <= this.level.tol) target.inside += dt;
       if (tracePhase(this.time, target.at) === 'hold') target.holdPeak = Math.max(target.holdPeak, this.alt);
     }
     if (target && target.side !== 0 && target.kind !== 'trace') this.separation.add(intent, target.side > 0, dt);

@@ -54,6 +54,7 @@ test('«Полёт»: one profile from level 2, none at level 1 and none in the 
   assert.ok(trace.inCorridor >= 60, `autopilot in the corridor ${trace.inCorridor} %`);
   assert.ok(trace.nrmse < 0.5, `nRMSE ${trace.nrmse}`);
   assert.ok(trace.overshoot <= 30, `overshoot ${trace.overshoot} %`);
+  assert.ok(Math.abs(game.track.find(i => i.kind === 'trace').n - TRACE_SPAN_S) < 0.2, 'the corridor is a share of seconds, not of frames');
   const item = game.replay().items.find(i => i.kind === 'trace');
   assert.equal(item.inCorridor, trace.inCorridor);
   assert.match(replaySummary(game.replay()), /Слежение: в коридоре \d+ % времени/);
@@ -81,7 +82,7 @@ test('«покой в движении»: quiet time and slips, and a long step 
   whole.step(5, false);
   assert.equal(whole.summary().slipS, 0, 'a finished block ignores further steps');
   assert.equal(REST_MOTION.prompts.reduce((s, p) => s + p.s, 0), 18);
-  assert.match(readFileSync('src/ui/results.js', 'utf8'), /sourceKind\(\) === 'bridge' \? new RestMotion/);
+  assert.match(readFileSync('src/ui/results.js', 'utf8'), /audience !== 'child' && app\.rules\.restS >= motionS/);
 });
 
 test('a day keeps one «покой в движении» and drops a crafted one', () => {
