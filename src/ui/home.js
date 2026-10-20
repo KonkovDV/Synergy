@@ -3,7 +3,7 @@ import { fmtPct, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { bottomNav, topBar, mioAvatar } from './widgets.js';
 import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
-import { trainingDays, playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, daysSinceTraining, recordDayNote } from '../core/progress.js';
+import { trainingDays, playerLevel, weeklyStatus, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, daysSinceTraining, recordDayNote, quickStart } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
 import { overDailyCap, capAdvice, safetyOutdated } from '../core/wellbeing.js';
@@ -29,6 +29,7 @@ export function homeScreen(app) {
   const doneCount = plan.items.filter(i => i.done).length;
   const allDone = doneCount === plan.items.length;
   const resting = app.checkin()?.action === 'stop';
+  const quick = quickStart({ tutorialDone: p.tutorialDone, resting, plan, trainedToday: (p.days[today]?.runs ?? 0) > 0 });
   // Жар-птица (5.12): grows with training days; fed when trained today, asleep on a declared rest day — never sad.
   // 5.13: its line says why (the day's latest event), and it wears what the achievements earned.
   const name = petName(s);
@@ -90,6 +91,9 @@ export function homeScreen(app) {
     h('button', { class: `btn ${p.tutorialDone ? 'primary' : 'ghost'} big plan-start`, disabled: allDone || resting, onclick: () => app.startPlan() },
       resting ? 'Сегодня — отдых' : allDone ? 'План выполнен' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
     resting ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null,
+    // 5.18 — one tap, one exercise: people drop off by not starting, not by doing less once started (Ramos Muñoz et
+    // al. 2022). Free play of the plan's first exercise — the day counts, the plan stays for later.
+    quick ? h('button', { class: 'btn ghost quick-start', onclick: () => app.go('play', { game: quick.game, level: quick.level }) }, `Быстро · ≈ 2 мин: ${GAME_BY_ID[quick.game].title}`) : null,
     h('ol', { class: 'plan-list', 'aria-label': 'Упражнения плана' }, ...plan.items.map(item => {
       const g = GAME_BY_ID[item.game];
       return h('li', { class: item.done ? 'done' : '' },

@@ -17,7 +17,7 @@ import { ADAPT } from '../src/config.js';
 import { FLICKER } from '../src/games/safe.js';
 import { coachFeedback } from '../src/ui/coach.js';
 import { reminderIcs, reminderTime } from '../src/services/report.js';
-import { replaySummary } from '../src/ui/results.js';
+import { replaySummary, gripReplaySummary } from '../src/ui/results.js';
 
 /** A canvas that draws nothing (rendering must not throw). */
 const nullCanvas = () => new Proxy({}, {
@@ -145,6 +145,36 @@ test('«Мастерская»: a crush leaves its force marked on the gauge for
   assert.doesNotThrow(() => game.render(nullCanvas(), { w: 360, h: 600 }, runner.hand, runner.intent), 'the mark is drawn');
   for (let i = 0; i < 80; i++) { t += 1 / 60; emulator.setTarget(toEmulatorTarget({ a: 0, b: 0 })); runner.step(t * 1000, 1 / 60); }
   assert.ok(!(game.peakMark?.t > 0), 'the mark is gone after 1.2 s');
+});
+
+test('«Мастерская»: the replay keeps every object — its window, the force at the outcome, what happened (5.18)', () => {
+  const game = createGame('grip', { levelNumber: 3, scheme: 'proportional', seed: 4 });
+  const emulator = new EmgEmulator({ realism: 0.5, seed: 4 });
+  const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme: 'proportional' }), hand: new BionicHand(), source: emulator, emulator, autopilot: true });
+  for (let t = 0; !game.done && t < 240000; t += 1000 / 60) runner.step(t, 1 / 60);
+  const r = game.replay();
+  assert.equal(r.kind, 'grip');
+  assert.equal(r.items.length, game.level.items.length, 'one column per object');
+  assert.deepEqual(r.items.map(i => i.kind), game.level.items);
+  assert.equal(r.items.filter(i => i.outcome === 'ok').length, game.details().delivered, 'agrees with the score');
+  for (const i of r.items) {
+    assert.ok(i.min < i.max && i.min >= 0 && i.max <= 1, `${i.kind}: window`);
+    if (i.outcome === 'ok') assert.ok(i.force >= i.min - 1e-6 && i.force <= i.max + 1e-6, `${i.kind}: lifted inside the window`);
+    if (i.breakAt !== null) assert.ok(i.breakAt > i.max, `${i.kind}: breaks above the window`);
+  }
+  const easy = createGame('grip', { levelNumber: 1, scheme: 'proportional', seed: 4 });
+  easy.keep(easy.current, 'timeout', null);
+  assert.deepEqual([easy.trace[0].kind, easy.trace[0].breakAt, easy.trace[0].force], ['sponge', null, null], 'a sponge has no crushing zone; untouched — no dot');
+  const win = (min, max) => ({ min, max, breakAt: 0.5 });
+  const summary = gripReplaySummary({ items: [
+    { name: 'Яйцо', outcome: 'crush', force: 0.6, ...win(0.15, 0.36) }, { name: 'Яйцо', outcome: 'crush', force: 0.55, ...win(0.15, 0.36) },
+    { name: 'Банка', outcome: 'drop', force: 0.3, ...win(0.45, 0.82) },
+    { name: 'Яблоко', outcome: 'ok', force: 0.68, ...win(0.3, 0.7) }, { name: 'Стаканчик', outcome: 'ok', force: 0.41, ...win(0.2, 0.42) },
+  ] });
+  assert.equal(summary, 'Доставлено 2 из 5. Раздавлено: яйцо ×2. Выскользнуло: банка. Сила при подъёме — чаще у верхнего края окна.');
+  assert.match(gripReplaySummary({ items: [{ name: 'Губка', outcome: 'timeout', force: null, min: 0.15, max: 0.85, breakAt: null }] }), /^Доставлено 0 из 1\. Не успели: губка\.$/);
+  assert.doesNotMatch(summary, /мышц|напряг|сожм|расслаб/i, 'outcome, not execution');
+  assert.ok(!JSON.stringify(game.result()).includes('"trace"'), 'the replay is not saved with the run');
 });
 
 test('«Сейф»: «стабильно / мерцает» follows how often the recognised command changes', () => {

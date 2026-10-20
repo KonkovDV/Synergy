@@ -158,6 +158,20 @@ export class SafeGame extends Game {
     };
   }
 
+  /**
+   * 5.18 — «Как прошёл Сейф» after the run: each digit of the code (opened or not, how long it took) and the gesture
+   * the prosthesis saw most often instead of the wanted one. Outcome only; lives until the results screen.
+   */
+  replay() {
+    const pairs = Object.entries(this.confusion.toJSON()).flatMap(([wanted, row]) => Object.entries(row).map(([seen, seconds]) => ({ wanted, seen, seconds })));
+    const top = pairs.sort((x, y) => y.seconds - x.seconds)[0] ?? null;
+    return {
+      kind: 'safe',
+      digits: this.code.map(c => ({ name: c.name, ok: c.state === 'ok', seconds: c.state === 'ok' ? Math.round(c.time * 10) / 10 : null })),
+      top: top && top.seconds >= 0.3 ? top : null,
+    };
+  }
+
   details() {
     const distinct = new Set(this.code.filter(c => c.state === 'ok' && c.gesture).map(c => c.gesture));
     return { solved: this.code.filter(c => c.state === 'ok').length, total: this.code.length, wrongMs: Math.round(this.wrongTime * 1000),

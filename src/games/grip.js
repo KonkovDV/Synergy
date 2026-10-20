@@ -47,6 +47,7 @@ export class GripGame extends Game {
     super(opts);
     this.queue = [...this.level.items];
     this.results = [];
+    this.trace = [];
     this.separation = new SeparationMeter();
     this.stability = new StabilityMeter(0.08);
     this.switchTimes = [];
@@ -94,6 +95,7 @@ export class GripGame extends Game {
     }
     if (o.phase === 'grasp' || o.phase === 'carry') {
       if (intent.command === COMMAND.CLOSE) this.separation.add(intent, true, dt);
+      o.peak = Math.max(o.peak ?? 0, hand.force);
       if (hand.force > o.breakAt) return this.fail('crush', hand);
     }
     if (o.phase === 'grasp') this.stepGrasp(dt, intent, hand, o);
@@ -144,6 +146,7 @@ export class GripGame extends Game {
       const speed = clamp01(1 - (this.time - o.graspStart - this.level.carry) / o.limit);
       const points = 60 + 25 * precision + 15 * speed;
       this.results.push({ kind: o.kind, ok: true, points, precision });
+      this.keep(o, 'ok', o.liftForce);
       this.adapt.record(true);
       if (o.fragile) this.fragileSaved++;
       o.phase = 'done'; o.t = 0; o.delivered = true;
@@ -155,6 +158,8 @@ export class GripGame extends Game {
   fail(reason, hand) {
     const o = this.current;
     this.results.push({ kind: o.kind, ok: false, points: reason === 'drop' ? 10 : 0, reason });
+    // A timeout keeps the strongest squeeze of the try (null if the object was never held).
+    this.keep(o, reason, reason === 'timeout' ? (o.peak > 0 ? o.peak : null) : hand.force);
     this.adapt.record(false);
     o.phase = 'done'; o.t = 0; o.failed = reason;
     // 5.17 — where the force was when it went wrong, on the gauge for 1.2 s: the size of the error, not a verdict.
@@ -198,6 +203,19 @@ export class GripGame extends Game {
       separation: this.separation.score,
     };
   }
+
+  /** One object of the replay: the window the player saw and the force at the outcome (units of the gauge, 0..1). */
+  keep(o, outcome, force) {
+    this.trace.push({ kind: o.kind, name: o.name, min: o.min, max: o.max, breakAt: o.breakAt <= 1 ? o.breakAt : null,
+      force: force === null ? null : Math.round(clamp01(force) * 1000) / 1000, outcome });
+  }
+
+  /**
+   * 5.18 — «Как прошла Мастерская» after the run: each object's force window and where the force was when it was
+   * lifted, crushed or slipped. Outcome only, like the flight replay (Bouwsema et al. 2014: feedback on the outcome
+   * helped transfer of grip force control, feedback on the movement hindered it). Lives until the results screen.
+   */
+  replay() { return { kind: 'grip', items: this.trace }; }
 
   details() {
     return {

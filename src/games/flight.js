@@ -190,7 +190,7 @@ export class FlightGame extends Game {
    */
   replay() {
     return {
-      total: this.total, tol: this.level.tol, path: this.path,
+      kind: 'flight', total: this.total, tol: this.level.tol, path: this.path,
       items: this.track.filter(x => x.done).map(x => ({
         kind: x.kind, at: x.at, end: x.end, alt: x.alt,
         ok: x.kind === 'ring' ? x.result !== 'miss' : (x.share ?? 0) > 0.6,
