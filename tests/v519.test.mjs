@@ -27,8 +27,10 @@ test('protocol metrics: training days in the first 7 and 14 days, quick starts, 
   assert.equal(m.check.count, 2);
   assert.equal(m.check.change.real, true, '4 of 8 → 8 of 8');
   assert.equal(m.restDays, 1);
+  assert.equal(m.painDays, 1, 'an older stop without a reason counts as pain');
+  assert.equal(m.skinDays, 0);
   const rows = protocolRows(m);
-  assert.deepEqual(rows.map(r => r[0].slice(0, 2)), ['H1', 'H1', 'H2', 'H3', 'H5']);
+  assert.deepEqual(rows.map(r => r[0].slice(0, 2)), ['H1', 'H1', 'H2', 'H3', 'H5', 'H5']);
   assert.match(rows[2][1], /^2 из 7 упражнений; дней — 2$/);
   assert.match(rows[3][1], /^50 % → 100 % \(проверок: 2\): больше погрешности ±\d+ п\. п\.$/);
   assert.match(rows[3][0], /Пропорц\./, 'the comparison is of one scheme, and the row names it');
@@ -54,7 +56,7 @@ test('the specialist report and the CSV carry the protocol: its table, a quick_s
   assert.match(html, /H2\. Открыто быстрым стартом<\/td><td>1 из 2 упражнений; дней — 1/);
   const [head, ...rows] = reportCsv(st).split('\n');
   const col = head.split(';').indexOf('quick_start');
-  assert.ok(col > 0 && head.endsWith('arm_pose'));
+  assert.ok(col > 0 && head.endsWith('rest_missed'));
   assert.deepEqual(rows.map(r => r.split(';')[col]), ['1', '0']);
 });
 

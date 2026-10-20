@@ -213,7 +213,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const action = resultsAction({ run, plan, demo, next, stopAdvice, restS: app.rules.restS, titleOf: id => GAME_BY_ID[id]?.title ?? id, pose: run.pose ?? pose });
   const primary = { label: action.label, go: () => app.go(action.kind, action.params) };
   // The hands-free «дальше» needs sensors: with the on-screen emulator there are no pads on this screen (5.10).
-  const handsFree = app.sourceKind() !== 'touch';
+  const handsFree = app.liveSource() !== 'touch';
 
   const skills = Object.entries(run.skills).map(([k, v]) => skillBar(SKILL_NAME[k], v));
   const d = run.details ?? {};
@@ -223,7 +223,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       metric('выполнено', fmtPct(d.completionRate)), metric('выбор, мс', d.selectionMs), metric('выполнение, мс', d.completionMs), metric('точность', d.accuracy === null ? '—' : fmtPct(d.accuracy)),
       'throughputBps' in d ? metric('ПС, бит/с', fmtNum(d.throughputBps)) : null),
     h('p', { class: 'note' }, `Время выбора — до первого верного сигнала; выполнение — до удержания 1 с${'throughputBps' in d ? ' (уровни силы — 0,5 с). ПС — игровая пропускная способность по мотивам теста Фиттса: чем быстрее и точнее выход на уровень силы, тем она выше' : ''}. Сравнивайте с прошлой неделей на экране «Прогресс». Метрики игровые, не клинический тест.`),
-    d.restMissed ? h('p', { class: 'note' }, `Покой не получился — ${count(d.restMissed, ['попытка не началась', 'попытки не начались', 'попыток не начались'])}. В выбор жеста это не вошло.`) : null) : null;
+    d.restMissed ? h('p', { class: 'note' }, `Покой не получился — ${count(d.restMissed, ['попытка не началась', 'попытки не начались', 'попыток не начались'])}. В выбор жеста это не вошло.${d.restMissed >= 2 && run.source === 'bridge' ? ' Если рука была расслаблена — проверьте, как сидят электроды, и сделайте калибровку.' : ''}`) : null,
+    d.restMissed >= 2 && run.source === 'bridge' ? h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка датчиков') : null) : null;
   const calibrationCard = calibrationNote?.recalibrate
     ? h('div', { class: 'card warn-card', role: 'status' }, h('b', { class: 'with-art' }, badgeArt('warning', 28), 'Пора перекалибровать'),
       h('p', {}, calibrationNote.stuckChannel !== null

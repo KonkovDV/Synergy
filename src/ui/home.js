@@ -80,7 +80,7 @@ export function homeScreen(app) {
   // The day's main action comes right under the title (5.8): at the end of the card it sat under the bottom bar
   // on a 390 × 844 phone and was not visible without scrolling. The list below says what is inside.
   const restText = app.checkin()?.reason === 'skin'
-    ? 'Сегодня вы отметили раздражение кожи под датчиками — день без датчиков: серия не прерывается. Если покраснение не проходит, покажите кожу протезисту.'
+    ? 'Сегодня игра без датчиков: занятия идут на экране. Если покраснение не проходит, покажите кожу протезисту.'
     : 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.';
   const planCard = h('section', { class: 'card plan', 'data-tour': 'home.plan' },
     h('div', { class: 'card-head' }, h('h2', { class: 'with-art' }, sectionArt('plan', 32), plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),

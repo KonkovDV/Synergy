@@ -103,6 +103,7 @@ export class App {
       const away = this.hiddenAt ? Date.now() - this.hiddenAt : 0;
       if (this.pinOk && away > PIN_RELOCK_MS) { this.pinOk = false; if (PIN_SCREENS.includes(this.screen?.name)) { this.go('settings'); return; } }
       // Midnight passed while the app was hidden (5.14): the day's screens show the new day — plan, the bird's words.
+      if (this.hiddenDay && this.hiddenDay !== dayKey()) this.applySource({ force: false });
       if (this.hiddenDay && this.hiddenDay !== dayKey() && ['home', 'nest', 'progress'].includes(this.screen?.name)) this.go(this.screen.name);
     });
     document.addEventListener('focusin', e => keepFocusVisible(e.target));
@@ -240,7 +241,11 @@ export class App {
   exposeApi() {
     window.Synergy = {
       version: APP.version,
-      feed: frame => { this.hostSource(); return this.bridge.feed(frame); },
+      feed: frame => {
+        if (this.sensorsPaused()) return false;
+        this.hostSource();
+        return this.bridge ? this.bridge.feed(frame) : false;
+      },
       useBridge: (url = '') => this.updateSettings({ source: 'bridge', wsUrl: url }),
       useTouch: () => this.updateSettings({ source: 'touch' }),
       state: () => JSON.parse(JSON.stringify({ settings: this.settings, profile: this.profile, runs: this.state.runs.length, screen: this.screen?.name, bridge: this.bridge?.status ?? null })),
@@ -326,6 +331,7 @@ export class App {
 
   /** Bluetooth EMG sensor (Nordic UART Service): its text lines go through the same parser. */
   async connectBle() {
+    if (this.sensorsPaused()) throw new Error('Сегодня датчики выключены: кожа под ними раздражена. Подключите завтра или измените ответ опроса.');
     if (!bleSupported()) throw new Error('Bluetooth недоступен: нужен Chrome на Android или ПК (в APK — через pushFrame).');
     if (this.settings.source !== 'bridge') this.updateSettings({ source: 'bridge' });
     this.ble?.disconnect();
@@ -574,6 +580,9 @@ export class App {
   }
 
   frame(now) {
+    const today = dayKey();
+    if (this.daySeen && this.daySeen !== today) this.applySource({ force: false });
+    this.daySeen = today;
     const dt = Math.min(0.05, Math.max(0.001, (now - this.lastTime) / 1000));
     this.lastTime = now;
     this.forwardIntent();

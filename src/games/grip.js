@@ -4,7 +4,7 @@
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
-import { SIGNAL } from '../config.js';
+import { SIGNAL, SESSION } from '../config.js';
 import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 
@@ -37,7 +37,7 @@ const LIFT_REST_S = 0.35;   // relax this long with force in the window → the 
 const HEAVY_SLIP = 0.05;    // force lost per second while carrying heavy objects
 export const PEAK_MARK_S = 1.2; // the force of a crush or a slip stays marked on the gauge this long
 /** Time to open after the carry. Opening is its own skill (ACMC: grip and release); without a limit the exercise waited forever. */
-export const RELEASE_S = 4;
+export const RELEASE_S = SESSION.releaseS;
 
 export class GripGame extends Game {
   static id = 'grip';

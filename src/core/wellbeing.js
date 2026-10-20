@@ -61,7 +61,7 @@ export function checkInAdvice({ pain = 0, fatigue = 0, skin = 0 } = {}) {
     return { action: CHECKIN_ACTION.STOP, reason: 'pain', text: 'Сильная боль — сегодня без тренировки. Если боль повторяется или усиливается, обратитесь к врачу или протезисту.' };
   }
   if (skin >= 1) {
-    return { action: CHECKIN_ACTION.STOP, reason: 'skin', text: 'Кожа под датчиками раздражена — сегодня без датчиков, пусть кожа отдохнёт. Если покраснение не проходит через 20–30 минут после снятия датчиков, появились сыпь, пузыри или боль — покажите кожу протезисту или врачу.' };
+    return { action: CHECKIN_ACTION.STOP, reason: 'skin', text: 'Сегодня игра без датчиков — занятия идут на экране. Носить ли сегодня протез, решает ваш протезист. Если покраснение не проходит через 20–30 минут после снятия датчиков, появились сыпь, пузыри или боль — покажите кожу протезисту или врачу.' };
   }
   if (pain >= WELLBEING.painLight || fatigue >= WELLBEING.fatigueLight) {
     return { action: CHECKIN_ACTION.LIGHT, reason: pain >= WELLBEING.painLight ? 'pain' : 'fatigue', text: 'Сегодня план короче: одно упражнение и короткая проверка. Если появится или усилится боль — остановитесь. Если операция или травма были недавно, сначала согласуйте занятия с врачом.' };
@@ -111,7 +111,7 @@ export function adviseStop(runsToday, secondsToday, softCapMin, history = []) {
 export function freePlayCaution({ checkin, secondsToday, softCapMin }) {
   if (checkin?.action === CHECKIN_ACTION.STOP) {
     return checkin.reason === 'skin'
-      ? 'Сегодня вы отметили раздражение кожи под датчиками. Если играете — только с эмулятором на экране, без датчиков.'
+      ? 'Датчики сегодня выключены — игра идёт на эмуляторе.'
       : 'Сегодня вы отметили сильную боль — сегодня без тренировки. Игра открыта, но при сильной боли напрягать мышцы не нужно. Если боль повторяется или усиливается — обратитесь к врачу или протезисту.';
   }
   return overDailyCap(secondsToday, softCapMin) ? capAdvice(softCapMin) : null;

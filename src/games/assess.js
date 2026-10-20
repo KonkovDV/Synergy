@@ -15,8 +15,9 @@ import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GEST
 import { COLORS, text, circle, fillRound, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
 import { createRng } from '../core/rng.js';
 import { reachableBand } from '../core/signal.js';
+import { SESSION } from '../config.js';
 
-export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, restGiveUpS: 8, seed: 2026 };
+export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, restGiveUpS: SESSION.restGiveUpS, seed: 2026 };
 /** Fitts block of the proportional scheme: every distance × width once, in a fixed shuffled order. */
 export const FITTS = { distances: [0.3, 0.55, 0.8], widths: [0.12, 0.24], dwellS: 0.5, minMtS: 0.05 };
 
@@ -203,8 +204,8 @@ export class AssessmentGame extends Game {
     const m = this.metrics();
     const switchTrials = this.trials.filter(t => !t.restMiss && (t.command === COMMAND.SWITCH || t.gesture));
     return {
-      precision: m.accuracy === null ? 0 : pct(m.accuracy),
-      timing: m.selectionS === null ? 0 : pct(1 - (m.selectionS - 0.3) / 3),
+      precision: m.accuracy === null ? null : pct(m.accuracy),
+      timing: m.accuracy === null ? null : (m.selectionS === null ? 0 : pct(1 - (m.selectionS - 0.3) / 3)),
       switching: switchTrials.length ? pct(switchTrials.filter(t => t.state === 'ok').length / switchTrials.length) : null,
     };
   }
@@ -213,7 +214,8 @@ export class AssessmentGame extends Game {
     const m = this.metrics();
     const ms = v => (v === null ? null : Math.round(1000 * v));
     return {
-      assessment: true, trialsTotal: this.trials.length, onThreshold: this.onThreshold,
+      assessment: true, trialsTotal: this.trials.length,
+      trialsStarted: this.trials.filter(t => !t.restMiss && t.state !== 'wait').length, onThreshold: this.onThreshold,
       completionRate: m.completionRate === null ? null : Math.round(100 * m.completionRate), selectionMs: ms(m.selectionS), completionMs: ms(m.completionS),
       accuracy: m.accuracy === null ? null : Math.round(100 * m.accuracy), overshoots: m.overshoots, restMissed: m.restMissed,
       ...(this.trials.some(t => t.fitts) ? {

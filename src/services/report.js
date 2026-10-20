@@ -75,6 +75,8 @@ export function protocolMetrics(state, today = dayKey()) {
     quick: { runs: quick.length, days: new Set(quick.map(r => dayKey(new Date(r.at)))).size },
     check: checks.length >= 2 ? { first: checks[0].completionRate, last: checks.at(-1).completionRate, count: checks.length, change: completionChange(checks[0], checks.at(-1)) } : { count: checks.length },
     restDays: all.rest,
+    painDays: Object.entries(p.days ?? {}).filter(([k, d]) => k <= today && d.checkin?.action === 'stop' && d.checkin?.reason !== 'skin').length,
+    skinDays: Object.entries(p.days ?? {}).filter(([k, d]) => k <= today && d.checkin?.reason === 'skin').length,
   };
 }
 
@@ -89,7 +91,8 @@ export function protocolRows(m) {
     ['H1. Дни с тренировкой: первые 14 дней', win(m.week2, 14)],
     ['H2. Открыто быстрым стартом', `${m.quick.runs} из ${m.runs} упражнений; дней — ${m.quick.days}`],
     [`H3. Проверка навыка (${SCHEME_INFO[m.scheme]?.abbr ?? m.scheme ?? '—'}): первая и последняя`, check],
-    ['H5. Дни отдыха из-за боли или кожи', String(m.restDays)],
+    ['H5. Дни сильной боли', String(m.painDays ?? m.restDays)],
+    ['H5. Дни раздражения кожи', String(m.skinDays ?? 0)],
   ];
 }
 
@@ -142,9 +145,9 @@ const csvCell = v => {
 };
 
 export function reportCsv(state) {
-  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'arm_pose'];
+  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'arm_pose', 'unreleased', 'rest_missed'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
-    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.pose ?? '']);
+    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '']);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
 
@@ -204,8 +207,10 @@ ${conf.top.length ? table(['Нужен жест', 'Распознан как', '
 ${table(['День', 'Боль', 'Усталость', 'Кожа под датчиками', 'Решение', 'Нагрузка', 'Минут'],
   log.map(l => [ruDate(`${l.day}T12:00:00`), label(PAIN_LEVELS, l.pain), label(FATIGUE_LEVELS, l.fatigue), label(SKIN_LEVELS, l.skin), { go: 'обычный план', light: 'короткий план', stop: 'отдых', skipped: 'пропущено' }[l.action] ?? '—', label(EFFORT_LEVELS, l.effort), l.minutes]))}
 <h2>Последние упражнения</h2>
-${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки'],
-  runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '']))}
+${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки', 'Заметка'],
+  runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '',
+    [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : ''].filter(Boolean).join('; ')]))}
+<p class="muted">«Не отпустили» и «покой не получился» — игровая статистика, не оценка тонуса и не диагноз.</p>
 <h2>Чем это проверяют в клинике</h2>
 <p class="muted">Игровые метрики — данные между визитами, а не замена теста: с клиническими тестами игра не сверена. Ближайшие по смыслу тесты, которые проводит специалист: «Мастерская» (взять — перенести — отпустить) — Box and Block Test, SHAP; «Проверка навыка» (выбор и выполнение движения) — Motion Test / TAC (виртуальный тест, по данным Hargrove et al. 2018 связан с SHAP, Box and Block и ACMC у 9 пользователей); управление протезом в повседневных задачах — ACMC, AM-ULA.</p>
 <p class="muted">Файл сформирован на устройстве пользователя и передан им самим. Содержит сведения о самочувствии.</p>

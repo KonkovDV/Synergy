@@ -177,8 +177,10 @@ test('a contraction that never rests does not trap the next «Сейф» digit o
   assert.equal(safe.code[0].rest, true);
   assert.equal(safe.index, 1);
   assert.equal(safe.wrongTime, 0, 'a digit that never started is not a wrong gesture');
+  for (const c of safe.code) c.rest = true;
+  assert.deepEqual(safe.skillScores(), { switching: null, timing: null, precision: null });
   assert.match(safeReplaySummary(safe.replay()), /цифра не началась/);
-  safe.code[1].state = 'ok'; safe.code[1].time = safe.level.hold;
+  safe.code[1].state = 'ok'; safe.code[1].time = safe.level.hold; safe.code[1].rest = false;
   for (const c of safe.code) if (c !== safe.code[1]) c.rest = true;
   assert.equal(Math.round(safe.scoreValue()), 100, 'a digit that never started is not a miss in the score');
   const check = createGame('check', { levelNumber: 1, scheme: 'proportional', seed: 1 });
