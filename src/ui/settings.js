@@ -10,6 +10,7 @@ import { download, reminderIcs } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
 import { bleSupported } from '../input/ble.js';
 import { createTwoChannelPads } from './controls.js';
+import { picture } from './pictures.js';
 import { fmtOffset } from './audiosync.js';
 import { hashPin, validPin, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
@@ -20,6 +21,9 @@ const pct = v => fmtPct(Math.round(v * 100));
 /** Section glyph and its tile tint (5.12): the sections are told apart at a glance, the title stays the name. */
 const SECTION_ICON = { 'Управление': ['hand', 'green'], 'Источник сигнала': ['signal', 'blue'], 'Чувствительность': ['gauge', 'coral'], 'Тренировка': ['dumbbell', 'teal'],
   'Доступность': ['access', 'violet'], 'Звук и вибрация': ['sound', 'coral'], 'Привычка': ['bell', 'yellow'], 'Данные': ['data', 'blue'], 'О приложении': ['info', 'green'] };
+/** 5.16: the illustrated icon of a section (public/art/ico-*); the line glyph stands in for a missing one. */
+const SECTION_PICTURE = { 'Управление': 'hand', 'Источник сигнала': 'sensor', 'Чувствительность': 'calibration', 'Тренировка': 'effort',
+  'Доступность': 'access', 'Звук и вибрация': 'sound', 'Привычка': 'bell', 'Данные': 'data', 'О приложении': 'info' };
 
 /** Reads a user-picked file as text (backup restore). */
 function pickTextFile(accept, onText) {
@@ -64,7 +68,7 @@ export function settingsScreen(app, { back = null } = {}) {
   const section = (title, ...children) => {
     const [glyph, tint] = SECTION_ICON[title] ?? ['info', 'violet'];
     return h('details', { class: 'card fold', open: OPEN.includes(title) },
-      h('summary', {}, h('span', { class: 'sec-head' }, h('span', { class: `sec-ico t-${tint}`, 'aria-hidden': 'true' }, icon(glyph)), h('h2', {}, title))), ...children);
+      h('summary', {}, h('span', { class: 'sec-head' }, h('span', { class: `sec-ico t-${tint}`, 'aria-hidden': 'true' }, picture(`ico-${SECTION_PICTURE[title]}`, 34, 'sec-pic', () => icon(glyph))), h('h2', {}, title))), ...children);
   };
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); };
@@ -144,7 +148,7 @@ export function settingsScreen(app, { back = null } = {}) {
       section('Звук и вибрация',
         toggleRow('Звук', s.sound, v => app.updateSettings({ sound: v })),
         toggleRow('Музыка в «Ритме»', s.music, v => app.updateSettings({ music: v }), 'барабаны, бас и аккорды в темпе уровня: такт слышен, когда нота доходит до линии'),
-        h('button', { class: 'btn ghost', 'data-return': 'audiosync', onclick: () => app.go('audiosync') }, `Синхронизация звука: ${fmtOffset(s.audioOffsetMs ?? 0)}`),
+        h('button', { class: 'btn ghost', 'data-return': 'audiosync', onclick: () => app.go('audiosync') }, picture('ico-audiosync', 24), `Синхронизация звука: ${fmtOffset(s.audioOffsetMs ?? 0)}`),
         toggleRow('Вибрация', s.haptics, v => app.updateSettings({ haptics: v })),
         toggleRow('Полоски сигнала в игре', s.showMeters, v => app.updateSettings({ showMeters: v }), 'мышечная обратная связь рядом с игровой')),
       section('Данные',
@@ -158,7 +162,7 @@ export function settingsScreen(app, { back = null } = {}) {
         h('div', { class: 'row-actions' },
           app.showcase
             ? h('button', { class: 'btn ghost', onclick: () => { app.exitShowcase(); app.go('settings'); } }, 'Выйти из демо-профиля')
-            : h('button', { class: 'btn ghost', onclick: () => { app.enterShowcase(); app.go('progress'); } }, 'Демо-профиль для презентации')),
+            : h('button', { class: 'btn ghost', onclick: () => { app.enterShowcase(); app.go('progress'); } }, picture('ico-demo', 24), 'Демо-профиль для презентации')),
         !app.showcase && app.store.canUndoReset()
           ? h('button', { class: 'btn ghost', onclick: () => { if (confirm('Вернуть данные, которые были до последнего сброса? Текущие данные заменятся.')) { try { app.undoReset(); toast('Данные до сброса возвращены', 'good'); app.go('home'); } catch (e) { toast(e.message, 'bad'); } } } }, 'Вернуть данные до сброса') : null,
         h('button', { class: 'btn danger', disabled: !!app.showcase, onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве? Копия останется до следующего сброса: вернуть — здесь же, в «Данных»; сбросить ещё раз — удалить без следа.')) { app.resetProgress(); toast('Прогресс удалён. Вернуть: Настройки → Данные'); app.go('onboarding'); } } }, 'Сбросить прогресс')),

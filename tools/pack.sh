@@ -4,7 +4,7 @@
 # Usage: sh tools/pack.sh [archive-name-without-.zip] [output-dir]
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; BASE="$(basename "$ROOT")"; PARENT="$(dirname "$ROOT")"
-VERSION="$(node -p "require('$ROOT/package.json').version")"
+VERSION="$(cd "$ROOT" && node -p "require('./package.json').version")" # a relative path: Node on Windows does not read /c/… of Git Bash
 NAME="${1:-SYNERGY_v$VERSION}"; OUTDIR="$(cd "${2:-$PARENT}" && pwd)"
 [ -f "$ROOT/release/Synergy-$VERSION.apk" ] || { echo "Нет release/Synergy-$VERSION.apk — сначала sh tools/build-apk.sh"; exit 1; }
 rm -f "$OUTDIR/$NAME.zip"
@@ -17,7 +17,8 @@ git -C "$STAGE/$BASE" remote remove origin
 git -C "$STAGE/$BASE" reflog expire --expire=now --all
 git -C "$STAGE/$BASE" gc -q --prune=now
 git -C "$STAGE/$BASE" repack -a -d -f -q --window=250 --depth=250 # tighter deltas
-(cd "$STAGE" && zip -9 -qr "$OUTDIR/$NAME.zip" "$BASE")
+if command -v zip >/dev/null; then (cd "$STAGE" && zip -9 -qr "$OUTDIR/$NAME.zip" "$BASE")
+else "$(command -v python || command -v python3)" "$ROOT/tools/zipdir.py" "$OUTDIR/$NAME.zip" "$STAGE" "$BASE"; fi # Git Bash on Windows (5.16)
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
 KEYS="$(find "$TMP" \( -name '*.keystore' -o -name '*.jks' -o -name '*.p12' -o -name '*.pem' -o -name '*.key' \) | head -5)"
 [ -z "$(git -C "$TMP/$BASE" fsck --unreachable --no-reflogs 2>/dev/null | head -1)" ] || { echo "✗ в архиве недостижимые объекты git"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }

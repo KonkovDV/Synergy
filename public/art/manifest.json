@@ -1,0 +1,2201 @@
+{
+ "items": {
+  "ach-all_games": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7298,
+   "alpha": true,
+   "sha256": "7d7195128670da12a602beeb83708778ae3becdaeb9200e94d19537c8362a5ce",
+   "source": "a8685b1d3d94df3f35c50534ffc4efbfe2a51ab4dc73bfe66acc105621c5b10d"
+  },
+  "ach-check": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8026,
+   "alpha": true,
+   "sha256": "195850c753f20f6ebcce8e7da9158d154e1fa387d2d518b543e8a88e4acb830e",
+   "source": "a33a10579166912330b8a59dad676688c4658c01edd236ccb988d7410f4357c5"
+  },
+  "ach-first_run": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7786,
+   "alpha": true,
+   "sha256": "acdb19c65b5e5e6237f3d0dd2551586c20ca2a214a238eecf496128ee94b4509",
+   "source": "458fd50917c7f9d9a409099bc4d6931228a207bc6eb7091abac8782cf5b3de73"
+  },
+  "ach-jeweler": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7972,
+   "alpha": true,
+   "sha256": "ca5adab08c6d2e415370760380c5902f16a538fdd5c27b52bfcb18072565848f",
+   "source": "a944376cf9db5e958909ab117e3f607c95c147c84f5b812dc630356b332c33ab"
+  },
+  "ach-locked": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6106,
+   "alpha": true,
+   "sha256": "a61fd41738a707c42f1e43f7be9f14d26e13cff0d8fea94a0d962f4dbf9d1a7b",
+   "source": "4fd28ea40ae36502f0b757ae749fe8b0622be5f80a43846f627b5896baf50fff"
+  },
+  "ach-perfect": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7876,
+   "alpha": true,
+   "sha256": "23babfc6ea08d70f4dcf736fa896eaad43c2c40ed79f81b3a5e0eab89c60b14b",
+   "source": "06946f64a28e7f42f999d06cee7aa4863e8869ca06d5576fda6bb075c6383744"
+  },
+  "ach-plan": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7876,
+   "alpha": true,
+   "sha256": "4d449e8d2951e82c2dadfbdd9274c6872e6c5a81a0bedfe16e19105f92d9d8ca",
+   "source": "3b63bfee48102e464d664bb09ca65768e97505408a6c9c291a3e41edcf02cb3e"
+  },
+  "ach-primer": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7934,
+   "alpha": true,
+   "sha256": "768105a2c719f8fc3094c7ccae6962e8faad2d7da24e6b5c18f73cd49a787e99",
+   "source": "ee4ffab321d86c62455fe45884f4e12a79d1468a4b25cd6eeb9350f3bffc1379"
+  },
+  "ach-retention": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8620,
+   "alpha": true,
+   "sha256": "5453e12b35f1da1745a74dac7b1b8c186e2e3bcfbc434ab57e1bd7c6a678a2b6",
+   "source": "04083544756ba947382c0f976e12c2cc47b4459636d6709c46f507525f9ddd14"
+  },
+  "ach-rhythm": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8036,
+   "alpha": true,
+   "sha256": "40f8821fc34fbc6e1d1abb027b0036501fac2cf4c85bda9765c81ad0bed2b09e",
+   "source": "5158f0fae71393686454478c89d8569111e3ee44b2ffdc31accbcec7befe31af"
+  },
+  "ach-seven": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8242,
+   "alpha": true,
+   "sha256": "11ea1e32bb0504de4b1019c9da4877bbf0d9482231856165608369613bbb7654",
+   "source": "71c2c11887527f99c2f256cafe8e0ece7e3cef499b28fce0f38e620a857bf36c"
+  },
+  "ach-streak3": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7972,
+   "alpha": true,
+   "sha256": "2e98559c17359c5af69348dab0408c0c758c5d2ee0b5f11c16a6fe168bf63408",
+   "source": "7efa3565ee05a8ede6a2adfc99fb419a246e8ce64ef451484e9a067b3b009506"
+  },
+  "ach-streak7": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7612,
+   "alpha": true,
+   "sha256": "135329889eee075e5a106235399ca2a48aac28698a8d2dd68da6997bdd0bd269",
+   "source": "d2c11c086874cb6427cf26f4b34984489818a6a81a6ca0e9f5aa3b606f12307b"
+  },
+  "ach-switcher": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8264,
+   "alpha": true,
+   "sha256": "5ab2a9c11c1d4dab03beaffb6cb5106ab27dd8105f40e98fca56f9607bae3ca6",
+   "source": "3e32ad27d2f1fd827e91351e581522a249d0a4f68f54b0f84679355bc9e3ca38"
+  },
+  "ach-tutorial": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8400,
+   "alpha": true,
+   "sha256": "349f84a102794345e978d1fb4a8ac30ffae7ac8da86b264b4a1a36dd0ec6c2c7",
+   "source": "d3524b5e0f004cfc13258a4f9b68ccf565c3290cee866fd9b9b1a64b858068da"
+  },
+  "ach-week_goal": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8334,
+   "alpha": true,
+   "sha256": "6c4fe1f591f52fddb5398c44716d4bc479c87c1c5016c29fb3dac91e9600fa2b",
+   "source": "d4de6339c2f999fdc07ccee42f78b1dcbb7fe77b9e0916d8a2990dc579be9944"
+  },
+  "bg-hero": {
+   "w": 1200,
+   "h": 450,
+   "bytes": 7256,
+   "alpha": false,
+   "sha256": "75d2848ab1ea26bf587d612caeadd9e561fd86ac8a3308fa5be28d1e75bc5533",
+   "source": "c76ddc6853d8cb1c4b2a116e912e73a7ce24e79099f7b3056ae0eed7ba53ef04"
+  },
+  "bg-nest-room": {
+   "w": 720,
+   "h": 1080,
+   "bytes": 28042,
+   "alpha": false,
+   "sha256": "0869a0ccdb3021e4c56af75c23c0130371b4399a09b0887e4e6447ec04c70606",
+   "source": "ad652ae870c10d3a3788004a22fac4a9c0063ab67f9f16432d69e4913e5cf43b"
+  },
+  "cover-prosthesis": {
+   "w": 900,
+   "h": 675,
+   "bytes": 18204,
+   "alpha": false,
+   "sha256": "071182c8d502708a576c3fa2334005c1d2d331e80abe22d538a802ce02a86b17",
+   "source": "731c8cedbc85b18ba3bd2fe4bec3a023e1aa709e995ca143ff92e38353dad97b"
+  },
+  "cover-safety": {
+   "w": 900,
+   "h": 675,
+   "bytes": 25252,
+   "alpha": false,
+   "sha256": "02c7059f696c790a6b56c112406ce1853c2c4e0bbc46f02f39cc6d732d7e9831",
+   "source": "5f23a174bb1272acb470220e6613837cbf288ae8278f8566f696ecdbd278a73a"
+  },
+  "cover-welcome": {
+   "w": 900,
+   "h": 675,
+   "bytes": 13858,
+   "alpha": false,
+   "sha256": "5837ffef2da6300873b812ffe0264257b8821e668a17ed96089e0c18d0a0e176",
+   "source": "86e40a80a023e22eeb2d034000b2e5daa63a47b61996c9ad86571e8b4f314e74"
+  },
+  "day-apple": {
+   "w": 256,
+   "h": 256,
+   "bytes": 3408,
+   "alpha": false,
+   "sha256": "e8213ae48f2efb283330d98bf516fcee1cc54493d37541a4c088e04b582a6a22",
+   "source": "999a264b4a80dcc065026d26e09ec3654878f9014457e44bf15a1d76353e81ab"
+  },
+  "day-bag": {
+   "w": 256,
+   "h": 256,
+   "bytes": 2402,
+   "alpha": false,
+   "sha256": "0a2028ca39ee2519cd849ca36efb6c345445ac639cc45e1a1c6812233ae050ce",
+   "source": "68f4abae52001d9d7f4737f5ff26f694b74b1f81610b5aff62b3e54fda2975a9"
+  },
+  "day-bottle": {
+   "w": 256,
+   "h": 256,
+   "bytes": 2172,
+   "alpha": false,
+   "sha256": "2271a138bdf6681f6c3c076ae450c3ac141ae6595a0572429b00016a89f2094a",
+   "source": "fad932c501e72184e7922e6d550015181880c4aa11578eeb0adc35cb0b72745e"
+  },
+  "day-box": {
+   "w": 256,
+   "h": 256,
+   "bytes": 3234,
+   "alpha": false,
+   "sha256": "942d306ba303d64f7e6129a23784efa00736bbef56f2dbfa05c2ca8a5bd0c462",
+   "source": "187e15e7af0320879f5d153c8c47071b90603cf39501da96524105ca04d7eece"
+  },
+  "day-cup": {
+   "w": 256,
+   "h": 256,
+   "bytes": 2378,
+   "alpha": false,
+   "sha256": "7beabaf029ea654f9532858c91227d5c4e8187b024d31c59065646ca4fb99d26",
+   "source": "41d284c76979b54d16fbd31addd1d1722d251ff633456deedfb84da1f8f66c85"
+  },
+  "day-paper": {
+   "w": 256,
+   "h": 256,
+   "bytes": 3558,
+   "alpha": false,
+   "sha256": "09b49497f0ed311b40ac041b0bed202801483c8dda257d123b44808ecbcbe3d8",
+   "source": "cfae079e622e05ab31dac1903ef42fae0e1717048c00c6517d4e4c2acc67f9f0"
+  },
+  "day-pegs": {
+   "w": 256,
+   "h": 256,
+   "bytes": 2304,
+   "alpha": false,
+   "sha256": "95d4546e6a17dc789c865448c158e2dca3d01edd7c23dd6b1dd0ecfd72d90c34",
+   "source": "715112276663623af905329e0a7c73ddb6e9df51d9ea40be634b36f9d6f270c4"
+  },
+  "day-tooth": {
+   "w": 256,
+   "h": 256,
+   "bytes": 1994,
+   "alpha": false,
+   "sha256": "0119c23c8aeeede265126b0893a3f65aa3cea9942c08979df674b2c761914257",
+   "source": "b7b7f53a676f758fc23bda6cfc50f1b125abdef3036c4dd460572bff95d29c3e"
+  },
+  "day-towel": {
+   "w": 256,
+   "h": 256,
+   "bytes": 2580,
+   "alpha": false,
+   "sha256": "3fc1d6a1afc5d85b1fdb2ccf2a9c30c18bfe01fba5ce4e8e3ecb0b70e7337ee7",
+   "source": "f46884fd181f5aaab5ee386434933901cf0aa65a4b04da0fc8254e8608dd0bf4"
+  },
+  "day-zip": {
+   "w": 256,
+   "h": 256,
+   "bytes": 3742,
+   "alpha": false,
+   "sha256": "ba13cf8f25d84b291dff73d4e3bf45e85b87bb06d3a40c8630df257441f8f0ab",
+   "source": "184f93904a11b531d68f6055341065064cfb6a198b70c024f481552920f62f8a"
+  },
+  "empty-progress": {
+   "w": 384,
+   "h": 384,
+   "bytes": 31262,
+   "alpha": true,
+   "sha256": "040b9c98326f3ceb583ebc7948567280f0741a80c2631bf26833581c180c75b9",
+   "source": "e7ba950ea84a5c9a76f62f28115d87f4ed134f29648c3144c895c10f75404e25"
+  },
+  "game-check": {
+   "w": 256,
+   "h": 256,
+   "bytes": 7526,
+   "alpha": true,
+   "sha256": "eab2ec8c9d5909f7193ecbfb79cdb1e45ca4e4494e522d016c732873cff40b54",
+   "source": "7c64f610465270482a6a739061ae5de0bf072be79b6e631622d1e6641abc84ab"
+  },
+  "game-flight": {
+   "w": 256,
+   "h": 256,
+   "bytes": 12712,
+   "alpha": true,
+   "sha256": "e3acad38b68b1cca631e092c1cc442ed6ba80062399338c8e041f47d5174dc32",
+   "source": "e86de2152b986772bbf19d310fc4a9b0117d49f1431b1b134f9ff9105f78b2c7"
+  },
+  "game-grip": {
+   "w": 256,
+   "h": 256,
+   "bytes": 11878,
+   "alpha": true,
+   "sha256": "ae49dfc3f8f3253d9e082721e5637d78bee866b3953e0260945d52fa88598e34",
+   "source": "3fbc29b389ac83fb26d8f96aaee480da1ca85034e6e8586529592910f30c30ba"
+  },
+  "game-rhythm": {
+   "w": 256,
+   "h": 256,
+   "bytes": 11764,
+   "alpha": true,
+   "sha256": "6a49be05440445b93ec52d404dda23203d64f5b3137434aa9b0eedb8bb8e23c9",
+   "source": "7343872d4e7cce4a83881995d06ae4c5fe8a7bd20f88b20d11731f607f4793d8"
+  },
+  "game-safe": {
+   "w": 256,
+   "h": 256,
+   "bytes": 9062,
+   "alpha": true,
+   "sha256": "562c7c7dc915419aae89c078562ca8e344733431377146f94a74b3a1d1e42b04",
+   "source": "bb9ffea5c141c6f7ff809e0f73299542980b36e9720e86c8f4aa3e2bfba18332"
+  },
+  "game-tutorial": {
+   "w": 256,
+   "h": 256,
+   "bytes": 8696,
+   "alpha": true,
+   "sha256": "47e0002273c72c258e8fe4c2c32168eefc13db42939e9bd7ceb9a08aef12343b",
+   "source": "ab82d252771733973c841496b70fe2f1f9ab36dc4e40ad700c707928a9a2f9a8"
+  },
+  "gesture-fist": {
+   "w": 192,
+   "h": 192,
+   "bytes": 5480,
+   "alpha": true,
+   "sha256": "31a8c692eb6e743f4aa9cc5f8a813649c930854047b59068ed7f4521fdcbf05c",
+   "source": "a37711166a257445616e9f3a8aaacc5499673364e05c6f75cea49a05f0217e9a"
+  },
+  "gesture-key": {
+   "w": 192,
+   "h": 192,
+   "bytes": 4912,
+   "alpha": true,
+   "sha256": "236dcdbc9918ba099c36900025e7b387cef3ed23db41584a7089ed03ced80ae1",
+   "source": "20ddc90fa2c00b437aa459f85b646a7a93cf4d3b12c6e52eb049046234edaf8c"
+  },
+  "gesture-open": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6922,
+   "alpha": true,
+   "sha256": "e2b635e92e8ebfe3eef894b2645ef19d86d0ed772688cbd70aa5172cc86441ed",
+   "source": "d2f3cb1166503280d3d8cacaf14117d9fc1a7b3f3611e7fe49adac19d022dc62"
+  },
+  "gesture-pinch": {
+   "w": 192,
+   "h": 192,
+   "bytes": 5390,
+   "alpha": true,
+   "sha256": "bbef7cfa882b65cb1bb2a053f75ab99a992b561c3f5e72a82d4d5e32aab419e6",
+   "source": "542b7bc00454cf24874b381547cabece326db17089af25933e0dfa6f4f9a517f"
+  },
+  "gesture-point": {
+   "w": 192,
+   "h": 192,
+   "bytes": 5266,
+   "alpha": true,
+   "sha256": "2b134faf93f74250fb69c7b51dff80983c29b87d2f5c418f4e146bc7b9a42f91",
+   "source": "a3b548160a8538dbb0ae49238d4d3486f1dbf12982c8642abe371315dfe301ff"
+  },
+  "gesture-rest": {
+   "w": 192,
+   "h": 192,
+   "bytes": 5824,
+   "alpha": true,
+   "sha256": "e75a630eb7d919a61078178d1b889cdc71bc36e729da5e208d6992d5d7885ff3",
+   "source": "ff451a2d446e44ed48593c2df71f0d4f771ebdbae5484ce8ae996533febc927d"
+  },
+  "gesture-thumb": {
+   "w": 192,
+   "h": 192,
+   "bytes": 4342,
+   "alpha": true,
+   "sha256": "30ac6fb4a2ceae18af669065d3ea51a72e3259b659278a258fa49aada7de325f",
+   "source": "6e398f8e456c879e36a4bdb5cacba86ce49ee98b0773202603c26eaeec8d30a0"
+  },
+  "gift-amulet": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7662,
+   "alpha": true,
+   "sha256": "b0d45365bb393c5f94c5ff11cccd202f3707ec6124525b9defd26f20f9908ea3",
+   "source": "37740fd21e44b91cb472ba15e5985ec086effe09903f4416ecd1dea697cd43f0"
+  },
+  "gift-apples": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8356,
+   "alpha": true,
+   "sha256": "85f984c26d31e9c0045d21fc2638156b024ac47dc52d1192e9f5aa07b45d1367",
+   "source": "4bd64f5aaed06ffa97a554f0c3e11144f47758cce387185507ebf5481ec9db39"
+  },
+  "gift-beads": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6624,
+   "alpha": true,
+   "sha256": "037f8622e32200d61492f579bfdb39348f1390124933d3e3f573f63be32edb49",
+   "source": "e79b2522a6174779b7ea8adc674c89739a0415ad696330a9d6c4abbba7c8d6ff"
+  },
+  "gift-book": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7434,
+   "alpha": true,
+   "sha256": "68d62b924812158a4b18edbc62827a9ef6b1b269f54787185274ac4cbd3e36c3",
+   "source": "53d76ae2cc4eda431b9df8bea8b3e2dd2c6b7749477201f3b5d9a4b006a50801"
+  },
+  "gift-bow": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6760,
+   "alpha": true,
+   "sha256": "d668b32bf8a5c8f519ad2885e662acec58744fd8fd19fa2436300b822d43071a",
+   "source": "bab7d8356a2f322f7206d19ea38e31fe99b2543dbc45adf7c9380fb5838c5e48"
+  },
+  "gift-kokoshnik": {
+   "w": 192,
+   "h": 192,
+   "bytes": 10148,
+   "alpha": true,
+   "sha256": "1209f1e916af84259a15a35f903a8987739493076692d9b2fbb19296adf518eb",
+   "source": "b93162086df6ced9f1628ab576503ee2f9a737c7c07fb79e11f614c5966324f2"
+  },
+  "gift-lantern": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7628,
+   "alpha": true,
+   "sha256": "baf90be826e59f5f815f5ada045daf0da4b8f83e3fa580e9635208922be76dba",
+   "source": "666641e7ace0486bae4c467c6e73af5e482855705c35e0f2083ab1a4d9054e02"
+  },
+  "gift-star": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8572,
+   "alpha": true,
+   "sha256": "809e9a741703f7c8fe62ffb99131473898ef1381c1c210e13c030371940aea55",
+   "source": "10d8fab9ea107150cb0bee489b1e4884d1515ed9a189b1d6d9dea7dd2d6692e9"
+  },
+  "gift-twigs": {
+   "w": 192,
+   "h": 192,
+   "bytes": 10098,
+   "alpha": true,
+   "sha256": "3101f57f39ad7a4ff28c09374956f9fc265d24fd19fd1d43408003c2cd163f2f",
+   "source": "fc18caf05c88f33191f69a1e223f2591627a41c48016ce595f006fdc9545e9c6"
+  },
+  "gift-wreath": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8918,
+   "alpha": true,
+   "sha256": "dbd442131fd2c40778004ea2ca48f1fdd486eed0886adafb0a739289d169b931",
+   "source": "589c7e63b8e9e30f6927c07395162f6e092f19d48d30e25fab9f354aad0b2f50"
+  },
+  "ico-access": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5302,
+   "alpha": true,
+   "sha256": "55cee7aed409cb2976284dd93d80fe03ed1fbbe2020e4d09fea06246985538cc",
+   "source": "366e541761fba6ab7abf69dc545d131630494dcdd013b144551f6e35a85977e5"
+  },
+  "ico-ask": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5348,
+   "alpha": true,
+   "sha256": "a1c2669b6b07726d9391a6692bf796abbeebfb84d1f67205bcf2fe7163856e8d",
+   "source": "7df4989af261dd57cc66ce3b2a1734ec081806cfaa08651d4751fe5c399f83bf"
+  },
+  "ico-audiosync": {
+   "w": 160,
+   "h": 160,
+   "bytes": 9378,
+   "alpha": true,
+   "sha256": "2ea684baf5254d4111874e89bbf1e502ef90bc8be84e8803899222b2d41e5ee6",
+   "source": "c2549e3708a0151573c69b5895312bde2aab07e3177a43d1da0bcbbcf1f61617"
+  },
+  "ico-bell": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6082,
+   "alpha": true,
+   "sha256": "860b2ae52f5b465230c4dc620033c8daf907dba048a2917374fa15a997a097a7",
+   "source": "fb76abb7e65edbca27bcb83991c1bb3c0480470a82b863a80cb890cbb932ff31"
+  },
+  "ico-calibration": {
+   "w": 160,
+   "h": 160,
+   "bytes": 4900,
+   "alpha": true,
+   "sha256": "9107439c13c4ebfbbc71d315e770579bc9a41f5884716bffb0e55fa23c4ffe5c",
+   "source": "3d911efe9419da5f4e5e4a088c19d361bcdb97c43ab4c72528073bfae0082bb9"
+  },
+  "ico-checkin": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6660,
+   "alpha": true,
+   "sha256": "104126f4c7af4ba1b8d8fb4f55d2d5e1c63f47ac3e8b3570c73757ab5f9c9fa6",
+   "source": "34d1f542d940388318c4bc9a8981d4a2282fb05e72e059c80c928140b3bf4588"
+  },
+  "ico-data": {
+   "w": 160,
+   "h": 160,
+   "bytes": 4678,
+   "alpha": true,
+   "sha256": "40fba8c321bfea6e77957e2c99f3e013f2977d945b451cf52621970e0067b0bf",
+   "source": "5382380f30d85e7f19870f272eee31a8220798c55d301673b58a4c2532046289"
+  },
+  "ico-demo": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6174,
+   "alpha": true,
+   "sha256": "cc85049a99c8111ffcacb14ce07f6a1a12c5113e9d518da7f7519d6bd56df49e",
+   "source": "3693953e4f6738b6f1e1efd3376152899d196fe7afc32dfa27c75b2bf531ca0c"
+  },
+  "ico-done": {
+   "w": 160,
+   "h": 160,
+   "bytes": 4750,
+   "alpha": true,
+   "sha256": "6b31c836b413378df0a3858a713d8c0de7ae519e05b71137933d3d1c62c4439c",
+   "source": "2c29df460e6c8cc0eb122397c5bb15c39f4ef64a6e333845124f152578dd404c"
+  },
+  "ico-effort": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5638,
+   "alpha": true,
+   "sha256": "82af22c60b48d31cb627f817d355631b745f1ff2b083d3d42c6eed34e5f7e589",
+   "source": "7b0aeb824095c62e7a10f7334d169b0fa51793b96327de3ce0c5996d308492f4"
+  },
+  "ico-everyday": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5458,
+   "alpha": true,
+   "sha256": "47f3853974b869fac6a6b4d2caf8cdd867e830e2183dc50274ebb45b98bf001a",
+   "source": "3464dc6e25571f298ea4123f7b3b20d6b579e29a1176936806d2ca85eab9d502"
+  },
+  "ico-gift": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5922,
+   "alpha": true,
+   "sha256": "e3284678873bd8818186bd32a1818c210b47e8f4f0e3a28dd0d426beb87577e4",
+   "source": "1647ee6ca916628c717a1a087ac8f1cb18b1d0f8c34049e8d1a587c70b37ea03"
+  },
+  "ico-gifts": {
+   "w": 160,
+   "h": 160,
+   "bytes": 7976,
+   "alpha": true,
+   "sha256": "2b4c29b66695e254ccbbd347d33a224b206209d0eef78759384e94753ad21bbb",
+   "source": "e2cd06241520e7d575ecd55619433fe430d084550f791736dc9ce6ea0a194f79"
+  },
+  "ico-goal": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6278,
+   "alpha": true,
+   "sha256": "64d0cf1f63f9c1ab17b29d8cfae9a1356921b7aafe341fc7e2da602ef284d0d7",
+   "source": "ac391b33f96d13a29f68a3e4076b27e376b1b3a9526c043d5b58f2e6336041e0"
+  },
+  "ico-hand": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5512,
+   "alpha": true,
+   "sha256": "59e37433fcd8e820c0e4d7c87246b73dbb4d8ab950a876f95f5e3238d9f2a4f5",
+   "source": "86ca2e06755ef4238833ea8d91c74e37d2dd646b4113e17169e62254f721c494"
+  },
+  "ico-info": {
+   "w": 160,
+   "h": 160,
+   "bytes": 4592,
+   "alpha": true,
+   "sha256": "c95208b1fbb17f669ee205067a36fa5f2feb53f2d0b2bfd9e20f0b971e85d4e1",
+   "source": "3be6e2504c2b32304495d3cc8cb7337eef3d7fc75db0d361bc997466dd64c147"
+  },
+  "ico-levelup": {
+   "w": 160,
+   "h": 160,
+   "bytes": 4864,
+   "alpha": true,
+   "sha256": "2714df18f6af4ba2490f7720bb24ce2a71c8b82eb774ee1f34e206eda91ea35d",
+   "source": "09017f22cd93f1d72da68071f1b220b8fa33628ef216711e89da495b7459bbe7"
+  },
+  "ico-lock": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5344,
+   "alpha": true,
+   "sha256": "37bea93f9ab9ee1e8eabe98f6b5462600daf6ad43b29a0d246c4107a15d260ea",
+   "source": "1dbd3a1e89ef9afb966500ebb2f098fd73762b18b66f244ec8c7d73dac2f84e3"
+  },
+  "ico-medal": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5598,
+   "alpha": true,
+   "sha256": "c8784a3cecd468656288a1ccb9c6023798ce8d8d91be4f75e81b5e740dbdf6b4",
+   "source": "277ad2b442f9a6d4747a962d2896b9b01cd886c8a0e4ccc47301e5dfa016e297"
+  },
+  "ico-palette": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6180,
+   "alpha": true,
+   "sha256": "e148e7f605a06e331e2c5806a9e8512bbc753ae7018a8a451f7140cd4bd3d8ac",
+   "source": "b11822d75e2bf27fe6f229287f7919c532ae5e0e3c38d3624dd02d1b6aef9619"
+  },
+  "ico-path": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5462,
+   "alpha": true,
+   "sha256": "0eeba762a04d9a880efad89bae46995d9d9c3823814969c29caf7f6c90698cdd",
+   "source": "2239c90793ed68b645d98046d4333d5705d6c0591fb7f1352944c7290bd590e1"
+  },
+  "ico-plan": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5334,
+   "alpha": true,
+   "sha256": "b151fb5fd3f900024286a6886ea4716687a42c4246e6b999f571dcc27509cf3a",
+   "source": "0dc064b17ce42d7f98dd517cc6660436ab9121ed9e4f037ab64405ab57b803fe"
+  },
+  "ico-primer": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5458,
+   "alpha": true,
+   "sha256": "f729ff3ed2e433fddef88a179056491ca89277127f855b35034399e3e7d8ba21",
+   "source": "880acd84543c01d818ff89296bf29ca4630578229c23c11788d340c9906849f7"
+  },
+  "ico-report": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5274,
+   "alpha": true,
+   "sha256": "a65368d3876ed2192dd7442d4e98005e1a027022d6f52de4aef0c4aa4d9010ca",
+   "source": "095be90a067ba1db49129aa7ec719b23fdd42da9083840d5fd9f491d76fd6835"
+  },
+  "ico-rest": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6694,
+   "alpha": true,
+   "sha256": "26c67d2852535fe9c1b1dc9a484ef9b0ad816d18d412393c47f60b728af874d6",
+   "source": "62d1de5126b6c81ebd5b7f71a1610f5a16dcd6ae42f9687b7276e938d6f74805"
+  },
+  "ico-safety": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5224,
+   "alpha": true,
+   "sha256": "e532e593c2b918888ebc52ee746b9e3671b53d735ccb279ffd380ab3e4374c16",
+   "source": "298d80cee2ef050b261a420086f4ae5ac0d9c80b2dc530f9ec95fdec7133a8d3"
+  },
+  "ico-sensor": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6174,
+   "alpha": true,
+   "sha256": "380d933942e09ee6203d96f7d3414ff3d49083ca1aa53ed8c85eea2c6f277622",
+   "source": "9f094c3689bf0cf4b13371e652912419e020281e55dfd8dd3311345e26741106"
+  },
+  "ico-sound": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6874,
+   "alpha": true,
+   "sha256": "bf75c3d19d66208b8e700bd29c5d63343b605e888ed5e575a4be575d09f6bc7c",
+   "source": "11b925c667f78b9b52f08d76a89334afd73d7822c162049531b4b5a2badf5f42"
+  },
+  "ico-star": {
+   "w": 160,
+   "h": 160,
+   "bytes": 4708,
+   "alpha": true,
+   "sha256": "87fce810d2e695e70f0ee163416b216945f3a4c586a6d29061522b3e90761d4c",
+   "source": "856c576907f19f42f29d2c8e2aa4176d2964d4063c7354eb18da1670e2a71ba9"
+  },
+  "ico-star-empty": {
+   "w": 160,
+   "h": 160,
+   "bytes": 6874,
+   "alpha": true,
+   "sha256": "6536456f07374e24d24a04421ec5ad7fc5f2f47162127203a9f989fe8a00a71a",
+   "source": "de0a1267e1d4dd28e60999c0daac90f60ca92022dff476f3d30586983a40e43d"
+  },
+  "ico-streak": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5528,
+   "alpha": true,
+   "sha256": "11e1508a832084933c53a246de2332ad2d6be2fad5d804b0fe9569ae61307afa",
+   "source": "6c9f4d407bbc5292c038f1acbf6a40e9b5f802b0c8cc6e7335366300242c746e"
+  },
+  "ico-trophy": {
+   "w": 160,
+   "h": 160,
+   "bytes": 7514,
+   "alpha": true,
+   "sha256": "78a465c4b0c79a16a116086515315c4a9dc0633bed2da13fb44fbf777c5dfd72",
+   "source": "bec266a0a882cc18c162207782f7520dd0283772f615d031243c16f5e9862ef6"
+  },
+  "ico-waiting": {
+   "w": 160,
+   "h": 160,
+   "bytes": 5702,
+   "alpha": true,
+   "sha256": "42b4e36ecc2d8039176e1a8f5714d0f309f24a1880ff60c2d7cd965e1d066dea",
+   "source": "ec4d6e20aa0cd7e130fd34136ed4afc31672b2747e00d45ea33bbdcc1b7399fc"
+  },
+  "ico-warning": {
+   "w": 160,
+   "h": 160,
+   "bytes": 4642,
+   "alpha": true,
+   "sha256": "895cd343ca8e2a425b319b19d0950061cc4d7a5ae9dfe1c6f897c38f5ceefc54",
+   "source": "f841251c4661de0376df0f481a66af601fa87f746b915a3a7095d93cd4e42cc6"
+  },
+  "ico-xp": {
+   "w": 160,
+   "h": 160,
+   "bytes": 4408,
+   "alpha": true,
+   "sha256": "969e81251195f589bf4661d81bc573851162eb13ce9b2809d7b1faa3f2d001ef",
+   "source": "162274932500c3914313e33d1542aefe079cbb861c9187526e556852257e32fc"
+  },
+  "mio-focus": {
+   "w": 320,
+   "h": 320,
+   "bytes": 12618,
+   "alpha": true,
+   "sha256": "224b3374e989dbcb79191181cdcb458f648f70fa40d8986d4ee7b483a24c4cd9",
+   "source": "af74324c35f50f0e560ac9240d05fbcd0aefefbb9f90943ded0bcda2e5594561"
+  },
+  "mio-hello": {
+   "w": 320,
+   "h": 320,
+   "bytes": 12824,
+   "alpha": true,
+   "sha256": "73d0d142187f5178e1159fb0e0ef73c3d441eea882a7216be93171ab1d4a6e16",
+   "source": "d6100c266dea1e0914270a9632ee24d7d44d63135935374d9688a23a46ac09f7"
+  },
+  "mio-joy": {
+   "w": 320,
+   "h": 320,
+   "bytes": 15752,
+   "alpha": true,
+   "sha256": "c7819afcfa6308e1b236d78f6fd9c5e901b207215f2fbb6cc4e07bd76a896cd6",
+   "source": "802a8c2bd5d1815a03c011e7fab9ff217c22879aebf5b3b68e76cbd3e40935a8"
+  },
+  "mio-rest": {
+   "w": 320,
+   "h": 320,
+   "bytes": 13282,
+   "alpha": true,
+   "sha256": "47c84f55130f5636fe77f05725b8ff36780bf6fcec3b17ff0ff945413ab0fbfe",
+   "source": "d747665269a2ac9ccd3c4ba60e3b1fc5c1ae24251c21d22967d9c1284e02ce3f"
+  },
+  "mio-support": {
+   "w": 320,
+   "h": 320,
+   "bytes": 11806,
+   "alpha": true,
+   "sha256": "21f9b2b85c3904ab3ed2c454a84da05cb59d531e9264f86eade2cbcb82f17b0e",
+   "source": "83e0adfde227295f9930a4df9027cf9bbcbbd6c512e7e529b3396d0717f788d3"
+  },
+  "nav-bird": {
+   "w": 96,
+   "h": 96,
+   "bytes": 4318,
+   "alpha": true,
+   "sha256": "d6fb0d6e54440dd103d2138f0678d196a0919a3f754dee0703d9337176a74667",
+   "source": "a355f3db414a0c180f97ae44ebfdb9be36ac7db0a7424b2f44464cc6c2ebff8b"
+  },
+  "nav-home": {
+   "w": 96,
+   "h": 96,
+   "bytes": 2662,
+   "alpha": true,
+   "sha256": "d5c64a1a181e36666178c2eb1246dcfc0d4d6dc561fe52eee87c2761664c9350",
+   "source": "cf74a20cde558d2468f7758e2b11ca5f627a883d56228cbf0f6a42a6c91ac5ad"
+  },
+  "nav-progress": {
+   "w": 96,
+   "h": 96,
+   "bytes": 2498,
+   "alpha": true,
+   "sha256": "eff0bd13b9cc78dac74d24ce0bba4693b641894653b3d4dc7795c84941a83de5",
+   "source": "a39d7b43a15edbd0c780398d808cb8a77f37d6e487a4d44aa375a3d18161fbb6"
+  },
+  "nav-settings": {
+   "w": 96,
+   "h": 96,
+   "bytes": 3520,
+   "alpha": true,
+   "sha256": "62e22ac5a5d213225b619ef3fbcd7e1b3af699a9c0a4ac2fc0728bccb977684e",
+   "source": "e11e14b817073c3a16d1c4902d13b89d70a1d5cfc1c5a5bb6eee04fd4ce78472"
+  },
+  "obj-apple": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6584,
+   "alpha": true,
+   "sha256": "5db4b61ce518fd5fdddc990d0c8ca39b021b27bd5da9ea3ecbd9474994f0046e",
+   "source": "d3bf1ad1c6de59f146df3cfc85c810b85047d1e019b09ca715add05466741d80"
+  },
+  "obj-berry": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7342,
+   "alpha": true,
+   "sha256": "4de57ce9c1d5bde1e40835157541bde96018c4d60dbf75388598153f352f6a6b",
+   "source": "d70d3ba0558d63ddf3e695206a512614c175607438ad06c02999fab838677af6"
+  },
+  "obj-can": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6414,
+   "alpha": true,
+   "sha256": "388ab1c81a55ac53b8cd1eae4a5e246c7da2488a7305db54c91c9f2eeef8a2bc",
+   "source": "48773cf2be0ccf1e45543e8b21e2645839a23eff7d1eaa820c798a6e23f23a24"
+  },
+  "obj-card": {
+   "w": 192,
+   "h": 192,
+   "bytes": 5720,
+   "alpha": true,
+   "sha256": "e53626d8c3c6eb14c22274a8c863e270631343bc1257a68b9cd34b298205df23",
+   "source": "0881e84283f31e7f3cf59e7b14090666ebf3b265263bd7b6b78aa1ac250b0c8c"
+  },
+  "obj-coin": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7420,
+   "alpha": true,
+   "sha256": "868c5bc5fe0555a2d96977aea195fc521a05890d620cf67aca11125c3d6740af",
+   "source": "2d128b371110c0e84a937292b78336a2d15967a1ef1642b4e8586438c51044af"
+  },
+  "obj-cup": {
+   "w": 192,
+   "h": 192,
+   "bytes": 4814,
+   "alpha": true,
+   "sha256": "6583be3fb41249cac4868a1b1a92cd72c4a49ed8a2bcade1881fc1037e75f15c",
+   "source": "28d5e0ddd39b2ea1fd6b864cf78044debc70e8cbbeb5a780f8cb50ac637b89f8"
+  },
+  "obj-dumbbell": {
+   "w": 192,
+   "h": 192,
+   "bytes": 5822,
+   "alpha": true,
+   "sha256": "9a91542ad691543490fd24d18772ca4b865b1ba91ef05da8f13ab3610983ec44",
+   "source": "4c88f9e4175486c11ceb7b82961d297f2b7ead7ae466a0717abef5eb9a0c401c"
+  },
+  "obj-egg": {
+   "w": 192,
+   "h": 192,
+   "bytes": 4736,
+   "alpha": true,
+   "sha256": "6470a111d85073f0ac18030ea881690ccbe1f480479ad76f2fb20a73896e6e6c",
+   "source": "91a218d0da05f3440a0228a13277c26b6d4f0b8051483b684948bfefad3ab7e9"
+  },
+  "obj-key": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7098,
+   "alpha": true,
+   "sha256": "f6467252ca1db18491eeb2606b1d399b28c68be3bb6b0cb0b0690723d14f2320",
+   "source": "a012da1fee2d9c18dcaa2b1a3c83e26fd5bbf25438e2c16b9009872cda166f92"
+  },
+  "obj-sponge": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6788,
+   "alpha": true,
+   "sha256": "6df2a57e13866e178e2d250456a93098c55a047dae0fb622414912144b3df706",
+   "source": "04780cc23177fc532183f87c05db14b86f4587c8985b17fce1958abba4de3402"
+  },
+  "pet-chick-happy": {
+   "w": 512,
+   "h": 512,
+   "bytes": 32328,
+   "alpha": true,
+   "sha256": "b6af05c8157b0c5bcce21360ca8c9051956497b87c44e6e09ed6be13c5a048c2",
+   "source": "4f27877d3bcc27210b821c11f030337556a54aa554c3f1b5f904ae53bf071ddd"
+  },
+  "pet-chick-rest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 23026,
+   "alpha": true,
+   "sha256": "1e16061f25a06020a98be877ad12fb38454d9cae7156202291142ee6af8a70ba",
+   "source": "80bae3337f7f5608c45ef4376913664c1d62242fe136540ec74b66565cf130c0"
+  },
+  "pet-chick-waiting": {
+   "w": 512,
+   "h": 512,
+   "bytes": 20830,
+   "alpha": true,
+   "sha256": "8d636ef8ea87563967846ca93a0d3ea583664b74e0282a8e26facf573f254e3e",
+   "source": "12d3a34e6a46ba7aad6139f63d86136ab70701c3f8f68cb202ce48021e5618b5"
+  },
+  "pet-egg-happy": {
+   "w": 512,
+   "h": 512,
+   "bytes": 21224,
+   "alpha": true,
+   "sha256": "627d8ab177b3914222566657ee8e346d351d14d7cf1176edf31bde495f925c8a",
+   "source": "83d84545702775ed2ff5e840e40142b168eeb9aff79100bec0614e65bfc15b62"
+  },
+  "pet-egg-rest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 18484,
+   "alpha": true,
+   "sha256": "890f9511146b1a464aaf1870d88b2c30ad878d7f406b16e451378fcb08a5c735",
+   "source": "6e361fc372da80fe527ef6f3e2b2cd3d689a0de3f9e3a9c1b15eba08a9ec7d88"
+  },
+  "pet-egg-waiting": {
+   "w": 512,
+   "h": 512,
+   "bytes": 17528,
+   "alpha": true,
+   "sha256": "8c9be1eb3decdae3dfdfbf8a9ccea0fe41af979dcc17c480ff1ed7fd72ac9d47",
+   "source": "b77debd5124fa98c9b4bba0d5f868cb9bf082fe0fea6e48972c383f4e8f1e255"
+  },
+  "pet-firebird-happy": {
+   "w": 512,
+   "h": 512,
+   "bytes": 47246,
+   "alpha": true,
+   "sha256": "180ded8e432b7778ed851f176e56bf88971e77a6c88ed0777f22c4660ed96b24",
+   "source": "5babdc5ae5e128c9021383622ca6b20435e4d0c734c4d187e3aeab163cec3503"
+  },
+  "pet-firebird-read": {
+   "w": 512,
+   "h": 512,
+   "bytes": 46862,
+   "alpha": true,
+   "sha256": "accfdac774c0e3559fac435b7b5c1163b02eaa9b87f4f7e390673fe2321fbcc7",
+   "source": "afc4bc84d5a498932d1812c0e986b44bf6b1d01c38eccc2b1f8b4f8b4be917ac"
+  },
+  "pet-firebird-rest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 40932,
+   "alpha": true,
+   "sha256": "382ea6e3ff0a837fdb794f5e3c98e89c21a761ecb8d4ad26a9430665f04c0577",
+   "source": "4acace14fb90233cdfefd566cbe8ab4264882c256f9bd4f4b334fa20da55d551"
+  },
+  "pet-firebird-star": {
+   "w": 512,
+   "h": 512,
+   "bytes": 45680,
+   "alpha": true,
+   "sha256": "6ffc2178f08b30985488d3fd6a3d9270cd9574d869127df43855c2e3dc532d2f",
+   "source": "0a4ac9a2e34be38bc816053e92e95a83de0f1b77bedf21e4052ba18952f9dd41"
+  },
+  "pet-firebird-waiting": {
+   "w": 512,
+   "h": 512,
+   "bytes": 45770,
+   "alpha": true,
+   "sha256": "d2d941e3639cc554a4640d00686e2257edd7ad5a4f4b58f813938dfee7fe3287",
+   "source": "b8c9a73b1ccba7b7557101d354c2c7d4f4dcaa761e5d3d22591d2c172884aaa6"
+  },
+  "pet-firebird-wave": {
+   "w": 512,
+   "h": 512,
+   "bytes": 49406,
+   "alpha": true,
+   "sha256": "fbbb69c0b511cc4dfcfcbe8221321a275ff6dcd599981b1360ceae8ae2e63a4d",
+   "source": "416343f3691a421b0382e7efecf7884f34a15075f5e5226c7d49959960386a6d"
+  },
+  "pet-fledgling-happy": {
+   "w": 512,
+   "h": 512,
+   "bytes": 33318,
+   "alpha": true,
+   "sha256": "5d2366a43d120e67409732ee3b1ef870e84439df92f089e4be2156e2ecb67e35",
+   "source": "772dd8d7c38fafbbc16e64214b684ee691665c251746e6de5b085cc9e076edc6"
+  },
+  "pet-fledgling-rest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 25928,
+   "alpha": true,
+   "sha256": "d82b05efe0fa8e83c9483de4e2ea993e4eb61e5063057adea6df11a8ff613435",
+   "source": "87559a2172b1195310fee35e901ef51b6bcd0c4ae4a23a1646997a3829a5535c"
+  },
+  "pet-fledgling-waiting": {
+   "w": 512,
+   "h": 512,
+   "bytes": 26798,
+   "alpha": true,
+   "sha256": "48916c0dc7ad5b3c98d759f122d0ec2ecdcfa37ec3eefabf6c584e074af5d149",
+   "source": "47f1619e7c1dd196ad51fd0792060d08ced09eeab89fb4df1b36fd23d6367269"
+  },
+  "pet-young-happy": {
+   "w": 512,
+   "h": 512,
+   "bytes": 38778,
+   "alpha": true,
+   "sha256": "7460076db54fb69bc1b9293c3a7723990cf87ea504817a862c5994000cc6ebaf",
+   "source": "1603a0859a7b66971948b1dfc70bd95036a1ea73972a9308e2942ad57076eed1"
+  },
+  "pet-young-read": {
+   "w": 512,
+   "h": 512,
+   "bytes": 32060,
+   "alpha": true,
+   "sha256": "96de54de7ec903afa1a359631e71dd92076d2b1ba87c84b32d1356caa0f0cd5c",
+   "source": "0b75e80faa676647143c83422ddd0a8ce2f20b88e923e43917dac4a9a71a3296"
+  },
+  "pet-young-rest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 32898,
+   "alpha": true,
+   "sha256": "c1d26caaf3ec5d9c1eba8e61cca915dfb37846c9d39db74f2dbbcfd1e817b145",
+   "source": "308b1415bea9a80718d672644c21c131ded7a7b80b48f679bf1f91488884f9e0"
+  },
+  "pet-young-star": {
+   "w": 512,
+   "h": 512,
+   "bytes": 31754,
+   "alpha": true,
+   "sha256": "c03e5b0659abaa0607b0d2ef5a71fc0bb7e0bf4a3c829744c72f7faa6fe1979a",
+   "source": "1f5861864259627509245202fcefac69fbb535047026020800107a7b539918b9"
+  },
+  "pet-young-waiting": {
+   "w": 512,
+   "h": 512,
+   "bytes": 29298,
+   "alpha": true,
+   "sha256": "6e2cc14bddf827de974ef5ce3f6bf8c33ba4e495a78316105407aa0a50bb3de3",
+   "source": "d0fdfbdbf3dc1b1f30105ac348b7bccc75a5555616f1f27d7babe17ac0f07207"
+  },
+  "pet-young-wave": {
+   "w": 512,
+   "h": 512,
+   "bytes": 31366,
+   "alpha": true,
+   "sha256": "cf6dd399ab93bfd1352cac8d75cd1002d3ed2793854d67a4dd7827371bf6bd15",
+   "source": "c41c5cf68a63fef0eacfac028a448f0088ef4f6f4749541cdd95109ea0470270"
+  },
+  "skin-coral": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6444,
+   "alpha": true,
+   "sha256": "47b25cb7c5652062af70c33aad15a4365d00aa496a51e32b2d28764869a00d07",
+   "source": "a2a168a18d39df69fe23cf6c727a61a2ab13579301da70e4c95f8c6982ce3b17"
+  },
+  "skin-cosmos": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6448,
+   "alpha": true,
+   "sha256": "a4875f76819ab76f7b8e75edbdbe06e19e4c0457840684f2096cdb6865d18848",
+   "source": "976c9351b735f11d4976908551c67472373b452031071d9921023ab199f426c9"
+  },
+  "skin-gold": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6762,
+   "alpha": true,
+   "sha256": "7ae1b96c80ba1ae41386698694e5a8271aedd82035c3d7db8c329bebe82beab8",
+   "source": "9d30cb4966f236ed2021b3253342ef872ed4d22967d84d3c450f20b89c99304e"
+  },
+  "skin-graphite": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6494,
+   "alpha": true,
+   "sha256": "1edd8d66a5380697939c568eeadbf7484195add678d03a212a7c1823483bc346",
+   "source": "c23399013453b8b9f9abfbc7c98dca2faed006f9d0216f936628693b2a11a72e"
+  },
+  "skin-mint": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7106,
+   "alpha": true,
+   "sha256": "a0aaf3e65ab081866e726b176e7fc29d6314b05674286ab495b3303beafa3b2e",
+   "source": "8685e80df54f7f6af5ef54e0f4bb046614f0b6d996bc665ed4d19e033d7af8c9"
+  },
+  "skin-neon": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6756,
+   "alpha": true,
+   "sha256": "5b3e9275f1fc5970a0294b553019564956955124b20a1d50c1ee7e5dd8cf0356",
+   "source": "e4e2835fbaed62132bfa37f87afc645f83cbbcdf8970861265cd34b66ab80695"
+  },
+  "skin-sky": {
+   "w": 192,
+   "h": 192,
+   "bytes": 7186,
+   "alpha": true,
+   "sha256": "5a50e6674695e2ce8c26d8da80421520d4057730e48ec2a62cca620eee2fca95",
+   "source": "e835e95f569e1ff365dbc0d6ea965d99abfc2f887d58a4e2b92fd86754656a44"
+  }
+ },
+ "icons": {
+  "adaptive": "android/res/mipmap-*/ic_launcher_{foreground,background}.png",
+  "pwa": [
+   "icon-48",
+   "icon-180",
+   "icon-192",
+   "icon-512",
+   "icon-maskable-512"
+  ],
+  "splash": "android/res/drawable-xxhdpi/splash_bird.png"
+ },
+ "total_bytes": 1543206,
+ "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP)",
+ "layout": {
+  "pet-chick-happy": {
+   "twigs": [
+    52.7,
+    65.9,
+    67.3,
+    0
+   ],
+   "apples": [
+    19.7,
+    84.9,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    81.9,
+    25.0,
+    0
+   ],
+   "book": [
+    21.7,
+    85.4,
+    27.0,
+    0
+   ],
+   "bow": [
+    60.4,
+    19.3,
+    14.0,
+    26.4
+   ],
+   "wreath": [
+    50.0,
+    16.9,
+    30.7,
+    8.4
+   ],
+   "star": [
+    48.9,
+    24.4,
+    8.3,
+    8.4
+   ],
+   "kokoshnik": [
+    50.7,
+    11.8,
+    31.3,
+    8.4
+   ]
+  },
+  "pet-chick-rest": {
+   "twigs": [
+    53.7,
+    63.8,
+    71.3,
+    0
+   ],
+   "apples": [
+    20.7,
+    81.4,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    78.4,
+    25.0,
+    0
+   ],
+   "book": [
+    22.7,
+    81.9,
+    27.0,
+    0
+   ],
+   "bow": [
+    49.7,
+    26.4,
+    15.7,
+    -1.0
+   ],
+   "wreath": [
+    38.0,
+    29.3,
+    34.5,
+    -19.0
+   ],
+   "star": [
+    40.8,
+    37.4,
+    9.3,
+    -19.0
+   ],
+   "kokoshnik": [
+    36.1,
+    23.9,
+    35.2,
+    -19.0
+   ]
+  },
+  "pet-chick-waiting": {
+   "twigs": [
+    52.7,
+    64.1,
+    70.8,
+    0
+   ],
+   "apples": [
+    19.7,
+    82.0,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    79.0,
+    25.0,
+    0
+   ],
+   "book": [
+    21.7,
+    82.5,
+    27.0,
+    0
+   ],
+   "bow": [
+    60.4,
+    23.9,
+    15.4,
+    18.8
+   ],
+   "wreath": [
+    48.7,
+    22.7,
+    33.7,
+    0.8
+   ],
+   "star": [
+    48.6,
+    31.1,
+    9.1,
+    0.8
+   ],
+   "kokoshnik": [
+    48.8,
+    17.1,
+    34.4,
+    0.8
+   ]
+  },
+  "pet-egg-happy": {
+   "twigs": [
+    53.9,
+    59.6,
+    79.7,
+    0
+   ],
+   "apples": [
+    20.9,
+    79.8,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    76.8,
+    25.0,
+    0
+   ],
+   "book": [
+    22.9,
+    80.3,
+    27.0,
+    0
+   ]
+  },
+  "pet-egg-rest": {
+   "twigs": [
+    53.3,
+    67.0,
+    65.0,
+    0
+   ],
+   "apples": [
+    20.3,
+    78.2,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    75.2,
+    25.0,
+    0
+   ],
+   "book": [
+    22.3,
+    78.7,
+    27.0,
+    0
+   ]
+  },
+  "pet-egg-waiting": {
+   "twigs": [
+    53.7,
+    64.6,
+    69.8,
+    0
+   ],
+   "apples": [
+    20.7,
+    79.8,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    76.8,
+    25.0,
+    0
+   ],
+   "book": [
+    22.7,
+    80.3,
+    27.0,
+    0
+   ]
+  },
+  "pet-firebird-happy": {
+   "twigs": [
+    54.0,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    21.0,
+    85.5,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    82.9,
+    25.0,
+    0
+   ],
+   "book": [
+    23.0,
+    86.0,
+    27.0,
+    0
+   ],
+   "bow": [
+    54.7,
+    23.7,
+    14.8,
+    29.2
+   ],
+   "wreath": [
+    43.8,
+    20.5,
+    32.5,
+    11.2
+   ],
+   "star": [
+    42.3,
+    28.4,
+    8.8,
+    11.2
+   ],
+   "kokoshnik": [
+    44.9,
+    15.2,
+    33.2,
+    11.2
+   ],
+   "amulet": [
+    37.1,
+    54.9,
+    17.0,
+    11.2
+   ],
+   "beads": [
+    37.9,
+    50.6,
+    25.4,
+    11.2
+   ]
+  },
+  "pet-firebird-read": {
+   "twigs": [
+    48.6,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    15.6,
+    83.1,
+    28.0,
+    0
+   ],
+   "lantern": [
+    82.6,
+    80.1,
+    25.0,
+    0
+   ],
+   "book": [
+    17.6,
+    83.6,
+    27.0,
+    0
+   ],
+   "bow": [
+    52.2,
+    27.8,
+    13.3,
+    18.9
+   ],
+   "wreath": [
+    42.1,
+    26.7,
+    29.2,
+    0.9
+   ],
+   "star": [
+    42.0,
+    34.0,
+    7.9,
+    0.9
+   ],
+   "kokoshnik": [
+    42.2,
+    21.9,
+    29.8,
+    0.9
+   ]
+  },
+  "pet-firebird-rest": {
+   "twigs": [
+    51.1,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    18.1,
+    81.2,
+    28.0,
+    0
+   ],
+   "lantern": [
+    85.1,
+    78.2,
+    25.0,
+    0
+   ],
+   "book": [
+    20.1,
+    81.7,
+    27.0,
+    0
+   ],
+   "bow": [
+    40.9,
+    33.1,
+    17.4,
+    -8.3
+   ],
+   "wreath": [
+    28.5,
+    37.9,
+    38.1,
+    -26.3
+   ],
+   "star": [
+    32.7,
+    46.3,
+    10.3,
+    -26.3
+   ],
+   "kokoshnik": [
+    25.7,
+    32.2,
+    38.9,
+    -26.3
+   ],
+   "amulet": [
+    46.7,
+    74.7,
+    19.9,
+    -26.3
+   ],
+   "beads": [
+    44.4,
+    70.1,
+    29.8,
+    -26.3
+   ]
+  },
+  "pet-firebird-star": {
+   "twigs": [
+    51.8,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    18.8,
+    85.5,
+    28.0,
+    0
+   ],
+   "lantern": [
+    85.8,
+    83.8,
+    25.0,
+    0
+   ],
+   "book": [
+    20.8,
+    86.0,
+    27.0,
+    0
+   ],
+   "amulet": [
+    39.6,
+    56.9,
+    9.5,
+    8.5
+   ],
+   "beads": [
+    39.9,
+    54.5,
+    14.2,
+    8.5
+   ]
+  },
+  "pet-firebird-waiting": {
+   "twigs": [
+    48.1,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    15.1,
+    85.1,
+    28.0,
+    0
+   ],
+   "lantern": [
+    82.1,
+    82.1,
+    25.0,
+    0
+   ],
+   "book": [
+    17.1,
+    85.6,
+    27.0,
+    0
+   ],
+   "bow": [
+    50.1,
+    23.0,
+    12.8,
+    23.5
+   ],
+   "wreath": [
+    40.5,
+    21.2,
+    28.0,
+    5.5
+   ],
+   "star": [
+    39.8,
+    28.1,
+    7.5,
+    5.5
+   ],
+   "kokoshnik": [
+    41.0,
+    16.6,
+    28.6,
+    5.5
+   ],
+   "amulet": [
+    37.6,
+    51.3,
+    14.6,
+    5.5
+   ],
+   "beads": [
+    38.0,
+    47.5,
+    21.9,
+    5.5
+   ]
+  },
+  "pet-firebird-wave": {
+   "twigs": [
+    48.8,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    15.8,
+    85.5,
+    28.0,
+    0
+   ],
+   "lantern": [
+    82.8,
+    82.7,
+    25.0,
+    0
+   ],
+   "book": [
+    17.8,
+    86.0,
+    27.0,
+    0
+   ],
+   "bow": [
+    52.3,
+    23.0,
+    13.0,
+    23.4
+   ],
+   "wreath": [
+    42.6,
+    21.2,
+    28.4,
+    5.4
+   ],
+   "star": [
+    41.9,
+    28.2,
+    7.7,
+    5.4
+   ],
+   "kokoshnik": [
+    43.0,
+    16.5,
+    29.0,
+    5.4
+   ],
+   "amulet": [
+    39.7,
+    51.7,
+    14.8,
+    5.4
+   ],
+   "beads": [
+    40.0,
+    47.9,
+    22.2,
+    5.4
+   ]
+  },
+  "pet-fledgling-happy": {
+   "twigs": [
+    59.0,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    27.7,
+    75.7,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    72.7,
+    25.0,
+    0
+   ],
+   "book": [
+    29.7,
+    76.2,
+    27.0,
+    0
+   ],
+   "bow": [
+    60.4,
+    23.9,
+    16.4,
+    27.0
+   ],
+   "wreath": [
+    48.2,
+    20.8,
+    35.9,
+    9.0
+   ],
+   "star": [
+    46.8,
+    29.6,
+    9.7,
+    9.0
+   ],
+   "kokoshnik": [
+    49.1,
+    15.0,
+    36.7,
+    9.0
+   ],
+   "amulet": [
+    42.2,
+    59.1,
+    18.7,
+    9.0
+   ],
+   "beads": [
+    42.9,
+    54.3,
+    28.1,
+    9.0
+   ]
+  },
+  "pet-fledgling-rest": {
+   "twigs": [
+    53.0,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    20.0,
+    76.3,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    73.3,
+    25.0,
+    0
+   ],
+   "book": [
+    22.0,
+    76.8,
+    27.0,
+    0
+   ],
+   "bow": [
+    43.1,
+    34.9,
+    16.1,
+    -4.5
+   ],
+   "wreath": [
+    31.4,
+    38.6,
+    35.2,
+    -22.5
+   ],
+   "star": [
+    34.7,
+    46.6,
+    9.5,
+    -22.5
+   ],
+   "kokoshnik": [
+    29.2,
+    33.2,
+    36.0,
+    -22.5
+   ],
+   "amulet": [
+    45.9,
+    73.7,
+    18.4,
+    -22.5
+   ],
+   "beads": [
+    44.1,
+    69.3,
+    27.6,
+    -22.5
+   ]
+  },
+  "pet-fledgling-waiting": {
+   "twigs": [
+    49.4,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    16.4,
+    80.0,
+    28.0,
+    0
+   ],
+   "lantern": [
+    83.4,
+    77.0,
+    25.0,
+    0
+   ],
+   "book": [
+    18.4,
+    80.5,
+    27.0,
+    0
+   ],
+   "bow": [
+    61.1,
+    25.5,
+    18.5,
+    17.4
+   ],
+   "wreath": [
+    47.1,
+    24.5,
+    40.4,
+    -0.6
+   ],
+   "star": [
+    47.2,
+    34.5,
+    10.9,
+    -0.6
+   ],
+   "kokoshnik": [
+    47.0,
+    17.8,
+    41.3,
+    -0.6
+   ],
+   "amulet": [
+    47.5,
+    68.0,
+    21.1,
+    -0.6
+   ],
+   "beads": [
+    47.5,
+    62.6,
+    31.6,
+    -0.6
+   ]
+  },
+  "pet-young-happy": {
+   "twigs": [
+    58.2,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    25.2,
+    83.3,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    80.3,
+    25.0,
+    0
+   ],
+   "book": [
+    27.2,
+    83.8,
+    27.0,
+    0
+   ],
+   "bow": [
+    55.1,
+    25.3,
+    16.2,
+    28.2
+   ],
+   "wreath": [
+    43.2,
+    22.1,
+    35.4,
+    10.2
+   ],
+   "star": [
+    41.7,
+    30.7,
+    9.5,
+    10.2
+   ],
+   "kokoshnik": [
+    44.2,
+    16.3,
+    36.1,
+    10.2
+   ],
+   "amulet": [
+    36.4,
+    59.6,
+    18.5,
+    10.2
+   ],
+   "beads": [
+    37.3,
+    54.9,
+    27.7,
+    10.2
+   ]
+  },
+  "pet-young-read": {
+   "twigs": [
+    49.1,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    16.1,
+    82.1,
+    28.0,
+    0
+   ],
+   "lantern": [
+    83.1,
+    79.1,
+    25.0,
+    0
+   ],
+   "book": [
+    18.1,
+    82.6,
+    27.0,
+    0
+   ],
+   "bow": [
+    51.1,
+    30.7,
+    14.8,
+    23.6
+   ],
+   "wreath": [
+    39.9,
+    28.6,
+    32.5,
+    5.6
+   ],
+   "star": [
+    39.2,
+    36.6,
+    8.8,
+    5.6
+   ],
+   "kokoshnik": [
+    40.5,
+    23.3,
+    33.2,
+    5.6
+   ]
+  },
+  "pet-young-rest": {
+   "twigs": [
+    53.7,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    20.7,
+    79.4,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.5,
+    76.4,
+    25.0,
+    0
+   ],
+   "book": [
+    22.7,
+    79.9,
+    27.0,
+    0
+   ],
+   "bow": [
+    44.7,
+    31.7,
+    18.5,
+    3.6
+   ],
+   "wreath": [
+    30.7,
+    34.0,
+    40.6,
+    -14.4
+   ],
+   "star": [
+    33.2,
+    43.8,
+    10.9,
+    -14.4
+   ],
+   "kokoshnik": [
+    29.0,
+    27.5,
+    41.5,
+    -14.4
+   ],
+   "amulet": [
+    41.6,
+    76.4,
+    21.2,
+    -14.4
+   ],
+   "beads": [
+    40.2,
+    71.1,
+    31.8,
+    -14.4
+   ]
+  },
+  "pet-young-star": {
+   "twigs": [
+    52.3,
+    65.3,
+    68.3,
+    0
+   ],
+   "apples": [
+    19.3,
+    85.5,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.3,
+    83.4,
+    25.0,
+    0
+   ],
+   "book": [
+    21.3,
+    86.0,
+    27.0,
+    0
+   ],
+   "amulet": [
+    45.4,
+    69.3,
+    14.7,
+    8.3
+   ],
+   "beads": [
+    45.9,
+    65.6,
+    22.0,
+    8.3
+   ]
+  },
+  "pet-young-waiting": {
+   "twigs": [
+    52.4,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    19.4,
+    79.4,
+    28.0,
+    0
+   ],
+   "lantern": [
+    86.4,
+    76.4,
+    25.0,
+    0
+   ],
+   "book": [
+    21.4,
+    79.9,
+    27.0,
+    0
+   ],
+   "bow": [
+    51.6,
+    28.0,
+    15.2,
+    19.5
+   ],
+   "wreath": [
+    40.1,
+    26.7,
+    33.3,
+    1.5
+   ],
+   "star": [
+    39.8,
+    35.0,
+    9.0,
+    1.5
+   ],
+   "kokoshnik": [
+    40.2,
+    21.2,
+    34.0,
+    1.5
+   ],
+   "amulet": [
+    39.1,
+    62.6,
+    17.4,
+    1.5
+   ],
+   "beads": [
+    39.2,
+    58.1,
+    26.0,
+    1.5
+   ]
+  },
+  "pet-young-wave": {
+   "twigs": [
+    51.6,
+    59.5,
+    80.0,
+    0
+   ],
+   "apples": [
+    18.6,
+    81.6,
+    28.0,
+    0
+   ],
+   "lantern": [
+    85.6,
+    78.6,
+    25.0,
+    0
+   ],
+   "book": [
+    20.6,
+    82.1,
+    27.0,
+    0
+   ],
+   "bow": [
+    60.2,
+    29.0,
+    16.0,
+    26.1
+   ],
+   "wreath": [
+    48.3,
+    26.2,
+    34.9,
+    8.1
+   ],
+   "star": [
+    47.1,
+    34.8,
+    9.4,
+    8.1
+   ],
+   "kokoshnik": [
+    49.1,
+    20.5,
+    35.7,
+    8.1
+   ],
+   "amulet": [
+    43.0,
+    63.5,
+    18.2,
+    8.1
+   ],
+   "beads": [
+    43.6,
+    58.8,
+    27.3,
+    8.1
+   ]
+  }
+ }
+}

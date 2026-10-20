@@ -4,10 +4,11 @@
 // was read. A wrong answer is not a fault: the right one and why come at once, the check can be taken again.
 import { h, toast } from './dom.js';
 import { topBar, mioAvatar } from './widgets.js';
-import { badgeArt } from './art.js';
+import { badgeArt, firebird, achievementArt, giftArt } from './art.js';
 import { PRIMER, PRIMER_BY_ID, deckProgress, resumeIndex, markSeen, checkOpen, recordCheck } from '../core/primer.js';
-import { ACHIEVEMENTS, unlockAchievements, dayKey } from '../core/progress.js';
-import { PET_ITEMS } from '../core/pet.js';
+import { ACHIEVEMENTS, unlockAchievements, dayKey, trainingDays } from '../core/progress.js';
+import { PET_ITEMS, petStageIndex, wornItems } from '../core/pet.js';
+import { PET } from '../config.js';
 
 /** replaceChildren without the «null» text a conditional child would leave (h() skips them, replaceChildren does not). */
 const fill = (el, ...children) => el.replaceChildren(...children.filter(Boolean));
@@ -18,6 +19,14 @@ export function primerScreen(app, { deck = null, card = null, check = false, fro
   if (d && check) return checkView(app, d, from);
   if (d) return deckView(app, d, card, from);
   return listView(app, from);
+}
+
+/** 5.16: a young or grown Firebird reads its book here (the pose of the illustrations); before that Мио explains. */
+function reader(p) {
+  const stage = PET.stages[petStageIndex(trainingDays(p))].id;
+  return ['young', 'firebird'].includes(stage)
+    ? h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(stage, 'fed', 72, { items: wornItems(p, stage), pose: 'read' }))
+    : mioAvatar('support', 56);
 }
 
 function listView(app, from) {
@@ -39,10 +48,10 @@ function listView(app, from) {
     node: h('div', { class: 'screen primer' },
       topBar('Азбука протеза', () => app.go(from)),
       h('main', { class: 'scroll' },
-        h('section', { class: 'card faq-intro' }, mioAvatar('support', 56),
+        h('section', { class: 'card faq-intro' }, reader(p),
           h('p', {}, 'Короткие карточки о жизни с протезом. Переверните карточку касанием, а в конце темы проверьте себя — без времени и без оценок. Вопрос о здоровье — к врачу или протезисту.')),
         ...topics,
-        h('p', { class: 'note primer-prize' }, badgeArt(won ? 'trophy' : 'gift', 22),
+        h('p', { class: 'note primer-prize' }, won ? achievementArt('primer', true, 28) : giftArt(prize.id, 28),
           won ? `«${ACHIEVEMENTS.find(a => a.id === 'primer').name}»: подарок «${prize.name}» — в гнезде.` : `Все проверки верно — подарок Жар-птице: «${prize.name}».`))),
   };
 }

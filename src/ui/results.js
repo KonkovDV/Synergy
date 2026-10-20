@@ -1,7 +1,7 @@
 // Results (knowledge of results + coach advice + rewards) and the rest break between plan items.
 import { count, fmtNum, fmtPct, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
-import { gameArt, badgeArt, starRow, firebird, evolution } from './art.js';
+import { gameArt, badgeArt, starRow, firebird, evolution, achievementArt, giftArt, skinArt, sectionArt } from './art.js';
 import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, PET_SLOTS } from '../core/pet.js';
 import { missionText } from '../core/missions.js';
 import { skillBar, handsFreeText } from './widgets.js';
@@ -53,9 +53,10 @@ function rewardList(report) {
   const goal = report.mission;
   return [
     ...(goal?.completed ? [{ art: 'trophy', text: `Цель выполнена: ${missionText(goal.mission, PLAN_CATALOG).title} · +${goal.xp} XP` }] : []),
-    ...report.achievements.map(id => ({ art: 'medal', text: `Достижение: ${ACHIEVEMENTS.find(a => a.id === id)?.name ?? id}` })),
-    ...(report.items ?? []).map(id => ({ art: 'gift', text: `Подарок Жар-птице: ${PET_ITEM_BY_ID[id]?.name ?? id}` })),
-    ...report.skins.map(id => ({ art: 'palette', text: `Новый облик: ${SKINS.find(sk => sk.id === id)?.name ?? id}` })),
+    // 5.16: the medal of that achievement, the gift itself and the hand in the new look (the badge stands in).
+    ...report.achievements.map(id => ({ art: 'medal', pic: () => achievementArt(id, true, 32), text: `Достижение: ${ACHIEVEMENTS.find(a => a.id === id)?.name ?? id}` })),
+    ...(report.items ?? []).map(id => ({ art: 'gift', pic: () => giftArt(id, 32), text: `Подарок Жар-птице: ${PET_ITEM_BY_ID[id]?.name ?? id}` })),
+    ...report.skins.map(id => ({ art: 'palette', pic: () => skinArt(id, 32), text: `Новый облик: ${SKINS.find(sk => sk.id === id)?.name ?? id}` })),
     ...(report.levelUp ? [{ art: 'levelup', text: `Уровень игрока: ${report.level}` }] : []),
     ...(goal && !goal.completed ? [{ art: 'done', text: `Цель: ${goal.done} из ${goal.target}` }] : []),
   ];
@@ -84,7 +85,9 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     const from = grown ? PET.stages[PET.stages.findIndex(st => st.id === grown.id) - 1] : null;
     const opened = grown ? PET_SLOTS.find(sl => sl.from === grown.id) : null;
     return h('section', { class: `card pet-moment${grown ? ' grown' : ''}`, role: 'status' },
-      grown && from ? evolution(from.id, grown.id, 112, { items }) : h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, 'fed', 96, { items, play })),
+      // 5.16: a goal reached — the grown bird holds up its star (the pose gives way to what it wears on the head).
+      grown && from ? evolution(from.id, grown.id, 112, { items })
+        : h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, 'fed', 96, { items, play, pose: report.mission?.completed ? 'star' : null })),
       h('div', {}, h('p', {}, h('b', {}, words)),
         grown ? h('p', { class: 'nest-character' }, grown.character) : null,
         opened ? h('p', { class: 'note' }, `Открылось место для наряда: «${opened.name}».`) : null));
@@ -117,7 +120,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       : 'Калибровка подстроилась под датчик: покой вернулся к уровню калибровки.') : null;
   const difficulty = !demo && !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
-  const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', {}, 'Насколько тяжело было?'),
+  const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', { class: 'with-art' }, sectionArt('effort', 32), 'Насколько тяжело было?'),
     segmented(EFFORT_LEVELS.map(e => ({ value: e.id, label: e.label })), app.profile.days[today]?.effort ?? null,
       v => { recordDayNote(app.profile, today, { effort: v }); app.save(); toast('Записано'); }, 'Насколько тяжело было'),
     h('p', { class: 'note' }, 'Ответ сохранится в дневнике самочувствия и в отчёте, если вы его сохраните.')) : null;
@@ -130,7 +133,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus + (report.mission?.xp ?? 0)} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel} игры` : ''}`)
         : h('p', { class: 'note' }, 'Так играет автопилот. Демо не влияет на прогресс.'),
       petCard,
-      rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, badgeArt(r.art, 24), r.text))) : null,
+      rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, r.pic?.() ?? badgeArt(r.art, 24), r.text))) : null,
       difficulty,
       calibrationCard,
       planDone ? h('div', { class: 'card celebrate tinted' }, h('b', { class: 'with-art' }, badgeArt('trophy', 30), 'Тренировка дня выполнена'), h('p', {}, 'Отличная работа! День отдыха серию не прерывает.')) : null,

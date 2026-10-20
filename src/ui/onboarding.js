@@ -2,7 +2,7 @@
 import { h } from './dom.js';
 import { segmented } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
-import { mio, badgeArt, trails, coverScene } from './art.js';
+import { mio, badgeArt, trails, coverArt } from './art.js';
 import { PET } from '../config.js';
 import { SAFETY_RULES, SAFETY_VERSION } from '../core/wellbeing.js';
 
@@ -19,18 +19,19 @@ export function onboardingScreen(app, { safety = false } = {}) {
 
   const pages = [
     // Each page opens with a cover (the sample's onboarding, the brand's dark cover with light trails): Мио, the title, one line.
-    () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art scene' }, coverScene(230)),
+    // 5.16: the three covers of the illustrations (the egg in its nest, the bird with the shield, Мио with the phone).
+    () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art cover' }, coverArt('welcome', 320)),
       h('h1', {}, 'Синергия'),
       h('p', { class: 'lead' }, 'Игра-тренажёр управления бионическим протезом.')),
       h('p', { class: 'lead pet-promise' }, 'Тренировки согревают яйцо Жар-птицы: вырастите её от птенца до огненной птицы.'),
       h('p', {}, 'Четыре игры тренируют то, что нужно протезу каждый день: взять предмет с нужной силой, удержать, отпустить, сменить хват, включиться вовремя.'),
       h('p', { class: 'note' }, 'Короткие игры по 10–15 минут. Сколько дней в неделю заниматься, лучше решить с реабилитологом или протезистом; цель недели меняется в настройках.')],
-    () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art small' }, badgeArt('shield', 84)),
+    () => [h('div', { class: 'onb-hero' }, trails(), safetyCover(),
       h('h1', {}, 'Безопасно'),
       h('p', { class: 'lead' }, 'Комфорт и самочувствие важнее очков.')),
       safetyList(),
       h('p', { class: 'note' }, 'Нет датчиков? Встроенный эмулятор ЭМГ на экране: удерживайте площадки A и B, высота пальца — сила.')],
-    () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art small' }, mio('focus', 84)),
+    () => [h('div', { class: 'onb-hero' }, trails(), cover('prosthesis', () => h('div', { class: 'onb-art small' }, mio('focus', 84))),
       h('h1', {}, 'Ваш протез'),
       h('p', { class: 'lead' }, 'Несколько вопросов — и можно начинать.')),
       h('p', {}, 'Как вы управляете протезом?'),
@@ -59,18 +60,27 @@ export function onboardingScreen(app, { safety = false } = {}) {
     // A double tap must not skip «Безопасно» (5.10): the second tap of the same gesture is ignored.
     if (performance.now() - shownAt < 300) return;
     // The new page is announced by its heading (5.11: focus stayed on «Дальше» and «Безопасно» passed unheard).
-    if (step < pages.length - 1) { step++; render(); const h1 = body.querySelector('h1'); h1?.setAttribute('tabindex', '-1'); h1?.focus({ preventScroll: true }); return; }
+    // 5.16: the next page starts at its top — the cover of the illustrations is tall and stayed above the fold.
+    if (step < pages.length - 1) { step++; render(); main.scrollTop = 0; window.scrollTo?.(0, 0); const h1 = body.querySelector('h1'); h1?.setAttribute('tabindex', '-1'); h1?.focus({ preventScroll: true }); return; }
     done('tutorial');
   };
   const skip = h('button', { class: 'btn ghost', onclick: () => done('home') }, 'Пропустить обучение');
+  const main = h('main', { class: 'scroll center' }, body);
   render();
   return {
-    node: h('div', { class: 'screen onboarding' }, h('main', { class: 'scroll center' }, body), h('div', { class: 'sticky-actions' }, dots, next, skip)),
+    node: h('div', { class: 'screen onboarding' }, main, h('div', { class: 'sticky-actions' }, dots, next, skip)),
     // Back goes to the previous page; on the first page the app may close (5.10: back restarted the onboarding
     // forever, so the APK could not be closed with back on the first launch).
-    onBack() { if (step === 0) return 'exit'; step--; render(); return true; },
+    onBack() { if (step === 0) return 'exit'; step--; render(); main.scrollTop = 0; window.scrollTo?.(0, 0); return true; },
   };
 }
+
+/** A cover of the illustrations in the dark hero, or the drawn stand-in. */
+function cover(name, stand) {
+  const art = coverArt(name, 320);
+  return art ? h('div', { class: 'onb-art cover' }, art) : stand();
+}
+const safetyCover = () => cover('safety', () => h('div', { class: 'onb-art small' }, badgeArt('shield', 84)));
 
 /** The safety rules (one list: core/wellbeing.js) — the onboarding page and the re-read after a change. */
 function safetyList() {
@@ -82,7 +92,7 @@ function safetyUpdate(app) {
   return {
     node: h('div', { class: 'screen onboarding' },
       h('main', { class: 'scroll center' }, h('div', { class: 'onboarding-body' },
-        h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art small' }, badgeArt('shield', 84)),
+        h('div', { class: 'onb-hero' }, trails(), safetyCover(),
           h('h1', {}, 'Безопасно'),
           h('p', { class: 'lead' }, 'Правила безопасности обновились — прочитайте, пожалуйста.')),
         safetyList())),

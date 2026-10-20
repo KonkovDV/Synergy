@@ -5,8 +5,9 @@
 // the 2021 study with limb-absent users found no consistent gain, so this is a design idea, not a promise).
 import { fmtFixed } from '../core/format.js';
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
-import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES, GESTURES } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand, panel, backdrop, scene } from '../render/draw.js';
+import { drawSprite } from '../render/sprites.js';
 import { reachableBand } from '../core/signal.js';
 
 /** Prompt pools per scheme; `from` = level where the prompt is introduced (gestures: GESTURES[].introducedAt). */
@@ -184,11 +185,18 @@ export class SafeGame extends Game {
       if (this.phase === 'rest') fillRound(ctx, x0, y0, cw, ch, 18, scene('rgba(255,255,255,0.55)', 'rgba(255,255,255,0.06)'));
       else panel(ctx, x0, y0, cw, ch, 18);
       if (this.phase === 'rest') {
+        // 5.16: the relaxed hand of the illustrations beside the word (the first gesture of the vocabulary is rest).
+        drawSprite(ctx, `gesture-${GESTURES[0].id}`, x0 + cw * 0.13, y0 + ch * 0.4, Math.min(ch * 0.5, cw * 0.18), { sx: this.mirror ? -1 : 1, alpha: 0.75 });
         text(ctx, 'Покой', w / 2, y0 + ch * 0.42, { size: 26, weight: 800, color: COLORS.muted });
         text(ctx, 'расслабьтесь перед следующей цифрой', w / 2, y0 + ch * 0.7, { size: 12, color: COLORS.muted, maxWidth: cw - 16 });
       } else {
         const size = ch * 0.27;
-        drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
+        // 5.16: the bionic hand of the illustrations showing the gesture; a two-channel command shows the first
+        // gesture of the vocabulary with that command (closing — the fist, opening — the palm).
+        const pic = card.gesture ?? ACTIVE_GESTURES.find(g => g.command === card.command)?.id;
+        if (!pic || !drawSprite(ctx, `gesture-${pic}`, w / 2 - cw * 0.22, y0 + ch * 0.5, Math.min(ch * 0.78, cw * 0.4), { sx: this.mirror ? -1 : 1 })) {
+          drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
+        }
         text(ctx, card.name, w / 2 + cw * 0.14, y0 + ch * 0.4, { size: 18, weight: 800, maxWidth: cw * 0.6 });
         if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {
           // «любая сила» / «от 65 %» instead of a range that ends at 100 (5.11, design review).

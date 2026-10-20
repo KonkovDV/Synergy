@@ -6,6 +6,7 @@ import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE } from '../core/vocabulary.
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL } from '../config.js';
 import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
+import { drawSprite } from '../render/sprites.js';
 
 /** Object catalog: force window [min,max], breakAt, grip, contact closure. Conditional units, not newtons. */
 export const OBJECTS = {
@@ -270,6 +271,9 @@ export function drawObject(ctx, o, x, y, s, squeeze = 0) {
   const broken = o.failed === 'crush';
   const sq = o.fragile || o.kind === 'apple' || o.kind === 'sponge' ? squeeze * 0.18 : 0;
   const r = s * 0.42;
+  // 5.16: the object of the illustrations (public/art/obj-*, natural colours), squeezed like the drawing; a crushed
+  // one keeps its drawn broken look. The picture carries its own soft shadow.
+  if (!broken && drawSprite(ctx, `obj-${o.kind}`, x, y, s * 1.12, { sx: 1 - sq, sy: 1 + sq * 0.5 })) return;
   ctx.save(); ctx.fillStyle = COLORS.shade; ctx.beginPath(); ctx.ellipse(x, y + r * 1.02, r * 0.75, r * 0.16, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   ctx.save(); ctx.translate(x, y); ctx.scale(1 - sq, 1 + sq * 0.5);
   switch (o.kind) {

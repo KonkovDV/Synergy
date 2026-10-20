@@ -51,12 +51,17 @@ writeFileSync(join(dist, 'app.css'), distCss);
 mkdirSync(join(dist, 'fonts'), { recursive: true });
 for (const f of fonts) copyFileSync(join(root, 'public/fonts', f), join(dist, 'fonts', f));
 writeFileSync(join(dist, 'index.html'), page({
-  head: '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon.svg" type="image/svg+xml">\n<link rel="apple-touch-icon" href="icons/icon-180.png">\n' + preload('fonts/') + '\n<link rel="stylesheet" href="app.css">',
+  head: '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon-48.png" type="image/png">\n<link rel="apple-touch-icon" href="icons/icon-180.png">\n' + preload('fonts/') + '\n<link rel="stylesheet" href="app.css">',
   body: '<script src="app.js"></script>',
 }));
 for (const f of readdirSync(join(root, 'public/icons'))) copyFileSync(join(root, 'public/icons', f), join(dist, 'icons', f));
 copyFileSync(join(root, 'public/manifest.webmanifest'), join(dist, 'manifest.webmanifest'));
-const shell = ['./', './index.html', './app.js', './app.css', './manifest.webmanifest', ...readdirSync(join(root, 'public/icons')).map(f => `./icons/${f}`), ...fonts.filter(f => f.endsWith('.woff2')).map(f => `./fonts/${f}`)];
+// The team's illustrations (5.16, tools/import-art.py): files in dist/art/, precached for offline; data URIs in the
+// one-file build (window.SYNERGY_ART, read by ui/pictures.js before the script runs).
+const art = readdirSync(join(root, 'public/art')).filter(f => f.endsWith('.webp')).sort();
+mkdirSync(join(dist, 'art'), { recursive: true });
+for (const f of art) copyFileSync(join(root, 'public/art', f), join(dist, 'art', f));
+const shell = ['./', './index.html', './app.js', './app.css', './manifest.webmanifest', ...readdirSync(join(root, 'public/icons')).map(f => `./icons/${f}`), ...fonts.filter(f => f.endsWith('.woff2')).map(f => `./fonts/${f}`), ...art.map(f => `./art/${f}`)];
 writeFileSync(join(dist, 'sw.js'), `// App-shell cache: the game works offline after the first visit.
 const CACHE = 'synergy-${pkg.version}';
 const SHELL = ${JSON.stringify(shell)};
@@ -72,12 +77,13 @@ self.addEventListener('fetch', e => {
   e.respondWith(caches.open(CACHE).then(c => c.match(e.request).then(hit => hit || fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }))));
 });
 `);
-const icon = readFileSync(join(root, 'public/icons/icon.svg'), 'utf8');
+const icon = readFileSync(join(root, 'public/icons/icon-48.png'));
+const inlineArt = Object.fromEntries(art.map(f => [f.replace(/\.webp$/, ''), `data:image/webp;base64,${readFileSync(join(root, 'public/art', f)).toString('base64')}`]));
 const standalone = page({
-  head: `<link rel="icon" href="data:image/svg+xml;base64,${Buffer.from(icon).toString('base64')}">\n<style>${inlineCss}</style>`,
-  body: `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`,
+  head: `<link rel="icon" href="data:image/png;base64,${icon.toString('base64')}">\n<style>${inlineCss}</style>`,
+  body: `<script>window.SYNERGY_ART=${JSON.stringify(inlineArt)};</script>\n<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`,
   inline: true,
 });
 writeFileSync(join(dist, 'synergy-standalone.html'), standalone);
 const kb = text => (Buffer.byteLength(text) / 1024).toFixed(0);
-console.log(`Built v${pkg.version}: dist/ (${kb(js)} KB JS) + synergy-standalone.html (${kb(standalone)} KB)`);
+console.log(`Built v${pkg.version}: dist/ (${kb(js)} KB JS, ${art.length} pictures) + synergy-standalone.html (${kb(standalone)} KB)`);

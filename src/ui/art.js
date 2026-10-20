@@ -2,9 +2,13 @@
 // Style — soft 3D («clay / glossy», like the 3D pictures of the team's sample ФинФениксы) in the corporate palette of
 // «Моторика»: green → teal → blue → violet, graphite prostheses with a green glow. Every volume is lit from the top
 // left: a body gradient, a darker underside, a specular gloss, a rim light and a soft contact shadow.
-// Drawn in SVG from code — no image files (rules п. 5.5), no emoji (they differ on every platform and are missing in
-// some WebView fonts); a picture costs a few hundred bytes and follows the theme. Every picture is decorative
-// (aria-hidden): the text next to it carries the meaning.
+// Drawn in SVG from code, no emoji (they differ on every platform and are missing in some WebView fonts); a picture
+// costs a few hundred bytes and follows the theme. Every picture is decorative (aria-hidden): the text next to it
+// carries the meaning.
+// 5.16: the team's illustrations come first (ui/pictures.js, public/art/); these drawings are the fallback for a
+// picture that is missing or fails to load, and the pieces the pictures do not cover (light trails).
+import { picture, petPicture } from './pictures.js';
+
 const NS = 'http://www.w3.org/2000/svg';
 let seq = 0;
 
@@ -54,6 +58,10 @@ const MIO_EYE = '#7dffc4';
  * (A coral, B blue) and the same A/B lights on its belt. Moods: hello, support, joy, focus, rest.
  */
 export function mio(mood = 'support', size = 64) {
+  return picture(`mio-${mood}`, size, `mio mio-${mood}`, () => mioDrawing(mood, size));
+}
+
+function mioDrawing(mood, size) {
   const id = `mio${++seq}`;
   const svg = root('0 0 120 120', size, `mio mio-${mood}`);
   const eye = mood === 'rest' ? '#9fd8ff' : MIO_EYE;
@@ -189,6 +197,10 @@ const GAME_ART = {
 
 /** Picture of a game (or «tutorial») for cards, plan rows and dialogs. */
 export function gameArt(id, size = 48) {
+  return picture(`game-${id}`, size, `game-art game-art-${id}`, () => gameDrawing(id, size));
+}
+
+function gameDrawing(id, size) {
   const svg = root('0 0 64 64', size, `game-art game-art-${id}`);
   const uid = `ga${++seq}`;
   svg.append(...[light(uid, 1.8), (GAME_ART[id] ?? GAME_ART.tutorial)(uid)].flat(3));
@@ -249,8 +261,19 @@ const BADGES = {
     path('M15.6 5.6 H17.6 V10.4 L16.6 9.4 L15.6 10.4 Z', { fill: '#16e182' })],
 };
 
+/** The illustration of each badge (5.16, public/art/ico-*); the drawing of BADGES is its fallback. */
+export const BADGE_PICTURES = Object.freeze({
+  flame: 'ico-streak', star: 'ico-star', 'star-empty': 'ico-star-empty', lock: 'ico-lock', shield: 'ico-safety', medal: 'ico-medal',
+  'medal-off': 'ach-locked', palette: 'ico-palette', gift: 'ico-gift', levelup: 'ico-levelup', trophy: 'ico-trophy', moon: 'ico-rest',
+  warning: 'ico-warning', done: 'ico-done', book: 'ico-primer',
+});
+
 /** A small colour picture by name (see BADGES). */
 export function badgeArt(name, size = 24) {
+  return picture(BADGE_PICTURES[name] ?? BADGE_PICTURES.star, size, `badge-art badge-art-${name}`, () => badgeDrawing(name, size));
+}
+
+function badgeDrawing(name, size) {
   const svg = root('0 0 24 24', size, `badge-art badge-art-${name}`);
   const uid = `ba${++seq}`;
   svg.append(...[light(uid, 0.9), (BADGES[name] ?? BADGES.star)(uid)].flat(3));
@@ -293,7 +316,7 @@ export function coverScene(size = 200) {
   const svg = root('0 0 200 160', size, 'cover-scene', Math.round(size * 0.8));
   const orbitDot = (cx, cy, r, colours) => [glow(id, cx, cy, r * 1.4, colours[1], 0.6), sphere(id, `o${cx}`, cx, cy, r, colours)];
   const spark = (x, y, r, c) => path(`M${x} ${y - r} L${x + r * 0.3} ${y - r * 0.3} L${x + r} ${y} L${x + r * 0.3} ${y + r * 0.3} L${x} ${y + r} L${x - r * 0.3} ${y + r * 0.3} L${x - r} ${y} L${x - r * 0.3} ${y - r * 0.3} Z`, { fill: c });
-  const hero = firebird('egg', 'fed', 120);
+  const hero = firebirdDrawing('egg', 'fed', 120); // an SVG inside the SVG scene
   hero.setAttribute('x', 40); hero.setAttribute('y', 22); hero.setAttribute('width', 120); hero.setAttribute('height', 120);
   svg.append(...[
     light(id, 3),
@@ -330,8 +353,16 @@ function plume(x, y, len, width, angle, bend, fill) {
  * 5.13: `items` — what it wears (slot → item id, see core/pet.js), drawn at the anchors of each stage (the sample's
  * slot anchors); `alive` — a short idle (breathing, a blink, the tail swaying) that stops by itself within 5 s
  * (WCAG 2.2.2); `play` — a one-shot animation of PET_ANIMATIONS. Every motion is off with «Меньше движения».
+ * 5.16: the bird is the team's picture of its stage and mood (`pose` — wave, read, star for the young and grown
+ * bird), what it wears is laid over it at the boxes of art-manifest.js; this drawing is the fallback.
  */
-export function firebird(stage = 'egg', mood = 'waiting', size = 96, { items = {}, alive = false, play = null } = {}) {
+export function firebird(stage = 'egg', mood = 'waiting', size = 96, { items = {}, alive = false, play = null, pose = null } = {}) {
+  const cls = `firebird firebird-${stage} firebird-${mood}${alive ? ' alive' : ''}${play ? ` anim-${play}` : ''}`;
+  const drawing = () => firebirdDrawing(stage, mood, size, { items, alive, play });
+  return petPicture(stage, mood, size, { items, pose, cls, fallback: drawing }) ?? drawing();
+}
+
+function firebirdDrawing(stage, mood, size, { items = {}, alive = false, play = null } = {}) {
   const id = `fb${++seq}`;
   const svg = root('0 0 120 120', size, `firebird firebird-${stage} firebird-${mood}${alive ? ' alive' : ''}${play ? ` anim-${play}` : ''}`);
   const g = (key, stops, dir) => lin(`${id}-${key}`, stops, dir);
@@ -439,8 +470,35 @@ export function evolution(fromStage, toStage, size = 120, { items = {} } = {}) {
   const box = layer('evo');
   box.setAttribute('aria-hidden', 'true');
   box.style.width = box.style.height = `${size}px`;
-  box.append(layer('evo-glow'), layer('evo-from', firebird(fromStage, 'fed', size, { items })), layer('evo-to', firebird(toStage, 'fed', size, { items })));
+  box.append(layer('evo-glow'), layer('evo-from', firebird(fromStage, 'fed', size, { items })), layer('evo-to', firebird(toStage, 'fed', size, { items, pose: 'star' })));
   return box;
+}
+
+// ---------- 5.16: pictures that have no drawing of their own (a drawn stand-in, or nothing next to the words) ----------
+
+/** The medal of an achievement — its own picture when earned, the closed medal when not. */
+export function achievementArt(id, earned, size = 48) {
+  return picture(earned ? `ach-${id}` : 'ach-locked', size, `badge-art ach-art${earned ? '' : ' ach-off'}`, () => badgeDrawing(earned ? 'medal' : 'medal-off', size));
+}
+
+/** A gift for the Firebird (core/pet.js PET_ITEMS). */
+export const giftArt = (id, size = 40) => picture(`gift-${id}`, size, 'gift-art', () => badgeDrawing('gift', size));
+
+/** The look of the game hand (core/progress.js SKINS); null — the caller draws the hand. */
+export const skinArt = (id, size = 56) => picture(`skin-${id}`, size, 'skin-art');
+
+/** The bionic hand showing a gesture of the vocabulary; null for a gesture without a picture (a new set on 28.10). */
+export const gestureArt = (id, size = 48) => picture(`gesture-${id}`, size, 'gesture-art');
+
+/** A scene of an everyday task (core/everyday.js) on its own light tile; null if there is none. */
+export const dayArt = (id, size = 96) => picture(`day-${id}`, size, 'day-art');
+
+/** A section icon of the illustrations (ico-*: plan, goal, primer, ask, report, sensor, …); null if there is none. */
+export const sectionArt = (name, size = 40) => picture(`ico-${name}`, size, 'section-art');
+
+/** A cover of the first run (welcome, safety, prosthesis); the drawn scene stands in for the first one. */
+export function coverArt(name, width = 320) {
+  return picture(`cover-${name}`, width, `cover-art cover-${name}`, name === 'welcome' ? () => coverScene(Math.min(230, width)) : null);
 }
 
 /**

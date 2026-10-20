@@ -5,6 +5,7 @@ import { fmtPct } from '../core/format.js';
 import { GESTURES, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { drawHand } from '../render/draw.js';
 import { h, longestWord } from './dom.js';
+import { gestureArt } from './art.js';
 
 const MIN_LEVEL = 0.12;
 
@@ -119,6 +120,10 @@ export function createTwoChannelPads(emulator) {
 }
 
 export function gestureIcon(gesture, skin = 'icon', size = 44) {
+  // 5.16: the bionic hand of the illustrations showing this gesture; a gesture without a picture (a new set on
+  // 28.10) is drawn on a canvas as before.
+  const pic = skin === 'icon' ? gestureArt(gesture.id, size) : null;
+  if (pic) { pic.classList.add('gesture-icon'); return pic; }
   const canvas = h('canvas', { width: size * 2, height: size * 2, class: 'gesture-icon', 'aria-hidden': 'true' });
   const ctx = canvas.getContext('2d');
   ctx.scale(2, 2);

@@ -1201,3 +1201,50 @@ span.evo { position: relative; display: inline-grid; place-items: center; flex: 
 :root.hc .flashcard.flipped, :root.hc .primer-options .option.right { background: #000; border-color: #3fe0a0 }
 :root.hc .flashcard.flipped .flash-face small { color: #fff }
 @media (forced-colors: active) { .flashcard.flipped, .primer-options .option.right { border-color: Highlight } .primer-options .option.wrong { border-color: CanvasText } }
+
+/* ===== 5.16 — the team's illustrations (ui/pictures.js, public/art/). A picture is <img class="art pic">, sized by
+   the same rules as the drawings it replaces. The Firebird is layers (.pet-pic): the nest behind, the bird with what it
+   wears (one .fb-bird — the drawing's animations move it as one), the things of the nest in front. ===== */
+img.pic { object-fit: contain; user-select: none; -webkit-user-select: none; -webkit-user-drag: none }
+/* A command is read at a glance: no syllable break inside a button or a bar label («Повто-рить» doubled the action bar
+   on 568 × 320 at 200 % text with the Russian dictionary of Chromium on Windows and Android). */
+.btn, .nav-label { hyphens: manual }
+:where(.pet-pic) { width: var(--size, 96px); height: var(--size, 96px) }
+.pet-pic { position: relative; display: block; aspect-ratio: 1 / 1; flex: none }
+.pet-pic > .fb-bird { position: absolute; inset: 0; display: block; transform-origin: 50% 92% }
+.pet-pic .pet-body { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain }
+.pet-pic .pet-thing { position: absolute; height: auto; aspect-ratio: 1 / 1; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)); display: block; pointer-events: none }
+/* The pictures carry their own soft contact shadow: a lighter drop shadow keeps them on the dark covers without a halo. */
+.pet-card .pet-art .pet-pic, .nest-bird .pet-pic, .pet-moment .pet-pic, .evo .pet-pic { filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .28)) }
+/* The light waves of the home header lie over the brand gradient as a texture; the dark text stays on the green. */
+.hero > .hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right center; opacity: .6; mix-blend-mode: soft-light; pointer-events: none }
+h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
+.btn > .art { display: inline-block; width: 1.5rem; height: 1.5rem; margin: -6px 8px -4px 0; vertical-align: middle }
+.xp-level { display: inline-flex; align-items: center; gap: 6px }
+.xp-level .art { width: 1.25rem; height: 1.25rem }
+/* «Дело дня»: the scene of the task on its own light tile (white paper and glass need their background). */
+.everyday-task { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center }
+.everyday-task p { margin: 0 }
+.day-art { width: 5.5rem; height: 5.5rem; border-radius: 18px; background: #ffffff; border: 1px solid var(--line); box-shadow: var(--shadow-1) }
+@media (max-width: 360px) { .day-art { width: 4.5rem; height: 4.5rem } }
+/* Covers of the first run: a light scene in the dark hero, still (it is the size of the page — no float). */
+.onb-art.cover { width: 100%; margin: 2px auto 10px }
+.onb-art.cover .art { width: auto; max-width: min(320px, 100%); height: auto; max-height: 34vh; aspect-ratio: 4 / 3; border-radius: 22px; filter: none; animation: none; box-shadow: 0 14px 28px rgba(0, 0, 0, .35) } /* a third of a landscape screen at most: the questions stay in view */
+/* The nest: the bird on the rug of its room. */
+.nest-stage { position: relative; width: 100%; display: grid; place-items: end center; border-radius: 26px; overflow: hidden }
+.nest-stage.room { background: var(--room) center 80% / cover no-repeat; min-height: min(250px, 68vw); padding-top: 14px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16) }
+.sec-ico .art { width: 34px; height: 34px }
+.nav-icon .nav-art { width: 28px; height: 28px }
+.badge .ach-art { width: 3rem; height: 3rem; margin-bottom: 2px }
+.badge .ach-off { opacity: .8 }
+.badge .gift { display: flex; align-items: center; gap: 6px }
+.badge .gift .art { width: 1.375rem; height: 1.375rem }
+.seg .gift-art { width: 2.25rem; height: 2.25rem; margin: 0 auto 2px }
+.skin .skin-art { width: 56px; height: 56px }
+.skin:disabled .skin-art { filter: grayscale(1); opacity: .5 }
+.rewards li .art { width: 2rem; height: 2rem }
+.empty-art .empty-pic { width: 7rem; height: 7rem }
+.primer-prize .art { width: 1.75rem; height: 1.75rem }
+:root.hc .hero-bg { display: none }
+:root.hc .nest-stage.room { background: none; min-height: 0 }
+@media (forced-colors: active) { .hero-bg { display: none } .nest-stage.room { background: none; min-height: 0 } }
