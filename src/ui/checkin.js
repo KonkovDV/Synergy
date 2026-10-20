@@ -3,6 +3,7 @@
 // Safety rules, not a diagnosis.
 import { h } from './dom.js';
 import { topBar, segmented, mioAvatar } from './widgets.js';
+import { sectionArt } from './art.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, checkInAdvice, checkinSkippable, CHECKIN_ACTION } from '../core/wellbeing.js';
 import { recordDayNote, lightenPlan, dayKey } from '../core/progress.js';
 
@@ -21,7 +22,8 @@ export function checkinScreen(app) {
     go.disabled = !ready;
     if (!ready) return;
     const a = checkInAdvice(answers);
-    advice.replaceChildren(h('p', { class: `note ${a.action === CHECKIN_ACTION.GO ? '' : 'warn'}` }, a.text));
+    // 5.16: the advice carries its picture — a calm shield for a stop or a light day, the check mark for a full one.
+    advice.replaceChildren(h('p', { class: `note with-art ${a.action === CHECKIN_ACTION.GO ? '' : 'warn'}` }, sectionArt(a.action === CHECKIN_ACTION.GO ? 'done' : 'safety', 32), a.text));
     go.textContent = a.action === CHECKIN_ACTION.STOP ? 'Понятно, отдыхаю' : a.action === CHECKIN_ACTION.LIGHT ? 'Начать короткий план' : 'Начать тренировку';
     app.say(a.text, { interrupt: true });
   };
@@ -33,7 +35,7 @@ export function checkinScreen(app) {
     if (a.action === CHECKIN_ACTION.STOP) app.go('home'); else app.startPlan({ checked: true });
   };
   skip.hidden = !checkinSkippable(answers, app.checkin());
-  const question = (title, levels, key) => h('section', { class: 'card' }, h('h2', {}, title),
+  const question = (title, levels, key) => h('section', { class: 'card' }, h('h2', { class: key === 'pain' ? 'with-art' : null }, key === 'pain' ? sectionArt('checkin', 32) : null, title),
     segmented(levels.map(l => ({ value: l.id, label: l.label, sub: l.nrs })), null, v => { answers[key] = v; update(); }, title));
   app.say(sensors ? 'Как рука сегодня? Есть ли боль, усталость, раздражение кожи под датчиками?' : 'Как рука сегодня? Есть ли боль и усталость?', { interrupt: true });
   return {

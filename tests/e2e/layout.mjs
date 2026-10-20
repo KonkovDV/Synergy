@@ -87,8 +87,18 @@ function inspect({ width, checkWords = false, minTarget = 44, minFont = 12 }) {
     if (checkWords) {
       for (const m of node.textContent.matchAll(/[^\s\-–—/­]{2,}/g)) {
         const word = document.createRange(); word.setStart(node, m.index); word.setEnd(node, m.index + m[0].length);
-        const lines = new Set([...word.getClientRects()].filter(r => r.width > 0.5).map(r => Math.round(r.top / 4)));
-        if (lines.size > 1) { out.push({ kind: 'broken', what: `${name(el)} word «${m[0]}» split across lines` }); break; }
+        const split = () => new Set([...word.getClientRects()].filter(r => r.width > 0.5).map(r => Math.round(r.top / 4))).size > 1;
+        if (!split()) continue;
+        // 5.16: a syllable break with a hyphen (`hyphens: auto`, the Russian dictionary of Chromium on Windows and
+        // Android; Linux headless has none) is typography, not a defect: the word that fits without hyphenation passes.
+        if (getComputedStyle(el).hyphens === 'auto') {
+          const before = el.style.hyphens;
+          el.style.hyphens = 'manual';
+          const still = split();
+          el.style.hyphens = before;
+          if (!still) continue;
+        }
+        out.push({ kind: 'broken', what: `${name(el)} word «${m[0]}» split across lines` }); break;
       }
     }
     // Clipped by an ancestor that hides overflow, or past the screen edge.
@@ -360,6 +370,9 @@ for (const [w, h] of VIEWPORTS) {
       try { await setup(page); } catch (e) { errors.push(`${w}×${h}@${scale} ${state}: setup ${e.message.split('\n')[0]}`); continue; }
       await page.evaluate(s => { document.documentElement.style.setProperty('--text-scale', String(s)); document.querySelectorAll('.toast').forEach(t => t.remove()); }, scale);
       await page.waitForTimeout(state.startsWith('play') || state.startsWith('gesture') ? 350 : 150);
+      // 5.16: the pictures are files — measure once every one has loaded or failed (its size is reserved, but a late
+      // decode under load moved the end of a page between two measurements: a «covered» once in a full run).
+      await page.waitForFunction(() => [...document.images].every(i => i.complete), null, { timeout: 3000 }).catch(() => {});
       // Whole words at the default text size on phones from 360 px; at 320 px (the WCAG reflow width) and at 130–200 %
       // text a split is the lesser evil than text past the edge.
       const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...(scale === 1 ? await page.evaluate(reachable) : []), ...await page.evaluate(coveredAtEnd), ...await page.evaluate(seeThrough)];

@@ -67,6 +67,9 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(false); // android_asset still loads; no access to other local files
         s.setAllowContentAccess(false); // nor to content:// providers
         s.setMediaPlaybackRequiresUserGesture(false);
+        // 5.16: transparent until the page paints its own background — the splash of the window theme (the Firebird
+        // on the light background, res/drawable/splash.xml) stays visible instead of a white WebView.
+        view.setBackgroundColor(0);
         view.setWebChromeClient(new WebChromeClient());
         view.setWebViewClient(new WebViewClient() {
             @Override

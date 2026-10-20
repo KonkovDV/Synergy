@@ -5,13 +5,16 @@ import { h } from './dom.js';
 import { firebird } from './art.js';
 import { petTap } from '../core/pet.js';
 
+/** 5.16: the pose of the illustrations for the day's event — back after a break it waves; a stage, a goal, the whole plan — it holds up a star. */
+const DAY_POSE = { back: 'wave', grew: 'star', goal: 'star', plan: 'star' };
+
 /**
  * @param app the app (its `petTaps` counter keeps the answers in turn across screens)
  * @param pet `petState()` of today
  * @returns {{ button: HTMLButtonElement, say: HTMLElement, bird: SVGElement }}
  */
 export function touchableBird(app, pet, { name, size = 104, items = {}, cls = 'pet-art' } = {}) {
-  const bird = firebird(pet.stage.id, pet.mood, size, { items, alive: true });
+  const bird = firebird(pet.stage.id, pet.mood, size, { items, alive: true, pose: DAY_POSE[pet.reason] ?? null });
   const say = h('p', { class: 'pet-say', 'aria-live': 'polite' }, pet.line);
   const touch = () => {
     const reply = petTap(pet, ++app.petTaps);

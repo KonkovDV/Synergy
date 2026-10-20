@@ -18,14 +18,22 @@ fetch() { # fetch <file> <maven path> <sha256>
 }
 fetch apktool-lib.jar org/apktool/apktool-lib/3.0.3/apktool-lib-3.0.3.jar 983773879fd89ede2cd938858e3efce2a90ac1123f6a5140e9d949dcf4464e3e
 fetch dalvik-dx.jar com/jakewharton/android/repackaged/dalvik-dx/16.0.1/dalvik-dx-16.0.1.jar 1e4b645628e3bdb097b5331d669e177ef235a551582a8c646dbe36865e541907
-case "$(uname -s)" in Darwin) PLAT=macosx;; *) PLAT=linux;; esac
-(cd "$CACHE" && unzip -o -q apktool-lib.jar "prebuilt/$PLAT/aapt2" prebuilt/android-framework.jar && chmod +x "prebuilt/$PLAT/aapt2")
-AAPT2="$CACHE/prebuilt/$PLAT/aapt2"; FRAMEWORK="$CACHE/prebuilt/android-framework.jar"
+# Windows (5.16): Git Bash — the same apktool-lib carries aapt2.exe; MSYS converts the paths for native programs.
+case "$(uname -s)" in Darwin) PLAT=macosx; EXE=;; MINGW*|MSYS*|CYGWIN*) PLAT=windows; EXE=.exe;; *) PLAT=linux; EXE=;; esac
+(cd "$CACHE" && unzip -o -q apktool-lib.jar "prebuilt/$PLAT/aapt2$EXE" prebuilt/android-framework.jar && chmod +x "prebuilt/$PLAT/aapt2$EXE")
+AAPT2="$CACHE/prebuilt/$PLAT/aapt2$EXE"; FRAMEWORK="$CACHE/prebuilt/android-framework.jar"
+# Adds one file to a zip: `zip` where there is one, else Python's zipfile (Git Bash has no zip).
+add_to_zip() { # add_to_zip <archive> <file>
+  if command -v zip >/dev/null; then zip -q -j "$1" "$2"; return; fi
+  PY=$(command -v python || command -v python3) || { echo "Нужен zip или Python"; exit 1; }
+  "$PY" -c 'import sys, zipfile, os; z = zipfile.ZipFile(sys.argv[1], "a", zipfile.ZIP_DEFLATED); z.write(sys.argv[2], os.path.basename(sys.argv[2])); z.close()' "$1" "$2"
+}
 
 rm -rf "$OUT"; mkdir -p "$OUT/classes" "$OUT/res" "$OUT/assets/www"
 (cd "$ROOT" && node tools/build.mjs)
-mkdir -p "$OUT/assets/www/icons" # the APK has launcher mipmaps: of the PWA icons only the SVG favicon is needed
-cp "$ROOT/dist/index.html" "$ROOT/dist/app.js" "$ROOT/dist/app.css" "$ROOT/dist/manifest.webmanifest" "$OUT/assets/www/" && cp "$ROOT/dist/icons/icon.svg" "$OUT/assets/www/icons/" && cp -r "$ROOT/dist/fonts" "$OUT/assets/www/" # brand fonts (5.12) and their OFL licence
+mkdir -p "$OUT/assets/www/icons" # the APK has launcher mipmaps: of the PWA icons only the favicon is needed
+cp "$ROOT/dist/index.html" "$ROOT/dist/app.js" "$ROOT/dist/app.css" "$ROOT/dist/manifest.webmanifest" "$OUT/assets/www/" && cp "$ROOT/dist/icons/icon-48.png" "$OUT/assets/www/icons/" && cp -r "$ROOT/dist/fonts" "$OUT/assets/www/" # brand fonts (5.12) and their OFL licence
+cp -r "$ROOT/dist/art" "$OUT/assets/www/" # the team's illustrations (5.16, WebP — aapt2 keeps them as they are)
 
 "$AAPT2" compile --dir "$ROOT/android/res" -o "$OUT/res/compiled.zip"
 "$AAPT2" link -I "$FRAMEWORK" --manifest "$ROOT/android/AndroidManifest.xml" --min-sdk-version 21 --target-sdk-version 29 \
@@ -49,7 +57,7 @@ if [ "${VERIFY_API:-0}" = "1" ]; then
   echo "API check: stubs match android-29"
 fi
 java -cp "$CACHE/dalvik-dx.jar" com.android.dx.command.Main --dex --min-sdk-version=21 --output="$OUT/classes.dex" "$OUT/classes"
-(cd "$OUT" && zip -q -j unsigned.apk classes.dex)
+(cd "$OUT" && add_to_zip unsigned.apk classes.dex)
 
 # Signing: SYNERGY_KEYSTORE / SYNERGY_KEYSTORE_PASS / SYNERGY_KEY_ALIAS = your release key (CI secrets).
 # Without them a throwaway debug key is generated in tools/.cache (never committed) — NOT for submission.

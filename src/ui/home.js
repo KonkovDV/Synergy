@@ -7,7 +7,8 @@ import { trainingDays, playerLevel, weeklyStatus, dayKey, gameProgress, recommen
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
 import { overDailyCap, capAdvice, safetyOutdated } from '../core/wellbeing.js';
-import { gameArt, badgeArt, starRow, trails, firebird } from './art.js';
+import { gameArt, badgeArt, starRow, trails, firebird, sectionArt, dayArt } from './art.js';
+import { picture } from './pictures.js';
 import { touchableBird } from './petcard.js';
 import { petState, petName, wornItems } from '../core/pet.js';
 import { everydayTask, validEverydayId } from '../core/everyday.js';
@@ -48,7 +49,8 @@ export function homeScreen(app) {
   const startPct = gained ? (before.level === lvl.level ? before.progress : 0) : lvl.progress;
   const xpFill = h('i', { style: { width: `${Math.round(startPct * 100)}%` } });
   if (gained) requestAnimationFrame(() => requestAnimationFrame(() => { xpFill.style.width = `${Math.round(lvl.progress * 100)}%`; }));
-  const head = h('section', { class: 'hero' }, trails('light'),
+  // 5.16: the light waves of bg-hero lie over the brand gradient as a soft texture (the dark text stays on the green).
+  const head = h('section', { class: 'hero' }, picture('bg-hero', 600, 'hero-bg', () => trails('light')),
     h('div', { class: 'hero-top' },
       h('div', { class: 'avatar' }, firebird(pet.stage.id, pet.mood, 52, { items: worn })),
       h('div', {},
@@ -56,7 +58,7 @@ export function homeScreen(app) {
         h('h1', {}, s.name ? `Привет, ${s.name}!` : 'Привет!')),
       h('div', { class: 'streak', title: 'Серия тренировочных дней (день отдыха не прерывает)' }, badgeArt('flame', 24), h('b', { 'aria-hidden': 'true' }, streak), h('span', { class: 'sr-only' }, `Серия: ${count(streak, FORMS.days)}`))),
     h('div', { class: 'xp' },
-      h('span', {}, `Уровень ${lvl.level}`),
+      h('span', { class: 'xp-level' }, sectionArt('xp', 20), `Уровень ${lvl.level}`),
       h('div', { class: 'xp-track', role: 'progressbar', 'aria-label': `Опыт до уровня ${lvl.level + 1}`, 'aria-valuenow': Math.round(lvl.progress * 100), 'aria-valuemin': 0, 'aria-valuemax': 100 }, xpFill),
       h('small', {}, `ещё ${lvl.toNext} XP`),
       gained ? h('span', { class: 'xp-float', 'aria-hidden': 'true' }, before.level < lvl.level ? `Уровень ${lvl.level}!` : `+${gained} XP`) : null),
@@ -71,13 +73,13 @@ export function homeScreen(app) {
     ? 'Сегодня вы отметили раздражение кожи под датчиками — день без датчиков: серия не прерывается. Если покраснение не проходит, покажите кожу протезисту.'
     : 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.';
   const planCard = h('section', { class: 'card plan', 'data-tour': 'home.plan' },
-    h('div', { class: 'card-head' }, h('h2', {}, plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
+    h('div', { class: 'card-head' }, h('h2', { class: 'with-art' }, sectionArt('plan', 32), plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
     overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,
     resting ? h('p', { class: 'note warn' }, restText) : null,
     // 5.14 — back after a break: growth kept, no catching up; a calm first exercise, and the sensors checked first
     // (skin, sweat and a shifted electrode change the signal — the device drifts while it lies in a drawer).
     !resting && pet.reason === 'back' ? h('p', { class: 'note comeback' }, `С возвращением! Догонять ничего не нужно: начните с первого упражнения в спокойном темпе.${app.sourceKind() === 'touch' ? '' : ' С датчиками — сначала короткая калибровка.'}`) : null,
-    !resting && pet.reason === 'back' && app.sourceKind() !== 'touch' ? h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, 'Калибровка датчиков') : null,
+    !resting && pet.reason === 'back' && app.sourceKind() !== 'touch' ? h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, sectionArt('calibration', 24), 'Калибровка датчиков') : null,
     // Before the tutorial its card is the one primary action (5.11: three equal glowing buttons on the first run).
     h('button', { class: `btn ${p.tutorialDone ? 'primary' : 'ghost'} big plan-start`, disabled: allDone || resting, onclick: () => app.startPlan() },
       resting ? 'Сегодня — отдых' : allDone ? 'План выполнен' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
@@ -92,22 +94,22 @@ export function homeScreen(app) {
 
   const tipCard = h('section', { class: 'card tip' }, h('div', { class: 'coach-head' }, mioAvatar('support', 44), h('b', {}, 'Совет Мио')), h('p', {}, tip),
     h('div', { class: 'row-actions' },
-      h('button', { class: 'btn ghost', onclick: () => app.go('faq', { from: 'home' }) }, 'Спросить Мио'),
+      h('button', { class: 'btn ghost', onclick: () => app.go('faq', { from: 'home' }) }, sectionArt('ask', 24), 'Спросить Мио'),
       // 5.15 — «Азбука протеза» (the sample's flashcards): short cards and a check without time.
-      h('button', { class: 'btn ghost', onclick: () => app.go('primer', { from: 'home' }) }, 'Азбука протеза')));
+      h('button', { class: 'btn ghost', onclick: () => app.go('primer', { from: 'home' }) }, sectionArt('primer', 24), 'Азбука протеза')));
   // 5.14 — «дело дня в быту»: one light two-handed task of daily life with the prosthesis, ticked by the player
   // (transfer of game skill to the prosthesis is weakly shown; daily use starts with practice — core/everyday.js).
   // Not on a rest day; for someone still waiting for the prosthesis — the path to it instead.
   const task = everydayTask(today);
   const ticked = validEverydayId(p.days[today]?.everyday);
   const everydayCard = s.prosthesis === 'waiting'
-    ? h('section', { class: 'card waiting-card' }, h('h2', {}, 'Пока протез делают'),
+    ? h('section', { class: 'card waiting-card' }, h('h2', { class: 'with-art' }, sectionArt('waiting', 32), 'Пока протез делают'),
       h('p', {}, 'Учитесь управлению заранее: все игры работают на экранном эмуляторе. Как обычно проходит путь к протезу — у Мио.'),
-      h('button', { class: 'btn ghost', onclick: () => app.go('faq', { topic: 'path', from: 'home' }) }, 'Путь к протезу'))
+      h('button', { class: 'btn ghost', onclick: () => app.go('faq', { topic: 'path', from: 'home' }) }, sectionArt('path', 24), 'Путь к протезу'))
     : !p.tutorialDone || resting ? null
       : h('section', { class: `card everyday ${ticked ? 'done' : ''}`, 'data-tour': 'home.everyday' },
-        h('div', { class: 'card-head' }, h('h2', {}, 'Дело дня в быту'), ticked ? h('span', { class: 'pill' }, 'отмечено') : null),
-        h('p', {}, task.text),
+        h('div', { class: 'card-head' }, h('h2', { class: 'with-art' }, sectionArt('everyday', 32), 'Дело дня в быту'), ticked ? h('span', { class: 'pill' }, 'отмечено') : null),
+        h('div', { class: 'everyday-task' }, dayArt(task.id, 88), h('p', {}, task.text)),
         ticked ? h('p', { class: 'note' }, 'Отмечено. Так навык из игры переходит в жизнь.') : h('p', { class: 'note' }, 'Лёгкие предметы, без спешки. Отметьте, когда получится.'),
         h('button', { class: 'btn ghost', 'aria-pressed': String(ticked), onclick: () => { recordDayNote(p, today, { everyday: ticked ? undefined : task.id }); app.save(); app.go('home'); } },
           ticked ? 'Снять отметку' : 'Получилось'));
@@ -138,7 +140,7 @@ export function homeScreen(app) {
   const goalRow = !app.state.runs.some(r => !r.demo) ? null : p.mission
     ? h('div', { class: 'pet-goal' },
       h('p', { class: 'eyebrow' }, 'Цель недели'),
-      h('b', {}, goal.title),
+      h('b', { class: 'with-art' }, sectionArt('goal', 28), goal.title),
       h('div', { class: 'xp-track', role: 'progressbar', 'aria-label': `Цель: ${goal.title}`, 'aria-valuenow': p.mission.done, 'aria-valuemin': 0, 'aria-valuemax': p.mission.target, 'aria-valuetext': `${p.mission.done} из ${p.mission.target}` },
         h('i', { style: { width: `${Math.round(100 * p.mission.done / p.mission.target)}%` } })),
       h('small', {}, `${p.mission.done} из ${p.mission.target} · награда +${missionXp(p.mission)} XP`),

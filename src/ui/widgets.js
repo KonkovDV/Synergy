@@ -3,6 +3,7 @@ import { h, longestWord } from './dom.js';
 import { fmtSec } from '../core/format.js';
 import { COMMAND_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { mio } from './art.js';
+import { picture } from './pictures.js';
 
 /**
  * Line icons drawn in SVG (5.8): emoji and symbols (⌂ 📈 ⚙ ← ✕ Ⅱ) render differently on every platform —
@@ -42,7 +43,9 @@ export function icon(name) {
 }
 
 export function bottomNav(app, active) {
-  const item = (id, glyph, label) => h('button', { class: `nav-item ${active === id ? 'active' : ''}`, 'aria-current': active === id ? 'page' : null, 'data-tour': `nav.${id}`, onclick: () => app.go(id) }, h('span', { class: 'nav-icon', 'aria-hidden': 'true' }, icon(glyph)), h('span', { class: 'nav-label' }, label));
+  // 5.16: the illustrated icons of the sections (public/art/nav-*); the line icon stands in for a missing picture.
+  const item = (id, glyph, label) => h('button', { class: `nav-item ${active === id ? 'active' : ''}`, 'aria-current': active === id ? 'page' : null, 'data-tour': `nav.${id}`, onclick: () => app.go(id) },
+    h('span', { class: 'nav-icon', 'aria-hidden': 'true' }, picture(`nav-${glyph}`, 28, 'nav-art', () => icon(glyph))), h('span', { class: 'nav-label' }, label));
   return h('nav', { class: 'bottom-nav', 'aria-label': 'Разделы' }, item('home', 'home', 'Главная'), item('nest', 'bird', 'Жар-птица'), item('progress', 'progress', 'Прогресс'), item('settings', 'settings', 'Настройки'));
 }
 
@@ -109,7 +112,7 @@ export function segmented(options, value, onChange, label = null) {
         e.preventDefault();
         pick(options[(i + step + options.length) % options.length], true);
       },
-    }, h('b', {}, o.label), o.sub ? h('small', {}, o.sub) : null)));
+    }, o.art ? o.art() : null, h('b', {}, o.label), o.sub ? h('small', {}, o.sub) : null)));
   };
   render(value);
   return node;

@@ -2,7 +2,8 @@
 // collection, and the report for a prosthetist / rehabilitation specialist.
 import { fmtNum, fmtPct, fmtDay, plural, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
-import { gameArt, firebird } from './art.js';
+import { gameArt, firebird, sectionArt } from './art.js';
+import { picture } from './pictures.js';
 import { petStageIndex } from '../core/pet.js';
 import { PET } from '../config.js';
 import { bottomNav, skillBar, segmented } from './widgets.js';
@@ -183,7 +184,7 @@ export function progressScreen(app) {
   const sameScheme = assessmentHistory(runs, app.settings.scheme, 6); // the trend: one scheme — a switch is not a change of skill (5.10)
   const conf = confusionMatrix(runs);
   const log = wellbeingLog(p, 7);
-  const checkSection = h('section', { class: 'card' }, h('h2', {}, gameArt('check', 28), 'Проверка навыка'),
+  const checkSection = h('section', { class: 'card' }, h('h2', { class: 'with-art' }, gameArt('check', 32), 'Проверка навыка'),
     checks.length
       ? dataTable('Последние проверки (стандартный набор)', ['Дата', 'Выполн., %', 'Выбор, мс', 'Точн., %', 'ПС, бит/с'],
         checks.map(c => [`${fmtDay(c.at)} · ${SCHEME_INFO[c.scheme]?.abbr ?? ''}`, c.completionRate, c.selectionMs, c.accuracy, fmtNum(c.throughputBps)]))
@@ -192,7 +193,7 @@ export function progressScreen(app) {
   const confSection = conf.runs ? h('section', { class: 'card' }, h('h2', {}, 'Ошибки распознавания жестов'),
     confusionTable(conf),
     h('p', { class: 'note' }, conf.top.length ? `Чаще всего: ${conf.top.map(t => `${name(t.wanted)} → ${name(t.seen)} (${t.seconds} с)`).join('; ')}. Тренируйте эти пары в «Сейфе»; если путаница не уходит — обсудите с протезистом переобучение распознавания.` : 'Ошибок нет — отличная разделимость жестов.')) : null;
-  const wellSection = log.length ? h('section', { class: 'card' }, h('h2', {}, 'Самочувствие'),
+  const wellSection = log.length ? h('section', { class: 'card' }, h('h2', { class: 'with-art' }, sectionArt('checkin', 32), 'Самочувствие'),
     dataTable('Последние 7 записей', ['День', 'Боль', 'Усталость', 'Минут'],
       log.map(l => [fmtDay(`${l.day}T12:00:00`), PAIN_LEVELS.find(x => x.id === l.pain)?.label ?? '—', FATIGUE_LEVELS.find(x => x.id === l.fatigue)?.label ?? '—', l.minutes]))) : null;
   return {
@@ -201,7 +202,7 @@ export function progressScreen(app) {
         h('h1', {}, 'Прогресс'),
         // Before the first exercise: one way forward instead of empty bars and a report with nothing in it (5.11).
         runs.length ? null : h('section', { class: 'card empty-state', role: 'status' },
-          h('span', { class: 'empty-art', 'aria-hidden': 'true' }, firebird(PET.stages[petStageIndex(days)].id, 'waiting', 72)),
+          h('span', { class: 'empty-art', 'aria-hidden': 'true' }, picture('empty-progress', 112, 'empty-pic', () => firebird(PET.stages[petStageIndex(days)].id, 'waiting', 72))),
           h('p', {}, 'Здесь появятся навыки, проверки и календарь — после первого упражнения.'),
           h('button', { class: 'btn primary', onclick: () => app.startPlan() }, 'К тренировке дня')),
         h('section', { class: 'stats' },
@@ -216,7 +217,7 @@ export function progressScreen(app) {
         h('section', { class: 'card' }, h('h2', {}, 'Динамика'), ...trends),
         checkSection, confSection, wellSection,
         h('section', { class: 'card' }, h('h2', {}, 'Календарь'), calendar(p)),
-        h('section', { class: 'card', 'data-tour': 'progress.report' }, h('h2', {}, 'Для специалиста'),
+        h('section', { class: 'card', 'data-tour': 'progress.report' }, h('h2', { class: 'with-art' }, sectionArt('report', 32), 'Для специалиста'),
           h('p', { class: 'note' }, 'Игровая статистика каждого упражнения — её можно показать протезисту или реабилитологу. Файл содержит ответы о самочувствии (сведения о здоровье): отправляйте его только тем, кому доверяете.'),
           // 5.14 — a period for the visit or the coordinator's call (about every three months in the first year).
           h('p', { class: 'outfit-label' }, 'Период отчёта'),

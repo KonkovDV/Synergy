@@ -6,7 +6,7 @@ import { signalMeter, icon, handsFreeText, BRIDGE_STATUS } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
 import { COLORS, circle, text } from '../render/draw.js';
-import { gameArt } from './art.js';
+import { gameArt, mio } from './art.js';
 import { LiveAnnouncer } from '../core/announce.js';
 import { MusicPlayer, offsetClock } from '../core/music.js';
 import { audioClock, playMusic } from '../services/audio.js';
@@ -98,7 +98,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       : 'A — сжатие · B — раскрытие · A+B разом — коактивация (смена хвата) · покой — протез держит';
     overlay.replaceChildren(h('div', { class: 'sheet' },
       h('p', { class: 'eyebrow' }, `${SCHEME_INFO[s.scheme].mode}${retention ? ' · без подсказки' : ''}`),
-      h('div', { class: 'sheet-title' }, h('span', { class: `tile g-${entry.id}`, 'aria-hidden': 'true' }, gameArt(entry.id, 44)), h('h2', { id: 'play-dialog-title' }, entry.title)),
+      // 5.16: before the weekly skill check Мио is focused with the player (the illustrations' «перед проверкой»).
+      h('div', { class: 'sheet-title' }, h('span', { class: `tile g-${entry.id}`, 'aria-hidden': 'true' }, entry.assessment ? mio('focus', 44) : gameArt(entry.id, 44)), h('h2', { id: 'play-dialog-title' }, entry.title)),
       h('p', {}, entry.teaches),
       h('ul', { class: 'how' }, ...howFor(entry, s.scheme).map(x => h('li', {}, x))),
       h('p', { class: 'legend' }, legend),
