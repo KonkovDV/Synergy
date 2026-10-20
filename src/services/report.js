@@ -64,7 +64,7 @@ const inPeriod = (runs, keys) => { const set = new Set(keys); return keys.length
  */
 export function protocolMetrics(state, today = dayKey()) {
   const p = state.profile, runs = realRuns(state);
-  const days = Object.keys(p.days ?? {}).filter(k => (p.days[k]?.runs ?? 0) > 0).sort();
+  const days = Object.keys(p.days ?? {}).filter(k => k <= today && (p.days[k]?.runs ?? 0) > 0).sort();
   const first = days[0] ?? null;
   const window = n => (first ? { trained: days.filter(k => k <= shiftDay(first, n - 1)).length, complete: today >= shiftDay(first, n - 1) } : null);
   const quick = runs.filter(r => r.quick);
