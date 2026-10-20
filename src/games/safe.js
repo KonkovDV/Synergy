@@ -3,7 +3,7 @@
 // and co-contraction. Repeating each pattern consistently trains separable EMG patterns
 // (Kristoffersen et al. 2020, 25 able-bodied participants: about 51 % more separated patterns after game training;
 // the 2021 study with limb-absent users found no consistent gain, so this is a design idea, not a promise).
-import { fmtFixed } from '../core/format.js';
+import { SESSION } from '../config.js';
 import { Game, ConfusionMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES, GESTURES } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand, panel, backdrop, scene } from '../render/draw.js';
@@ -41,7 +41,7 @@ const LEVELS = [
 
 const REST_BEFORE_S = 0.3;
 /** A contraction that never becomes rest used to hold the next digit forever. Eight seconds is a real try, then the digit is skipped. */
-export const REST_GIVE_UP_S = 8;
+export const REST_GIVE_UP_S = SESSION.restGiveUpS;
 /**
  * 5.17 — «стабильно / мерцает» beside «Протез видит» (Ottobock Myo Plus: «a strong pattern is indicated by a solid
  * appearance»): two or more changes of the recognised command within 0.6 s. A hint for the moment, not a skill —
@@ -160,12 +160,12 @@ export class SafeGame extends Game {
   skillScores() {
     const mean = this.reactions.length ? this.reactions.reduce((s, v) => s + v, 0) / this.reactions.length : null;
     const asked = this.code.filter(c => !c.rest);
+    if (!asked.length) return { switching: null, timing: null, precision: null };
     const solved = asked.filter(c => c.state === 'ok').length;
-    const n = asked.length || this.code.length;
     return {
-      switching: pct(solved / n - this.wrongTime / 20),
+      switching: pct(solved / asked.length - this.wrongTime / 20),
       timing: mean === null ? 0 : pct(1 - (mean - 0.25) / 2.5),
-      precision: asked.length ? pct(solved / asked.length) : 0,
+      precision: pct(solved / asked.length),
     };
   }
 

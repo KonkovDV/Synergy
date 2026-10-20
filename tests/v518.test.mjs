@@ -89,4 +89,10 @@ test('the demo profile’s checks are whole trials of the scheme and carry their
 test('skill check history carries the trial count; a stored count that is not a positive integer is dropped', () => {
   const run = (trialsTotal, at = '2026-10-20T10:00:00') => ({ at, demo: false, scheme: 'proportional', score: 70, details: { assessment: true, completionRate: 75, trialsTotal } });
   assert.deepEqual(assessmentHistory([run(8), run(0), run('8'), run(-3), run(8.5)]).map(c => c.trials), [8, null, null, null, null]);
+  const partial = assessmentHistory([
+    { at: '2026-10-01T10:00:00', demo: false, scheme: 'proportional', score: 50, details: { assessment: true, completionRate: 50, trialsTotal: 8, trialsStarted: 8 } },
+    { at: '2026-10-08T10:00:00', demo: false, scheme: 'proportional', score: 80, details: { assessment: true, completionRate: 83, trialsTotal: 8, trialsStarted: 6 } },
+  ]);
+  assert.deepEqual(partial.map(c => c.trials), [8, 6]);
+  assert.deepEqual(completionChange(partial[0], partial[1]), completionChange({ completionRate: 50, trials: 8 }, { completionRate: 83, trials: 6 }));
 });

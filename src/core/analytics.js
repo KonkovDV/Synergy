@@ -30,14 +30,17 @@ export function confusionMatrix(runs, last = 20) {
 
 /** Weekly skill checks, oldest first (for the trend table). */
 export function assessmentHistory(runs, scheme = null, last = 8) {
-  return runs.filter(r => !r.demo && r.details?.assessment && (!scheme || r.scheme === scheme)).slice(-last).map(r => ({
-    at: r.at, scheme: r.scheme, score: r.score,
-    completionRate: r.details.completionRate, selectionMs: r.details.selectionMs, completionMs: r.details.completionMs,
-    accuracy: r.details.accuracy, overshoots: r.details.overshoots,
-    throughputBps: r.details.throughputBps ?? null, pathEfficiency: r.details.pathEfficiency ?? null,
-    onThreshold: Number.isFinite(r.details.onThreshold) ? r.details.onThreshold : null,
-    trials: Number.isInteger(r.details.trialsTotal) && r.details.trialsTotal > 0 ? r.details.trialsTotal : null,
-  }));
+  return runs.filter(r => !r.demo && r.details?.assessment && (!scheme || r.scheme === scheme)).slice(-last).map(r => {
+    const n = Number.isInteger(r.details.trialsStarted) ? r.details.trialsStarted : r.details.trialsTotal;
+    return {
+      at: r.at, scheme: r.scheme, score: r.score,
+      completionRate: r.details.completionRate, selectionMs: r.details.selectionMs, completionMs: r.details.completionMs,
+      accuracy: r.details.accuracy, overshoots: r.details.overshoots,
+      throughputBps: r.details.throughputBps ?? null, pathEfficiency: r.details.pathEfficiency ?? null,
+      onThreshold: Number.isFinite(r.details.onThreshold) ? r.details.onThreshold : null,
+      trials: Number.isInteger(n) && n > 0 ? n : null,
+    };
+  });
 }
 
 /**

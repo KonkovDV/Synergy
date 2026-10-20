@@ -305,7 +305,7 @@ export function levelBest(runs, run) {
 
 /** Last skill check in this scheme and whether a new one is due (once a week). */
 export function assessmentStatus(runs, scheme, today = dayKey()) {
-  const last = [...runs].reverse().find(r => !r.demo && r.details?.assessment && r.scheme === scheme) ?? null;
+  const last = [...runs].reverse().find(r => !r.demo && r.details?.assessment && r.scheme === scheme && r.details.completionRate !== null) ?? null;
   const days = last ? dayIndex(today) - dayIndex(dayKey(new Date(last.at))) : Infinity;
   return { last, days, due: days >= SESSION.assessmentEveryDays };
 }

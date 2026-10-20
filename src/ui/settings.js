@@ -50,13 +50,14 @@ export function settingsScreen(app, { back = null } = {}) {
     catch (e) { toast(e?.name === 'NotFoundError' ? 'Устройство не выбрано' : e.message, 'bad'); }
   };
   const bridgeBox = h('div', { class: 'bridge-box', hidden: s.source !== 'bridge' },
+    app.sensorsPaused() ? h('p', { class: 'note warn' }, 'Сегодня датчики выключены: кожа под ними раздражена. Подключите завтра или измените ответ опроса.') : null,
     h('label', { class: 'row' }, h('span', {}, 'WebSocket эмулятора'), urlInput),
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ wsUrl: urlInput.value.trim() }); toast('Подключаемся…'); } }, 'Подключить'),
       h('button', { class: 'btn ghost', 'data-return': 'calibration', onclick: () => app.go('calibration') }, 'Калибровка')),
     status,
     h('div', { class: 'row-actions' },
-      h('button', { class: 'btn ghost', disabled: !bleSupported(), onclick: connectBle }, 'Bluetooth-датчик (BLE UART)')),
+      h('button', { class: 'btn ghost', disabled: !bleSupported() || app.sensorsPaused(), onclick: connectBle }, 'Bluetooth-датчик (BLE UART)')),
     bleStatus,
     h('p', { class: 'note' }, bleSupported()
       ? 'Датчики ESP32/nRF с сервисом Nordic UART (например, MyoWare 2.0 + беспроводной модуль) — прошивка-пример в bridge/firmware. После подключения выполните калибровку.'
@@ -191,6 +192,15 @@ export function calibrationScreen(app) {
   // Calibration changes how the signal is read: in child mode it sits behind the parent PIN like the settings
   // (the results screen links here directly).
   if (app.settings.audience === 'child' && app.settings.parentPin && !app.pinOk) return pinGateScreen(app, { next: 'calibration' });
+  if (app.sensorsPaused()) {
+    return {
+      node: h('div', { class: 'screen calibration' },
+        topBar('Калибровка', () => app.go('settings', { back: 'calibration' })),
+        h('main', { class: 'scroll center' },
+          h('p', { class: 'note warn' }, 'Сегодня датчики выключены: кожа под ними раздражена. Калибровка — в другой день.'))),
+      focus: null,
+    };
+  }
   const kind = app.sourceKind();
   // Paced by «Темп игр» and started on demand (5.11, accessibility review: it ran by itself, silently, in 11 s —
   // a blind or slow user with real sensors could not follow it and saved a wrong calibration).

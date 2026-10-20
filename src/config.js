@@ -52,6 +52,8 @@ export const SESSION = {
   weeklyGoalDefault: 4,     // 15 min, 3–5 days a week is the dose used in game-based studies
   planExercises: 3,         // + 1 retention probe
   assessmentEveryDays: 7,   // the standardized skill check is suggested once a week
+  releaseS: 4,              // seconds to open the hand after a carry («Мастерская»); opening is its own action
+  restGiveUpS: 8,           // a contraction that never becomes rest skips the next digit or trial
 };
 
 /** Child mode (with a parent): shorter plan, shorter rest, lower daily cap. */
