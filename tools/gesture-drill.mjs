@@ -4,6 +4,7 @@
 // from vocabulary.js. Usage: node tools/gesture-drill.mjs
 import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, readdirSync, symlinkSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { writeEvidence } from './evidence.mjs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,6 +39,7 @@ try {
   const failed = [...run.stdout.matchAll(/^not ok \d+ - (.+)$/gm)].map(m => m[1].trim());
   const total = Number(run.stdout.match(/^# tests (\d+)/m)?.[1] ?? 0);
   const unexpected = failed.filter(t => !EXPECTED.includes(t));
+  writeEvidence('drill', { tests: total, failed: failed.length, unexpected: unexpected.length, ok: !!total && !unexpected.length });
   console.log(`Учебная замена «Класс» → «Трипод»: тестов ${total}, упало ${failed.length}.`);
   for (const t of failed) console.log(`${EXPECTED.includes(t) ? '  ожидаемо ' : '  ✗ ОШИБКА'} ${t}`);
   if (!total || unexpected.length) { console.log('Набор жестов задан не в одном месте — см. упавшие тесты.'); process.exitCode = 1; }

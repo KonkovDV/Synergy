@@ -155,10 +155,14 @@ const validPlan = p => p === null || (isObject(p) && typeof p.day === 'string' &
 /** Day records: real dates only, numeric counters, a check-in only as an object. */
 function cleanDays(days) {
   const count = v => (Number.isFinite(v) && v >= 0 ? v : 0);
+  // 5.20 — «покой в движении»: a share 0..1 and the seconds the muscles were on. Anything else is dropped.
+  const motion = m => (isObject(m) && Number.isFinite(m.quiet) && Number.isFinite(m.slipS)
+    ? { quiet: Math.min(1, Math.max(0, m.quiet)), slipS: Math.min(600, Math.max(0, m.slipS)), done: !!m.done } : null);
   return Object.fromEntries(Object.entries(days).filter(([k, d]) => /^\d{4}-\d{2}-\d{2}$/.test(k) && isObject(d)).map(([k, d]) => {
-    const { checkin, everyday, ...rest } = d;
+    const { checkin, everyday, restMotion, ...rest } = d;
+    const kept = motion(restMotion);
     // 5.14 — «дело дня» is a self-report: only a known task id is kept (a backup is untrusted input).
-    return [k, { ...rest, seconds: count(d.seconds), runs: count(d.runs), ...(isObject(checkin) ? { checkin } : {}), ...(validEverydayId(everyday) ? { everyday } : {}) }];
+    return [k, { ...rest, seconds: count(d.seconds), runs: count(d.runs), ...(isObject(checkin) ? { checkin } : {}), ...(validEverydayId(everyday) ? { everyday } : {}), ...(kept ? { restMotion: kept } : {}) }];
   }));
 }
 
