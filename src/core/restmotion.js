@@ -11,6 +11,18 @@ export const REST_MOTION = Object.freeze({
   ]),
 });
 
+/** Seconds of all prompts. The rest pause must be at least this long, or the last prompt is cut off. */
+export const restMotionSeconds = (prompts = REST_MOTION.prompts) => prompts.reduce((sum, p) => sum + p.s, 0);
+
+/**
+ * Who is asked to move the arm during the pause (20.10, medical review). Sensors only. Not a child. Not a short pause.
+ * Only after a check-in that allowed an ordinary plan («go»): moderate pain already shortened the day, and this block
+ * is not a reason to load the arm further. A skipped check-in does not count as permission.
+ */
+export function restMotionAllowed({ source, audience, restS, checkinAction }) {
+  return source === 'bridge' && audience !== 'child' && restS >= restMotionSeconds() && checkinAction === 'go';
+}
+
 export class RestMotion {
   constructor(prompts = REST_MOTION.prompts) {
     this.prompts = prompts;

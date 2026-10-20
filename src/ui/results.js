@@ -8,7 +8,7 @@ import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
 import { SKILL_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest } from '../core/progress.js';
-import { RestMotion, REST_MOTION } from '../core/restmotion.js';
+import { RestMotion, restMotionAllowed } from '../core/restmotion.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
@@ -283,12 +283,9 @@ export function restScreen(app, { next }) {
   const breathWord = h('p', { class: 'breath-word', 'aria-hidden': 'true' }, still ? 'Вдох…' : '');
   const more = h('button', { class: 'btn ghost', onclick: () => { left = Math.min(left + app.rules.restS, app.rules.restS * 10); counter.textContent = Math.ceil(left); } }, `Отдохнуть ещё ${app.rules.restS} с`);
   let breathT = 0;
-  // 5.20 — with real sensors the rest is also «покой в движении»: raise, turn and lower the arm while both channels
-  // stay off. Not on the on-screen emulator (there is no arm to move), not for a child, and not when the rest is
-  // shorter than the three prompts: a child's pause is 15 s and the prompts take 18, so the last one was cut off
-  // and nothing was saved.
-  const motionS = REST_MOTION.prompts.reduce((sum, p) => sum + p.s, 0);
-  const motion = app.sourceKind() === 'bridge' && app.settings.audience !== 'child' && app.rules.restS >= motionS ? new RestMotion() : null;
+  // 5.20 — with real sensors the rest can also be «покой в движении». Who is asked: restMotionAllowed (an adult,
+  // an ordinary check-in, a pause long enough for every prompt).
+  const motion = restMotionAllowed({ source: app.sourceKind(), audience: app.settings.audience, restS: app.rules.restS, checkinAction: app.checkin()?.action }) ? new RestMotion() : null;
   const motionLine = motion ? h('p', { class: 'note' }, motion.prompt.text) : null;
   let motionSaved = false;
   const node = h('div', { class: 'screen rest' },
