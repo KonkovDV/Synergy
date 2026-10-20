@@ -93,7 +93,7 @@ export function homeScreen(app) {
     resting ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null,
     // 5.18 — one tap, one exercise: people drop off by not starting, not by doing less once started (Ramos Muñoz et
     // al. 2022). Free play of the plan's first exercise — the day counts, the plan stays for later.
-    quick ? h('button', { class: 'btn ghost quick-start', onclick: () => app.go('play', { game: quick.game, level: quick.level }) }, `Быстро · ≈ 2 мин: ${GAME_BY_ID[quick.game].title}`) : null,
+    quick ? h('button', { class: 'btn ghost quick-start', onclick: () => app.go('play', { game: quick.game, level: quick.level, quick: true }) }, gameArt(quick.game, 24), `Быстро · ≈ 2 мин: ${GAME_BY_ID[quick.game].title}`) : null,
     h('ol', { class: 'plan-list', 'aria-label': 'Упражнения плана' }, ...plan.items.map(item => {
       const g = GAME_BY_ID[item.game];
       return h('li', { class: item.done ? 'done' : '' },

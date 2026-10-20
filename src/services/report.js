@@ -5,7 +5,7 @@ import { APP, ARM_POSES } from '../config.js';
 import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabulary.js';
 import { skillProfile, playerLevel, shiftDay, dayKey } from '../core/progress.js';
 import { everydayDays } from '../core/everyday.js';
-import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
+import { confusionMatrix, assessmentHistory, completionChange } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS } from '../core/wellbeing.js';
 
 export const DISCLAIMER = 'Тренажёр, не медицинское изделие. Игровая статистика без клинической валидации: не для оценки состояния, подбора нагрузки или решений о лечении. Не медицинская документация и не согласие на обработку персональных данных.';
@@ -57,6 +57,42 @@ export function periodSummary(profile, keys) {
 
 const inPeriod = (runs, keys) => { const set = new Set(keys); return keys.length ? runs.filter(r => set.has(dayKey(new Date(r.at)))) : []; };
 
+/**
+ * 5.19 — the numbers of the field protocol (docs/USABILITY_PROTOCOL.md), as the app itself counts them: training days
+ * in the first 7 and 14 days from the first one, how many exercises a quick start opened, the skill check against its
+ * error, declared rest days. Pure: tests/v519.test.mjs.
+ */
+export function protocolMetrics(state, today = dayKey()) {
+  const p = state.profile, runs = realRuns(state);
+  const days = Object.keys(p.days ?? {}).filter(k => (p.days[k]?.runs ?? 0) > 0).sort();
+  const first = days[0] ?? null;
+  const window = n => (first ? { trained: days.filter(k => k <= shiftDay(first, n - 1)).length, complete: today >= shiftDay(first, n - 1) } : null);
+  const quick = runs.filter(r => r.quick);
+  const checks = assessmentHistory(runs, state.settings.scheme, 1000);
+  const all = periodSummary(p, periodKeys(p, null, today));
+  return {
+    first, week1: window(7), week2: window(14), runs: runs.length,
+    quick: { runs: quick.length, days: new Set(quick.map(r => dayKey(new Date(r.at)))).size },
+    check: checks.length >= 2 ? { first: checks[0].completionRate, last: checks.at(-1).completionRate, count: checks.length, change: completionChange(checks[0], checks.at(-1)) } : { count: checks.length },
+    restDays: all.rest,
+  };
+}
+
+/** Rows of the protocol table in the report: hypothesis, what the app counted. */
+export function protocolRows(m) {
+  const win = (w, n) => (w ? `${w.trained} из ${n}${w.complete ? '' : ' — период ещё идёт'}` : 'тренировок ещё не было');
+  const check = m.check.change
+    ? `${m.check.first} % → ${m.check.last} % (проверок: ${m.check.count}): ${m.check.change.real ? 'больше' : 'в пределах'} погрешности ±${m.check.change.mdc} п. п.`
+    : m.check.count >= 2 ? 'в проверках нет числа попыток (до 5.18)' : `проверок: ${m.check.count} — для сравнения нужны две`;
+  return [
+    ['H1. Дни с тренировкой: первые 7 дней', win(m.week1, 7)],
+    ['H1. Дни с тренировкой: первые 14 дней', win(m.week2, 14)],
+    ['H2. Открыто быстрым стартом', `${m.quick.runs} из ${m.runs} упражнений; дней — ${m.quick.days}`],
+    ['H3. Проверка навыка: первая и последняя', check],
+    ['H5. Дни отдыха из-за боли или кожи', String(m.restDays)],
+  ];
+}
+
 export function buildReport(state, { periodDays = null, today = dayKey() } = {}) {
   const keys = periodKeys(state.profile, periodDays, today);
   const runs = periodDays ? inPeriod(realRuns(state), keys) : realRuns(state);
@@ -106,9 +142,9 @@ const csvCell = v => {
 };
 
 export function reportCsv(state) {
-  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'arm_pose'];
+  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'arm_pose'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
-    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.pose ?? '']);
+    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.pose ?? '']);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
 
@@ -148,6 +184,9 @@ table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border:1px solid #9
 ${table(['Схема управления', 'Сторона', 'Протез', 'Упражнений', 'Минут (всего)', 'Уровень игрока', 'Серия (лучшая)'],
   [[SCHEME_INFO[s.scheme]?.name ?? s.scheme, s.side === 'left' ? 'левая' : 'правая', s.prosthesis === 'waiting' ? 'ожидает' : 'есть', runs.length, Math.round(p.totals.seconds / 60), playerLevel(p.xp).level, `${p.streak.current} (${p.streak.best})`]])}
 <p class="muted">Полнота периода: дней — ${period.days}; с тренировкой — ${period.trained}; день отдыха (боль, кожа) — ${period.rest}; без данных — ${period.empty}. «Дело дня в быту» отмечено в ${period.everyday} дн. — это самоотчёт человека, не измерение.</p>
+<h2>Для проверки гипотез (протокол — docs/USABILITY_PROTOCOL.md)</h2>
+${table(['Гипотеза и мера', 'Что посчитало приложение'], protocolRows(protocolMetrics(state, today)))}
+<p class="muted">Считано за всё время на этом устройстве, без выбранного периода. Это описание одного человека, а не результат исследования: вывод о гипотезах делают по протоколу, по группе участников и с заранее записанными порогами.</p>
 <h2>Профиль навыков (последние 30 упражнений, 0–100)</h2>
 ${table(Object.values(SKILL_NAME), [Object.keys(SKILL_NAME).map(k => skills[k] ?? '—')])}
 <p class="muted">«Без подсказки» — результат испытаний со скрытой живой обратной связью. Игровая метрика удержания навыка (по мотивам тренировки с отсроченной обратной связью, Dupan et al., 2025); клинической валидации у этой игры нет.</p>

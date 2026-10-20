@@ -119,7 +119,7 @@ function gripReplayCard(replay) {
     ].filter(Boolean);
   });
   const pic = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'replay-plot grip-plot', 'aria-hidden': 'true', focusable: 'false' }, ...cols);
-  return h('section', { class: 'card replay' }, h('h2', {}, 'Как прошла Мастерская'), pic,
+  return h('section', { class: 'card replay' }, h('h2', { class: 'with-art' }, gameArt('grip', 32), 'Как прошла Мастерская'), pic,
     h('p', { class: 'note' }, `${gripReplaySummary(replay)} Столбики — предметы по порядку: зелёное — окно силы, красное — где ломается; точка — сила в конце попытки.`));
 }
 
@@ -142,7 +142,7 @@ function safeReplayCard(replay) {
   const W = 320, H = 40, n = replay.digits.length, step = Math.min(34, (W - 16) / n);
   const lamps = replay.digits.map((d, i) => svgEl('circle', { cx: (W / 2 - (n - 1) * step / 2 + i * step).toFixed(1), cy: H / 2, r: (step * 0.32).toFixed(1), class: d.ok ? 'lamp ok' : 'lamp miss' }));
   const pic = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'replay-plot safe-plot', 'aria-hidden': 'true', focusable: 'false' }, ...lamps);
-  return h('section', { class: 'card replay' }, h('h2', {}, 'Как прошёл Сейф'), pic,
+  return h('section', { class: 'card replay' }, h('h2', { class: 'with-art' }, gameArt('safe', 32), 'Как прошёл Сейф'), pic,
     h('p', { class: 'note' }, `${safeReplaySummary(replay, id => GESTURE_BY_ID[id]?.name ?? id)} Огоньки — цифры кода по порядку: зелёные открыты, жёлтые — нет.`));
 }
 
@@ -164,7 +164,7 @@ function flightReplayCard(replay) {
   const d = replay.path.map(([t, a], i) => `${i ? 'L' : 'M'}${x(t)} ${y(a)}`).join(' ');
   const pic = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'replay-plot', 'aria-hidden': 'true', focusable: 'false' },
     svgEl('line', { x1: pad, x2: W - pad, y1: y(0.5), y2: y(0.5), class: 'mid' }), ...marks, svgEl('path', { d, class: 'flight-line' }));
-  return h('section', { class: 'card replay' }, h('h2', {}, 'Как прошёл полёт'), pic,
+  return h('section', { class: 'card replay' }, h('h2', { class: 'with-art' }, gameArt('flight', 32), 'Как прошёл полёт'), pic,
     h('p', { class: 'note' }, `${replaySummary(replay)} Линия — высота птицы; отрезки — кольца: зелёные пройдены, жёлтые — мимо.`));
 }
 

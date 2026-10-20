@@ -34,6 +34,9 @@ const UNVERIFIED = ['Попытки без живой', 'подсказки бы
 const UP_TO_44 = ['Отказов', 'до', '44 %.'].join(' ');
 const FITTS_LAW = ['Пропускная способность', 'по закону', 'Фиттса.'].join(' ');
 const WCAG_CLAIM = ['Приложение', 'соответствует', 'WCAG 2.2.'].join(' ');
+const SOTA_CLAIM = `Синергия — ${['SOTA', 'решение'].join('-')} для тренировки.`;
+const READY_CLAIM = `Игра ${['production', 'ready'].join('-')}.`;
+const UNIQUE_CLAIM = ['Аналогов', 'нет.'].join(' ');
 const gate = dir => spawnSync(process.execPath, ['tools/check-submission.mjs', '--draft', '--no-tests'], { cwd: dir, encoding: 'utf8' });
 const edit = (dir, f, fn) => writeFileSync(join(dir, f), fn(readFileSync(join(dir, f), 'utf8')));
 
@@ -53,6 +56,11 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['«up to 44 %»', () => edit(dir, 'README.md', s => `${s}\n${UP_TO_44}\n`), 'README.md:'],
       ['«Fitts\' law measured»', () => edit(dir, 'README.md', s => `${s}\n${FITTS_LAW}\n`), 'по мотивам теста Фиттса'],
       ['«complies with WCAG»', () => edit(dir, 'README.md', s => `${s}\n${WCAG_CLAIM}\n`), 'соответствует WCAG'],
+      // 5.19 — a grade of one's own product only beside a measured report (the team's MicroPhoenix rule).
+      ['a state-of-the-art grade of ourselves', () => edit(dir, 'docs/PITCH.md', s => `${s}\n${SOTA_CLAIM}\n`), 'о себе — назвать измеренное'],
+      ['a readiness grade', () => edit(dir, 'README.md', s => `${s}\n${READY_CLAIM}\n`), 'прототип геймджема'],
+      ['«no competitors» on a slide', () => edit(dir, 'tools/build-deck.py', s => `${s}\n# ${UNIQUE_CLAIM}\n`), 'есть свои игры'],
+      ['a field result without its session', () => edit(dir, 'docs/USABILITY_RESULTS.md', s => s.replace('|---|---|---|---|---|---|---|---|\n', '|---|---|---|---|---|---|---|---|\n| в среднем | | | | 90 % | 81 | нет | |\n')), 'строка без ссылки на сессию'],
       ['stale APK name in README', () => edit(dir, 'README.md', s => `${s}\nrelease/Synergy-0.0.1.apk\n`), 'Synergy-0.0.1.apk'],
       ['overstated claim', () => edit(dir, 'README.md', s => `${s}\n${OVERSTATED}\n`), 'README.md:'], // the wording lint names the file and line
       ['manifest declares a medical app', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"games",', '"games", "medical",')), 'категория «medical»'],

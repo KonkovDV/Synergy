@@ -22,13 +22,13 @@ import { howFor } from '../games/registry.js';
 /** Hints that flip with the signal (spaced for screen readers); everything else is a task and is said promptly. */
 const FEEDBACK_HINT = /^(Держите|Сильнее|Слабее|Слабо|Сильно|Отлично|Несите)/;
 
-export function playScreen(app, { game, level, retention = false, plan = false, demo = false, pose = null }) {
+export function playScreen(app, { game, level, retention = false, plan = false, demo = false, pose = null, quick = false }) {
   const s = app.settings;
   // 5.16+: in «Полёт» the player's Firebird flies through the rings once it has wings (fledgling on); the egg and the
   // chick leave it to the glider. The game reads the sprite `flight-flier` (render/sprites.js).
   const stage = PET.stages[petStageIndex(trainingDays(app.profile))];
   useSprite('flight-flier', petFlyer(stage.id));
-  let session = app.createSession({ game, level, retention, demo, plan, pose });
+  let session = app.createSession({ game, level, retention, demo, plan, pose, quick });
   // Procedural music (only «Ритм» has a song): scheduled on the audio clock, heard when the note reaches the line.
   const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: offsetClock(audioClock, s.audioOffsetMs), play: playMusic }) : null; };
   let music = musicFor(session);
@@ -158,7 +158,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   function restart(asDemo) {
     music?.update(0, 1, false);
     if (asDemo !== demo) { app.go('play', { game, level, retention, plan, demo: asDemo, pose }); return; }
-    session = app.createSession({ game, level, retention, demo, plan, pose });
+    session = app.createSession({ game, level, retention, demo, plan, pose, quick });
     music = musicFor(session);
     lastScore = -1; showIntro();
   }

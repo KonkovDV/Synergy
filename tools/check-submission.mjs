@@ -89,12 +89,29 @@ const BANNED = [
   // External audit 18.10.2026: a game metric is not «Fitts' law measured»; automated checks are not «compliance».
   [new RegExp(`(пропускн${W} способност${W} по закону Фиттса|измерил${W} закон${W} Фиттса)`, 'i'), '«по закону Фиттса» — говорить «игровая пропускная способность по мотивам теста Фиттса»'],
   [new RegExp(`(приложени${W}|игра|продукт|Синерги${W})»? (полностью )?соответству${W} WCAG`, 'i'), '«соответствует WCAG» — без ручной проверки со скринридером говорить «ориентир WCAG 2.2, автоматические проверки»'],
+  // 5.19 — the rule of the team's MicroPhoenix plan: a grade of one's own product only beside a measured report.
+  // «SOTA» as the state of research («SOTA на октябрь 2026») stays; «SOTA-решение» about ourselves does not.
+  [new RegExp(`SOTA-(решени|продукт|игр|приложени|уровн)|(решени${W}|продукт${W}|игр${W}|приложени${W}) уровня SOTA`, 'i'), '«SOTA-решение» о себе — назвать измеренное: тесты, axe, линтер (docs/evidence.json)'],
+  // «10/10» as a count of checks («встраивание — 10/10») is a measurement; as a grade it is not.
+  [new RegExp(`production[- ]ready|(оценк${W}|качеств${W}|уровн${W})[^.\\n]{0,15}\\b10\\s*/\\s*10\\b`, 'i'), '«production-ready», «качество 10/10» — у нас прототип геймджема; оценки — только из измеренных отчётов'],
+  [new RegExp(`лучш${W} в мире|не име${W} аналогов|аналогов нет`, 'i'), '«лучший в мире», «аналогов нет» — у «Моторики» и Coapt есть свои игры (docs/RESEARCH.md §9, §11)'],
+  [new RegExp(`клинически (доказан|подтвержд|проверен)${W}`, 'i'), '«клинически доказано» — клинической проверки не было (LIMITS.md)'],
 ];
 // Everything the jury or a user may read, except the frozen v3 snapshot and this file (it quotes the patterns).
 const textFiles = tracked.filter(f => /\.(md|js|mjs|html|py)$/.test(f) && !/^legacy\//.test(f) && f !== 'tools/check-submission.mjs' && existsSync(join(root, f)));
 for (const f of textFiles) {
   const lines = read(f).split('\n');
   lines.forEach((line, i) => { for (const [re, why] of BANNED) if (re.test(line)) fail(`${f}:${i + 1}: ${why}`); });
+}
+
+// 3b (5.19). Field results come from sessions only (docs/USABILITY_PROTOCOL.md §6): every row of a results table
+// names its session (S1…), participant (P1…) or hypothesis (H1…) — a number without one is an invented number.
+if (existsSync(join(root, 'docs/USABILITY_RESULTS.md'))) {
+  read('docs/USABILITY_RESULTS.md').split('\n').forEach((line, i) => {
+    const cells = line.trim().startsWith('|') ? line.split('|').slice(1, -1).map(c => c.trim()) : null;
+    if (!cells || cells.every(c => /^:?-{3,}:?$/.test(c)) || ['Сессия', 'Участник', 'Гипотеза'].includes(cells[0])) return;
+    if (!/^[SPH]\d+\b/.test(cells[0])) fail(`docs/USABILITY_RESULTS.md:${i + 1}: строка без ссылки на сессию, участника или гипотезу (S1, P1, H1)`);
+  });
 }
 
 const { GESTURE_IDS } = await import(pathToFileURL(join(root, 'src/core/vocabulary.js')).href);
