@@ -1,6 +1,13 @@
 # Синергия — игра-тренажёр управления бионическим протезом
 
-![версия](https://img.shields.io/badge/версия-5.20.0-16e182) ![офлайн](https://img.shields.io/badge/офлайн-PWA·HTML·APK-3fe0a0) ![лицензия](https://img.shields.io/badge/лицензия-все_права_защищены-lightgrey)
+<p align="center">
+  <a href="https://github.com/KonkovDV/Synergy/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/KonkovDV/Synergy/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <img alt="версия 5.20.0" src="https://img.shields.io/badge/версия-5.20.0-16e182">
+  <img alt="офлайн" src="https://img.shields.io/badge/офлайн-PWA·HTML·APK-3fe0a0">
+  <img alt="лицензия" src="https://img.shields.io/badge/лицензия-все_права_защищены-lightgrey">
+</p>
+
+**Для жюри:** [открыть за 3 минуты](#проверьте-нас-за-3-минуты) · [границы](LIMITS.md) · [вопросы и питч](docs/JURY_STRATEGY.md) · [раскрытие ИИ](docs/AI_USAGE.md) · [что сдаём](submission/README.md)
 
 Мобильная игра для людей с миоэлектрическими протезами кисти — и для тех, кто протез ещё ждёт. Короткие игры тренируют то, что протезу нужно каждый день: **взять предмет с нужной силой, удержать, отпустить, сменить хват, включиться вовремя**. Две ЭМГ-кнопки (пороговый и пропорциональный режим) и режим жестов. Семь жестов — гипотеза команды, пока организатор не опубликует набор 28.10.
 
@@ -17,7 +24,7 @@
 <!-- evidence:begin -->
 | Главное | Цифра | Где проверить |
 |---|---|---|
-| Тесты | 298 тестов, 0 упали | `npm test` |
+| Тесты | 299 тестов, 0 упали | `npm test` |
 | Доступность | 0 нарушений axe: светлая тема — 31 состояние, тёмная — 10 (20.10.2026) | `npm run e2e:a11y` |
 | Раскладка | 62 состояния × 7 экранов × текст 100/130/200 % = 1302 — 0 находок (20.10.2026) | `npm run audit:layout` |
 | Контраст | каждая пара цветов ≥ 4,5:1 в трёх темах | `tests/design.test.mjs` |
@@ -46,17 +53,16 @@
 | Доказан ли перенос навыка на протез? | Нет. Механика повторяет закон управления протеза, но пользу мы не обещаем | `docs/RESEARCH.md`, `LIMITS.md` |
 | Где реальные пользователи? | Пока не играли: баланс проверен ботом и моделью новичка. Протокол гипотез H1–H5 готов, результатов нет | `docs/USABILITY_PROTOCOL.md`, `docs/USABILITY_RESULTS.md`, `LIMITS.md` |
 | Чья графика? | Иллюстрации созданы генератором по промптам команды, отобраны и проверены вручную; чужих персонажей и знаков нет | `docs/AI_USAGE.md`, `docs/LEGAL.md` §6, `docs/ART.md` |
-| Что будет 28.10, когда опубликуют жесты и эмулятор? | Набор жестов меняется в одном файле, адаптер эмулятора — одна функция | `docs/INTEGRATION.md`, `PLAN.md` |
+| Что будет 28.10, когда опубликуют жесты и эмулятор? | Набор жестов меняется в одном файле, адаптер эмулятора — одна функция | `docs/INTEGRATION.md`, `src/core/vocabulary.js` |
 
 ## Кому что читать
 
 | Вы | Читайте |
 |---|---|
-| Жюри | этот README → `LIMITS.md` → `docs/JURY_STRATEGY.md` · `docs/PITCH.md` |
+| Жюри | этот README → `submission/README.md` → `LIMITS.md` → `docs/JURY_STRATEGY.md` |
 | «Моторика» | `docs/embed/README.md` · `docs/INTEGRATION.md` · `docs/USABILITY_PROTOCOL.md` · `docs/RESEARCH.md` |
 | Реабилитолог | `docs/GAME_RULES.md` · `docs/USABILITY_PROTOCOL.md` · `docs/SCENARIOS.md` · отчёт для специалиста в приложении |
-| Разработчик | `docs/ARCHITECTURE.md` · `docs/ART.md` · `MEMORY.md` · `PLAN.md` |
-| Капитан репозитория | `PROVENANCE.md` · `PLAN.md` B.1 · `SECURITY.md` |
+| Разработчик | `docs/ARCHITECTURE.md` · `docs/ART.md` · `CONTRIBUTING.md` |
 
 ## Запуск за 1 минуту
 
@@ -81,7 +87,7 @@
 ## Проверка качества
 
 ```bash
-npm ci && npm test              # 298 тестов: ядро, игры × уровни × схемы (бот и модель новичка), графика, сборка, ворота
+npm ci && npm test              # 299 тестов: ядро, игры × уровни × схемы (бот и модель новичка), графика, сборка, ворота
 npm run build                   # dist/ (PWA) + dist/synergy-standalone.html
 npm run drill:gestures          # учебная замена жеста: остальной код берёт набор из vocabulary.js
 npm run e2e:embed               # хост другого origin: ready → знакомство → упражнение → кадры хоста → результат → close
@@ -94,7 +100,7 @@ python tools/import-art.py      # картинки из пакета графи�
 
 e2e-скрипты сами поднимают локальный сервер (`tools/static-server.mjs`), Python для них не нужен. Нужен Chromium для Playwright: `npm i --no-save playwright && npx playwright install chromium`. **Windows (проверено 20.10.2026):** `npm test`, e2e, линтер раскладки, учебная замена жестов и сборка APK в Git Bash работают. Распаковывайте архив целиком: без картинок и PNG-иконок тесты графики падают и говорят об этом.
 
-CI (`.github/workflows`, actions закреплены по SHA): тесты, учебная замена, сборка, e2e с аудитом доступности и линтером раскладки; dependency review на каждый PR; публикация PWA в Pages; релиз APK/HTML по тегу `v*` с SBOM (CycloneDX) и `SHA256SUMS`. На GitHub ещё не запускался — у репозитория нет удалённого адреса.
+Репозиторий: https://github.com/KonkovDV/Synergy. CI (`.github/workflows`, actions закреплены по SHA): тесты, учебная замена, сборка, e2e с аудитом доступности и линтером раскладки; dependency review на каждый PR; публикация PWA в Pages; релиз APK/HTML по тегу `v*` с SBOM (CycloneDX) и `SHA256SUMS`. Значок CI ведёт на этот прогон. Цифры в таблице выше сняты локально — дата и платформа в `docs/evidence.json`.
 
 ## Документы
 
@@ -103,16 +109,16 @@ CI (`.github/workflows`, actions закреплены по SHA): тесты, у�
 | `LIMITS.md` | границы: чего продукт не делает, что не проверено, о чём нельзя говорить |
 | `docs/SCENARIOS.md` | все сценарии и граничные случаи → поведение → проверка |
 | `docs/RESEARCH.md` | заказчик (в т. ч. VR-платформа Attilan), конкуренты, наука, интерфейсы 2026 |
-| `docs/JURY_STRATEGY.md` · `docs/PITCH.md` | критерии, Murder Board, чек-лист сдачи · слайды, видео 90 с, демо 3 мин |
+| `docs/JURY_STRATEGY.md` · `docs/PITCH.md` | критерии, вопросы жюри, чек-лист сдачи · слайды, видео 90 с, демо 3 мин |
 | `docs/GAME_RULES.md` | все правила и формулы игры с константами — сверяются с кодом тестом |
 | `docs/GAME_DESIGN.md` · `docs/ARCHITECTURE.md` · `docs/INTEGRATION.md` | механики · слои и принципы · форматы и транспорты |
 | `docs/DESIGN.md` · `docs/ART.md` | дизайн-система и промпты графики · каталог иллюстраций, места на экране, как заменить |
 | `docs/embed/README.md` | встраивание в приложение заказчика: контракт, чек-лист, примеры на каждый стек и как каждый проверен |
-| `docs/AUDIT.md` | аудит 5.5–5.19 (§12–16, §18 — что взято из образца ФинФениксов): триаж, Red Team, фактчекинг, конкуренты и SOTA, Murder Board |
+| `docs/AUDIT.md` | журнал проверок: фактчекинг, конкуренты, что взято из образца и чего не взяли |
 | `docs/USABILITY_PROTOCOL.md` · `docs/USABILITY_RESULTS.md` | гипотезы H1–H5 для проверки с экспертами «Моторики»: меры, пороги, процедура; результатов пока нет |
 | `docs/LEGAL.md` · `SECURITY.md` · `docs/ACCESSIBILITY.md` | право (п. 6.6, 152-ФЗ, 323-ФЗ, изображения ИИ) · модель угроз · доступность |
 | `docs/AI_USAGE.md` · `AUTHORS.md` · `THIRD_PARTY.md` | раскрытие ИИ · авторы и РИД · компоненты третьих лиц |
-| `MEMORY.md` · `PLAN.md` | состояние и план для новой сессии ИИ |
+| `submission/README.md` | что открыть жюри: прототип, документы, колода |
 
 ## Структура
 
