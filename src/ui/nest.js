@@ -27,7 +27,7 @@ export function nestScreen(app) {
   const p = app.profile, s = app.settings, today = dayKey();
   const name = petName(s);
   const days = trainingDays(p);
-  const resting = app.checkin()?.action === 'stop';
+  const resting = app.checkin()?.action === 'stop' && app.checkin()?.reason !== 'skin';
   const pet = petState(days, { trainedToday: (p.days[today]?.runs ?? 0) > 0, restToday: resting, name,
     planDone: !!(p.plan?.day === today && p.plan.rewarded), goalDone: !!p.days[today]?.goal, daysSince: daysSinceTraining(p, today) });
   const worn = wornItems(p, pet.stage.id);

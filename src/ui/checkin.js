@@ -24,7 +24,7 @@ export function checkinScreen(app) {
     const a = checkInAdvice(answers);
     // 5.16: the advice carries its picture — a calm shield for a stop or a light day, the check mark for a full one.
     advice.replaceChildren(h('p', { class: `note with-art ${a.action === CHECKIN_ACTION.GO ? '' : 'warn'}` }, sectionArt(a.action === CHECKIN_ACTION.GO ? 'done' : 'safety', 32), a.text));
-    go.textContent = a.action === CHECKIN_ACTION.STOP ? 'Понятно, отдыхаю' : a.action === CHECKIN_ACTION.LIGHT ? 'Начать короткий план' : 'Начать тренировку';
+    go.textContent = a.reason === 'skin' ? 'Начать без датчиков' : a.action === CHECKIN_ACTION.STOP ? 'Понятно, отдыхаю' : a.action === CHECKIN_ACTION.LIGHT ? 'Начать короткий план' : 'Начать тренировку';
     app.say(a.text, { interrupt: true });
   };
   go.onclick = () => {
@@ -32,7 +32,10 @@ export function checkinScreen(app) {
     recordDayNote(app.profile, today, { checkin: { ...answers, action: a.action, reason: a.reason, at: new Date().toISOString() } });
     if (a.action === CHECKIN_ACTION.LIGHT) lightenPlan(app.dailyPlan());
     app.save();
-    if (a.action === CHECKIN_ACTION.STOP) app.go('home'); else app.startPlan({ checked: true });
+    app.applySource();
+    if (a.reason === 'skin') app.startPlan({ checked: true });
+    else if (a.action === CHECKIN_ACTION.STOP) app.go('home');
+    else app.startPlan({ checked: true });
   };
   skip.hidden = !checkinSkippable(answers, app.checkin());
   const question = (title, levels, key) => h('section', { class: 'card' }, h('h2', { class: key === 'pain' ? 'with-art' : null }, key === 'pain' ? sectionArt('checkin', 32) : null, title),

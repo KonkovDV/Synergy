@@ -3,7 +3,7 @@ import { fmtPct, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { bottomNav, topBar, mioAvatar } from './widgets.js';
 import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
-import { trainingDays, playerLevel, weeklyStatus, weekOutlookText, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, daysSinceTraining, recordDayNote, quickStart } from '../core/progress.js';
+import { trainingDays, playerLevel, weeklyStatus, weekOutlookText, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, planClosedDays, daysSinceTraining, recordDayNote, quickStart } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
 import { overDailyCap, capAdvice, safetyOutdated } from '../core/wellbeing.js';
@@ -28,7 +28,10 @@ export function homeScreen(app) {
   const plan = app.dailyPlan();
   const doneCount = plan.items.filter(i => i.done).length;
   const allDone = doneCount === plan.items.length;
-  const resting = app.checkin()?.action === 'stop';
+  const answer = app.checkin();
+  const painRest = answer?.action === 'stop' && answer?.reason !== 'skin';
+  const skinDay = answer?.reason === 'skin';
+  const resting = painRest;
   const quick = quickStart({ tutorialDone: p.tutorialDone, resting, plan, trainedToday: (p.days[today]?.runs ?? 0) > 0 });
   // Жар-птица (5.12): grows with training days; fed when trained today, asleep on a declared rest day — never sad.
   // 5.13: its line says why (the day's latest event), and it wears what the achievements earned.
@@ -72,7 +75,7 @@ export function homeScreen(app) {
     h('div', { class: 'week' },
       ...week.days.map((d, i) => h('div', { class: `day ${week.trained[i] ? 'done' : ''} ${i === week.todayIndex ? 'today' : ''}` }, h('i'), h('small', {}, WEEKDAYS[i]),
         h('span', { class: 'sr-only' }, week.trained[i] ? ': занимались' : i === week.todayIndex ? ': сегодня' : ''))),
-      h('p', { class: 'week-note' }, `${week.done} из ${week.goal}. ${weekOutlookText(week, { restDays: painRestDays(p) })}`)));
+      h('p', { class: 'week-note' }, `${week.done} из ${week.goal}. ${weekOutlookText(week, { restDays: planClosedDays(p) })}`)));
 
   // The day's main action comes right under the title (5.8): at the end of the card it sat under the bottom bar
   // on a 390 × 844 phone and was not visible without scrolling. The list below says what is inside.
@@ -82,15 +85,12 @@ export function homeScreen(app) {
   const planCard = h('section', { class: 'card plan', 'data-tour': 'home.plan' },
     h('div', { class: 'card-head' }, h('h2', { class: 'with-art' }, sectionArt('plan', 32), plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
     overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,
-    resting ? h('p', { class: 'note warn' }, restText) : null,
-    // 5.14 — back after a break: growth kept, no catching up; a calm first exercise, and the sensors checked first
-    // (skin, sweat and a shifted electrode change the signal — the device drifts while it lies in a drawer).
-    !resting && pet.reason === 'back' ? h('p', { class: 'note comeback' }, `С возвращением! Догонять ничего не нужно: начните с первого упражнения в спокойном темпе.${app.sourceKind() === 'touch' ? '' : ' С датчиками — сначала короткая калибровка.'}`) : null,
-    !resting && pet.reason === 'back' && app.sourceKind() !== 'touch' ? h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, sectionArt('calibration', 24), 'Калибровка датчиков') : null,
-    // Before the tutorial its card is the one primary action (5.11: three equal glowing buttons on the first run).
+    resting || skinDay ? h('p', { class: 'note warn' }, restText) : null,
+    !resting && !skinDay && pet.reason === 'back' ? h('p', { class: 'note comeback' }, `С возвращением! Догонять ничего не нужно: начните с первого упражнения в спокойном темпе.${app.sourceKind() === 'touch' ? '' : ' С датчиками — сначала короткая калибровка.'}`) : null,
+    !resting && !skinDay && pet.reason === 'back' && app.sourceKind() !== 'touch' ? h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, sectionArt('calibration', 24), 'Калибровка датчиков') : null,
     h('button', { class: `btn ${p.tutorialDone ? 'primary' : 'ghost'} big plan-start`, disabled: allDone || resting, onclick: () => app.startPlan() },
-      resting ? 'Сегодня — отдых' : allDone ? 'План выполнен' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
-    resting ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null,
+      resting ? 'Сегодня — отдых' : skinDay ? (doneCount ? 'Продолжить без датчиков' : 'Начать без датчиков') : allDone ? 'План выполнен' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
+    resting || skinDay ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null,
     // 5.18 — one tap, one exercise: people drop off by not starting, not by doing less once started (Ramos Muñoz et
     // al. 2022). Free play of the plan's first exercise — the day counts, the plan stays for later.
     quick ? h('button', { class: 'btn ghost quick-start', onclick: () => app.go('play', { game: quick.game, level: quick.level, quick: true }) }, gameArt(quick.game, 24), `Быстро · ≈ 2 мин: ${GAME_BY_ID[quick.game].title}`) : null,
