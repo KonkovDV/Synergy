@@ -261,6 +261,12 @@ export class App {
   }
 
   applySource({ force = true } = {}) {
+    if (this.sensorsPaused()) {
+      this.ble?.disconnect(); this.ble = null;
+      this.bridge?.stop(); this.bridge = null;
+      this.appliedSource = 'skin-off';
+      return;
+    }
     const url = this.hostFed ? '' : this.settings.wsUrl;
     const key = `${this.settings.source}|${url}`;
     if (!force && key === this.appliedSource) return;
@@ -297,6 +303,7 @@ export class App {
    * true when the source was (re)started now — then BridgeSource did not hear the frame that caused it.
    */
   hostSource() {
+    if (this.sensorsPaused()) return false;
     if (this.settings.source === 'bridge' && this.hostFed) return false;
     this.hostFed = true;
     if (this.settings.source !== 'bridge') this.updateSettings({ source: 'bridge' });
@@ -372,10 +379,17 @@ export class App {
     return fresh;
   }
 
+  /** Irritated skin under the electrodes: no sensor signal today. The saved source is left as it is. */
+  sensorsPaused() { return this.checkin()?.reason === 'skin'; }
+
   sourceKind() { return this.settings.source === 'bridge' ? 'bridge' : 'touch'; }
+
+  /** The emulator when the skin must rest; otherwise the chosen source. */
+  liveSource() { return this.sensorsPaused() ? 'touch' : this.sourceKind(); }
+
   /** The emulator, or the external source; never null (5.10: a missing bridge made every frame throw). */
   signalSource(demo = false) {
-    if (demo || this.sourceKind() === 'touch') return this.emulator;
+    if (demo || this.liveSource() === 'touch') return this.emulator;
     if (!this.bridge) this.applySource();
     return this.bridge;
   }
@@ -383,7 +397,7 @@ export class App {
 
   createPipeline(demo = false, { adaptRest = false } = {}) {
     const s = this.settings;
-    const calibration = demo ? this.state.calibrations.touch : this.calibration();
+    const calibration = demo || this.sensorsPaused() ? this.state.calibrations.touch : this.calibration();
     const restTracker = adaptRest ? new RestTracker(calibration, { onThreshold: s.sensitivity }) : null;
     return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, coThreshold: s.coThreshold }, restTracker });
   }
@@ -406,7 +420,7 @@ export class App {
     if (!item) return this.go('home');
     const answer = this.checkin();
     if (!checked && needsCheckin(this.profile, dayKey())) return this.go('checkin');
-    if (answer?.action === CHECKIN_ACTION.STOP) return this.go('home');
+    if (answer?.action === CHECKIN_ACTION.STOP && answer?.reason !== 'skin') return this.go('home');
     this.go('play', { game: item.game, level: item.level, retention: item.retention, plan: true, pose: item.pose });
   }
 
@@ -420,10 +434,10 @@ export class App {
       mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: s.sensitivity,
       successTarget: trainingDays(this.profile) < ADAPT.firstWeekDays ? ADAPT.firstWeekTarget : null });
     const hand = this.createHand();
-    const adaptRest = restAdaptationAllowed({ source: this.sourceKind(), enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
+    const live = this.liveSource();
+    const adaptRest = restAdaptationAllowed({ source: live, enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
     const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });
-    // The arm pose matters only for real sensors: with the on-screen emulator it is neither asked nor recorded (5.11).
-    const armPose = pose && !demo && this.sourceKind() === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
+    const armPose = pose && !demo && live === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
     return { id: game, level, retention, demo, plan, quick: !!quick && !demo, pose: armPose, game: instance, hand, runner, entry: GAME_BY_ID[game] };
   }
 
@@ -441,7 +455,7 @@ export class App {
     const run = {
       id: crypto.randomUUID?.() ?? String(Date.now()), at: new Date().toISOString(),
       game: session.id, level: session.level, levelCount: session.entry.Game.levels.length,
-      scheme: this.settings.scheme, source: session.demo ? 'demo' : this.sourceKind(),
+      scheme: this.settings.scheme, source: session.demo ? 'demo' : this.liveSource(),
       retention: session.retention, demo: session.demo, plan: !!session.plan, ...(session.quick ? { quick: true } : {}), ...(session.pose ? { pose: session.pose.id } : {}), ...r,
     };
     const replay = session.game.replay?.() ?? null; // shown on the results screen, never saved

@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { adviseStop, needsCheckin, checkInAdvice, checkinSkippable, CHECKIN_ACTION, SKIN_LEVELS, freePlayCaution } from '../src/core/wellbeing.js';
-import { createProfile, recordDayNote, sessionRules, buildDailyPlan, completePlanItem, recordRun, streakAlive } from '../src/core/progress.js';
+import { createProfile, recordDayNote, sessionRules, buildDailyPlan, completePlanItem, recordRun, streakAlive, weeklyStatus, weekOutlook, planClosedDays, painRestDays } from '../src/core/progress.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
 
 const D = '2026-10-17', NEXT = '2026-10-18';
@@ -30,6 +30,13 @@ test('scenario 1.3a: irritated skin under the sensors → no sensor training tod
   recordDayNote(p, '2026-10-19', { checkin: { ...a, skin: 1 } });
   recordRun(p, run('grip', 80, '2026-10-21T10:00:00'), { today: '2026-10-21' });
   assert.equal(p.streak.current, 2, 'two skin-rest days + one ordinary rest day keep the series');
+  const skin = createProfile();
+  recordDayNote(skin, '2026-10-24', { checkin: { action: 'stop', reason: 'skin' } });
+  const week = weeklyStatus(skin, 2, '2026-10-24');
+  assert.equal(weekOutlook(week, { restDays: planClosedDays(skin) }).kind, 'fits', 'emulator practice still fits in the week');
+  assert.equal(weekOutlook(week, { restDays: painRestDays(skin) }).kind, 'short');
+  recordDayNote(skin, '2026-10-25', { checkin: { action: 'stop' } });
+  assert.deepEqual(planClosedDays(skin), ['2026-10-25'], 'an old stop with no reason stays a closed day');
 });
 
 test('scenario 1.3b: free play on a declared rest day or over the daily cap shows a caution', () => {

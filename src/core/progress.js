@@ -95,9 +95,14 @@ export function gameProgress(profile, gameId) {
   return profile.games[gameId] ?? { unlocked: 1, stars: {}, best: {}, played: false, lastStars: {} };
 }
 
-/** Days the user declared «rest because of pain»: neutral for the series (never punish resting). */
+/** Days the user declared «rest because of pain»: neutral for the series (never punish resting). Skin irritation is included: a day without electrodes is not a broken series. */
 export function painRestDays(profile) {
   return Object.keys(profile.days).filter(d => profile.days[d]?.checkin?.action === 'stop');
+}
+
+/** Days the plan is closed. Severe pain, and older answers with no reason. Irritated skin is not closed: the day continues on the on-screen emulator. */
+export function planClosedDays(profile) {
+  return painRestDays(profile).filter(d => profile.days[d]?.checkin?.reason !== 'skin');
 }
 
 /** Calendar gap between two days, not counting declared pain-rest days in between. */
