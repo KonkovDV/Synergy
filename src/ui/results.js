@@ -133,6 +133,8 @@ function gripReplayCard(replay) {
 export function safeReplaySummary(replay, nameOf = id => id) {
   const opened = replay.digits.filter(d => d.ok);
   const parts = [`Открыто ${opened.length} из ${replay.digits.length}.`];
+  const skipped = replay.digits.filter(d => d.rest).length;
+  if (skipped) parts.push(`Покой не получился — ${count(skipped, ['цифра не началась', 'цифры не начались', 'цифр не начались'])}.`);
   const slow = opened.length >= 2 ? opened.reduce((a, b) => (b.seconds > a.seconds ? b : a)) : null;
   if (slow) parts.push(`Дольше всего — «${slow.name}»: ${fmtFixed(slow.seconds)} с.`);
   if (replay.top) parts.push(`Вместо «${nameOf(replay.top.wanted)}» протез чаще видел «${nameOf(replay.top.seen)}» (${fmtFixed(replay.top.seconds)} с) — эту пару стоит потренировать.`);
@@ -219,7 +221,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     h('div', { class: 'stats' },
       metric('выполнено', fmtPct(d.completionRate)), metric('выбор, мс', d.selectionMs), metric('выполнение, мс', d.completionMs), metric('точность', d.accuracy === null ? '—' : fmtPct(d.accuracy)),
       'throughputBps' in d ? metric('ПС, бит/с', fmtNum(d.throughputBps)) : null),
-    h('p', { class: 'note' }, `Время выбора — до первого верного сигнала; выполнение — до удержания 1 с${'throughputBps' in d ? ' (уровни силы — 0,5 с). ПС — игровая пропускная способность по мотивам теста Фиттса: чем быстрее и точнее выход на уровень силы, тем она выше' : ''}. Сравнивайте с прошлой неделей на экране «Прогресс». Метрики игровые, не клинический тест.`)) : null;
+    h('p', { class: 'note' }, `Время выбора — до первого верного сигнала; выполнение — до удержания 1 с${'throughputBps' in d ? ' (уровни силы — 0,5 с). ПС — игровая пропускная способность по мотивам теста Фиттса: чем быстрее и точнее выход на уровень силы, тем она выше' : ''}. Сравнивайте с прошлой неделей на экране «Прогресс». Метрики игровые, не клинический тест.`),
+    d.restMissed ? h('p', { class: 'note' }, `Покой не получился — ${count(d.restMissed, ['попытка не началась', 'попытки не начались', 'попыток не начались'])}. В выбор жеста это не вошло.`) : null) : null;
   const calibrationCard = calibrationNote?.recalibrate
     ? h('div', { class: 'card warn-card', role: 'status' }, h('b', { class: 'with-art' }, badgeArt('warning', 28), 'Пора перекалибровать'),
       h('p', {}, calibrationNote.stuckChannel !== null
