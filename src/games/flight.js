@@ -22,6 +22,47 @@ const LEVELS = [
 const climbRate = levelNumber => 0.32 + 0.03 * (levelNumber - 1);
 const LEAD_S = 2.2;     // seconds of track visible ahead of the glider
 const CUE_AHEAD_S = 1.6; // the spoken cue names the next target this long before it
+
+/**
+ * 5.20 — one «ramp → hold 3 s → release» of proportional control (Bouwsema 2014: outcome of force, not how to tense;
+ * De Nunzio 2017: precision falls as the force rises, so the target sits clearly above rest, not near it).
+ * Threshold scheme is velocity control — the profile is for proportional and gesture schemes, from level 2.
+ */
+export const TRACE = Object.freeze({ fromLevel: 2, rampS: 2, holdS: 3, releaseS: 1.5, rest: 0.5, goal: 0.78 });
+export const TRACE_SPAN_S = TRACE.rampS + TRACE.holdS + TRACE.releaseS;
+
+/** The altitude the profile asks for at game time `t` (rest outside the segment). */
+export function traceTarget(t, t0, goal = TRACE.goal) {
+  const x = t - t0;
+  if (x <= 0 || x >= TRACE_SPAN_S) return TRACE.rest;
+  if (x < TRACE.rampS) return TRACE.rest + (goal - TRACE.rest) * (x / TRACE.rampS);
+  if (x < TRACE.rampS + TRACE.holdS) return goal;
+  return goal + (TRACE.rest - goal) * ((x - TRACE.rampS - TRACE.holdS) / TRACE.releaseS);
+}
+
+/** Which part of the profile `t` is in. */
+export function tracePhase(t, t0) {
+  const x = t - t0;
+  if (x < TRACE.rampS) return 'ramp';
+  if (x < TRACE.rampS + TRACE.holdS) return 'hold';
+  return 'release';
+}
+
+/**
+ * The three numbers of a finished profile, from the running sums (no sample list is kept).
+ * nRMSE — root mean square error divided by the height of the ramp; inCorridor — share of samples inside the
+ * level's own tolerance (not the adapted one); overshoot — how far the hold rose above the target, as a share
+ * of the ramp height.
+ */
+export function traceMetrics({ n, sse, inside, holdPeak }, { goal = TRACE.goal, tol }) {
+  if (!n) return null;
+  const height = Math.abs(goal - TRACE.rest) || 1;
+  return {
+    nrmse: Math.round(Math.sqrt(sse / n) / height * 1000) / 1000,
+    inCorridor: Math.round(inside / n * 100),
+    overshoot: Math.round(Math.max(0, (holdPeak - goal) / height) * 100),
+  };
+}
 const REPLAY_STEP_S = 0.1; // the altitude is kept 10 times a second for the replay after the run (not saved)
 
 export class FlightGame extends Game {
@@ -54,6 +95,11 @@ export class FlightGame extends Game {
    */
   cue(target) {
     if (!target || target.at - this.time > CUE_AHEAD_S) return this.baseHint;
+    if (target.kind === 'trace') {
+      const want = traceTarget(this.time, target.at, target.goal);
+      if (Math.abs(want - this.alt) <= this.tol) return 'Держите линию';
+      return want > this.alt ? 'Линия выше' : 'Линия ниже';
+    }
     const what = target.kind === 'stream' ? 'Поток' : 'Кольцо';
     const diff = target.alt - this.alt;
     if (Math.abs(diff) <= this.tol * 0.8) return `${what} на вашей высоте — держите`;
@@ -72,6 +118,10 @@ export class FlightGame extends Game {
       const alt = Math.min(0.96, Math.max(0.04, 0.5 + side * offset));
       items.push({ kind: 'ring', at: t, end: t, alt, side, done: false });
       t += L.gap;
+      if (this.scheme !== SCHEME.THRESHOLD && this.levelNumber >= TRACE.fromLevel && i === Math.floor(L.rings / 2) - 1) {
+        items.push({ kind: 'trace', at: t, end: t + TRACE_SPAN_S, goal: TRACE.goal, side: 1, done: false, n: 0, sse: 0, inside: 0, holdPeak: TRACE.goal });
+        t += TRACE_SPAN_S + 0.8;
+      }
       if (streamsLeft > 0 && (i + 1) % streamEvery === 0) {
         const sAlt = 0.5 + (streamsLeft % 2 ? 1 : -1) * L.spread * 0.6;
         items.push({ kind: 'stream', at: t, end: t + L.streamLen, alt: sAlt, side: Math.sign(sAlt - 0.5), inside: 0, done: false });
@@ -100,7 +150,14 @@ export class FlightGame extends Game {
       while (this.nextSample <= this.time) this.nextSample += REPLAY_STEP_S; // a fixed grid: frame jitter does not drift it
     }
     const target = this.nextTarget();
-    if (target && target.side !== 0) this.separation.add(intent, target.side > 0, dt);
+    if (target?.kind === 'trace' && this.time >= target.at && this.time <= target.end) {
+      const want = traceTarget(this.time, target.at, target.goal);
+      const err = this.alt - want;
+      target.n++; target.sse += err * err;
+      if (Math.abs(err) <= this.level.tol) target.inside++;
+      if (tracePhase(this.time, target.at) === 'hold') target.holdPeak = Math.max(target.holdPeak, this.alt);
+    }
+    if (target && target.side !== 0 && target.kind !== 'trace') this.separation.add(intent, target.side > 0, dt);
     this.hint = this.cue(target);
     for (const item of this.track) {
       if (item.done) continue;
@@ -120,6 +177,15 @@ export class FlightGame extends Game {
           this.adapt.record(share > 0.6);
           this.emit(share > 0.7 ? 'success' : 'soft');
         }
+      }
+      if (item.kind === 'trace' && this.time > item.end) {
+        item.done = true;
+        item.metrics = traceMetrics(item, { goal: item.goal, tol: this.level.tol });
+        const share = (item.metrics?.inCorridor ?? 0) / 100;
+        this.points += 4 * share; this.maxPoints += 4;
+        this.adapt.record(share >= 0.6);
+        this.traceResult = item.metrics;
+        this.emit(share >= 0.7 ? 'success' : 'soft');
       }
     }
     if (this.flash) this.flash.t -= dt;
@@ -156,7 +222,7 @@ export class FlightGame extends Game {
 
   autopilot(intent) {
     const target = this.nextTarget();
-    const alt = target ? target.alt : 0.5;
+    const alt = target?.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : target ? target.alt : 0.5;
     if (this.scheme === SCHEME.THRESHOLD) {
       const lead = target && target.kind === 'ring' ? 0.02 : 0.015;
       if (this.alt < alt - lead) return { a: 0.6, b: 0 };
@@ -181,7 +247,7 @@ export class FlightGame extends Game {
     };
   }
 
-  details() { return { rings: this.ringsSeen, hits: this.hits, perfect: this.perfect }; }
+  details() { return { rings: this.ringsSeen, hits: this.hits, perfect: this.perfect, ...(this.traceResult ? { trace: this.traceResult } : {}) }; }
 
   /**
    * 5.17 — the flight shown again after the run: delayed feedback (the altitude over the rings once the trial is over
@@ -191,11 +257,13 @@ export class FlightGame extends Game {
   replay() {
     return {
       kind: 'flight', total: this.total, tol: this.level.tol, path: this.path,
-      items: this.track.filter(x => x.done).map(x => ({
-        kind: x.kind, at: x.at, end: x.end, alt: x.alt,
-        ok: x.kind === 'ring' ? x.result !== 'miss' : (x.share ?? 0) > 0.6,
-        ...(x.kind === 'ring' && x.result === 'miss' ? { dir: x.passedAlt > x.alt ? 'above' : 'below' } : {}),
-      })),
+      items: this.track.filter(x => x.done).map(x => (x.kind === 'trace'
+        ? { kind: 'trace', at: x.at, end: x.end, ...(x.metrics ?? {}) }
+        : {
+          kind: x.kind, at: x.at, end: x.end, alt: x.alt,
+          ok: x.kind === 'ring' ? x.result !== 'miss' : (x.share ?? 0) > 0.6,
+          ...(x.kind === 'ring' && x.result === 'miss' ? { dir: x.passedAlt > x.alt ? 'above' : 'below' } : {}),
+        })),
     };
   }
 
@@ -246,7 +314,18 @@ export class FlightGame extends Game {
       const col = s.side > 0 ? 'rgba(249,115,22,0.22)' : 'rgba(14,143,214,0.2)';
       fillRound(ctx, x1, y(s.alt) - tolPx, x2 - x1, tolPx * 2, tolPx, col);
       ctx.strokeStyle = s.side > 0 ? COLORS.a : COLORS.b; ctx.lineWidth = 2;
-      ctx.setLineDash([10, 6]); ctx.beginPath(); ctx.moveTo(x1, y(s.alt)); ctx.lineTo(x2, y(s.alt)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.setLineDash([10, 6]); ctx.beginPath(); ctx.moveTo(x1, y(s.alt)); ctx.lineTo(x2, y(s.alt)); ctx.stroke();       ctx.setLineDash([]);
+    }
+    // 5.20 — the ramp, the 3 s hold and the release: the line to follow (the corridor is the level's tolerance).
+    for (const s of this.track.filter(x => x.kind === 'trace')) {
+      const x1 = gx + (s.at - this.time) * pps, x2 = gx + (s.end - this.time) * pps;
+      if (x2 < -20 || x1 > w + 20) continue;
+      ctx.beginPath();
+      for (let i = 0; i <= 24; i++) {
+        const tt = s.at + (s.end - s.at) * i / 24, xx = gx + (tt - this.time) * pps, yy = y(traceTarget(tt, s.at, s.goal));
+        i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+      }
+      ctx.strokeStyle = COLORS.good; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke();
     }
     // Rings (back half).
     const rings = this.track.filter(x => x.kind === 'ring');

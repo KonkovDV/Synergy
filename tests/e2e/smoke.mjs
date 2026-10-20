@@ -3,6 +3,7 @@
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import { baseUrl } from '../../tools/static-server.mjs';
+import { writeEvidence } from '../../tools/evidence.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require('/opt/node22/lib/node_modules/playwright'); }
@@ -63,6 +64,7 @@ await wait(300); await page.getByRole('button', { name: 'Старт' }).click();
 
 const state = await page.evaluate(() => window.Synergy.state());
 console.log(JSON.stringify({ errors, screen: state.screen, runs: state.runs, scheme: state.settings.scheme }, null, 2));
+writeEvidence('smoke', { errors: errors.length, out });
 await browser.close();
 await server.close();
 if (errors.length) process.exit(1);

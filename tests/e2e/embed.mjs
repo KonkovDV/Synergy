@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import { startServer } from '../../tools/static-server.mjs';
+import { writeEvidence } from '../../tools/evidence.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require('/opt/node22/lib/node_modules/playwright'); }
@@ -73,6 +74,7 @@ try {
 } finally {
   const failed = checks.filter(c => !c.ok);
   console.log(JSON.stringify({ errors, checks }, null, 2));
+  writeEvidence('embed', { checks: checks.length, passed: checks.length - failed.length, errors: errors.length });
   await browser.close(); await game.close(); await host.close();
   if (errors.length || failed.length || !checks.length) process.exit(1);
 }

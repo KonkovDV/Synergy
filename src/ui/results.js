@@ -8,6 +8,7 @@ import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
 import { SKILL_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest } from '../core/progress.js';
+import { RestMotion } from '../core/restmotion.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
@@ -76,7 +77,9 @@ export function replaySummary(replay) {
   const rings = replay.items.filter(i => i.kind === 'ring'), passed = rings.filter(i => i.ok).length;
   const above = rings.filter(i => i.dir === 'above').length, below = rings.filter(i => i.dir === 'below').length;
   const lean = above > below ? ' Промахи — чаще выше колец.' : below > above ? ' Промахи — чаще ниже колец.' : above ? ' Промахи — и выше, и ниже колец.' : '';
-  return `Пройдено ${passed} из ${count(rings.length, FORMS.ringsOf)}.${lean}`;
+  const trace = replay.items.find(i => i.kind === 'trace' && Number.isFinite(i.inCorridor));
+  const follow = trace ? ` Слежение: в коридоре ${trace.inCorridor} % времени, ошибка ${fmtNum(trace.nrmse) ?? trace.nrmse} высоты, перерегулирование ${trace.overshoot} %.` : '';
+  return `Пройдено ${passed} из ${count(rings.length, FORMS.ringsOf)}.${lean}${follow}`;
 }
 
 const OUTCOME_WORD = { crush: 'Раздавлено', drop: 'Выскользнуло', timeout: 'Не успели' };
@@ -158,7 +161,8 @@ function flightReplayCard(replay) {
   if (!replay?.path?.length || !replay.items?.length) return null;
   const W = 320, H = 112, pad = 8;
   const x = t => (pad + (t / replay.total) * (W - 2 * pad)).toFixed(1), y = a => (pad + (1 - a) * (H - 2 * pad)).toFixed(1);
-  const marks = replay.items.map(it => (it.kind === 'ring'
+  const drawn = replay.items.filter(it => it.kind === 'ring' || it.kind === 'stream');
+  const marks = drawn.map(it => (it.kind === 'ring'
     ? svgEl('line', { x1: x(it.at), x2: x(it.at), y1: y(Math.min(1, it.alt + replay.tol)), y2: y(Math.max(0, it.alt - replay.tol)), class: it.ok ? 'ok' : 'miss' })
     : svgEl('rect', { x: x(it.at), width: (x(it.end) - x(it.at)).toFixed(1), y: y(Math.min(1, it.alt + replay.tol)), height: (y(Math.max(0, it.alt - replay.tol)) - y(Math.min(1, it.alt + replay.tol))).toFixed(1), rx: 4, class: it.ok ? 'ok' : 'miss' })));
   const d = replay.path.map(([t, a], i) => `${i ? 'L' : 'M'}${x(t)} ${y(a)}`).join(' ');
@@ -279,6 +283,11 @@ export function restScreen(app, { next }) {
   const breathWord = h('p', { class: 'breath-word', 'aria-hidden': 'true' }, still ? 'Вдох…' : '');
   const more = h('button', { class: 'btn ghost', onclick: () => { left = Math.min(left + app.rules.restS, app.rules.restS * 10); counter.textContent = Math.ceil(left); } }, `Отдохнуть ещё ${app.rules.restS} с`);
   let breathT = 0;
+  // 5.20 — with real sensors the rest is also «покой в движении»: raise, turn and lower the arm while both channels
+  // stay off. The on-screen emulator has no arm to move, so it is not asked. The result is kept on the day.
+  const motion = app.sourceKind() === 'bridge' ? new RestMotion() : null;
+  const motionLine = motion ? h('p', { class: 'note' }, motion.prompt.text) : null;
+  let motionSaved = false;
   const node = h('div', { class: 'screen rest' },
     h('main', { class: 'scroll center' },
       mioAvatar('rest', 88),
@@ -288,6 +297,7 @@ export function restScreen(app, { next }) {
       counter,
       h('p', {}, still ? 'Полностью расслабьте руку. Дышите спокойно: вдох — четыре счёта, выдох — четыре.' : 'Полностью расслабьте руку. Дышите спокойно: вдох — круг растёт, выдох — сжимается.'),
       h('p', { class: 'note' }, 'Проверка покоя: обе полоски должны быть почти пустыми.'),
+      motionLine,
       meter.node,
       h('section', { class: `card tinted g-${g.id}` }, h('b', { class: 'with-art' }, gameArt(g.id, 36), `Дальше: ${g.title}${next.retention ? ' — без подсказки' : ''}`), h('p', {}, g.tagline)),
       // The pause is the safety rule, not an obstacle (5.11): skipping it is a quiet option, the timer moves on itself.
@@ -297,7 +307,14 @@ export function restScreen(app, { next }) {
   return {
     node,
     tick(now, dt) {
-      meter.update(pipeline.process(source.sample(now), now));
+      const frame = pipeline.process(source.sample(now), now);
+      meter.update(frame);
+      if (motion) {
+        motion.step(dt, !!frame?.relaxed);
+        const text = motion.done ? `Покой держался ${Math.round(motion.summary().quiet * 100)} % времени.` : motion.prompt.text;
+        if (motionLine.textContent !== text) motionLine.textContent = text;
+        if (motion.done && !motionSaved) { motionSaved = true; recordDayNote(app.profile, dayKey(), { restMotion: motion.summary() }); app.save(); }
+      }
       left -= dt;
       if (still) { breathT += dt; const word = Math.floor(breathT / 4) % 2 ? 'Выдох…' : 'Вдох…'; if (breathWord.textContent !== word) breathWord.textContent = word; }
       const shown = Math.max(0, Math.ceil(left));
