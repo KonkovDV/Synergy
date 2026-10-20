@@ -8,7 +8,7 @@ import { GameRunner } from '../src/games/runner.js';
 import { EmgEmulator } from '../src/input/emulator.js';
 import { SignalPipeline } from '../src/core/signal.js';
 import { BionicHand } from '../src/core/hand.js';
-import { RestMotion, REST_MOTION } from '../src/core/restmotion.js';
+import { RestMotion, REST_MOTION, restMotionAllowed, restMotionSeconds } from '../src/core/restmotion.js';
 import { replaySummary } from '../src/ui/results.js';
 import { emptyState, parseState } from '../src/core/storage.js';
 import { createProfile, recordDayNote } from '../src/core/progress.js';
@@ -82,7 +82,7 @@ test('«покой в движении»: quiet time and slips, and a long step 
   whole.step(5, false);
   assert.equal(whole.summary().slipS, 0, 'a finished block ignores further steps');
   assert.equal(REST_MOTION.prompts.reduce((s, p) => s + p.s, 0), 18);
-  assert.match(readFileSync('src/ui/results.js', 'utf8'), /audience !== 'child' && app\.rules\.restS >= motionS/);
+  assert.match(readFileSync('src/ui/results.js', 'utf8'), /restMotionAllowed\(/);
 });
 
 test('a day keeps one «покой в движении» and drops a crafted one', () => {
@@ -114,4 +114,15 @@ test('a backup cannot invent quick starts: only the boolean true is kept', () =>
   st.runs = [{ ...base, id: 'a', quick: 'yes' }, { ...base, id: 'b', quick: 1 }, { ...base, id: 'c', quick: true }];
   const kept = parseState(JSON.stringify(st)).runs;
   assert.deepEqual(kept.map(r => r.quick), [undefined, undefined, true]);
+});
+
+test('arm movement during the pause: an adult with sensors after an ordinary check-in, and a pause long enough', () => {
+  const yes = { source: 'bridge', audience: 'adult', restS: 20, checkinAction: 'go' };
+  assert.equal(restMotionAllowed(yes), true);
+  assert.equal(restMotionAllowed({ ...yes, source: 'touch' }), false, 'the emulator has no arm');
+  assert.equal(restMotionAllowed({ ...yes, audience: 'child' }), false);
+  assert.equal(restMotionAllowed({ ...yes, restS: 15 }), false, '15 s cuts off an 18 s block');
+  assert.equal(restMotionAllowed({ ...yes, checkinAction: 'light' }), false, 'moderate pain: do not add an arm task');
+  assert.equal(restMotionAllowed({ ...yes, checkinAction: undefined }), false, 'a skipped check-in is not permission');
+  assert.equal(restMotionSeconds(), 18);
 });
