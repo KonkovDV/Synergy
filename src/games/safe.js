@@ -40,6 +40,8 @@ const LEVELS = [
 ];
 
 const REST_BEFORE_S = 0.3;
+/** A contraction that never becomes rest used to hold the next digit forever. Eight seconds is a real try, then the digit is skipped. */
+export const REST_GIVE_UP_S = 8;
 /**
  * 5.17 — «стабильно / мерцает» beside «Протез видит» (Ottobock Myo Plus: «a strong pattern is indicated by a solid
  * appearance»): two or more changes of the recognised command within 0.6 s. A hint for the moment, not a skill —
@@ -63,7 +65,7 @@ export class SafeGame extends Game {
       let p; do { p = this.rng.pick(pool); } while (pool.length > 1 && p.id === this.code[i - 1]?.id);
       this.code.push({ ...p, state: 'wait' });
     }
-    this.index = 0; this.phase = 'rest'; this.restFor = 0; this.holdFor = 0; this.cardTime = 0;
+    this.index = 0; this.phase = 'rest'; this.restFor = 0; this.restWait = 0; this.holdFor = 0; this.cardTime = 0;
     this.reactions = []; this.wrongTime = 0; this.stats = {};
     this.confusion = new ConfusionMeter();
     this.seen = undefined; this.changes = [];
@@ -99,10 +101,16 @@ export class SafeGame extends Game {
     this.watch(intent);
     const resting = intent.relaxed; // both channels off: two tense muscles are not a rest (5.10)
     if (this.phase === 'rest') {
-      // A clean transition: every code digit starts from rest.
+      // A clean transition: every code digit starts from rest. A muscle that never switches off must not trap the game.
+      this.restWait += dt;
       this.restFor = resting ? this.restFor + dt : 0;
-      this.hint = 'Покой — расслабьте мышцы';
-      if (this.restFor >= REST_BEFORE_S) { this.phase = 'show'; this.cardTime = 0; this.holdFor = 0; this.firstMatch = null; }
+      this.hint = this.restWait > 3 ? 'Покой не получается — расслабьте обе мышцы' : 'Покой — расслабьте мышцы';
+      if (this.restFor >= REST_BEFORE_S) { this.phase = 'show'; this.cardTime = 0; this.holdFor = 0; this.firstMatch = null; this.restWait = 0; }
+      else if (this.restWait >= REST_GIVE_UP_S && card) {
+        card.state = 'fail'; card.rest = true;
+        this.adapt.record(false);
+        this.emit('miss'); this.next();
+      }
       return;
     }
     this.cardTime += dt;
@@ -126,7 +134,7 @@ export class SafeGame extends Game {
   }
 
   next() {
-    this.index++; this.phase = 'rest'; this.restFor = 0;
+    this.index++; this.phase = 'rest'; this.restFor = 0; this.restWait = 0;
     if (this.index >= this.code.length) { this.openedAt = this.time; this.finish(); } // 5.17: finish() alone closes the run — one sound, not three
   }
 
@@ -167,7 +175,7 @@ export class SafeGame extends Game {
     const top = pairs.sort((x, y) => y.seconds - x.seconds)[0] ?? null;
     return {
       kind: 'safe',
-      digits: this.code.map(c => ({ name: c.name, ok: c.state === 'ok', seconds: c.state === 'ok' ? Math.round(c.time * 10) / 10 : null })),
+      digits: this.code.map(c => ({ name: c.name, ok: c.state === 'ok', rest: !!c.rest, seconds: c.state === 'ok' ? Math.round(c.time * 10) / 10 : null })),
       top: top && top.seconds >= 0.3 ? top : null,
     };
   }
@@ -176,7 +184,8 @@ export class SafeGame extends Game {
     const distinct = new Set(this.code.filter(c => c.state === 'ok' && c.gesture).map(c => c.gesture));
     return { solved: this.code.filter(c => c.state === 'ok').length, total: this.code.length, wrongMs: Math.round(this.wrongTime * 1000),
       distinctGestures: distinct.size, perPrompt: this.stats, confusion: this.confusion.toJSON(),
-      meanReactionMs: this.reactions.length ? Math.round(1000 * this.reactions.reduce((s, v) => s + v, 0) / this.reactions.length) : null };
+      meanReactionMs: this.reactions.length ? Math.round(1000 * this.reactions.reduce((s, v) => s + v, 0) / this.reactions.length) : null,
+      restMissed: this.code.filter(c => c.rest).length };
   }
 
   render(ctx, view, hand, intent) {

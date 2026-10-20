@@ -9,6 +9,8 @@ import { SOUND_NAMES } from '../src/services/audio.js';
 import { createGame, GAMES } from '../src/games/registry.js';
 import { GameRunner, toEmulatorTarget } from '../src/games/runner.js';
 import { PEAK_MARK_S, RELEASE_S } from '../src/games/grip.js';
+import { REST_GIVE_UP_S } from '../src/games/safe.js';
+import { ASSESS } from '../src/games/assess.js';
 import { EmgEmulator } from '../src/input/emulator.js';
 import { SignalPipeline } from '../src/core/signal.js';
 import { BionicHand } from '../src/core/hand.js';
@@ -17,7 +19,7 @@ import { ADAPT } from '../src/config.js';
 import { FLICKER } from '../src/games/safe.js';
 import { coachFeedback } from '../src/ui/coach.js';
 import { reminderIcs, reminderTime } from '../src/services/report.js';
-import { replaySummary, gripReplaySummary } from '../src/ui/results.js';
+import { replaySummary, gripReplaySummary, safeReplaySummary } from '../src/ui/results.js';
 
 /** A canvas that draws nothing (rendering must not throw). */
 const nullCanvas = () => new Proxy({}, {
@@ -166,6 +168,21 @@ test('«Мастерская»: a carried object that is never opened ends as «
   held.force = 0.9; held.closure = 0.9;
   egg.step(1 / 60, intent, held);
   assert.equal(egg.current.failed, 'crush', 'a squeeze over the basket still breaks a fragile object');
+});
+
+test('a contraction that never rests does not trap the next «Сейф» digit or the skill check', () => {
+  const tense = { command: 'close', relaxed: false, valid: true, a: 0.8, b: 0, intensity: 0.8, level: 0.8, gesture: 'fist' };
+  const safe = createGame('safe', { levelNumber: 1, scheme: 'proportional', seed: 1 });
+  for (let i = 0; i < (REST_GIVE_UP_S + 0.2) * 60; i++) safe.update(1 / 60, tense, null);
+  assert.equal(safe.code[0].rest, true);
+  assert.equal(safe.index, 1);
+  assert.equal(safe.wrongTime, 0, 'a digit that never started is not a wrong gesture');
+  assert.match(safeReplaySummary(safe.replay()), /цифра не началась/);
+  const check = createGame('check', { levelNumber: 1, scheme: 'proportional', seed: 1 });
+  for (let i = 0; i < (ASSESS.restGiveUpS + 0.2) * 60; i++) check.update(1 / 60, tense, null);
+  assert.equal(check.trials[0].restMiss, true);
+  assert.equal(check.trials[0].selectedAt ?? null, null);
+  assert.equal(check.details().restMissed, 1);
 });
 
 test('«Мастерская»: the replay keeps every object — its window, the force at the outcome, what happened (5.18)', () => {

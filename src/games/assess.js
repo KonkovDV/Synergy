@@ -16,7 +16,7 @@ import { COLORS, text, circle, fillRound, drawHand, drawGauge, panel, backdrop, 
 import { createRng } from '../core/rng.js';
 import { reachableBand } from '../core/signal.js';
 
-export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, seed: 2026 };
+export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, restGiveUpS: 8, seed: 2026 };
 /** Fitts block of the proportional scheme: every distance × width once, in a fixed shuffled order. */
 export const FITTS = { distances: [0.3, 0.55, 0.8], widths: [0.12, 0.24], dwellS: 0.5, minMtS: 0.05 };
 
@@ -79,7 +79,7 @@ export class AssessmentGame extends Game {
     this.speed = 1;
     this.lastT = null;
     this.trials = assessmentTrials(this.scheme, this.onThreshold).map(t => ({ ...t, state: 'wait' }));
-    this.index = 0; this.phase = 'rest'; this.restFor = 0;
+    this.index = 0; this.phase = 'rest'; this.restFor = 0; this.restWait = 0;
     this.confusion = new ConfusionMeter();
     this.hint = 'Стандартная проверка: покажите команду и держите 1 секунду';
   }
@@ -110,14 +110,19 @@ export class AssessmentGame extends Game {
     const t = this.trial;
     if (!t) return;
     if (this.phase === 'rest') {
+      this.restWait += dt;
       this.restFor = intent.relaxed ? this.restFor + dt : 0; // both channels off (5.10: tension in both passed as rest)
-      this.hint = 'Покой перед следующей попыткой';
+      this.hint = this.restWait > 3 ? 'Покой не получается — расслабьте обе мышцы' : 'Покой перед следующей попыткой';
       if (this.restFor >= ASSESS.restS) {
         this.phase = 'trial';
+        this.restWait = 0;
         // Path efficiency (5.10): straight-line distance from the level at target onset to the level at entry,
         // over the path between them — until then the band centre was divided by the path to the band edge.
         const x0 = t.command === COMMAND.OPEN ? intent.b : intent.a;
         Object.assign(t, { t: 0, hold: 0, selectedAt: null, correct: 0, active: 0, overshoots: 0, above: false, enteredAt: null, path: 0, pathAtEntry: 0, lastX: x0, startX: x0, entryX: null });
+      } else if (this.restWait >= ASSESS.restGiveUpS) {
+        t.restMiss = true;
+        this.settle(t, false);
       }
       return;
     }
@@ -149,7 +154,7 @@ export class AssessmentGame extends Game {
     t.state = ok ? 'ok' : 'fail';
     t.completedAt = ok ? t.t : null;
     this.emit(ok ? 'ring' : 'miss');
-    this.index++; this.phase = 'rest'; this.restFor = 0;
+    this.index++; this.phase = 'rest'; this.restFor = 0; this.restWait = 0;
     if (this.index >= this.trials.length) this.finish(); // 5.17: one closing sound (finish), not «success» on top of it
   }
 
@@ -176,6 +181,7 @@ export class AssessmentGame extends Game {
       completionS: mean(ok.map(t => t.completedAt)),
       accuracy: active > 0 ? done.reduce((s, t) => s + (t.correct ?? 0), 0) / active : null,
       overshoots: done.reduce((s, t) => s + (t.overshoots ?? 0), 0),
+      restMissed: this.trials.filter(t => t.restMiss).length,
       throughput: mean(fitts.map(t => t.fitts.id / Math.max(FITTS.minMtS, t.enteredAt))),
       pathEfficiency: mean(fitts.map(t => (t.pathAtEntry > 1e-6 ? clamp01(Math.abs(t.entryX - t.startX) / t.pathAtEntry) : 1))),
       fittsTrials: fitts.length,
@@ -206,7 +212,7 @@ export class AssessmentGame extends Game {
     return {
       assessment: true, trialsTotal: this.trials.length, onThreshold: this.onThreshold,
       completionRate: Math.round(100 * m.completionRate), selectionMs: ms(m.selectionS), completionMs: ms(m.completionS),
-      accuracy: m.accuracy === null ? null : Math.round(100 * m.accuracy), overshoots: m.overshoots,
+      accuracy: m.accuracy === null ? null : Math.round(100 * m.accuracy), overshoots: m.overshoots, restMissed: m.restMissed,
       ...(this.trials.some(t => t.fitts) ? {
         throughputBps: m.throughput === null ? null : Math.round(100 * m.throughput) / 100, fittsTrials: m.fittsTrials,
         pathEfficiency: m.pathEfficiency === null ? null : Math.round(100 * m.pathEfficiency),
