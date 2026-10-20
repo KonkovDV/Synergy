@@ -36,6 +36,8 @@ const LEVELS = [
 const LIFT_REST_S = 0.35;   // relax this long with force in the window → the object is lifted
 const HEAVY_SLIP = 0.05;    // force lost per second while carrying heavy objects
 export const PEAK_MARK_S = 1.2; // the force of a crush or a slip stays marked on the gauge this long
+/** Time to open after the carry. Opening is its own skill (ACMC: grip and release); without a limit the exercise waited forever. */
+export const RELEASE_S = 4;
 
 export class GripGame extends Game {
   static id = 'grip';
@@ -93,8 +95,8 @@ export class GripGame extends Game {
       if (o.t >= 0.8) { o.phase = 'grasp'; o.t = 0; o.graspStart = this.time; }
       return;
     }
-    if (o.phase === 'grasp' || o.phase === 'carry') {
-      if (intent.command === COMMAND.CLOSE) this.separation.add(intent, true, dt);
+    if (o.phase === 'grasp' || o.phase === 'carry' || o.phase === 'release') {
+      if (intent.command === COMMAND.CLOSE && o.phase !== 'release') this.separation.add(intent, true, dt);
       o.peak = Math.max(o.peak ?? 0, hand.force);
       if (hand.force > o.breakAt) return this.fail('crush', hand);
     }
@@ -152,12 +154,14 @@ export class GripGame extends Game {
       o.phase = 'done'; o.t = 0; o.delivered = true;
       this.emit('success');
       this.flash = { text: precision > 0.75 ? 'Идеальная сила!' : 'Доставлено', color: COLORS.good, t: 0.8 };
+      return;
     }
+    if (o.t > RELEASE_S) this.fail('release', hand);
   }
 
   fail(reason, hand) {
     const o = this.current;
-    this.results.push({ kind: o.kind, ok: false, points: reason === 'drop' ? 10 : 0, reason });
+    this.results.push({ kind: o.kind, ok: false, points: reason === 'drop' || reason === 'release' ? 10 : 0, reason });
     // A timeout keeps the strongest squeeze of the try (null if the object was never held).
     this.keep(o, reason, reason === 'timeout' ? (o.peak > 0 ? o.peak : null) : hand.force);
     this.adapt.record(false);
@@ -166,7 +170,7 @@ export class GripGame extends Game {
     this.peakMark = reason === 'timeout' ? null : { force: clamp01(hand.force), reason, t: PEAK_MARK_S };
     hand.clearObject();
     this.emit(reason === 'crush' ? 'crush' : 'miss');
-    this.flash = { text: reason === 'crush' ? 'Раздавлено' : reason === 'drop' ? 'Выскользнуло' : 'Не успели', color: COLORS.bad, t: 0.8 };
+    this.flash = { text: reason === 'crush' ? 'Раздавлено' : reason === 'drop' ? 'Выскользнуло' : reason === 'release' ? 'Не отпустили' : 'Не успели', color: COLORS.bad, t: 0.8 };
   }
 
   autopilot(intent, hand) {
@@ -222,6 +226,7 @@ export class GripGame extends Game {
       delivered: this.results.filter(r => r.ok).length, total: this.total,
       crushed: this.results.filter(r => r.reason === 'crush').length,
       dropped: this.results.filter(r => r.reason === 'drop').length,
+      unreleased: this.results.filter(r => r.reason === 'release').length,
       fragileSaved: this.fragileSaved, switches: this.switchTimes.length,
     };
   }
@@ -279,7 +284,7 @@ export class GripGame extends Game {
         ctx.globalAlpha = Math.min(1, this.peakMark.t * 2);
         ctx.strokeStyle = COLORS.warnInk; ctx.lineWidth = 3; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(gx - 5, my); ctx.lineTo(gx + 27, my); ctx.stroke();
-        text(ctx, this.peakMark.reason === 'crush' ? 'пик' : 'мало', gx + 32, my, { size: 12, weight: 800, color: COLORS.warnInk, align: 'left', outline: true });
+        text(ctx, this.peakMark.reason === 'crush' ? 'пик' : this.peakMark.reason === 'release' ? 'не открыли' : 'мало', gx + 32, my, { size: 12, weight: 800, color: COLORS.warnInk, align: 'left', outline: true });
         ctx.globalAlpha = 1;
       }
     } else if (o) {

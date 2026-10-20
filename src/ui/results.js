@@ -82,7 +82,7 @@ export function replaySummary(replay) {
   return `Пройдено ${passed} из ${count(rings.length, FORMS.ringsOf)}.${lean}${follow}`;
 }
 
-const OUTCOME_WORD = { crush: 'Раздавлено', drop: 'Выскользнуло', timeout: 'Не успели' };
+const OUTCOME_WORD = { crush: 'Раздавлено', drop: 'Выскользнуло', release: 'Не отпустили', timeout: 'Не успели' };
 const listed = names => Object.entries(names.reduce((m, n) => ({ ...m, [n]: (m[n] ?? 0) + 1 }), {})).map(([n, k]) => (k > 1 ? `${n} ×${k}` : n)).join(', ');
 
 /**
@@ -92,7 +92,7 @@ const listed = names => Object.entries(names.reduce((m, n) => ({ ...m, [n]: (m[n
 export function gripReplaySummary(replay) {
   const items = replay.items, ok = items.filter(i => i.outcome === 'ok');
   const parts = [`Доставлено ${ok.length} из ${items.length}.`];
-  for (const outcome of ['crush', 'drop', 'timeout']) {
+  for (const outcome of ['crush', 'drop', 'release', 'timeout']) {
     const names = items.filter(i => i.outcome === outcome).map(i => i.name.toLowerCase());
     if (names.length) parts.push(`${OUTCOME_WORD[outcome]}: ${listed(names)}.`);
   }
