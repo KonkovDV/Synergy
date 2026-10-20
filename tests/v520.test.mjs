@@ -82,6 +82,9 @@ test('«покой в движении»: quiet time and slips, and a long step 
   whole.step(5, false);
   assert.equal(whole.summary().slipS, 0, 'a finished block ignores further steps');
   assert.equal(REST_MOTION.prompts.reduce((s, p) => s + p.s, 0), 18);
+  assert.match(REST_MOTION.prompts.map(p => p.text).join(' '), /предплечье/);
+  assert.doesNotMatch(REST_MOTION.prompts.map(p => p.text).join(' '), /Поверните ладонь/);
+  assert.ok(REST_MOTION.prompts.filter(p => p.id !== 'down').every(p => p.text.includes('если удобно')));
   assert.match(readFileSync('src/ui/results.js', 'utf8'), /restMotionAllowed\(/);
 });
 

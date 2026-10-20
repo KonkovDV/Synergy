@@ -5,8 +5,8 @@
 
 export const REST_MOTION = Object.freeze({
   prompts: Object.freeze([
-    Object.freeze({ id: 'raise', text: 'Поднимите руку вперёд и держите покой', s: 6 }),
-    Object.freeze({ id: 'turn', text: 'Поверните ладонь вверх — по-прежнему покой', s: 6 }),
+    Object.freeze({ id: 'raise', text: 'Поднимите руку вперёд, если удобно, и держите покой', s: 6 }),
+    Object.freeze({ id: 'turn', text: 'Поверните предплечье ладонью вверх, если удобно — покой', s: 6 }),
     Object.freeze({ id: 'down', text: 'Опустите руку вдоль тела — покой', s: 6 }),
   ]),
 });
