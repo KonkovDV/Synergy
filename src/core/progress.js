@@ -298,6 +298,16 @@ export function secondsToday(profile, today = dayKey()) { return profile.days[to
  */
 export const trainingDays = profile => Object.values(profile.days ?? {}).filter(d => (d?.runs ?? 0) > 0).length;
 
+/**
+ * 5.18 — the quick start of the home screen: the plan's first exercise as free play, before the day's first training.
+ * Not before «Первые шаги», not on a declared rest day; the retention probe is not a warm-up.
+ */
+export function quickStart({ tutorialDone, resting, plan, trainedToday }) {
+  if (!tutorialDone || resting || trainedToday) return null;
+  const item = plan.items.find(i => !i.done && !i.retention);
+  return item ? { game: item.game, level: item.level } : null;
+}
+
 /** Training days among the `n` calendar days that end with `today` (5.17: the «Три дня» and «Неделя» achievements). */
 export function trainingDaysWithin(profile, today, n) {
   const from = shiftDay(today, 1 - n);

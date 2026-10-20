@@ -12,7 +12,7 @@ import { skillProfile, trainingDays, dayKey, weekCompare } from '../core/progres
 import { COLORS } from '../render/draw.js';
 import { gestureName as name } from '../core/vocabulary.js';
 import { buildReport, reportCsv, reportHtml, printHtml, download, wellbeingLog, REPORT_PERIODS } from '../services/report.js';
-import { confusionMatrix, assessmentHistory } from '../core/analytics.js';
+import { confusionMatrix, assessmentHistory, completionChange } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS } from '../core/wellbeing.js';
 import { GAME_BY_ID } from '../games/registry.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
@@ -82,10 +82,18 @@ function trendText(checks) {
   const parts = [];
   if (Number.isFinite(a.completionRate) && Number.isFinite(b.completionRate)) parts.push(`выполнено ${fmtPct(a.completionRate)} → ${fmtPct(b.completionRate)}`);
   if (Number.isFinite(a.selectionMs) && Number.isFinite(b.selectionMs)) parts.push(`время выбора ${a.selectionMs} → ${b.selectionMs} мс`);
-  if (Number.isFinite(a.throughputBps) && Number.isFinite(b.throughputBps)) parts.push(`игровая пропускная способность ${fmtNum(a.throughputBps)} → ${fmtNum(b.throughputBps)} бит/с`);
+  if (Number.isFinite(a.throughputBps) && Number.isFinite(b.throughputBps)) parts.push(`игровая пропускная способность ${fmtNum(a.throughputBps)} → ${fmtNum(b.throughputBps)}\u00a0бит\u2060/\u2060с`);
   // Targets follow the switch-on threshold (reachableBand): after a change of sensitivity the comparison is rough.
   const moved = a.onThreshold !== null && b.onThreshold !== null && Math.abs(a.onThreshold - b.onThreshold) > 1e-6;
-  return parts.length ? `С первой проверки${b.scheme && SCHEME_INFO[b.scheme] ? ` (${SCHEME_INFO[b.scheme].abbr})` : ''}: ${parts.join(', ')}.${moved ? ' Чувствительность менялась — сравнение приблизительное.' : ''}` : '';
+  return parts.length ? `С первой проверки${b.scheme && SCHEME_INFO[b.scheme] ? ` (${SCHEME_INFO[b.scheme].abbr})` : ''}: ${parts.join(', ')}.${errorText(completionChange(a, b))}${moved ? ' Чувствительность менялась — сравнение приблизительное.' : ''}` : '';
+}
+
+/** 5.18 — the measurement error of the check in words (core/analytics.js `completionChange`). */
+export function errorText(change) {
+  if (!change) return '';
+  if (!change.real) return ` Разница выполненных — в пределах погрешности проверки (±${change.mdc} п. п.): пока нельзя сказать, что навык изменился.`;
+  return change.delta > 0 ? ` Рост выполненных больше погрешности проверки (±${change.mdc} п. п.) — это не случайность.`
+    : ` Выполненных меньше, и это больше погрешности (±${change.mdc} п. п.): проверьте датчики и самочувствие.`;
 }
 
 function sparkline(values) {

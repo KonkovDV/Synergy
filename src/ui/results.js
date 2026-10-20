@@ -1,12 +1,12 @@
 // Results (knowledge of results + coach advice + rewards) and the rest break between plan items.
-import { count, fmtNum, fmtPct, FORMS } from '../core/format.js';
+import { count, fmtNum, fmtPct, fmtFixed, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { gameArt, badgeArt, starRow, firebird, evolution, achievementArt, giftArt, skinArt, sectionArt } from './art.js';
 import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, PET_SLOTS } from '../core/pet.js';
 import { missionText } from '../core/missions.js';
 import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
-import { SKILL_NAME } from '../core/vocabulary.js';
+import { SKILL_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest } from '../core/progress.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
@@ -79,11 +79,82 @@ export function replaySummary(replay) {
   return `Пройдено ${passed} из ${count(rings.length, FORMS.ringsOf)}.${lean}`;
 }
 
+const OUTCOME_WORD = { crush: 'Раздавлено', drop: 'Выскользнуло', timeout: 'Не успели' };
+const listed = names => Object.entries(names.reduce((m, n) => ({ ...m, [n]: (m[n] ?? 0) + 1 }), {})).map(([n, k]) => (k > 1 ? `${n} ×${k}` : n)).join(', ');
+
+/**
+ * The words of the workshop replay (pure: tests/feel.test.mjs). What happened to each object and where the force sat
+ * in the window when it was lifted — the outcome, never which muscle to tense.
+ */
+export function gripReplaySummary(replay) {
+  const items = replay.items, ok = items.filter(i => i.outcome === 'ok');
+  const parts = [`Доставлено ${ok.length} из ${items.length}.`];
+  for (const outcome of ['crush', 'drop', 'timeout']) {
+    const names = items.filter(i => i.outcome === outcome).map(i => i.name.toLowerCase());
+    if (names.length) parts.push(`${OUTCOME_WORD[outcome]}: ${listed(names)}.`);
+  }
+  if (ok.length >= 2) {
+    const place = ok.map(i => (i.force - i.min) / Math.max(1e-6, i.max - i.min));
+    const high = place.filter(p => p > 2 / 3).length, low = place.filter(p => p < 1 / 3).length;
+    parts.push(high > ok.length / 2 ? 'Сила при подъёме — чаще у верхнего края окна.' : low > ok.length / 2 ? 'Сила при подъёме — чаще у нижнего края окна.' : 'Сила при подъёме — около середины окна.');
+  }
+  return parts.join(' ');
+}
+
+/**
+ * 5.18 — «Как прошла Мастерская»: a column per object — its green window, the crushing zone above it and a dot where
+ * the force was at the outcome (games/grip.js replay). The summary under it says the same in words.
+ */
+function gripReplayCard(replay) {
+  if (!replay?.items?.length) return null;
+  const W = 320, H = 112, pad = 8, n = replay.items.length, cw = (W - 2 * pad) / n;
+  const y = f => (pad + (1 - f) * (H - 2 * pad)).toFixed(1);
+  const cols = replay.items.flatMap((it, i) => {
+    const cx = pad + cw * (i + 0.5), bw = Math.min(18, cw * 0.5), x = (cx - bw / 2).toFixed(1);
+    return [
+      svgEl('rect', { x, width: bw.toFixed(1), y: y(1), height: (H - 2 * pad).toFixed(1), rx: 4, class: 'track' }),
+      it.breakAt === null ? null : svgEl('rect', { x, width: bw.toFixed(1), y: y(1), height: (y(it.breakAt) - y(1)).toFixed(1), rx: 4, class: 'break' }),
+      svgEl('rect', { x, width: bw.toFixed(1), y: y(it.max), height: (y(it.min) - y(it.max)).toFixed(1), rx: 3, class: 'window' }),
+      it.force === null ? null : svgEl('circle', { cx: cx.toFixed(1), cy: y(it.force), r: 5, class: it.outcome === 'ok' ? 'force ok' : 'force miss' }),
+    ].filter(Boolean);
+  });
+  const pic = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'replay-plot grip-plot', 'aria-hidden': 'true', focusable: 'false' }, ...cols);
+  return h('section', { class: 'card replay' }, h('h2', {}, 'Как прошла Мастерская'), pic,
+    h('p', { class: 'note' }, `${gripReplaySummary(replay)} Столбики — предметы по порядку: зелёное — окно силы, красное — где ломается; точка — сила в конце попытки.`));
+}
+
+/**
+ * The words of the safe replay (pure: tests/v518.test.mjs): how many digits opened, which took longest, and what the
+ * prosthesis saw instead of the wanted gesture — the pair worth practising.
+ */
+export function safeReplaySummary(replay, nameOf = id => id) {
+  const opened = replay.digits.filter(d => d.ok);
+  const parts = [`Открыто ${opened.length} из ${replay.digits.length}.`];
+  const slow = opened.length >= 2 ? opened.reduce((a, b) => (b.seconds > a.seconds ? b : a)) : null;
+  if (slow) parts.push(`Дольше всего — «${slow.name}»: ${fmtFixed(slow.seconds)} с.`);
+  if (replay.top) parts.push(`Вместо «${nameOf(replay.top.wanted)}» протез чаще видел «${nameOf(replay.top.seen)}» (${fmtFixed(replay.top.seconds)} с) — эту пару стоит потренировать.`);
+  return parts.join(' ');
+}
+
+/** 5.18 — «Как прошёл Сейф»: the code lamps again, green opened and amber missed, and the summary in words. */
+function safeReplayCard(replay) {
+  if (!replay?.digits?.length) return null;
+  const W = 320, H = 40, n = replay.digits.length, step = Math.min(34, (W - 16) / n);
+  const lamps = replay.digits.map((d, i) => svgEl('circle', { cx: (W / 2 - (n - 1) * step / 2 + i * step).toFixed(1), cy: H / 2, r: (step * 0.32).toFixed(1), class: d.ok ? 'lamp ok' : 'lamp miss' }));
+  const pic = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'replay-plot safe-plot', 'aria-hidden': 'true', focusable: 'false' }, ...lamps);
+  return h('section', { class: 'card replay' }, h('h2', {}, 'Как прошёл Сейф'), pic,
+    h('p', { class: 'note' }, `${safeReplaySummary(replay, id => GESTURE_BY_ID[id]?.name ?? id)} Огоньки — цифры кода по порядку: зелёные открыты, жёлтые — нет.`));
+}
+
+/** The replay of the game that has one («Полёт», «Мастерская», «Сейф»), or nothing. */
+const replayCard = replay => (replay?.kind === 'grip' ? gripReplayCard(replay) : replay?.kind === 'flight' ? flightReplayCard(replay)
+  : replay?.kind === 'safe' ? safeReplayCard(replay) : null);
+
 /**
  * 5.17 — «Как прошёл полёт»: the altitude line over the rings after the run (delayed feedback, games/flight.js replay).
  * A picture with a text twin: the summary under it says the same for a screen reader.
  */
-function replayCard(replay) {
+function flightReplayCard(replay) {
   if (!replay?.path?.length || !replay.items?.length) return null;
   const W = 320, H = 112, pad = 8;
   const x = t => (pad + (t / replay.total) * (W - 2 * pad)).toFixed(1), y = a => (pad + (1 - a) * (H - 2 * pad)).toFixed(1);
@@ -178,7 +249,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       stopAdvice ? h('div', { class: 'card warn-card' }, h('b', { class: 'with-art' }, badgeArt('moon', 28), 'Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
       effortCard,
       assessmentCard,
-      run.game === 'flight' ? replayCard(replay) : null,
+      replayCard(replay),
       h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills),
       h('section', { class: 'card coach' }, h('div', { class: 'coach-head' }, mioAvatar(coachMood({ stars: run.stars, stopAdvice }), 52), h('b', {}, 'Мио советует')), ...advice.map(t => h('p', {}, t))),
       h('div', { class: 'sticky-actions' },

@@ -36,5 +36,22 @@ export function assessmentHistory(runs, scheme = null, last = 8) {
     accuracy: r.details.accuracy, overshoots: r.details.overshoots,
     throughputBps: r.details.throughputBps ?? null, pathEfficiency: r.details.pathEfficiency ?? null,
     onThreshold: Number.isFinite(r.details.onThreshold) ? r.details.onThreshold : null,
+    trials: Number.isInteger(r.details.trialsTotal) && r.details.trialsTotal > 0 ? r.details.trialsTotal : null,
   }));
+}
+
+/**
+ * 5.18 — is the change of the completion rate between two checks larger than the measurement error? A check is n
+ * pass/fail trials, so a share has the binomial error; the difference is called real at 95 % when it exceeds
+ * 1.96 standard errors (the minimal-detectable-change idea — Maas et al. 2024: the success share is the reliable
+ * metric of a check). Agresti–Caffo: one success and one failure added to each check, so 0 % and 100 % still carry
+ * an error. With 8 trials a change has to pass 30–45 points — the screen says so instead of praising noise.
+ * @returns {{ delta: number, mdc: number, real: boolean } | null} points of percent
+ */
+export function completionChange(a, b) {
+  if (!Number.isFinite(a?.completionRate) || !Number.isFinite(b?.completionRate) || !a.trials || !b.trials) return null;
+  const variance = (rate, n) => { const p = (rate / 100 * n + 1) / (n + 2); return p * (1 - p) / (n + 2); };
+  const mdc = 1.96 * Math.sqrt(variance(a.completionRate, a.trials) + variance(b.completionRate, b.trials));
+  const delta = (b.completionRate - a.completionRate) / 100;
+  return { delta: Math.round(delta * 100), mdc: Math.round(mdc * 100), real: Math.abs(delta) > mdc };
 }

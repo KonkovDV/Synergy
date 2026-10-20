@@ -17,6 +17,7 @@ import { BridgeSource, trustedMessageSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard, setPadMode } from './ui/controls.js';
 import { createGame, GAME_BY_ID, GAMES, PLAN_CATALOG } from './games/registry.js';
+import { assessmentTrials } from './games/assess.js';
 import { GameRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
 import { setSoundEnabled, unlockAudio } from './services/audio.js';
@@ -338,7 +339,7 @@ export class App {
     if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = null; this.save(); } // a change of the last 300 ms is kept
     this.realStore = this.store;
     this.store = new Store(memoryStorage(), { catalog: CATALOG });
-    this.store.replace(buildShowcaseState(settings, dayKey(), PLAN_CATALOG));
+    this.store.replace(buildShowcaseState(settings, dayKey(), PLAN_CATALOG, { checkTrials: assessmentTrials(settings.scheme, settings.sensitivity).length }));
     this.showcase = true;
     this.refreshFromState();
   }

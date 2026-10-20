@@ -16,7 +16,7 @@ export const SHOWCASE_DAYS = 21;
  * @param {object} settings current settings (presentation preferences are kept)
  * @param {string} today dayKey
  */
-export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey(), catalog = []) {
+export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey(), catalog = [], { checkTrials = null } = {}) {
   // Training games from the registry (PLAN_CATALOG: id, skills, levelCount) — core does not import games.
   const GAMES = catalog.map(g => ({ id: g.id, levels: g.levelCount, skills: g.skills }));
   const rng = createRng(42);
@@ -43,7 +43,7 @@ export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey()
       recordRun(profile, run, { today: day, weeklyGoal: settings.weeklyGoal });
       if (run.stars >= 2 && level[g.id] < g.levels) level[g.id]++;
     });
-    if (back % 7 === 0) runs.push(assessmentRun(rng, date, settings.scheme, k, profile));
+    if (back % 7 === 0) runs.push(assessmentRun(rng, date, settings.scheme, k, profile, checkTrials));
     recordDayNote(profile, day, { effort: k > 0.6 ? 0 : 1 });
   }
   return { version: 4, profile, settings: { ...settings }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration() }, runs };
@@ -60,14 +60,19 @@ function safeDetails(rng, k) {
   return { solved: 6, total: 7, confusion };
 }
 
-function assessmentRun(rng, date, scheme, k, profile) {
-  const completionRate = Math.round(Math.min(100, 70 + 28 * k));
+/**
+ * A weekly check of the period. With the scheme's trial count (5.18, from the caller — core does not import games)
+ * the share is whole trials, as a real check gives, and the count is stored for the error of the check.
+ */
+function assessmentRun(rng, date, scheme, k, profile, trials = null) {
+  const share = Math.min(1, 0.7 + 0.28 * k);
+  const completionRate = trials ? Math.round(100 * Math.round(share * trials) / trials) : Math.round(100 * share);
   const run = {
     id: `showcase-check-${dayKey(date)}`, at: new Date(date.getTime() + 20 * 60000).toISOString(), game: 'check', level: 1, levelCount: 1,
     scheme, source: 'showcase', retention: false, demo: false,
     score: Math.round(60 + 32 * k), stars: starsFor(Math.round(60 + 32 * k)), durationS: 75,
     skills: { precision: Math.round(62 + 30 * k), timing: Math.round(58 + 34 * k), switching: completionRate },
-    details: { assessment: true, completionRate, selectionMs: Math.round(900 - 480 * k + 60 * rng()), completionMs: Math.round(2900 - 1300 * k + 120 * rng()),
+    details: { assessment: true, completionRate, ...(trials ? { trialsTotal: trials } : {}), selectionMs: Math.round(900 - 480 * k + 60 * rng()), completionMs: Math.round(2900 - 1300 * k + 120 * rng()),
       accuracy: Math.round(68 + 26 * k), overshoots: Math.max(0, Math.round(4 - 4 * k)),
       ...(scheme === 'proportional' ? { throughputBps: Math.round(100 * (0.8 + 0.9 * k + 0.1 * rng())) / 100, fittsTrials: 6, pathEfficiency: Math.round(62 + 25 * k) } : {}) },
   };

@@ -324,6 +324,8 @@ const STATES = [
     }
   }],
   ['tutorial-lock', async p => { await go(p, 'tutorial'); for (let i = 0; i < 12 && !(await p.getByRole('heading', { name: /Замок/ }).count()); i++) await p.getByRole('button', { name: 'Пропустить шаг' }).click(); }],
+  // 5.18 — after «Первые шаги» and before the day's first exercise: the plan card with «Быстро · ≈ 2 мин».
+  ['home-quick', async p => { await go(p, 'tutorial'); await p.getByRole('button', { name: 'Завершить обучение' }).click(); await p.waitForTimeout(300); await go(p, 'home'); await p.keyboard.press('Escape'); }],
   ['goals', async p => go(p, 'goals')],
   ['settings', async p => { await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
   ['calibration', async p => go(p, 'calibration')],

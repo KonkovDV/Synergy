@@ -1263,10 +1263,28 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 .replay-plot rect.ok { fill: var(--good); opacity: 0.35 }
 .replay-plot rect.miss { fill: var(--warn); opacity: 0.35 }
 .replay-plot .flight-line { fill: none; stroke: var(--text); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round }
+/* 5.18 — the quick start under «Начать»: a quieter second door into the same day. */
+.plan .quick-start { display: block; margin: 0 auto 12px }
+/* 5.18 — the workshop replay: a column per object. */
+.grip-plot .track { fill: var(--track) }
+.grip-plot .break { fill: var(--bad); opacity: 0.22 }
+.grip-plot .window { fill: var(--good); opacity: 0.5 }
+.grip-plot .force { stroke: var(--text); stroke-width: 2 }
+.grip-plot .force.ok { fill: var(--good) }
+.grip-plot .force.miss { fill: var(--warn) }
+.safe-plot .lamp { stroke: var(--text); stroke-width: 1.5 }
+.safe-plot .lamp.ok { fill: var(--good) }
+.safe-plot .lamp.miss { fill: var(--warn) }
 :root.hc .replay-plot { background: none; border: 2px solid currentColor }
 @media (forced-colors: active) {
   .replay-plot { background: none; border: 1px solid CanvasText }
   .replay-plot .flight-line { stroke: CanvasText }
   .replay-plot line.ok, .replay-plot rect.ok { stroke: Highlight; fill: Highlight }
   .replay-plot line.miss, .replay-plot rect.miss { stroke: GrayText; fill: GrayText }
+  .grip-plot .track { fill: Canvas; stroke: CanvasText }
+  .grip-plot .window, .grip-plot .force.ok { fill: Highlight; opacity: 1 }
+  .grip-plot .break, .grip-plot .force.miss { fill: GrayText; opacity: 1 }
+  .grip-plot .force, .safe-plot .lamp { stroke: CanvasText }
+  .safe-plot .lamp.ok { fill: Highlight }
+  .safe-plot .lamp.miss { fill: GrayText }
 }
