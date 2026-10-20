@@ -2,7 +2,7 @@
  "version": "5.20.0",
  "generated": "2026-10-20T19:20:12.960Z",
  "tests": {
-  "total": 298,
+  "total": 299,
   "failed": 0,
   "at": "2026-10-20T18:46:35.043Z",
   "platform": "win32 10.0.26200",
