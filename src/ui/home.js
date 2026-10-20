@@ -85,12 +85,14 @@ export function homeScreen(app) {
   const planCard = h('section', { class: 'card plan', 'data-tour': 'home.plan' },
     h('div', { class: 'card-head' }, h('h2', { class: 'with-art' }, sectionArt('plan', 32), plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
     overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,
-    resting || skinDay ? h('p', { class: 'note warn' }, restText) : null,
+    resting ? h('p', { class: 'note warn' }, restText) : null,
     !resting && !skinDay && pet.reason === 'back' ? h('p', { class: 'note comeback' }, `С возвращением! Догонять ничего не нужно: начните с первого упражнения в спокойном темпе.${app.sourceKind() === 'touch' ? '' : ' С датчиками — сначала короткая калибровка.'}`) : null,
     !resting && !skinDay && pet.reason === 'back' && app.sourceKind() !== 'touch' ? h('button', { class: 'btn ghost', onclick: () => app.go('calibration') }, sectionArt('calibration', 24), 'Калибровка датчиков') : null,
     h('button', { class: `btn ${p.tutorialDone ? 'primary' : 'ghost'} big plan-start`, disabled: allDone || resting, onclick: () => app.startPlan() },
       resting ? 'Сегодня — отдых' : skinDay ? (doneCount ? 'Продолжить без датчиков' : 'Начать без датчиков') : allDone ? 'План выполнен' : doneCount ? 'Продолжить' : `Начать · ≈ ${plan.items.length * 2 + 2} мин`),
     resting || skinDay ? h('button', { class: 'btn ghost', onclick: () => app.go('checkin') }, 'Изменить ответ') : null,
+    // A skin day has a plan to start: its button stays above the fold on a small phone, the advice goes under it.
+    skinDay ? h('p', { class: 'note warn' }, restText) : null,
     // 5.18 — one tap, one exercise: people drop off by not starting, not by doing less once started (Ramos Muñoz et
     // al. 2022). Free play of the plan's first exercise — the day counts, the plan stays for later.
     quick ? h('button', { class: 'btn ghost quick-start', onclick: () => app.go('play', { game: quick.game, level: quick.level, quick: true }) }, gameArt(quick.game, 24), `Быстро · ≈ 2 мин: ${GAME_BY_ID[quick.game].title}`) : null,

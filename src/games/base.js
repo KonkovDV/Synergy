@@ -11,6 +11,9 @@ import { SIGNAL } from '../config.js';
 export const clamp01 = x => Math.max(0, Math.min(1, x));
 export const pct = x => Math.round(100 * clamp01(x));
 
+/** After 3 s without rest («Сейф», the skill check): what comes next, and that a tense muscle is no mistake. */
+export const REST_STUCK_HINT = 'Расслабить не получается — это не ошибка. Скоро пойдём дальше';
+
 /** Channel separation: how little the passive channel leaks while one channel works. */
 export class SeparationMeter {
   constructor() { this.active = 0; this.leak = 0; }

@@ -334,6 +334,15 @@ const STATES = [
   ['gesture-play', async p => { await p.evaluate(() => window.Synergy.go('settings')); await p.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click(); await go(p, 'play', { game: 'safe', level: 5 }); }],
   ['gesture-running', async p => { await go(p, 'play', { game: 'safe', level: 5, demo: true }); await p.getByRole('button', { name: 'Старт' }).click(); await p.waitForTimeout(3600); }],
   ['gesture-tutorial', async p => go(p, 'tutorial')],
+  // 5.20.1 — a skin day with sensors chosen: the longest advice (skin + moderate pain), then the day on the emulator.
+  ['checkin-skin-pain', async p => {
+    await p.evaluate(() => window.Synergy.useBridge(''));
+    await go(p, 'checkin');
+    for (const name of [/Умеренная/, /Сил много/, /Покраснение/]) await p.getByRole('radio', { name }).click();
+  }],
+  ['play-skin', async p => { await p.getByRole('button', { name: 'Короткий план без датчиков' }).click(); await p.waitForTimeout(300); }],
+  ['home-skin', async p => go(p, 'home')],
+  ['tutorial-skin', async p => go(p, 'tutorial')],
   ['showcase-progress', async p => { await go(p, 'settings'); await p.locator('summary', { hasText: 'Данные' }).click(); await p.getByRole('button', { name: 'Демо-профиль для презентации' }).click(); }],
   ['showcase-home', async p => go(p, 'home')],
   ['showcase-pet', async p => { await p.evaluate(() => document.querySelector('.pet-card').scrollIntoView({ block: 'start' })); await p.getByRole('button', { name: /Погладить/ }).click(); }],
@@ -341,6 +350,8 @@ const STATES = [
   ['showcase-goal-taken', async p => { await p.getByRole('button', { name: 'Взять цель' }).first().click(); }],
   ['showcase-nest', async p => { await go(p, 'nest'); await p.waitForTimeout(600); const skip = p.locator('.tour').getByRole('button', { name: 'Пропустить подсказки' }); if (await skip.count()) await skip.click(); }],
   ['showcase-outfit', async p => { await go(p, 'nest'); await p.evaluate(() => document.querySelector('.outfit').scrollIntoView({ block: 'start' })); }],
+  // 5.20.1 — «Первые шаги» under the demo banner: the gesture pads stay on a short screen.
+  ['showcase-tutorial', async p => go(p, 'tutorial')],
   ['results-pet', async p => go(p, 'results', { run: { ...run, stars: 3, score: 92 }, report: { xp: 137, levelUp: true, level: 4, achievements: ['perfect', 'plan'], skins: [], items: ['star', 'wreath'], unlockedLevel: 3,
     mission: { mission: { kind: 'weak', game: 'grip', minStars: 2, target: 3, done: 3 }, done: 3, target: 3, completed: true, xp: 60 } } })],
   // 5.9: the system asks for more contrast (the app follows it) and Windows forced colors — borders and outlines change.

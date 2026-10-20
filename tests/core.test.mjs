@@ -132,7 +132,7 @@ test('progress: stars, levels, unlocks, rest day keeps the series', () => {
 test('week outlook: remaining days can hold the goal, or they cannot and nothing is owed', () => {
   const open = weeklyStatus(createProfile(), 4, '2026-10-19'); // Monday, nothing trained
   assert.deepEqual(weekOutlook(open), { kind: 'fits', need: 4, room: 7 });
-  assert.match(weekOutlookText(open), /4 дня с тренировкой/);
+  assert.equal(weekOutlookText(open), 'В неделе есть место.', 'one short line after «N из M» on a 320 px phone');
   const p = createProfile();
   recordRun(p, { game: 'grip', level: 1, levelCount: 8, score: 80, stars: 2, durationS: 60, skills: {}, details: {} }, { today: '2026-10-19' });
   recordRun(p, { game: 'grip', level: 1, levelCount: 8, score: 80, stars: 2, durationS: 60, skills: {}, details: {} }, { today: '2026-10-20' });

@@ -1029,6 +1029,9 @@ table.data th { font-size: 0.75rem }
 /* …and on a short landscape game screen there is no room for the banner and six gesture pads: the pads win («что нажимать —
    всегда на экране», 5.10); every other screen of the demo still shows the banner. */
 @media (orientation: landscape) and (max-height: 540px) { .app:has(> .play-screen) > .showcase-banner { display: none } }
+/* The same for «Первые шаги» and the calibration (`.frame`), in both orientations of a short screen: on 320 × 568 the
+   banner put «Ключ» of the gesture pads under the bottom edge. */
+@media (max-height: 600px) { .app:has(> .frame) > .showcase-banner { display: none } }
 :root.hc .tour { background: #000; border-color: #ffe14d }
 :root.hc .tour-target { outline-color: #ffe14d !important; box-shadow: none !important }
 :root.hc .pet-say { background: #000; color: #fff; border: 2px solid #fff }

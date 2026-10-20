@@ -6,8 +6,10 @@ permissions: { contents: read, pages: write, id-token: write }
 concurrency: { group: pages, cancel-in-progress: false }
 jobs:
   deploy:
+    # A Pages site is public even when its repository is private: a private draft must not publish the product.
+    if: ${{ !github.event.repository.private }}
     environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false }

@@ -1,9 +1,10 @@
 // Scenarios of docs/SCENARIOS.md that had no automated check («—» in the table), named by their number.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adviseStop, needsCheckin, checkInAdvice, checkinSkippable, CHECKIN_ACTION, SKIN_LEVELS, freePlayCaution } from '../src/core/wellbeing.js';
+import { adviseStop, needsCheckin, checkInAdvice, checkinSkippable, checkinLight, CHECKIN_ACTION, SKIN_LEVELS, freePlayCaution } from '../src/core/wellbeing.js';
 import { createProfile, recordDayNote, sessionRules, buildDailyPlan, completePlanItem, recordRun, streakAlive, weeklyStatus, weekOutlook, planClosedDays, painRestDays } from '../src/core/progress.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
+import { decisionOf } from '../src/services/report.js';
 
 const D = '2026-10-17', NEXT = '2026-10-18';
 const run = (game, score, at = `${D}T10:00:00`, extra = {}) => ({ id: `${game}-${score}-${at}`, at, game, level: 1, levelCount: 8, scheme: 'proportional', score, stars: score >= 50 ? 1 : 0, skills: {}, details: {}, durationS: 150, ...extra });
@@ -22,6 +23,23 @@ test('scenario 1.3a: irritated skin under the sensors → no sensor training tod
   assert.match(a.text, /протезист|врач/, 'points to a specialist');
   assert.equal(checkInAdvice({ pain: 3, skin: 1 }).reason, 'pain', 'severe pain is named first');
   assert.equal(checkInAdvice({ skin: 0 }).action, CHECKIN_ACTION.GO);
+  // Skin and moderate pain or strong fatigue: no sensors, and still the short day with its advice.
+  for (const answers of [{ pain: 2, skin: 1 }, { fatigue: 2, skin: 1 }]) {
+    const both = checkInAdvice(answers);
+    assert.equal(both.reason, 'skin');
+    assert.equal(both.light, true);
+    assert.match(both.text, /без датчиков[\s\S]*план короче[\s\S]*остановитесь/);
+    assert.equal(checkinLight(both), true);
+  }
+  assert.equal(a.light, undefined);
+  assert.equal(checkinLight(a), false, 'irritated skin alone keeps the whole plan on the emulator');
+  assert.equal(checkinLight({ action: 'light' }), true);
+  assert.equal(checkinLight({ action: 'stop', reason: 'pain', light: true }), false, 'a severe-pain stop is never a short day');
+  // The specialist report names a skin day for what it is: practice on the screen, not a rest day.
+  assert.equal(decisionOf(a), 'без датчиков, на экране');
+  assert.equal(decisionOf(checkInAdvice({ pain: 2, skin: 1 })), 'короткий план без датчиков');
+  assert.equal(decisionOf(checkInAdvice({ pain: 3 })), 'отдых');
+  assert.equal(decisionOf({ skipped: true }), 'пропущено');
   assert.equal(SKIN_LEVELS.length, 2);
   // A declared rest day (pain or skin) never breaks the training series.
   const p = createProfile();

@@ -31,7 +31,9 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
   const ctx = canvas.getContext('2d');
   ctx.scale(2, 2); // sharp on 2–3× screens; drawn in 320 × 240
   const meter = signalMeter(app);
-  const pads = s.source === 'touch' ? (s.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator) : createTwoChannelPads(app.emulator)) : null;
+  // On a skin day the saved source may be «Внешний», but the emulator gives the signal: it needs its pads.
+  const onScreen = app.liveSource() === 'touch';
+  const pads = onScreen ? (s.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator) : createTwoChannelPads(app.emulator)) : null;
   const finish = () => {
     const fresh = app.completeTutorial(run.passed);
     fresh.forEach(id => toast(`Достижение: ${ACHIEVEMENTS.find(a => a.id === id).name}`, 'good'));
@@ -71,7 +73,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       }
       ring.style.setProperty('--p', String(run.stepProgress));
       // Pad tips are for the on-screen emulator; with sensors the usual cause is contact or calibration.
-      const tipText = s.source === 'touch' ? run.step.tip : 'Не получается? Проверьте, что датчики плотно прилегают к коже, или пройдите калибровку в настройках.';
+      const tipText = onScreen ? run.step.tip : 'Не получается? Проверьте, что датчики плотно прилегают к коже, или пройдите калибровку в настройках.';
       if (run.showTip && !tip.textContent) { tip.textContent = tipText; app.say(tipText); }
       // Live picture: the prosthesis follows the signal; the force band of the «level» step is drawn.
       const bg = ctx.createLinearGradient(0, 0, 0, 240);

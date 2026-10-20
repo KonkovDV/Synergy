@@ -10,8 +10,12 @@ const store = new Map();
 globalThis.window = Object.assign(globalThis, target());
 globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
 globalThis.Node = class Node {};
-const el = () => ({ style: { setProperty: noop }, classList: { toggle: noop, add: noop, remove: noop }, addEventListener: noop, setAttribute: noop, append(...c) { this.kids = [...(this.kids ?? []), ...c]; }, replaceChildren: noop, dataset: {}, kids: [] });
-globalThis.document = { ...target(), documentElement: el(), createElement: el, createElementNS: () => el(), createTextNode: t => Object.assign(new Node(), { textContent: String(t) }), querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, hidden: false, body: el() };
+const canvas2d = new Proxy({}, { get: (_, k) => (k === 'createLinearGradient' ? () => ({ addColorStop: noop }) : noop) });
+// A small tree: screens built here can be searched by class and text (no layout, no events).
+const el = tag => Object.assign(new Node(), { tag, attrs: {}, style: { setProperty: noop }, classList: { toggle: noop, add: noop, remove: noop }, addEventListener: noop,
+  setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; }, append(...c) { this.kids.push(...c); }, replaceChildren(...c) { this.kids = [...c]; },
+  getContext: () => canvas2d, dataset: {}, kids: [] });
+globalThis.document = { ...target(), documentElement: el('html'), createElement: el, createElementNS: (_, tag) => el(tag), createTextNode: t => Object.assign(new Node(), { textContent: String(t) }), querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, hidden: false, body: el('body') };
 globalThis.requestAnimationFrame = noop;
 globalThis.matchMedia = () => ({ matches: false, addEventListener: noop });
 globalThis.history = { state: null, pushState: noop, back: noop };
@@ -20,8 +24,12 @@ const { App } = await import('../src/app.js');
 const { emptyState } = await import('../src/core/storage.js');
 const { dayKey, recordDayNote } = await import('../src/core/progress.js');
 const { calibrationScreen } = await import('../src/ui/settings.js');
+const { tutorialScreen } = await import('../src/ui/tutorial.js');
 
-const fresh = () => { store.clear(); return new App(el()); };
+const fresh = () => { store.clear(); return new App(el('main')); };
+const nodes = n => [n, ...(n?.kids ?? []).flatMap(nodes)];
+const textOf = n => nodes(n).map(x => x.textContent ?? '').join(' ');
+const byClass = (n, c) => nodes(n).filter(x => String(x.attrs?.class ?? '').split(' ').includes(c));
 
 test('reset and undo re-apply the signal source (the game loop threw on a null bridge after undo)', () => {
   let app = fresh();
@@ -51,15 +59,35 @@ test('a skin day refuses host frames and a sensor connection, and does not calib
   await assert.rejects(() => app.connectBle(), /кожа под ними раздражена/);
   assert.equal(app.ble, null);
   const before = JSON.stringify(app.state.calibrations.bridge);
-  calibrationScreen(app);
-  const copy = readFileSync(new URL('../src/ui/settings.js', import.meta.url), 'utf8');
-  assert.match(copy, /Калибровка — в другой день/);
-  assert.equal(app.sensorsPaused(), true);
+  assert.match(textOf(calibrationScreen(app).node), /Калибровка\s— в другой день/);
   assert.equal(JSON.stringify(app.state.calibrations.bridge), before);
   delete app.profile.days[today].checkin;
   app.daySeen = '1999-01-01';
   app.frame(1000);
   assert.ok(app.bridge, 'the next day reconnects the saved source');
+});
+
+test('a skin day trains on the emulator: «Первые шаги» show its pads, and no screen of the signal asks for the saved source', () => {
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  assert.equal(byClass(tutorialScreen(app).node, 'pads').length, 0, 'with sensors the tutorial has no pads');
+  recordDayNote(app.profile, dayKey(), { checkin: { action: 'stop', reason: 'skin', pain: 0, fatigue: 0, skin: 1 } });
+  app.applySource();
+  assert.equal(app.liveSource(), 'touch');
+  assert.equal(byClass(tutorialScreen(app).node, 'pads').length, 1, 'the emulator gives the signal, so its pads are there');
+  // The game screen decides «external source» by the live source too (it is too browser-bound to build here).
+  for (const f of ['play.js', 'tutorial.js']) assert.doesNotMatch(readFileSync(new URL(`../src/ui/${f}`, import.meta.url), 'utf8'), /\bs\.source\b/, f);
+});
+
+test('irritated skin with moderate pain is a short day without sensors; the pain answer is not lost', () => {
+  const app = fresh();
+  const full = app.dailyPlan().items.length;
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  recordDayNote(app.profile, dayKey(), { checkin: { action: 'stop', reason: 'skin', light: true, pain: 2, fatigue: 0, skin: 1 } });
+  const plan = app.dailyPlan();
+  assert.equal(plan.light, true);
+  assert.ok(plan.items.length < full, `${plan.items.length} of ${full}`);
+  assert.equal(app.liveSource(), 'touch');
 });
 
 test('only plan runs complete the plan; the run records where it came from', () => {

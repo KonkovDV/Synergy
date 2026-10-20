@@ -51,6 +51,8 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['unsigned APK', () => writeFileSync(join(dir, 'release', `Synergy-${version}.apk`), Buffer.from([0x50, 0x4b, 0x05, 0x06, ...new Array(18).fill(0)])), 'не подписан'],
       ['release APK tracked in git', () => git(dir, 'add', '-f', `release/Synergy-${version}.apk`), 'артефакты сборки в git'],
       ['README table edited by hand', () => edit(dir, 'README.md', s => s.replace('каждая пара цветов', 'почти каждая пара цветов')), 'расходится с docs/evidence.json'],
+      ['an old axe count in the pitch', () => edit(dir, 'docs/PITCH.md', s => `${s}\nНоль нарушений на 28 состояниях экранов светлой темы и 10 тёмной.\n`), 'а axe —'],
+      ['an old layout run in the jury strategy', () => edit(dir, 'docs/JURY_STRATEGY.md', s => `${s}\nЛинтер: 37 состояний × 7 экранов.\n`), 'а линтер раскладки —'],
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
       ['unverified claim (fact-check)', () => edit(dir, 'README.md', s => `${s}\n${UNVERIFIED}\n`), 'README.md:'],
       ['«up to 44 %»', () => edit(dir, 'README.md', s => `${s}\n${UP_TO_44}\n`), 'README.md:'],

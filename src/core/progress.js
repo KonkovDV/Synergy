@@ -154,7 +154,8 @@ export function weekOutlook(status, { restDays = [] } = {}) {
 export function weekOutlookText(status, options) {
   const o = weekOutlook(status, options);
   if (o.kind === 'met') return 'Цель недели есть.';
-  if (o.kind === 'fits') return `До цели ещё ${count(o.need, ['день с тренировкой', 'дня с тренировкой', 'дней с тренировкой'])}, и в неделе есть место.`;
+  // «N из M» before it already says how many days are left; on a 320 px phone a longer line pushed «Начать» below the fold.
+  if (o.kind === 'fits') return 'В неделе есть место.';
   return 'Дней недели меньше, чем до цели. Догонять не нужно.';
 }
 

@@ -35,7 +35,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   let phase = 'intro', countdown = 0, confirm = new HoldConfirm(s.dwellS), doneAt = 0, lastScore = -1, lastCount = 0, lastNow = null, outcome = null;
   const confirmS = s.dwellS;
   const entry = session.entry;
-  const bridgeMode = s.source === 'bridge' && !demo;
+  // The live source, not the saved one: on a skin day the saved «Внешний» stays, but the emulator gives the signal.
+  const bridgeMode = app.liveSource() === 'bridge' && !demo;
 
   const canvas = h('canvas', { class: 'stage-canvas', 'aria-label': `Игровое поле: ${entry.title}` });
   const ctx = canvas.getContext('2d');

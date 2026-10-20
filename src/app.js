@@ -9,7 +9,7 @@ import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessi
 import { missionOffers } from './core/missions.js';
 import { guidanceFor } from './core/guidance.js';
 import { FpsGuard } from './core/fps.js';
-import { CHECKIN_ACTION, needsCheckin, safetyOutdated } from './core/wellbeing.js';
+import { CHECKIN_ACTION, needsCheckin, safetyOutdated, checkinLight } from './core/wellbeing.js';
 import { exportState, importState } from './core/storage.js';
 import { buildShowcaseState } from './core/showcase.js';
 import { EmgEmulator } from './input/emulator.js';
@@ -416,7 +416,7 @@ export class App {
   dailyPlan() {
     const plan = buildDailyPlan(this.profile, this.state.runs, PLAN_CATALOG, this.settings.scheme, dayKey(), { exercises: this.rules.planExercises });
     // A plan rebuilt today (e.g. after a scheme change) keeps today's «light session» answer.
-    if (this.checkin()?.action === CHECKIN_ACTION.LIGHT && !plan.light) lightenPlan(plan);
+    if (checkinLight(this.checkin()) && !plan.light) lightenPlan(plan);
     return plan;
   }
 
