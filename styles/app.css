@@ -1248,3 +1248,25 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 :root.hc .hero-bg { display: none }
 :root.hc .nest-stage.room { background: none; min-height: 0 }
 @media (forced-colors: active) { .hero-bg { display: none } .nest-stage.room { background: none; min-height: 0 } }
+
+/* 5.17 — a new best of the level: a quiet chip under the score (compared with oneself). */
+.record { display: inline-flex; align-items: center; gap: 6px; margin: 2px auto 0; padding: 4px 12px 4px 6px; border-radius: 99px; background: var(--tint-yellow); color: var(--text); font-weight: 800; font-size: 0.875rem }
+.record .art { width: 1.25rem; height: 1.25rem }
+/* 5.17 — the still breathing circle gets words (reduced motion); the line keeps its height so nothing jumps. */
+.breath-word { min-height: 1.5em; margin: 0; font-weight: 800; color: var(--accent-ink) }
+.breath-word:empty { display: none }
+/* 5.17 — «Как прошёл полёт»: the altitude line over the rings (green — passed, amber — missed); the note repeats it. */
+.replay-plot { display: block; width: 100%; height: auto; margin: 4px 0 8px; border-radius: 12px; background: var(--tint-teal) }
+.replay-plot .mid { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0.5 }
+.replay-plot line.ok { stroke: var(--good); stroke-width: 5; stroke-linecap: round }
+.replay-plot line.miss { stroke: var(--warn); stroke-width: 5; stroke-linecap: round }
+.replay-plot rect.ok { fill: var(--good); opacity: 0.35 }
+.replay-plot rect.miss { fill: var(--warn); opacity: 0.35 }
+.replay-plot .flight-line { fill: none; stroke: var(--text); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round }
+:root.hc .replay-plot { background: none; border: 2px solid currentColor }
+@media (forced-colors: active) {
+  .replay-plot { background: none; border: 1px solid CanvasText }
+  .replay-plot .flight-line { stroke: CanvasText }
+  .replay-plot line.ok, .replay-plot rect.ok { stroke: Highlight; fill: Highlight }
+  .replay-plot line.miss, .replay-plot rect.miss { stroke: GrayText; fill: GrayText }
+}

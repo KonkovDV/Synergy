@@ -17,7 +17,9 @@
 // Usage: npm run build && npm run audit:layout [-- baseUrl] [-- --quick] [-- --view=568x320 --state=a,b]   (no URL — serves dist/ itself)
 import { createRequire } from 'node:module';
 import { baseUrl } from '../../tools/static-server.mjs';
+import { writeEvidence } from '../../tools/evidence.mjs';
 const require = createRequire(import.meta.url);
+const startedAt = Date.now();
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require('/opt/node22/lib/node_modules/playwright'); }
 const server = await baseUrl();
@@ -399,4 +401,6 @@ for (const i of issues) {
 }
 const list = [...groups.values()].sort((a, b) => a.kind.localeCompare(b.kind) || a.state.localeCompare(b.state));
 console.log(JSON.stringify({ errors, issues: list.length, list }, null, 1));
+// 5.17 — only a full run is a number for docs/evidence.json (tools/evidence.mjs); a quick or partial one is not.
+if (!quick && !arg('view') && !onlyStates) writeEvidence('layout', { states: STATES.length, viewports: VIEWPORTS.length, scales: SCALES.length, combinations: STATES.length * VIEWPORTS.length * SCALES.length, findings: list.length, errors: errors.length, seconds: Math.round((Date.now() - startedAt) / 1000) });
 process.exit(errors.length || list.length ? 1 : 0);

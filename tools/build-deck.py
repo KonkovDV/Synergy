@@ -47,6 +47,14 @@ def slides_from_pitch():
 
 
 def numbers():
+    # 5.17: docs/evidence.json is the one source of the numbers (tools/evidence.mjs); measured again only without it.
+    ev_path = ROOT / "docs" / "evidence.json"
+    if ev_path.exists():
+        ev = json.loads(ev_path.read_text("utf-8"))
+        if ev.get("version") == VERSION and ev.get("tests") and ev.get("apk"):
+            return {"tests": ev["tests"]["total"], "apk_kb": ev["apk"]["kb"], "html_mb": round(ev["html"]["bytes"] / 1024 / 1024, 1) if ev.get("html") else None,
+                    "art": ev["art"]["pictures"], "art_mb": round(ev["art"]["bytes"] / 1024 / 1024, 2),
+                    "a11y": ev.get("a11y"), "layout": ev.get("layout")}
     tests = None
     try:
         files = [str(p) for p in sorted((ROOT / "tests").glob("*.test.mjs"))]

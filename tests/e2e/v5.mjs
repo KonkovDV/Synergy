@@ -4,6 +4,7 @@
 import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { baseUrl } from '../../tools/static-server.mjs';
+import { writeEvidence } from '../../tools/evidence.mjs';
 const require = createRequire(import.meta.url);
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require('/opt/node22/lib/node_modules/playwright'); }
@@ -22,8 +23,9 @@ const wait = ms => page.waitForTimeout(ms);
 const go = (name, params) => page.evaluate(([n, p]) => window.Synergy.go(n, p), [name, params ?? {}]);
 // axe-core is evaluated through the DevTools protocol, so the page's CSP (no inline scripts) stays intact.
 const axeSource = readFileSync(require.resolve('axe-core/axe.min.js'), 'utf8');
-const a11y = [];
+const a11y = [], audited = [];
 async function audit(screen) {
+  audited.push(screen);
   if (!(await page.evaluate(() => !!window.axe))) await page.evaluate(axeSource);
   const result = await page.evaluate(() => window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] }));
   for (const v of result.violations) {
@@ -227,9 +229,12 @@ for (const [scheme, game] of [['proportional', 'grip'], ['gesture', 'safe']]) {
   await land.screenshot({ path: `${out}/v5-12-landscape-${game}.jpg`, type: 'jpeg', quality: 78, scale: 'css' });
   if (!(await land.evaluate(() => !!window.axe))) await land.evaluate(axeSource);
   const r = await land.evaluate(() => window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] }));
+  audited.push(`landscape-${game}`);
   for (const v of r.violations) a11y.push({ screen: `landscape-${game}`, rule: v.id, impact: v.impact, nodes: v.nodes.slice(0, 3).map(n => n.target.join(' ')) });
 }
 console.log(JSON.stringify({ errors, a11y }, null, 1));
+// 5.17 — the numbers of this run for docs/evidence.json (tools/evidence.mjs): states audited, light and dark.
+writeEvidence('e2e-a11y', { light: audited.filter(s => !s.startsWith('dark-')).length, dark: audited.filter(s => s.startsWith('dark-')).length, violations: a11y.length, errors: errors.length, browser: browser.version() });
 await browser.close();
 await server.close();
 process.exit(errors.length || a11y.length ? 1 : 0);

@@ -127,6 +127,21 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void stop() { if (ttsReady) tts.stop(); }
 
+        /**
+         * 5.17 — a system haptic instead of a vibration «by duration» (Android haptics principles: buzzing durations are
+         * often too loud): it follows the system haptic setting and needs no VIBRATE permission. kind: "confirm" — a
+         * success, "tick" — a hit or a grip change. A mistake has no haptic: REJECT is not for a game's miss.
+         */
+        @JavascriptInterface
+        public void haptic(final String kind) {
+            final int effect = "confirm".equals(kind) ? (Build.VERSION.SDK_INT >= 30 ? 16 /* CONFIRM */ : 1 /* VIRTUAL_KEY */)
+                : "tick".equals(kind) ? 4 /* CLOCK_TICK */ : -1;
+            if (effect < 0) return;
+            runOnUiThread(new Runnable() {
+                public void run() { if (web != null) web.performHapticFeedback(effect); }
+            });
+        }
+
         /** The system dark theme (5.12): a WebView of an app targeting API 29 does not pass it to prefers-color-scheme. */
         @JavascriptInterface
         public boolean nightMode() {

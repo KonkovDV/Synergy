@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.16.0',
+  version: '5.17.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -80,6 +80,10 @@ export const ADAPT = {
   step: 0.25,       // ease change per decision
   limit: 1,         // ease ∈ [-1, 1]: −1 harder … +1 easier
   span: 0.3,        // tolerances scale by 1 ± 30 % at the limits
+  // 5.17 — the first week aims higher: 4 of 4 → harder, 3 of 4 → easier (≈ 87 %). Who kept training had «high but not
+  // perfect success during the 1st week», and drop-out was fewer sessions started (Ramos Muñoz et al. 2022, n = 2581).
+  firstWeekTarget: 0.875,
+  firstWeekDays: 7, // training days, not calendar ones
 };
 
 /** Faded feedback (guidance hypothesis, Winstein & Schmidt 1990): live feedback on fewer trials as the skill grows. */

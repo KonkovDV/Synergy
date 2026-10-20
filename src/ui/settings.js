@@ -6,7 +6,7 @@ import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, BRIDGE
 import { SCHEME_INFO } from '../core/vocabulary.js';
 import { CalibrationRecorder, CALIBRATION_STEPS } from '../core/calibration.js';
 import { defaultCalibration } from '../core/signal.js';
-import { download, reminderIcs } from '../services/report.js';
+import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
 import { bleSupported } from '../input/ble.js';
 import { createTwoChannelPads } from './controls.js';
@@ -117,7 +117,7 @@ export function settingsScreen(app, { back = null } = {}) {
           h('button', { class: 'btn ghost', 'data-return': 'tutorial', onclick: () => app.go('tutorial', { from: 'settings' }) }, 'Первые шаги (обучение)')),
         toggleRow('Подстраивать покой', s.adaptRest, v => app.updateSettings({ adaptRest: v }), 'внешние датчики: покой медленно следует за дрейфом сигнала; при большом сдвиге попросим перекалибровать')),
       section('Тренировка',
-        toggleRow('Адаптивная сложность', s.adaptive, v => app.updateSettings({ adaptive: v }), 'допуски подстраиваются, чтобы удавалось ~75 % попыток; испытание без подсказки и проверка — без подстройки'),
+        toggleRow('Адаптивная сложность', s.adaptive, v => app.updateSettings({ adaptive: v }), 'допуски подстраиваются, чтобы удавалось ~75 % попыток (первую неделю — почти 90 %); испытание без подсказки и проверка — без подстройки'),
         toggleRow('Затухающие подсказки', s.fadedFeedback, v => app.updateSettings({ fadedFeedback: v }), 'чем лучше навык, тем чаще шкала скрыта в отдельных попытках — так навык прочнее держится без экрана'),
         h('div', { class: 'row' }, h('span', {}, 'Кто занимается'),
           segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { app.updateSettings({ audience: v }); childBox.hidden = v !== 'child'; }, 'Кто занимается')),
@@ -138,8 +138,8 @@ export function settingsScreen(app, { back = null } = {}) {
       section('Привычка',
         sliderRow('Цель: дней в неделю', { ...R.weeklyGoal, value: s.weeklyGoal, format: v => String(v), onInput: v => app.updateSettings({ weeklyGoal: v }) }),
         h('label', { class: 'row' }, h('span', {}, 'Напоминание'),
-          h('input', { type: 'time', value: s.reminder, onchange: e => app.updateSettings({ reminder: e.target.value }) })),
-        h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder, new Date(), s.weeklyGoal), 'text/calendar') }, 'Добавить в календарь (.ics)'),
+          h('input', { type: 'time', value: s.reminder, ...(s.audience === 'child' ? { min: CHILD_REMINDER.from, max: CHILD_REMINDER.to } : {}), onchange: e => app.updateSettings({ reminder: reminderTime(e.target.value, s.audience === 'child') }) })),
+        h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder, new Date(), s.weeklyGoal, { child: s.audience === 'child' }), 'text/calendar') }, 'Добавить в календарь (.ics)'),
         h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) })),
         h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы'), h('input', { type: 'text', value: s.petName, maxlength: 16, placeholder: PET.defaultName, onchange: e => app.updateSettings({ petName: e.target.value.trim() }) })),
         // 5.13: the hint tours once more — for a new person on this device, or before a demo.

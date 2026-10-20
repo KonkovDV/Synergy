@@ -7,11 +7,14 @@ import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
 import { COLORS, circle, text } from '../render/draw.js';
 import { gameArt, mio } from './art.js';
+import { useSprite, petFlyer } from './pictures.js';
+import { petStageIndex } from '../core/pet.js';
+import { PET } from '../config.js';
 import { LiveAnnouncer } from '../core/announce.js';
 import { MusicPlayer, offsetClock } from '../core/music.js';
 import { audioClock, playMusic } from '../services/audio.js';
 import { freePlayCaution } from '../core/wellbeing.js';
-import { secondsToday, dayKey } from '../core/progress.js';
+import { secondsToday, dayKey, trainingDays } from '../core/progress.js';
 import { HoldConfirm } from '../core/handsfree.js';
 import { howFor } from '../games/registry.js';
 
@@ -21,6 +24,10 @@ const FEEDBACK_HINT = /^(Держите|Сильнее|Слабее|Слабо|�
 
 export function playScreen(app, { game, level, retention = false, plan = false, demo = false, pose = null }) {
   const s = app.settings;
+  // 5.16+: in «Полёт» the player's Firebird flies through the rings once it has wings (fledgling on); the egg and the
+  // chick leave it to the glider. The game reads the sprite `flight-flier` (render/sprites.js).
+  const stage = PET.stages[petStageIndex(trainingDays(app.profile))];
+  useSprite('flight-flier', petFlyer(stage.id));
   let session = app.createSession({ game, level, retention, demo, plan, pose });
   // Procedural music (only «Ритм» has a song): scheduled on the audio clock, heard when the note reaches the line.
   const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: offsetClock(audioClock, s.audioOffsetMs), play: playMusic }) : null; };
@@ -35,6 +42,10 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   // The hint on screen follows the game every frame; screen readers and the voice get it through LiveAnnouncer (5.11).
   const hint = h('p', { class: 'stage-hint', 'aria-hidden': 'true' });
   const liveHint = h('p', { class: 'sr-only', role: 'status' });
+  // 5.17 — the verdict drawn on the field («Чуть выше цели», «Раздавлено») reaches a screen reader too. «Полёт» and
+  // «Мастерская» only: «Ритм» judges a note twice a second — its sound and pulse carry that.
+  const liveVerdict = h('p', { class: 'sr-only', role: 'status' });
+  let lastFlash = null;
   const announcer = new LiveAnnouncer();
   const overlay = h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'play-dialog-title' });
   const scoreEl = h('b', { class: 'score' }, '0');
@@ -66,7 +77,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     h('div', { class: 'play-progress', 'aria-hidden': 'true' }, bar),
     h('main', { class: 'stage', 'aria-label': 'Игровое поле' }, canvas),
     hint, // under the field, not over it: never covers the header or what a game draws at the bottom
-    liveHint,
+    liveHint, liveVerdict,
     // Signal and pads: one column on the right in landscape (styles/app.css), in the flow in portrait.
     h('div', { class: 'play-side' }, s.showMeters ? meter.node : null, controls),
     // The intro and pause dialogs cover everything under the header (5.10): over the field alone the sheet was
@@ -196,6 +207,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     music?.update(musicTime, session.game.speed, (phase === 'running' || phase === 'countdown') && !session.game.done);
     for (const e of session.game.drainEvents()) app.feedback.event(music && e.name === 'beat' ? { ...e, silent: true } : e);
     session.game.render(ctx, view, session.hand, intent);
+    const flash = session.game.flash;
+    if (flash && flash !== lastFlash) { lastFlash = flash; liveVerdict.textContent = flash.text; }
     if (phase === 'countdown') drawCountdown();
     const lost = bridgeMode && session.runner.signalLost && phase === 'running';
     node.classList.toggle('lost', lost);

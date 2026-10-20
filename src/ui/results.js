@@ -7,7 +7,7 @@ import { missionText } from '../core/missions.js';
 import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
 import { SKILL_NAME } from '../core/vocabulary.js';
-import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays } from '../core/progress.js';
+import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest } from '../core/progress.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
@@ -62,13 +62,49 @@ function rewardList(report) {
   ];
 }
 
-export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote = null, plan = false, demo = false, pose = null }) {
+/**
+ * Whether the fatigue and daily-cap advice is computed: a plan with an exercise left, and (5.17) free play too — it
+ * was plan-only. Advice, never a lock: «Повторить» stays. A demo and a finished plan («Готово на сегодня») need none.
+ */
+export const stopAdviceApplies = ({ demo, plan, next }) => !demo && (!!next || !plan);
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs = {}, ...kids) => { const el = document.createElementNS(SVG_NS, tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); el.append(...kids); return el; };
+
+/** The words of the flight replay (pure: tests/feel.test.mjs). Outcome only — where the bird passed, not which muscle. */
+export function replaySummary(replay) {
+  const rings = replay.items.filter(i => i.kind === 'ring'), passed = rings.filter(i => i.ok).length;
+  const above = rings.filter(i => i.dir === 'above').length, below = rings.filter(i => i.dir === 'below').length;
+  const lean = above > below ? ' Промахи — чаще выше колец.' : below > above ? ' Промахи — чаще ниже колец.' : above ? ' Промахи — и выше, и ниже колец.' : '';
+  return `Пройдено ${passed} из ${count(rings.length, FORMS.ringsOf)}.${lean}`;
+}
+
+/**
+ * 5.17 — «Как прошёл полёт»: the altitude line over the rings after the run (delayed feedback, games/flight.js replay).
+ * A picture with a text twin: the summary under it says the same for a screen reader.
+ */
+function replayCard(replay) {
+  if (!replay?.path?.length || !replay.items?.length) return null;
+  const W = 320, H = 112, pad = 8;
+  const x = t => (pad + (t / replay.total) * (W - 2 * pad)).toFixed(1), y = a => (pad + (1 - a) * (H - 2 * pad)).toFixed(1);
+  const marks = replay.items.map(it => (it.kind === 'ring'
+    ? svgEl('line', { x1: x(it.at), x2: x(it.at), y1: y(Math.min(1, it.alt + replay.tol)), y2: y(Math.max(0, it.alt - replay.tol)), class: it.ok ? 'ok' : 'miss' })
+    : svgEl('rect', { x: x(it.at), width: (x(it.end) - x(it.at)).toFixed(1), y: y(Math.min(1, it.alt + replay.tol)), height: (y(Math.max(0, it.alt - replay.tol)) - y(Math.min(1, it.alt + replay.tol))).toFixed(1), rx: 4, class: it.ok ? 'ok' : 'miss' })));
+  const d = replay.path.map(([t, a], i) => `${i ? 'L' : 'M'}${x(t)} ${y(a)}`).join(' ');
+  const pic = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'replay-plot', 'aria-hidden': 'true', focusable: 'false' },
+    svgEl('line', { x1: pad, x2: W - pad, y1: y(0.5), y2: y(0.5), class: 'mid' }), ...marks, svgEl('path', { d, class: 'flight-line' }));
+  return h('section', { class: 'card replay' }, h('h2', {}, 'Как прошёл полёт'), pic,
+    h('p', { class: 'note' }, `${replaySummary(replay)} Линия — высота птицы; отрезки — кольца: зелёные пройдены, жёлтые — мимо.`));
+}
+
+export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote = null, plan = false, demo = false, pose = null, replay = null }) {
   const g = GAME_BY_ID[run.game];
   const advice = coachFeedback(run.game, run, app.state.runs);
   const next = plan && !demo ? app.nextPlanItem() : null;
   const planDone = plan && !demo && !next;
   const name = petName(app.settings);
   const rewards = rewardList(report);
+  const best = report && !demo ? levelBest(app.state.runs, run) : null;
   // Жар-птица (5.12): the first run of a day is a training day — it may move the bird to its next stage.
   const grown = report && !demo ? petStageUp(trainingDays(app.profile), app.runsToday().length === 1) : null;
   // 5.13: the bird reacts to what this run did (the sample's animations): a new stage — it grows before your eyes;
@@ -95,7 +131,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const ring = h('i', { class: 'confirm-ring' });
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
-  const stopAdvice = !demo && next ? adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs)?.text ?? null : null;
+  const stopAdvice = stopAdviceApplies({ demo, plan, next }) ? adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs)?.text ?? null : null;
   const action = resultsAction({ run, plan, demo, next, stopAdvice, restS: app.rules.restS, titleOf: id => GAME_BY_ID[id]?.title ?? id, pose: run.pose ?? pose });
   const primary = { label: action.label, go: () => app.go(action.kind, action.params) };
   // The hands-free «дальше» needs sensors: with the on-screen emulator there are no pads on this screen (5.10).
@@ -130,6 +166,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       h('p', { class: 'eyebrow' }, `${g.title}${g.assessment ? '' : ` · уровень ${run.level}`}${run.retention ? ' · без подсказки' : ''}${demo ? ' · демо' : ''}`),
       h('div', { class: `big-stars s${run.stars}`, role: 'img', 'aria-label': `${count(run.stars, FORMS.stars)} из 3` }, starRow(run.stars, 3, 72)),
       h('p', { class: 'big-score' }, run.score, h('small', {}, ' / 100')),
+      // 5.17 — a new best of this level, compared with oneself; a weaker run is not compared at all.
+      best?.record ? h('p', { class: 'record' }, badgeArt('star', 20), `Лучший результат уровня · было ${best.previous}`) : null,
       report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus + (report.mission?.xp ?? 0)} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel} игры` : ''}`)
         : h('p', { class: 'note' }, 'Так играет автопилот. Демо не влияет на прогресс.'),
       petCard,
@@ -140,6 +178,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       stopAdvice ? h('div', { class: 'card warn-card' }, h('b', { class: 'with-art' }, badgeArt('moon', 28), 'Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
       effortCard,
       assessmentCard,
+      run.game === 'flight' ? replayCard(replay) : null,
       h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills),
       h('section', { class: 'card coach' }, h('div', { class: 'coach-head' }, mioAvatar(coachMood({ stars: run.stars, stopAdvice }), 52), h('b', {}, 'Мио советует')), ...advice.map(t => h('p', {}, t))),
       h('div', { class: 'sticky-actions' },
@@ -163,18 +202,25 @@ export function restScreen(app, { next }) {
   const meter = signalMeter(app);
   // Through the plan flow (5.10): after midnight the new day asks its check-in instead of playing on.
   const go = () => app.startPlan();
+  // 5.17 — the timer of the pause can be extended (XAG 116: a UI timer offers more time), and with «Меньше движения»
+  // the still circle gets words instead: «Вдох…» / «Выдох…» every 4 s.
+  const still = !!app.reduceMotion;
+  const breathWord = h('p', { class: 'breath-word', 'aria-hidden': 'true' }, still ? 'Вдох…' : '');
+  const more = h('button', { class: 'btn ghost', onclick: () => { left = Math.min(left + app.rules.restS, app.rules.restS * 10); counter.textContent = Math.ceil(left); } }, `Отдохнуть ещё ${app.rules.restS} с`);
+  let breathT = 0;
   const node = h('div', { class: 'screen rest' },
     h('main', { class: 'scroll center' },
       mioAvatar('rest', 88),
       h('h1', { class: 'eyebrow' }, 'Отдых'),
       h('div', { class: 'breath', 'aria-hidden': 'true' }),
+      breathWord,
       counter,
-      h('p', {}, 'Полностью расслабьте руку. Дышите спокойно: вдох — круг растёт, выдох — сжимается.'),
+      h('p', {}, still ? 'Полностью расслабьте руку. Дышите спокойно: вдох — четыре счёта, выдох — четыре.' : 'Полностью расслабьте руку. Дышите спокойно: вдох — круг растёт, выдох — сжимается.'),
       h('p', { class: 'note' }, 'Проверка покоя: обе полоски должны быть почти пустыми.'),
       meter.node,
       h('section', { class: `card tinted g-${g.id}` }, h('b', { class: 'with-art' }, gameArt(g.id, 36), `Дальше: ${g.title}${next.retention ? ' — без подсказки' : ''}`), h('p', {}, g.tagline)),
       // The pause is the safety rule, not an obstacle (5.11): skipping it is a quiet option, the timer moves on itself.
-      h('div', { class: 'sticky-actions' }, h('button', { class: 'btn ghost', onclick: go }, 'Дальше без отдыха'))));
+      h('div', { class: 'sticky-actions' }, more, h('button', { class: 'btn ghost', onclick: go }, 'Дальше без отдыха'))));
   const pipeline = app.createPipeline(), source = app.signalSource();
   app.say(`Отдых ${count(left, FORMS.seconds)}. Полностью расслабьте руку. Дальше: ${g.title}.`, { interrupt: true });
   return {
@@ -182,6 +228,7 @@ export function restScreen(app, { next }) {
     tick(now, dt) {
       meter.update(pipeline.process(source.sample(now), now));
       left -= dt;
+      if (still) { breathT += dt; const word = Math.floor(breathT / 4) % 2 ? 'Выдох…' : 'Вдох…'; if (breathWord.textContent !== word) breathWord.textContent = word; }
       const shown = Math.max(0, Math.ceil(left));
       if (counter.textContent !== String(shown)) counter.textContent = shown;
       if (left <= 0) { left = Infinity; go(); }

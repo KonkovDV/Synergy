@@ -57,8 +57,10 @@ export const ACHIEVEMENTS = [
   { id: 'rhythm', name: 'Чувство ритма', text: 'Серия из 16 попаданий в «Ритме»', test: (p, run) => (run?.details?.bestCombo ?? 0) >= 16 },
   { id: 'seven', name: 'Все жесты', text: 'Выполните все жесты в «Сейфе» в режиме жестов', test: (p, run) => (run?.details?.distinctGestures ?? 0) >= ACTIVE_GESTURE_IDS.length },
   { id: 'plan', name: 'Тренировка дня', text: 'Пройдите план на день целиком', test: (p) => p.totals.plans >= 1 },
-  { id: 'streak3', name: 'Три дня', text: 'Серия из 3 тренировочных дней', test: (p) => p.streak.current >= 3 },
-  { id: 'streak7', name: 'Неделя', text: 'Серия из 7 тренировочных дней', test: (p) => p.streak.current >= 7 },
+  // 5.17 — days with training in a window, not an unbroken series: a missed day delays the gift, it never takes it away
+  // (the kokoshnik and «Космос» hung on a series — loss aversion is not a motive we use). The ids stay: earned stays earned.
+  { id: 'streak3', name: 'Три дня', text: '3 дня с тренировкой за 7 дней', test: (p, run, ctx) => trainingDaysWithin(p, ctx?.today ?? dayKey(), 7) >= 3 },
+  { id: 'streak7', name: 'Неделя', text: '7 дней с тренировкой за 14 дней', test: (p, run, ctx) => trainingDaysWithin(p, ctx?.today ?? dayKey(), 14) >= 7 },
   { id: 'week_goal', name: 'Цель недели', text: 'Выполните недельную цель', test: (p, run, ctx) => ctx?.weekly?.done >= ctx?.weekly?.goal },
   { id: 'retention', name: 'Без подсказки', text: 'Пройдите испытание без подсказки на 2★', test: (p, run) => run?.retention && run.stars >= 2 },
   { id: 'all_games', name: 'Универсал', text: 'Сыграйте во все четыре игры', test: (p) => Object.values(p.games).filter(g => g.played && !g.assessment).length >= 4 },
@@ -162,7 +164,7 @@ export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION
 
 /** New achievements of this moment; the Firebird's items they earn go on into empty slots (5.13). */
 export function unlockAchievements(profile, run, ctx, today = dayKey()) {
-  const fresh = ACHIEVEMENTS.filter(a => !profile.achievements[a.id] && a.test(profile, run, ctx));
+  const fresh = ACHIEVEMENTS.filter(a => !profile.achievements[a.id] && a.test(profile, run, { ...ctx, today }));
   if (fresh.length) {
     profile.achievements = { ...profile.achievements, ...Object.fromEntries(fresh.map(a => [a.id, today])) };
     autoEquip(profile, itemsFor(fresh.map(a => a.id)));
@@ -250,6 +252,21 @@ export function recordDayNote(profile, today, patch) {
   profile.days = { ...profile.days, [today]: { ...day, ...patch } };
 }
 
+/**
+ * The best score of the same game, level, scheme and mode before this run (5.17): «a new best of the level» compares
+ * the player with themselves, never with others, and a weaker run says nothing at all. Demo runs and skill checks do
+ * not count; the first run of a level is not a record — there is nothing to beat yet.
+ * @returns {{ previous: number|null, record: boolean }|null}
+ */
+export function levelBest(runs, run) {
+  if (!run || run.demo || run.details?.assessment || !Number.isFinite(run.score)) return null;
+  const same = runs.filter(r => r !== run && r.id !== run.id && !r.demo && !r.details?.assessment && r.game === run.game && r.level === run.level
+    && r.scheme === run.scheme && !!r.retention === !!run.retention && Number.isFinite(r.score));
+  if (!same.length) return { previous: null, record: false };
+  const previous = Math.max(...same.map(r => r.score));
+  return { previous, record: run.score > previous };
+}
+
 /** Last skill check in this scheme and whether a new one is due (once a week). */
 export function assessmentStatus(runs, scheme, today = dayKey()) {
   const last = [...runs].reverse().find(r => !r.demo && r.details?.assessment && r.scheme === scheme) ?? null;
@@ -280,6 +297,12 @@ export function secondsToday(profile, today = dayKey()) { return profile.days[to
  * a missed week (ethical gamification; streak vs tally is an open question, so the series stays, second).
  */
 export const trainingDays = profile => Object.values(profile.days ?? {}).filter(d => (d?.runs ?? 0) > 0).length;
+
+/** Training days among the `n` calendar days that end with `today` (5.17: the «Три дня» and «Неделя» achievements). */
+export function trainingDaysWithin(profile, today, n) {
+  const from = shiftDay(today, 1 - n);
+  return Object.entries(profile.days ?? {}).filter(([key, d]) => key >= from && key <= today && (d?.runs ?? 0) > 0).length;
+}
 
 /** A day key `n` days from `key` (calendar arithmetic in UTC, like `dayIndex`). */
 export function shiftDay(key, n) {

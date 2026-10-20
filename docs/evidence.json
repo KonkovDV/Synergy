@@ -1,0 +1,49 @@
+{
+ "version": "5.17.0",
+ "generated": "2026-10-20T05:47:09.678Z",
+ "tests": {
+  "total": 275,
+  "failed": 0,
+  "at": "2026-10-20T05:47:09.677Z",
+  "platform": "win32 10.0.26200",
+  "node": "v24.11.0"
+ },
+ "a11y": {
+  "light": 31,
+  "dark": 10,
+  "violations": 0,
+  "errors": 0,
+  "browser": "156.0.8078.4",
+  "at": "2026-10-20T05:31:02.905Z",
+  "platform": "win32 10.0.26200",
+  "node": "v24.11.0"
+ },
+ "layout": {
+  "states": 61,
+  "viewports": 7,
+  "scales": 3,
+  "combinations": 1281,
+  "findings": 0,
+  "errors": 0,
+  "seconds": 581,
+  "at": "2026-10-20T05:44:01.366Z",
+  "platform": "win32 10.0.26200",
+  "node": "v24.11.0"
+ },
+ "apk": {
+  "file": "release/Synergy-5.17.0.apk",
+  "bytes": 2148247,
+  "kb": 2098,
+  "sha256": "26266f2125ad9c7f10efd4513b8199c737cb6149ab2b8a817a2cc5ce561be67f"
+ },
+ "html": {
+  "file": "release/synergy-standalone.html",
+  "bytes": 2615019,
+  "kb": 2554,
+  "sha256": "e29389c83bf32232cbda29fc6b04ad0fbfb75cd9cfe618b431ae8bbc4b69e967"
+ },
+ "art": {
+  "pictures": 137,
+  "bytes": 1543206
+ }
+}

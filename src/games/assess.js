@@ -150,7 +150,7 @@ export class AssessmentGame extends Game {
     t.completedAt = ok ? t.t : null;
     this.emit(ok ? 'ring' : 'miss');
     this.index++; this.phase = 'rest'; this.restFor = 0;
-    if (this.index >= this.trials.length) { this.emit('success'); this.finish(); }
+    if (this.index >= this.trials.length) this.finish(); // 5.17: one closing sound (finish), not «success» on top of it
   }
 
   autopilot() {

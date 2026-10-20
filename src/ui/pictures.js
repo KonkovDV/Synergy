@@ -110,5 +110,19 @@ export function loadSprites(names = CANVAS_PICTURES) {
   }
 }
 
+/** The picture of the Firebird that flies in «Полёт»: from the fledgling on, wings up; null — the glider flies. */
+export const petFlyer = stageId => (['egg', 'chick'].includes(stageId) ? null : `pet-${stageId}-happy`);
+
+/** Points a canvas alias at a catalogue picture (loads it once), or clears the alias. */
+export function useSprite(alias, name) {
+  if (!name || !hasArt(name) || typeof Image === 'undefined') { setSprite(alias, null); return; }
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => setSprite(alias, img);
+  img.onerror = () => failed.add(name);
+  setSprite(alias, null); // until it has loaded, the game draws its own
+  img.src = artUrl(name);
+}
+
 /** CSS `url()` of a picture for a background (the nest room, the home header), or null. */
 export const artBackground = name => (hasArt(name) ? `url("${artUrl(name)}")` : null);

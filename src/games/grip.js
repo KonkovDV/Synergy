@@ -35,6 +35,7 @@ const LEVELS = [
 
 const LIFT_REST_S = 0.35;   // relax this long with force in the window → the object is lifted
 const HEAVY_SLIP = 0.05;    // force lost per second while carrying heavy objects
+export const PEAK_MARK_S = 1.2; // the force of a crush or a slip stays marked on the gauge this long
 
 export class GripGame extends Game {
   static id = 'grip';
@@ -81,6 +82,7 @@ export class GripGame extends Game {
     if (!o) return;
     o.t += dt;
     if (this.flash) this.flash.t -= dt;
+    if (this.peakMark) this.peakMark.t -= dt;
     // Fingers already closed past the object cannot grasp it: open first (as with a real hand).
     const touchable = hand.grip === o.grip && ['grasp', 'carry', 'release'].includes(o.phase);
     o.overClosed = o.phase === 'grasp' && hand.force === 0 && hand.closure > o.contact + 0.05;
@@ -155,6 +157,8 @@ export class GripGame extends Game {
     this.results.push({ kind: o.kind, ok: false, points: reason === 'drop' ? 10 : 0, reason });
     this.adapt.record(false);
     o.phase = 'done'; o.t = 0; o.failed = reason;
+    // 5.17 — where the force was when it went wrong, on the gauge for 1.2 s: the size of the error, not a verdict.
+    this.peakMark = reason === 'timeout' ? null : { force: clamp01(hand.force), reason, t: PEAK_MARK_S };
     hand.clearObject();
     this.emit(reason === 'crush' ? 'crush' : 'miss');
     this.flash = { text: reason === 'crush' ? 'Раздавлено' : reason === 'drop' ? 'Выскользнуло' : 'Не успели', color: COLORS.bad, t: 0.8 };
@@ -241,7 +245,9 @@ export class GripGame extends Game {
       }
       const squeeze = o.phase !== 'arrive' && hand.inContact ? hand.force : 0;
       if (!(o.phase === 'done' && o.failed === 'timeout')) drawObject(ctx, o, ox, oy, s, squeeze);
-      if (o.phase === 'done' && o.failed && !o.bursted) { o.bursted = true; this.burst(ox, oy, o.color, 18); }
+      // 5.17 — the sparks belong to the delivery, not to the mistake (feedback after a good try teaches more); a crushed
+      // thing stays a still drawing.
+      if (o.phase === 'done' && o.delivered && !o.bursted) { o.bursted = true; this.burst(ox, oy, COLORS.good, 12, 140, 260, 0.6); }
     }
     // Hand from above (fingers down).
     const fingerReach = s * 1.72;
@@ -250,6 +256,14 @@ export class GripGame extends Game {
     const gx = 18, gy = h * 0.14, gh = h * 0.5;
     if (o && this.liveFeedback(this.results.length)) {
       drawGauge(ctx, { x: gx, y: gy, w: 22, h: gh, value: hand.force, min: o.min, max: o.max, danger: Math.min(1, o.breakAt), color: hand.force > o.max ? COLORS.bad : COLORS.accent, label: 'сила' });
+      if (this.peakMark?.t > 0) {
+        const my = gy + gh * (1 - this.peakMark.force);
+        ctx.globalAlpha = Math.min(1, this.peakMark.t * 2);
+        ctx.strokeStyle = COLORS.warnInk; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(gx - 5, my); ctx.lineTo(gx + 27, my); ctx.stroke();
+        text(ctx, this.peakMark.reason === 'crush' ? 'пик' : 'мало', gx + 32, my, { size: 12, weight: 800, color: COLORS.warnInk, align: 'left', outline: true });
+        ctx.globalAlpha = 1;
+      }
     } else if (o) {
       fillRound(ctx, gx, gy, 22, gh, 11, COLORS.track);
       text(ctx, '?', gx + 11, gy + gh / 2, { size: 18, color: COLORS.muted });

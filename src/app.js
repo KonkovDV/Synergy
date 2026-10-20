@@ -1,11 +1,11 @@
 // Composition root: state, signal sources, routing, the frame loop and training sessions.
-import { APP, ARM_POSES } from './config.js';
+import { APP, ARM_POSES, ADAPT } from './config.js';
 import { Store, memoryStorage } from './core/storage.js';
 import { SignalPipeline } from './core/signal.js';
 import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
-import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile, assessmentStatus, weekIndex } from './core/progress.js';
+import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile, assessmentStatus, weekIndex, trainingDays } from './core/progress.js';
 import { missionOffers } from './core/missions.js';
 import { guidanceFor } from './core/guidance.js';
 import { FpsGuard } from './core/fps.js';
@@ -416,7 +416,8 @@ export class App {
   createSession({ game, level, retention = false, demo = false, plan = false, pose = null }) {
     const s = this.settings;
     const instance = createGame(game, { levelNumber: level, scheme: s.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
-      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: s.sensitivity });
+      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: s.sensitivity,
+      successTarget: trainingDays(this.profile) < ADAPT.firstWeekDays ? ADAPT.firstWeekTarget : null });
     const hand = this.createHand();
     const adaptRest = restAdaptationAllowed({ source: this.sourceKind(), enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
     const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });
@@ -442,7 +443,8 @@ export class App {
       scheme: this.settings.scheme, source: session.demo ? 'demo' : this.sourceKind(),
       retention: session.retention, demo: session.demo, plan: !!session.plan, ...(session.pose ? { pose: session.pose.id } : {}), ...r,
     };
-    if (session.demo) return { run, report: null, planBonus: 0 };
+    const replay = session.game.replay?.() ?? null; // shown on the results screen, never saved
+    if (session.demo) return { run, report: null, planBonus: 0, replay };
     this.state.runs.push(run);
     const report = recordRun(this.profile, run, { today: dayKey(), weeklyGoal: this.settings.weeklyGoal });
     // Only exercises started from the plan complete it (5.10: a free-play «без подсказки» ticked the plan's probe
@@ -452,7 +454,7 @@ export class App {
     this.save();
     if (report.levelUp) this.feedback.event({ name: 'levelup' });
     notifyHost(resultMessage(run, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
-    return { run, report, planBonus, calibrationNote };
+    return { run, report, planBonus, calibrationNote, replay };
   }
 
   /** Co-adaptive calibration: keeps a bounded rest shift for the next session, or asks to recalibrate. */

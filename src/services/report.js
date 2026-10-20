@@ -207,8 +207,12 @@ function foldIcsLine(line) {
  */
 export const REMINDER_DAYS = { 2: 'TU,FR', 3: 'MO,WE,FR', 4: 'MO,TU,TH,FR', 5: 'MO,TU,WE,TH,FR', 6: 'MO,TU,WE,TH,FR,SA', 7: 'MO,TU,WE,TH,FR,SA,SU' };
 
-export function reminderIcs(time = '19:00', now = new Date(), weeklyGoal = 4) {
-  const [hh, mm] = /^\d\d:\d\d$/.test(time) ? time.split(':').map(Number) : [19, 0];
+/** 5.17 — a child's reminder rings between 08:00 and 21:00 (a time outside moves to the nearest edge). */
+export const CHILD_REMINDER = { from: '08:00', to: '21:00' };
+export const reminderTime = (time, child = false) => (!child ? time : time < CHILD_REMINDER.from ? CHILD_REMINDER.from : time > CHILD_REMINDER.to ? CHILD_REMINDER.to : time);
+
+export function reminderIcs(time = '19:00', now = new Date(), weeklyGoal = 4, { child = false } = {}) {
+  const [hh, mm] = /^\d\d:\d\d$/.test(time) ? reminderTime(time, child).split(':').map(Number) : [19, 0];
   const pad = n => String(n).padStart(2, '0');
   // DTSTART is the first occurrence (RFC 5545 §3.8.5.3): the first reminder day of the rule on or after today (5.11).
   const days = (REMINDER_DAYS[weeklyGoal] ?? REMINDER_DAYS[4]).split(',');
@@ -220,7 +224,8 @@ export function reminderIcs(time = '19:00', now = new Date(), weeklyGoal = 4) {
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Synergy//Trainer//RU', 'BEGIN:VEVENT',
     `UID:synergy-${now.getTime()}@local`, `DTSTAMP:${utc}`, `DTSTART:${day}T${pad(hh)}${pad(mm)}00`, 'DURATION:PT15M', `RRULE:FREQ=WEEKLY;BYDAY=${REMINDER_DAYS[weeklyGoal] ?? REMINDER_DAYS[4]}`,
     'SUMMARY:Синергия: тренировка 10–15 минут', 'DESCRIPTION:Тренировка дня ждёт. Устали или болит — сегодня отдых.',
-    'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Пора на тренировку', 'END:VALARM',
+    // 5.17 — an invitation, not an order: rest is a valid answer to the reminder too (no guilt for a missed day).
+    'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Можно потренироваться 10 минут — или отдохнуть', 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR',
   ].map(foldIcsLine).join('\r\n');
 }

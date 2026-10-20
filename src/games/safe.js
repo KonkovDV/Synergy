@@ -40,6 +40,12 @@ const LEVELS = [
 ];
 
 const REST_BEFORE_S = 0.3;
+/**
+ * 5.17 — «стабильно / мерцает» beside «Протез видит» (Ottobock Myo Plus: «a strong pattern is indicated by a solid
+ * appearance»): two or more changes of the recognised command within 0.6 s. A hint for the moment, not a skill —
+ * pattern metrics and real-time control «appear to be unrelated» (Franzke et al. 2021), so it is not scored.
+ */
+export const FLICKER = { windowS: 0.6, changes: 2 };
 
 export class SafeGame extends Game {
   static id = 'safe';
@@ -60,10 +66,21 @@ export class SafeGame extends Game {
     this.index = 0; this.phase = 'rest'; this.restFor = 0; this.holdFor = 0; this.cardTime = 0;
     this.reactions = []; this.wrongTime = 0; this.stats = {};
     this.confusion = new ConfusionMeter();
+    this.seen = undefined; this.changes = [];
     this.hint = 'Покажите команду с карточки и удерживайте, пока заполняется круг';
   }
 
   get card() { return this.code[this.index] ?? null; }
+
+  /** The recognised command holds still (see FLICKER). */
+  get steady() { return this.changes.length < FLICKER.changes; }
+
+  watch(intent) {
+    const seen = intent.valid ? (intent.gesture ?? intent.command ?? 'rest') : null;
+    if (this.seen !== undefined && seen !== this.seen) this.changes.push(this.time);
+    this.seen = seen;
+    while (this.changes.length && this.time - this.changes[0] > FLICKER.windowS) this.changes.shift();
+  }
 
   /** Time allowed per code digit (challenge point). */
   get limit() { return this.adapt.widen(this.level.limit); }
@@ -79,6 +96,7 @@ export class SafeGame extends Game {
   step(dt, intent) {
     const card = this.card;
     if (!card) return;
+    this.watch(intent);
     const resting = intent.relaxed; // both channels off: two tense muscles are not a rest (5.10)
     if (this.phase === 'rest') {
       // A clean transition: every code digit starts from rest.
@@ -109,7 +127,7 @@ export class SafeGame extends Game {
 
   next() {
     this.index++; this.phase = 'rest'; this.restFor = 0;
-    if (this.index >= this.code.length) { this.emit('success'); this.openedAt = this.time; this.finish(); }
+    if (this.index >= this.code.length) { this.openedAt = this.time; this.finish(); } // 5.17: finish() alone closes the run — one sound, not three
   }
 
   autopilot() {
@@ -214,7 +232,8 @@ export class SafeGame extends Game {
     }
     if (intent && !this.retention) {
       const seen = intent.gesture ? GESTURE_BY_ID[intent.gesture]?.name : COMMAND_NAME[intent.command];
-      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''}`, w / 2, Math.min(h - 10, cy + R * 1.15 + 14), { size: 13, color: COLORS.muted, maxWidth: w - 16 });
+      // The word carries the meaning (colour only adds to it): amber ink when the command flickers.
+      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''} · ${this.steady ? 'стабильно' : 'мерцает'}`, w / 2, Math.min(h - 10, cy + R * 1.15 + 14), { size: 13, color: this.steady ? COLORS.muted : COLORS.warnInk, maxWidth: w - 16 });
     }
   }
 }

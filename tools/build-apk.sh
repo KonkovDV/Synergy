@@ -73,3 +73,10 @@ cp "$OUT/unsigned.apk" "$OUT/synergy.apk"
 jarsigner -keystore "$KEY" -storepass "$PASS" -sigalg SHA256withRSA -digestalg SHA-256 "$OUT/synergy.apk" "$ALIAS" >/dev/null
 jarsigner -verify "$OUT/synergy.apk" >/dev/null && echo "APK: $OUT/synergy.apk ($(du -k "$OUT/synergy.apk" | cut -f1) KB)"
 "$AAPT2" dump badging "$OUT/synergy.apk" 2>/dev/null | head -3 || true
+
+# Release files (5.17): built here and carried by the archive (tools/pack.sh), not by git history — two binaries
+# a release grew the archive by ≈ 4 MB, 5.16.0 reached 25 of the 30 MB the platform accepts.
+VERSION="$(cd "$ROOT" && node -p "require('./package.json').version")"
+mkdir -p "$ROOT/release" && rm -f "$ROOT"/release/Synergy-*.apk
+cp "$OUT/synergy.apk" "$ROOT/release/Synergy-$VERSION.apk" && cp "$ROOT/dist/synergy-standalone.html" "$ROOT/release/"
+echo "release/: Synergy-$VERSION.apk, synergy-standalone.html"

@@ -4,6 +4,7 @@
 //        --no-tests — skip running the suite (only for the gate's own test: tests/submission.test.mjs)
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { NUMBER_DOCS } from './number-docs.mjs';
@@ -50,9 +51,25 @@ for (const doc of NUMBER_DOCS) {
   for (const m of text.matchAll(/APK[^\n|]{0,24}?(\d+)\s*КБ/g)) if (apkKb !== null && Math.abs(Number(m[1]) - apkKb) > 2) fail(`${doc}: «${m[0]}», а APK ${apkKb} КБ`);
 }
 
+// 2a. docs/evidence.json (5.17) — one source for the numbers of the README table: this version, this APK, these tests.
+{
+  const { renderTable, readmeBlock } = await import(pathToFileURL(join(root, 'tools/evidence.mjs')).href);
+  const ev = existsSync(join(root, 'docs/evidence.json')) ? JSON.parse(read('docs/evidence.json')) : null;
+  if (!ev) fail('нет docs/evidence.json — node tools/evidence.mjs');
+  else {
+    if (ev.version !== version) fail(`docs/evidence.json: версия ${ev.version}, а ${version} — node tools/evidence.mjs`);
+    if (tests !== null && ev.tests?.total !== tests) fail(`docs/evidence.json: тестов ${ev.tests?.total}, а ${tests} — node tools/evidence.mjs`);
+    if (existsSync(apk) && ev.apk?.sha256 !== createHash('sha256').update(readFileSync(apk)).digest('hex')) fail('docs/evidence.json: APK другой сборки — node tools/evidence.mjs');
+    const block = readmeBlock(read('README.md'));
+    if (block === null) fail('README.md: нет таблицы <!-- evidence:begin --> … <!-- evidence:end -->');
+    else if (block !== renderTable(ev).trim()) fail('README.md: таблица «Главное» расходится с docs/evidence.json — node tools/evidence.mjs');
+  }
+}
+
 const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
 // Build outputs must not be tracked: the archive excludes them and the receiver rebuilds (dist/ hole of 5.1.0).
-const builds = tracked.filter(f => /^(dist|android\/build|node_modules|tools\/\.cache)\//.test(f));
+// 5.17: the release APK and HTML too — built by tools/build-apk.sh, carried by the archive, ≈ 4 MB of history a release.
+const builds = tracked.filter(f => /^(dist|android\/build|node_modules|tools\/\.cache)\//.test(f) || /^release\/.*\.(apk|html)$/.test(f));
 if (builds.length) fail(`артефакты сборки в git (${builds.length}, напр. ${builds[0]}): git rm -r --cached`);
 const missing = tracked.filter(f => !existsSync(join(root, f)));
 if (missing.length) warn(`в git, но нет на диске: ${missing.length} (напр. ${missing[0]})`);
