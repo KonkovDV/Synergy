@@ -150,7 +150,8 @@ export class FlightGame extends Game {
       while (this.nextSample <= this.time) this.nextSample += REPLAY_STEP_S; // a fixed grid: frame jitter does not drift it
     }
     const target = this.nextTarget();
-    if (target?.kind === 'trace' && this.time >= target.at && this.time <= target.end) {
+    // Open interval: at the exact end the profile is already «rest», and that one frame used to count as a miss.
+    if (target?.kind === 'trace' && this.time > target.at && this.time < target.end) {
       const want = traceTarget(this.time, target.at, target.goal);
       const err = this.alt - want;
       target.n++; target.sse += err * err;

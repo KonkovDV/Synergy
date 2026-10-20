@@ -23,12 +23,20 @@ export class RestMotion {
   get prompt() { return this.prompts[this.index] ?? null; }
   get done() { return this.index >= this.prompts.length; }
 
-  /** One moment: `relaxed` is both channels off. A non-positive step changes nothing. */
+  /**
+   * One moment: `relaxed` is both channels off. Time past the last prompt is not counted — a stalled frame used to add
+   * its whole gap (a 100 s step became 100 s of «покой») and skip every prompt the person never saw.
+   */
   step(dt, relaxed) {
     if (this.done || !(dt > 0)) return;
-    this.t += dt;
-    if (relaxed) this.quiet += dt; else this.slip += dt;
-    while (this.prompt && this.t >= this.prompt.s) { this.t -= this.prompt.s; this.index++; }
+    let left = dt;
+    while (left > 0 && !this.done) {
+      const take = Math.min(left, this.prompt.s - this.t);
+      this.t += take;
+      if (relaxed) this.quiet += take; else this.slip += take;
+      left -= take;
+      if (this.t >= this.prompt.s - 1e-9) { this.t = 0; this.index++; }
+    }
   }
 
   /** Quiet share 0..1 and seconds the muscles were on. Saved on the day once, by the rest screen. */

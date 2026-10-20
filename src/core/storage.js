@@ -230,6 +230,7 @@ export function parseState(raw, catalog = null) {
   const calibrations = Object.fromEntries(Object.keys(base.calibrations).map(k => [k, validCal(data.calibrations?.[k], k) ? cleanCal(data.calibrations[k]) : base.calibrations[k]]));
   const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS).map(r => {
     if (r.pose !== undefined && !POSE_IDS.includes(r.pose)) { const { pose, ...rest } = r; r = rest; } // the report prints it
+    if (r.quick !== true) { const { quick, ...rest } = r; r = rest; } // 5.19: only a real quick start; a backup must not invent them
     if (!isObject(r.details) || r.details.confusion === undefined) return r;
     return { ...r, details: { ...r.details, confusion: cleanConfusion(r.details.confusion) } };
   }) : [];

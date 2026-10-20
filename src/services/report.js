@@ -71,7 +71,7 @@ export function protocolMetrics(state, today = dayKey()) {
   const checks = assessmentHistory(runs, state.settings.scheme, 1000);
   const all = periodSummary(p, periodKeys(p, null, today));
   return {
-    first, week1: window(7), week2: window(14), runs: runs.length,
+    first, week1: window(7), week2: window(14), runs: runs.length, scheme: state.settings.scheme,
     quick: { runs: quick.length, days: new Set(quick.map(r => dayKey(new Date(r.at)))).size },
     check: checks.length >= 2 ? { first: checks[0].completionRate, last: checks.at(-1).completionRate, count: checks.length, change: completionChange(checks[0], checks.at(-1)) } : { count: checks.length },
     restDays: all.rest,
@@ -88,7 +88,7 @@ export function protocolRows(m) {
     ['H1. Дни с тренировкой: первые 7 дней', win(m.week1, 7)],
     ['H1. Дни с тренировкой: первые 14 дней', win(m.week2, 14)],
     ['H2. Открыто быстрым стартом', `${m.quick.runs} из ${m.runs} упражнений; дней — ${m.quick.days}`],
-    ['H3. Проверка навыка: первая и последняя', check],
+    [`H3. Проверка навыка (${SCHEME_INFO[m.scheme]?.abbr ?? m.scheme ?? '—'}): первая и последняя`, check],
     ['H5. Дни отдыха из-за боли или кожи', String(m.restDays)],
   ];
 }
