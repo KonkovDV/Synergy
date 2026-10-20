@@ -8,7 +8,7 @@ import { HAPTIC, NATIVE_HAPTIC, BEAT_HAPTIC, lateAudio } from '../src/services/f
 import { SOUND_NAMES } from '../src/services/audio.js';
 import { createGame, GAMES } from '../src/games/registry.js';
 import { GameRunner, toEmulatorTarget } from '../src/games/runner.js';
-import { PEAK_MARK_S } from '../src/games/grip.js';
+import { PEAK_MARK_S, RELEASE_S } from '../src/games/grip.js';
 import { EmgEmulator } from '../src/input/emulator.js';
 import { SignalPipeline } from '../src/core/signal.js';
 import { BionicHand } from '../src/core/hand.js';
@@ -145,6 +145,27 @@ test('«Мастерская»: a crush leaves its force marked on the gauge for
   assert.doesNotThrow(() => game.render(nullCanvas(), { w: 360, h: 600 }, runner.hand, runner.intent), 'the mark is drawn');
   for (let i = 0; i < 80; i++) { t += 1 / 60; emulator.setTarget(toEmulatorTarget({ a: 0, b: 0 })); runner.step(t * 1000, 1 / 60); }
   assert.ok(!(game.peakMark?.t > 0), 'the mark is gone after 1.2 s');
+});
+
+test('«Мастерская»: a carried object that is never opened ends as «не отпустили» within 4 s', () => {
+  const game = createGame('grip', { levelNumber: 1, scheme: 'proportional', seed: 1 });
+  const hand = new BionicHand();
+  const o = game.current;
+  o.phase = 'release'; o.t = 0; o.liftForce = 0.5; o.graspStart = 0;
+  hand.force = 0.55; hand.closure = 0.9;
+  const intent = { relaxed: false, command: 'close', level: 0.55, intensity: 0.55 };
+  for (let i = 0; i < (RELEASE_S + 0.2) * 60; i++) game.step(1 / 60, intent, hand);
+  assert.equal(o.failed, 'release');
+  assert.equal(game.results.at(-1).points, 10, 'the grasp counted, the task did not');
+  assert.equal(game.details().unreleased, 1);
+  assert.match(gripReplaySummary(game.replay()), /Не отпустили: губка/);
+  assert.equal(game.peakMark.reason, 'release');
+  const egg = createGame('grip', { levelNumber: 1, scheme: 'proportional', seed: 1 });
+  const held = new BionicHand();
+  egg.current.phase = 'release'; egg.current.t = 0; egg.current.breakAt = 0.5; egg.current.graspStart = 0;
+  held.force = 0.9; held.closure = 0.9;
+  egg.step(1 / 60, intent, held);
+  assert.equal(egg.current.failed, 'crush', 'a squeeze over the basket still breaks a fragile object');
 });
 
 test('«Мастерская»: the replay keeps every object — its window, the force at the outcome, what happened (5.18)', () => {
