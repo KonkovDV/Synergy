@@ -3,7 +3,7 @@
 // The copy runs the gate with --no-tests (the gate runs this suite, this test runs the gate).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync, existsSync, lstatSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, rmSync, existsSync, lstatSync, readdirSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -17,8 +17,15 @@ function copyRepo() {
   const files = git(root, 'ls-files', '--cached', '--others', '--exclude-standard').split('\n')
     .filter(f => f && !f.endsWith('.png') && existsSync(join(root, f)) && lstatSync(join(root, f)).isFile()); // no symlinks (node_modules)
   for (const f of files) { mkdirSync(dirname(join(dir, f)), { recursive: true }); copyFileSync(join(root, f), join(dir, f)); }
+  copyRelease(dir);
   git(dir, 'init', '-q'); git(dir, 'add', '-A'); git(dir, 'commit', '-q', '-m', 'copy');
   return dir;
+}
+
+/** The release files are built, not tracked (5.17): the copy gets them the way the archive does (tools/pack.sh). */
+function copyRelease(dir) {
+  mkdirSync(join(dir, 'release'), { recursive: true });
+  for (const f of readdirSync(join(root, 'release')).filter(f => /\.(apk|html)$/.test(f))) copyFileSync(join(root, 'release', f), join(dir, 'release', f));
 }
 
 // Built from parts: the gate lints every tracked file, this one included.
@@ -39,6 +46,8 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
     const cases = [
       ['no APK', () => rmSync(join(dir, 'release', `Synergy-${version}.apk`)), `нет release/Synergy-${version}.apk`],
       ['unsigned APK', () => writeFileSync(join(dir, 'release', `Synergy-${version}.apk`), Buffer.from([0x50, 0x4b, 0x05, 0x06, ...new Array(18).fill(0)])), 'не подписан'],
+      ['release APK tracked in git', () => git(dir, 'add', '-f', `release/Synergy-${version}.apk`), 'артефакты сборки в git'],
+      ['README table edited by hand', () => edit(dir, 'README.md', s => s.replace('каждая пара цветов', 'почти каждая пара цветов')), 'расходится с docs/evidence.json'],
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
       ['unverified claim (fact-check)', () => edit(dir, 'README.md', s => `${s}\n${UNVERIFIED}\n`), 'README.md:'],
       ['«up to 44 %»', () => edit(dir, 'README.md', s => `${s}\n${UP_TO_44}\n`), 'README.md:'],
@@ -56,7 +65,7 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       const r = gate(dir);
       assert.equal(r.status, 1, `${name}: exit code\n${r.stdout}`);
       assert.ok(r.stdout.includes(message), `${name}: «${message}» in\n${r.stdout}`);
-      git(dir, 'checkout', '-q', '--', '.'); git(dir, 'clean', '-qfd'); // back to the clean copy
+      git(dir, 'reset', '-q'); git(dir, 'checkout', '-q', '--', '.'); git(dir, 'clean', '-qfd'); copyRelease(dir); // back to the clean copy (git does not restore the ignored release files)
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });

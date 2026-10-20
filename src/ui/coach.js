@@ -39,6 +39,8 @@ export function coachFeedback(gameId, result, history = []) {
   }
   if (result.retention) lines.push(ADVICE.retention);
   if (result.stars === 3 || !lines.length) lines.push(PRAISE[(result.score + history.length) % PRAISE.length]);
+  // 5.17 (the sample marks every finished game positively): no stars is still a counted practice — said first.
+  if (result.stars === 0) lines.unshift('Тренировка засчитана: опыт и день с тренировкой уже ваши.');
   return lines.slice(0, 2);
 }
 

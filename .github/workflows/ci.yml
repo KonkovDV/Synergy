@@ -16,6 +16,9 @@ jobs:
       - run: npm test
       - run: node tools/gesture-drill.mjs
       - run: npm run build
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with: { distribution: temurin, java-version: '17' }
+      - run: sh tools/build-apk.sh   # 5.17: release/ is built, not tracked — the gate checks the APK of this very commit
       - run: node tools/check-submission.mjs --draft
       - name: e2e (mobile smoke + axe-core accessibility audit + layout audit, Playwright)
         run: |

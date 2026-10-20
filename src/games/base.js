@@ -61,14 +61,14 @@ export class Game {
   static adaptive = true;
 
   constructor({ level, levelNumber = 1, scheme, seed = 1, retention = false, skin = 'graphite', mirror = false,
-    adaptive = true, speed = 1, reduceMotion = false, guidance = 1, onThreshold = SIGNAL.onThreshold }) {
+    adaptive = true, speed = 1, reduceMotion = false, guidance = 1, onThreshold = SIGNAL.onThreshold, successTarget = null }) {
     this.level = level;
     this.onThreshold = onThreshold; // the user's switch-on threshold: force bands are placed above it (reachableBand)
     this.guidance = retention ? 0 : guidance; // share of trials with live feedback (faded feedback)
     this.speed = speed;              // темп игры: игровое время идёт медленнее (Game Accessibility Guidelines)
     this.reduceMotion = reduceMotion; // без частиц и вспышек
     // Retention probe = fixed difficulty: it measures the skill, it does not train it.
-    this.adapt = new AdaptiveDifficulty({ enabled: adaptive && !retention && this.constructor.adaptive });
+    this.adapt = new AdaptiveDifficulty({ enabled: adaptive && !retention && this.constructor.adaptive, params: successTarget ? { target: successTarget } : {} });
     this.skin = skin;
     this.mirror = mirror;            // левый протез — кисть рисуется зеркально
     this.levelNumber = levelNumber;
@@ -98,11 +98,12 @@ export class Game {
     for (const p of this.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.g ?? 0) * dt; }
   }
 
-  burst(x, y, color, count = 14, speed = 160, g = 300) {
+  /** Sparks of a success (5.17: never on a mistake); `maxLife` — seconds, at most 1. Off with «Меньше движения». */
+  burst(x, y, color, count = 14, speed = 160, g = 300, maxLife = 1) {
     if (this.reduceMotion) return;
     for (let i = 0; i < count; i++) {
       const a = this.rng() * Math.PI * 2, v = speed * (0.4 + this.rng());
-      this.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * 0.4, g, life: 0.5 + this.rng() * 0.5, max: 1, color, r: 2 + this.rng() * 3 });
+      this.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * 0.4, g, life: (0.5 + this.rng() * 0.5) * maxLife, max: 1, color, r: 2 + this.rng() * 3 });
     }
   }
 
@@ -115,7 +116,18 @@ export class Game {
     ctx.globalAlpha = 1;
   }
 
-  finish() { if (!this.done) { this.done = true; this.emit(this.scoreValue() >= 50 ? 'win' : 'lose'); } }
+  // 5.17 — one closing sound for any outcome: a calm «done», a fanfare only from two stars. No «lose»: for people in
+  // pain feedback supports, never punishes (a weaker result is told by fewer stars, not by a sad chord).
+  /**
+   * 5.17 — one closing sound: «win» from two stars, a calm «done» below (there is no «lose»); the result of the last
+   * trial of the same frame gives way to it (the code's last digit used to ring under the fanfare).
+   */
+  finish() {
+    if (this.done) return;
+    this.done = true;
+    this.events = this.events.filter(e => e.name === 'beat');
+    this.emit(starsFor(Math.round(Math.max(0, Math.min(100, this.scoreValue())))) >= 2 ? 'win' : 'done');
+  }
 
   // Subclasses implement:
   step() {}

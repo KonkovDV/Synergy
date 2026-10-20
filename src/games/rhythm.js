@@ -120,13 +120,13 @@ export class RhythmGame extends Game {
     if (!note) {
       // A co-contraction starts as a single channel for a few frames: not a false start near a wide note.
       const nearBoth = this.notes.some(n => n.lane === 'both' && n.state === 'wait' && Math.abs(now - n.at) <= this.good);
-      if (!nearBoth) { this.falseStarts++; this.combo = 0; this.popup(lane, 'Рано', COLORS.warn); }
+      if (!nearBoth) { this.falseStarts++; this.combo = 0; this.popup(lane, 'Чуть раньше ноты', COLORS.warn); } // 5.17: what happened, not a verdict
       return;
     }
     const err = Math.abs(now - note.at);
     note.state = 'active'; note.onsetErr = err; note.grade = err <= PERFECT_S ? 'perfect' : 'good';
     this.onsetErrors.push(err);
-    this.emit('hit');
+    this.emit('hit', { timed: true }); // timed: a verdict sound is skipped when the audio output lags (services/feedback.js)
   }
 
   release(lane, now) {
@@ -172,7 +172,7 @@ export class RhythmGame extends Game {
     if (this.combo > 0 && this.combo % 8 === 0) this.emit('perfect');
   }
 
-  miss(note) { this.adapt.record(false); this.combo = 0; note.score = 0; this.popup(note.lane, 'Мимо', COLORS.bad); this.emit('miss'); }
+  miss(note) { this.adapt.record(false); this.combo = 0; note.score = 0; this.popup(note.lane, 'Нота прошла', COLORS.warn); this.emit('miss', { timed: true }); } // 5.17: «Мимо» in red read as a verdict
   popup(lane, label, color) { this.popups.push({ lane, label, color, t: 0.7 }); }
 
   autopilot() {
@@ -210,9 +210,14 @@ export class RhythmGame extends Game {
     // and the HUD text sat on the falling notes. HUD text is drawn *behind* the notes, the notes are never covered.
     const { R, labels, hitY, laneX, laneW, noteR } = rhythmLayout(w, h);
     const beatPhase = (this.time / this.beat) % 1;
-    // Stage: lavender to pink by day, the night club in the dark theme; the whole stage pulses on the beat.
+    // Stage: lavender to pink by day, the night club in the dark theme. 5.17 — the beat glows around the two hit circles
+    // only: a whole-field pulse for the whole song is the long low flicker XAG 118 counts as a risk (≥ 20 % of the screen).
     backdrop(ctx, w, h, scene([[0, '#e2f0ff'], [1, '#ece7ff']], [[0, '#081322'], [1, '#191240']]));
-    if (!this.reduceMotion) { ctx.globalAlpha = scene(0.1, 0.15) * (1 - beatPhase); ctx.fillStyle = COLORS.violet; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; }
+    if (!this.reduceMotion) {
+      ctx.globalAlpha = scene(0.22, 0.3) * (1 - beatPhase);
+      for (const lane of ['a', 'b']) circle(ctx, laneX[lane], hitY, R * 1.45, COLORS.violet);
+      ctx.globalAlpha = 1;
+    }
     const y = t => hitY - ((t - this.time) / LOOKAHEAD_S) * hitY;
     // Lanes.
     for (const lane of ['a', 'b']) {

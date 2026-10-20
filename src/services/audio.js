@@ -85,15 +85,19 @@ const SOUNDS = {
   perfect: () => { [880, 1108, 1320].forEach((f, i) => tone(f, 0.14, { type: 'triangle', delay: i * 0.05 })); },
   hit: () => tone(740, 0.08, { type: 'triangle', gain: 0.12 }),
   soft: () => tone(520, 0.12, { type: 'sine' }),
-  miss: () => tone(220, 0.18, { type: 'sawtooth', gain: 0.06, slide: -80 }),
+  // 5.17 — a miss is a soft low-key note, not a buzzer (Microsoft sound guidance: 600 Hz – 2 kHz, short, quiet).
+  miss: () => tone(560, 0.12, { type: 'triangle', gain: 0.05, attack: 0.01, slide: -60 }),
   lift: () => tone(440, 0.15, { type: 'sine', slide: 220 }),
   switch: () => { tone(500, 0.06, { type: 'square', gain: 0.05 }); tone(750, 0.06, { type: 'square', gain: 0.05, delay: 0.07 }); },
   success: () => { [660, 880, 1100].forEach((f, i) => tone(f, 0.16, { type: 'triangle', delay: i * 0.07 })); },
-  crush: () => noise(0.3, 0.25, 900),
+  crush: () => noise(0.15, 0.12, 900), // 5.17: shorter and quieter than a success
   win: () => { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.22, { type: 'triangle', delay: i * 0.09 })); },
-  lose: () => { [392, 330, 262].forEach((f, i) => tone(f, 0.22, { type: 'sine', delay: i * 0.1 })); },
+  // 5.17 — the end of any run below two stars: two calm notes (≤ 0.3 s). There is no «lose» sound.
+  done: () => { tone(660, 0.14, { type: 'sine', gain: 0.1, attack: 0.01 }); tone(880, 0.16, { type: 'sine', gain: 0.1, attack: 0.01, delay: 0.12 }); },
   levelup: () => { [523, 784, 1046, 1568].forEach((f, i) => tone(f, 0.25, { type: 'triangle', delay: i * 0.08 })); },
   beat: ({ strong } = {}) => { tone(strong ? 90 : 70, 0.12, { type: 'sine', gain: strong ? 0.35 : 0.22, slide: -40 }); if (!strong) noise(0.03, 0.04, 6000); },
 };
 
 export function play(name, extra) { SOUNDS[name]?.(extra); }
+/** Names of the sound effects (tests: there is no «lose», every game event has a sound). */
+export const SOUND_NAMES = Object.freeze(Object.keys(SOUNDS));

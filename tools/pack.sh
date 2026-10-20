@@ -17,6 +17,8 @@ git -C "$STAGE/$BASE" remote remove origin
 git -C "$STAGE/$BASE" reflog expire --expire=now --all
 git -C "$STAGE/$BASE" gc -q --prune=now
 git -C "$STAGE/$BASE" repack -a -d -f -q --window=250 --depth=250 # tighter deltas
+# The release files are built, not tracked (5.17): the archive carries the ones of this version once.
+mkdir -p "$STAGE/$BASE/release" && cp "$ROOT/release/Synergy-$VERSION.apk" "$ROOT/release/synergy-standalone.html" "$STAGE/$BASE/release/"
 if command -v zip >/dev/null; then (cd "$STAGE" && zip -9 -qr "$OUTDIR/$NAME.zip" "$BASE")
 else "$(command -v python || command -v python3)" "$ROOT/tools/zipdir.py" "$OUTDIR/$NAME.zip" "$STAGE" "$BASE"; fi # Git Bash on Windows (5.16)
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"

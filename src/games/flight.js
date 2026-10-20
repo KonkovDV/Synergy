@@ -5,6 +5,7 @@
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, backdrop, scene } from '../render/draw.js';
+import { drawSprite } from '../render/sprites.js';
 
 const LEVELS = [
   { rings: 8, gap: 2.8, tol: 0.15, spread: 0.25, streams: 0 },
@@ -21,6 +22,7 @@ const LEVELS = [
 const climbRate = levelNumber => 0.32 + 0.03 * (levelNumber - 1);
 const LEAD_S = 2.2;     // seconds of track visible ahead of the glider
 const CUE_AHEAD_S = 1.6; // the spoken cue names the next target this long before it
+const REPLAY_STEP_S = 0.1; // the altitude is kept 10 times a second for the replay after the run (not saved)
 
 export class FlightGame extends Game {
   static id = 'flight';
@@ -39,6 +41,7 @@ export class FlightGame extends Game {
     this.hits = 0; this.perfect = 0; this.ringsSeen = 0; this.streak = 0;
     this.skillHits = 0; this.skillPerfect = 0; // against the level's original tolerance (not the adapted one)
     this.trail = [];
+    this.path = []; this.nextSample = 0;
     this.baseHint = this.scheme === SCHEME.THRESHOLD ? 'A — набрать высоту, B — снизиться, покой — держать высоту'
       : this.scheme === SCHEME.GESTURE ? `Жест хвата — выше, «${OPENING_GESTURE.name}» — ниже, покой — середина`
       : 'Сильнее A — выше, сильнее B — ниже, расслабление — середина';
@@ -92,6 +95,10 @@ export class FlightGame extends Game {
       const goal = 0.5 + intent.level * 0.47;
       this.alt += (goal - this.alt) * (1 - Math.exp(-dt / 0.12));
     }
+    if (this.time >= this.nextSample) {
+      this.path.push([Math.round(this.time * 100) / 100, Math.round(this.alt * 1000) / 1000]);
+      while (this.nextSample <= this.time) this.nextSample += REPLAY_STEP_S; // a fixed grid: frame jitter does not drift it
+    }
     const target = this.nextTarget();
     if (target && target.side !== 0) this.separation.add(intent, target.side > 0, dt);
     this.hint = this.cue(target);
@@ -108,6 +115,7 @@ export class FlightGame extends Game {
         } else {
           item.done = true;
           const share = item.inside / (item.end - item.at);
+          item.share = share;
           this.points += 3 * share; this.maxPoints += 3;
           this.adapt.record(share > 0.6);
           this.emit(share > 0.7 ? 'success' : 'soft');
@@ -120,7 +128,7 @@ export class FlightGame extends Game {
   }
 
   passRing(ring) {
-    ring.done = true; this.ringsSeen++;
+    ring.done = true; this.ringsSeen++; ring.passedAlt = this.alt;
     const err = Math.abs(this.alt - ring.alt);
     const tol = this.tol;
     this.adapt.record(err <= tol);
@@ -139,7 +147,10 @@ export class FlightGame extends Game {
     } else {
       this.streak = 0; ring.result = 'miss';
       this.emit('miss');
-      this.flash = { text: this.alt > ring.alt ? 'Выше цели' : 'Ниже цели', color: COLORS.warn, t: 0.6 };
+      // 5.17 — a near miss says the direction gently («чуть»): the size of the error, not a verdict; no success sound
+      // or sparks for it (near-miss rewards keep gamblers playing, not learners learning).
+      const near = err <= tol * 1.5;
+      this.flash = { text: this.alt > ring.alt ? (near ? 'Чуть выше цели' : 'Выше цели') : (near ? 'Чуть ниже цели' : 'Ниже цели'), color: COLORS.warn, t: 0.6 };
     }
   }
 
@@ -171,6 +182,22 @@ export class FlightGame extends Game {
   }
 
   details() { return { rings: this.ringsSeen, hits: this.hits, perfect: this.perfect }; }
+
+  /**
+   * 5.17 — the flight shown again after the run: delayed feedback (the altitude over the rings once the trial is over
+   * kept the skill better than live feedback alone — Stuttaford et al. 2023, able-bodied). Outcome only: where the
+   * bird passed each ring, never how to tense a muscle (Bouwsema et al. 2014). Lives until the results screen.
+   */
+  replay() {
+    return {
+      total: this.total, tol: this.level.tol, path: this.path,
+      items: this.track.filter(x => x.done).map(x => ({
+        kind: x.kind, at: x.at, end: x.end, alt: x.alt,
+        ok: x.kind === 'ring' ? x.result !== 'miss' : (x.share ?? 0) > 0.6,
+        ...(x.kind === 'ring' && x.result === 'miss' ? { dir: x.passedAlt > x.alt ? 'above' : 'below' } : {}),
+      })),
+    };
+  }
 
   render(ctx, view) {
     const { w, h } = view;
@@ -248,14 +275,18 @@ export class FlightGame extends Game {
       text(ctx, '?', gx, y(0.5), { size: 28, weight: 800, color: COLORS.muted, outline: true });
     }
     rings.forEach(r => drawRing(r, true));
-    for (const r of rings) if (r.burst) { r.burst = false; this.burst(gx, y(r.alt), ringColor(r), 16); }
+    for (const r of rings) if (r.burst) { r.burst = false; if (r.result !== 'miss') this.burst(gx, y(r.alt), ringColor(r), 12, 160, 300, 0.7); } // 5.17: sparks for a passed ring only
     this.renderParticles(ctx);
     if (this.flash?.t > 0) text(ctx, this.flash.text, gx + 70, y(this.alt) - 34, { size: 18, weight: 800, color: this.flash.color, outline: true });
     if (this.streak >= 3) text(ctx, `Серия ×${this.streak}`, w - 12, 18, { size: 14, weight: 800, color: COLORS.warnInk, align: 'right', outline: true });
   }
 
   drawGlider(ctx, x, y) {
-    const flap = Math.sin(this.time * 10) * 6;
+    // 5.16+: the player's own Firebird flies when it has grown wings (the UI registers `flight-flier`, ui/play.js);
+    // a gentle bob, still with «Меньше движения». The ring is passed by height, not by the size of the picture.
+    const bob = this.reduceMotion ? 0 : Math.sin(this.time * 5) * 2;
+    if (drawSprite(ctx, 'flight-flier', x + 4, y + bob - 6, 66)) return;
+    const flap = this.reduceMotion ? 0 : Math.sin(this.time * 10) * 6; // 5.17: the wings stand still with «Меньше движения»
     ctx.save(); ctx.translate(x, y);
     ctx.fillStyle = '#ffffff'; ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.ellipse(0, 0, 20, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();

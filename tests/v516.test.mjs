@@ -181,10 +181,11 @@ test('build: dist/ carries the pictures and precaches them; the one-file build i
 
 // 5.16, found on Windows: a PowerShell round trip read a UTF-8 file as Windows-1251 and wrote it back — the title of
 // index.html became pairs of «Р»/«С» and a punctuation sign per letter. Two such pairs in a row never occur in Russian.
-test('encoding: no file of the repository is UTF-8 read as Windows-1251 and saved again', async () => {
-  const { execFileSync } = await import('node:child_process');
-  const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8' }).split('\n')
-    .filter(f => /\.(html|md|js|mjs|css|json|xml|py|sh|kt|swift|dart|tsx?|cs|yml|webmanifest)$/.test(f) && !f.startsWith('legacy/') && existsSync(f));
+test('encoding: no file of the repository is UTF-8 read as Windows-1251 and saved again', () => {
+  // The files on disk, not `git ls-files`: the gesture drill runs this suite in a copy that is not a repository (5.17).
+  const skip = /^(node_modules|\.git|dist|legacy|release)(\/|$)|^android\/build\/|^tools\/\.cache\//;
+  const files = readdirSync('.', { recursive: true }).map(f => String(f).replaceAll('\\', '/'))
+    .filter(f => !skip.test(f) && /\.(html|md|js|mjs|css|json|xml|py|sh|kt|swift|dart|tsx?|cs|yml|webmanifest)$/.test(f));
   const twice = /(?:[РС][ЂЃ‚ѓ„…†‡€‰Љ‹ЊЌЋЏђ‘’“”•™љ›њќћџ°±µ¶·№]){2}|вЂ[”“™¦]/;
   assert.deepEqual(files.filter(f => twice.test(readFileSync(f, 'utf8'))), []);
 });

@@ -1,7 +1,7 @@
 // Flow rules of the screens as pure functions (5.10): where the results lead, and the hands-free hold.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resultsAction } from '../src/ui/results.js';
+import { resultsAction, stopAdviceApplies } from '../src/ui/results.js';
 import { HoldConfirm } from '../src/core/handsfree.js';
 import { restIntent } from '../src/core/signal.js';
 
@@ -16,6 +16,15 @@ test('results lead: safety first, then the plan, then the next level', () => {
   assert.equal(resultsAction({ ...base, run: run() }).label, 'Уровень 3');
   assert.equal(resultsAction({ ...base, run: run({ stars: 0 }) }).label, 'Ещё раз');
   assert.equal(resultsAction({ ...base, run: run({ level: 8 }) }).label, 'Ещё раз', 'the last level repeats');
+});
+
+test('scenario 11.10: free play gets the stop advice too — as the main button, «Повторить» stays (5.17)', () => {
+  const next = { game: 'flight', level: 1, retention: false };
+  assert.equal(stopAdviceApplies({ demo: false, plan: false, next: null }), true, 'free play (was plan-only)');
+  assert.equal(stopAdviceApplies({ demo: false, plan: true, next }), true, 'a plan with an exercise left');
+  assert.equal(stopAdviceApplies({ demo: false, plan: true, next: null }), false, 'a finished plan says «Готово на сегодня»');
+  assert.equal(stopAdviceApplies({ demo: true, plan: false, next: null }), false, 'a demo is not the player');
+  assert.deepEqual(resultsAction({ ...base, run: run(), stopAdvice: 'усталость' }), { kind: 'home', label: 'Закончить на сегодня' });
 });
 
 test('results lead after a demo: the real exercise, not a rest before the same game (B-15)', () => {

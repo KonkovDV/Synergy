@@ -56,7 +56,13 @@ export function homeScreen(app) {
       h('div', {},
         h('p', { class: 'eyebrow' }, SCHEME_INFO[s.scheme].short),
         h('h1', {}, s.name ? `Привет, ${s.name}!` : 'Привет!')),
-      h('div', { class: 'streak', title: 'Серия тренировочных дней (день отдыха не прерывает)' }, badgeArt('flame', 24), h('b', { 'aria-hidden': 'true' }, streak), h('span', { class: 'sr-only' }, `Серия: ${count(streak, FORMS.days)}`))),
+      // 5.17 — a streak only from two days on, and never for a child: a broken «0» punishes a missed day; the count of
+      // training days only grows (streak-loss aversion, Duolingo/Headspace practice; ethics in GAME_DESIGN).
+      streak >= 2 && s.audience !== 'child'
+        ? h('div', { class: 'streak', title: 'Серия тренировочных дней (день отдыха не прерывает)' }, badgeArt('flame', 24), h('b', { 'aria-hidden': 'true' }, streak), h('span', { class: 'sr-only' }, `Серия: ${count(streak, FORMS.days)}`))
+        : trainingDays(p) > 0
+          ? h('div', { class: 'streak days', title: 'Дни с тренировкой — считаются все, перерывы не обнуляют' }, sectionArt('plan', 24), h('b', { 'aria-hidden': 'true' }, trainingDays(p)), h('span', { class: 'sr-only' }, `Дней с тренировкой: ${trainingDays(p)}`))
+          : null),
     h('div', { class: 'xp' },
       h('span', { class: 'xp-level' }, sectionArt('xp', 20), `Уровень ${lvl.level}`),
       h('div', { class: 'xp-track', role: 'progressbar', 'aria-label': `Опыт до уровня ${lvl.level + 1}`, 'aria-valuenow': Math.round(lvl.progress * 100), 'aria-valuemin': 0, 'aria-valuemax': 100 }, xpFill),
