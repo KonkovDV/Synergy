@@ -249,7 +249,11 @@ export function lightenPlan(plan) {
 /** Day record helpers: wellbeing check-in before the plan, perceived effort after it. */
 export function recordDayNote(profile, today, patch) {
   const day = profile.days[today] ?? { seconds: 0, runs: 0 };
-  profile.days = { ...profile.days, [today]: { ...day, ...patch } };
+  const next = { ...day, ...patch };
+  // A second finished «покой в движении» the same day keeps the one with more seconds of activation: the worse
+  // attempt is what a specialist should see, and a rushed rest must not erase a careful one.
+  if (day.restMotion?.done && patch.restMotion?.done && (day.restMotion.slipS ?? 0) >= (patch.restMotion.slipS ?? 0)) next.restMotion = day.restMotion;
+  profile.days = { ...profile.days, [today]: next };
 }
 
 /**

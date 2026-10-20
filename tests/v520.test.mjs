@@ -11,6 +11,7 @@ import { BionicHand } from '../src/core/hand.js';
 import { RestMotion, REST_MOTION } from '../src/core/restmotion.js';
 import { replaySummary } from '../src/ui/results.js';
 import { emptyState, parseState } from '../src/core/storage.js';
+import { createProfile, recordDayNote } from '../src/core/progress.js';
 
 test('the profile: rest, a 2 s ramp, a 3 s hold, a release, then rest', () => {
   assert.equal(TRACE.holdS, 3);
@@ -76,6 +77,7 @@ test('«покой в движении»: quiet time and slips, and a long step 
   whole.step(100, true);
   assert.equal(whole.done, true);
   assert.equal(whole.summary().slipS, 0);
+  assert.equal(Math.round((whole.quiet + whole.slip) * 10) / 10, 18, 'a stalled frame does not add time past the three prompts');
   whole.step(5, false);
   assert.equal(whole.summary().slipS, 0, 'a finished block ignores further steps');
   assert.equal(REST_MOTION.prompts.reduce((s, p) => s + p.s, 0), 18);
@@ -94,4 +96,21 @@ test('a day keeps one «покой в движении» and drops a crafted one
   const worse = emptyState();
   worse.profile.days['2026-10-20'] = { seconds: 1, runs: 0, restMotion: 'no' };
   assert.equal(parseState(JSON.stringify(worse)).profile.days['2026-10-20'].restMotion, undefined);
+});
+
+test('a second «покой в движении» the same day keeps the attempt with more activation', () => {
+  const p = createProfile();
+  recordDayNote(p, '2026-10-20', { restMotion: { quiet: 0.9, slipS: 1.8, done: true } });
+  recordDayNote(p, '2026-10-20', { restMotion: { quiet: 1, slipS: 0.2, done: true } });
+  assert.equal(p.days['2026-10-20'].restMotion.slipS, 1.8, 'a careful rest is not erased');
+  recordDayNote(p, '2026-10-20', { restMotion: { quiet: 0.4, slipS: 8, done: true } });
+  assert.equal(p.days['2026-10-20'].restMotion.slipS, 8, 'a worse rest replaces it');
+});
+
+test('a backup cannot invent quick starts: only the boolean true is kept', () => {
+  const st = emptyState();
+  const base = { game: 'grip', level: 1, score: 70, stars: 2, at: '2026-10-20T10:00:00' };
+  st.runs = [{ ...base, id: 'a', quick: 'yes' }, { ...base, id: 'b', quick: 1 }, { ...base, id: 'c', quick: true }];
+  const kept = parseState(JSON.stringify(st)).runs;
+  assert.deepEqual(kept.map(r => r.quick), [undefined, undefined, true]);
 });
