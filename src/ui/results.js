@@ -131,10 +131,11 @@ function gripReplayCard(replay) {
  * prosthesis saw instead of the wanted gesture — the pair worth practising.
  */
 export function safeReplaySummary(replay, nameOf = id => id) {
-  const opened = replay.digits.filter(d => d.ok);
-  const parts = [`Открыто ${opened.length} из ${replay.digits.length}.`];
-  const skipped = replay.digits.filter(d => d.rest).length;
-  if (skipped) parts.push(`Покой не получился — ${count(skipped, ['цифра не началась', 'цифры не начались', 'цифр не начались'])}.`);
+  const skipped = replay.digits.filter(d => d.rest);
+  const asked = replay.digits.filter(d => !d.rest);
+  const opened = asked.filter(d => d.ok);
+  const parts = asked.length ? [`Открыто ${opened.length} из ${asked.length}.`] : ['Ни одна цифра не началась: покой не получился.'];
+  if (skipped.length && asked.length) parts.push(`Покой не получился — ${count(skipped.length, ['цифра не началась', 'цифры не начались', 'цифр не начались'])}.`);
   const slow = opened.length >= 2 ? opened.reduce((a, b) => (b.seconds > a.seconds ? b : a)) : null;
   if (slow) parts.push(`Дольше всего — «${slow.name}»: ${fmtFixed(slow.seconds)} с.`);
   if (replay.top) parts.push(`Вместо «${nameOf(replay.top.wanted)}» протез чаще видел «${nameOf(replay.top.seen)}» (${fmtFixed(replay.top.seconds)} с) — эту пару стоит потренировать.`);
