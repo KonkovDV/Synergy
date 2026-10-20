@@ -108,7 +108,6 @@ export class SafeGame extends Game {
       if (this.restFor >= REST_BEFORE_S) { this.phase = 'show'; this.cardTime = 0; this.holdFor = 0; this.firstMatch = null; this.restWait = 0; }
       else if (this.restWait >= REST_GIVE_UP_S && card) {
         card.state = 'fail'; card.rest = true;
-        this.adapt.record(false);
         this.emit('miss'); this.next();
       }
       return;
@@ -151,18 +150,22 @@ export class SafeGame extends Game {
   progress() { return clamp01(this.code.filter(c => c.state !== 'wait').length / this.code.length); }
 
   scoreValue() {
-    const solved = this.code.filter(c => c.state === 'ok');
+    const asked = this.code.filter(c => !c.rest);
+    const solved = asked.filter(c => c.state === 'ok');
+    if (!asked.length) return 0;
     const points = solved.reduce((s, c) => s + 70 + 30 * clamp01(1 - (c.time - this.level.hold) / this.level.limit), 0);
-    return points / this.code.length - this.wrongTime * 2;
+    return points / asked.length - this.wrongTime * 2;
   }
 
   skillScores() {
     const mean = this.reactions.length ? this.reactions.reduce((s, v) => s + v, 0) / this.reactions.length : null;
-    const solved = this.code.filter(c => c.state === 'ok').length;
+    const asked = this.code.filter(c => !c.rest);
+    const solved = asked.filter(c => c.state === 'ok').length;
+    const n = asked.length || this.code.length;
     return {
-      switching: pct(solved / this.code.length - this.wrongTime / 20),
+      switching: pct(solved / n - this.wrongTime / 20),
       timing: mean === null ? 0 : pct(1 - (mean - 0.25) / 2.5),
-      precision: pct(solved / this.code.length),
+      precision: asked.length ? pct(solved / asked.length) : 0,
     };
   }
 

@@ -170,17 +170,18 @@ export class AssessmentGame extends Game {
 
   /** Summary metrics (Motion Test / TAC style). */
   metrics() {
-    const done = this.trials.filter(t => t.state !== 'wait');
-    const ok = done.filter(t => t.state === 'ok');
-    const selected = done.filter(t => t.selectedAt !== null);
-    const active = done.reduce((s, t) => s + (t.active ?? 0), 0);
+    const started = this.trials.filter(t => !t.restMiss && t.state !== 'wait');
+    const ok = started.filter(t => t.state === 'ok');
+    const selected = started.filter(t => t.selectedAt !== null);
+    const active = started.reduce((s, t) => s + (t.active ?? 0), 0);
     const fitts = ok.filter(t => t.fitts);
     return {
-      completionRate: done.length ? ok.length / this.trials.length : 0,
+      // A trial that never left rest is not a missed gesture: tone and a stuck electrode are not the movement.
+      completionRate: started.length ? ok.length / started.length : null,
       selectionS: mean(selected.map(t => t.selectedAt)),
       completionS: mean(ok.map(t => t.completedAt)),
-      accuracy: active > 0 ? done.reduce((s, t) => s + (t.correct ?? 0), 0) / active : null,
-      overshoots: done.reduce((s, t) => s + (t.overshoots ?? 0), 0),
+      accuracy: active > 0 ? started.reduce((s, t) => s + (t.correct ?? 0), 0) / active : null,
+      overshoots: started.reduce((s, t) => s + (t.overshoots ?? 0), 0),
       restMissed: this.trials.filter(t => t.restMiss).length,
       throughput: mean(fitts.map(t => t.fitts.id / Math.max(FITTS.minMtS, t.enteredAt))),
       pathEfficiency: mean(fitts.map(t => (t.pathAtEntry > 1e-6 ? clamp01(Math.abs(t.entryX - t.startX) / t.pathAtEntry) : 1))),
@@ -191,14 +192,16 @@ export class AssessmentGame extends Game {
   progress() { return clamp01(this.index / this.trials.length); }
 
   scoreValue() {
-    const m = this.metrics(), ok = this.trials.filter(t => t.state === 'ok');
-    const speed = ok.length ? ok.reduce((s, t) => s + clamp01(1 - (t.completedAt - holdOf(t)) / (ASSESS.timeoutS - holdOf(t))), 0) / this.trials.length : 0;
-    return 100 * (0.7 * m.completionRate + 0.3 * speed);
+    const m = this.metrics();
+    const started = this.trials.filter(t => !t.restMiss && t.state !== 'wait');
+    const ok = started.filter(t => t.state === 'ok');
+    const speed = started.length ? ok.reduce((s, t) => s + clamp01(1 - (t.completedAt - holdOf(t)) / (ASSESS.timeoutS - holdOf(t))), 0) / started.length : 0;
+    return 100 * (0.7 * (m.completionRate ?? 0) + 0.3 * speed);
   }
 
   skillScores() {
     const m = this.metrics();
-    const switchTrials = this.trials.filter(t => t.command === COMMAND.SWITCH || t.gesture);
+    const switchTrials = this.trials.filter(t => !t.restMiss && (t.command === COMMAND.SWITCH || t.gesture));
     return {
       precision: m.accuracy === null ? 0 : pct(m.accuracy),
       timing: m.selectionS === null ? 0 : pct(1 - (m.selectionS - 0.3) / 3),
@@ -211,7 +214,7 @@ export class AssessmentGame extends Game {
     const ms = v => (v === null ? null : Math.round(1000 * v));
     return {
       assessment: true, trialsTotal: this.trials.length, onThreshold: this.onThreshold,
-      completionRate: Math.round(100 * m.completionRate), selectionMs: ms(m.selectionS), completionMs: ms(m.completionS),
+      completionRate: m.completionRate === null ? null : Math.round(100 * m.completionRate), selectionMs: ms(m.selectionS), completionMs: ms(m.completionS),
       accuracy: m.accuracy === null ? null : Math.round(100 * m.accuracy), overshoots: m.overshoots, restMissed: m.restMissed,
       ...(this.trials.some(t => t.fitts) ? {
         throughputBps: m.throughput === null ? null : Math.round(100 * m.throughput) / 100, fittsTrials: m.fittsTrials,

@@ -178,11 +178,17 @@ test('a contraction that never rests does not trap the next «Сейф» digit o
   assert.equal(safe.index, 1);
   assert.equal(safe.wrongTime, 0, 'a digit that never started is not a wrong gesture');
   assert.match(safeReplaySummary(safe.replay()), /цифра не началась/);
+  safe.code[1].state = 'ok'; safe.code[1].time = safe.level.hold;
+  for (const c of safe.code) if (c !== safe.code[1]) c.rest = true;
+  assert.equal(Math.round(safe.scoreValue()), 100, 'a digit that never started is not a miss in the score');
   const check = createGame('check', { levelNumber: 1, scheme: 'proportional', seed: 1 });
   for (let i = 0; i < (ASSESS.restGiveUpS + 0.2) * 60; i++) check.update(1 / 60, tense, null);
   assert.equal(check.trials[0].restMiss, true);
   assert.equal(check.trials[0].selectedAt ?? null, null);
   assert.equal(check.details().restMissed, 1);
+  check.trials[1].state = 'ok';
+  assert.equal(check.metrics().completionRate, 1, 'the unstarted trial is not a failed gesture');
+  assert.equal(check.details().completionRate, 100);
 });
 
 test('«Мастерская»: the replay keeps every object — its window, the force at the outcome, what happened (5.18)', () => {
