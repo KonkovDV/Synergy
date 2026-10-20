@@ -4,7 +4,7 @@
 import { h } from './dom.js';
 import { topBar, segmented, mioAvatar } from './widgets.js';
 import { sectionArt } from './art.js';
-import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, checkInAdvice, checkinSkippable, CHECKIN_ACTION } from '../core/wellbeing.js';
+import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, checkInAdvice, checkinSkippable, checkinLight, CHECKIN_ACTION } from '../core/wellbeing.js';
 import { recordDayNote, lightenPlan, dayKey } from '../core/progress.js';
 
 export function checkinScreen(app) {
@@ -24,13 +24,13 @@ export function checkinScreen(app) {
     const a = checkInAdvice(answers);
     // 5.16: the advice carries its picture — a calm shield for a stop or a light day, the check mark for a full one.
     advice.replaceChildren(h('p', { class: `note with-art ${a.action === CHECKIN_ACTION.GO ? '' : 'warn'}` }, sectionArt(a.action === CHECKIN_ACTION.GO ? 'done' : 'safety', 32), a.text));
-    go.textContent = a.reason === 'skin' ? 'Начать без датчиков' : a.action === CHECKIN_ACTION.STOP ? 'Понятно, отдыхаю' : a.action === CHECKIN_ACTION.LIGHT ? 'Начать короткий план' : 'Начать тренировку';
+    go.textContent = a.reason === 'skin' ? (a.light ? 'Короткий план без датчиков' : 'Начать без датчиков') : a.action === CHECKIN_ACTION.STOP ? 'Понятно, отдыхаю' : a.action === CHECKIN_ACTION.LIGHT ? 'Начать короткий план' : 'Начать тренировку';
     app.say(a.text, { interrupt: true });
   };
   go.onclick = () => {
     const a = checkInAdvice(answers), today = dayKey();
-    recordDayNote(app.profile, today, { checkin: { ...answers, action: a.action, reason: a.reason, at: new Date().toISOString() } });
-    if (a.action === CHECKIN_ACTION.LIGHT) lightenPlan(app.dailyPlan());
+    recordDayNote(app.profile, today, { checkin: { ...answers, action: a.action, reason: a.reason, ...(a.light ? { light: true } : {}), at: new Date().toISOString() } });
+    if (checkinLight(a)) lightenPlan(app.dailyPlan());
     app.save();
     app.applySource();
     if (a.reason === 'skin') app.startPlan({ checked: true });
@@ -47,7 +47,7 @@ export function checkinScreen(app) {
       h('main', { class: 'scroll' },
         h('div', { class: 'checkin-hero' }, mioAvatar('support', 64), h('p', { class: 'lead' }, 'Как рука сегодня?')),
         h('p', { class: 'note' }, `${sensors ? 'Три вопроса' : 'Два вопроса'} перед тренировкой — чтобы вовремя остановиться или сделать день лёгким. Ответы хранятся на этом устройстве и попадают в копию и отчёт, которые вы сохраняете сами.`),
-        question('Боль в культе или руке', PAIN_LEVELS, 'pain'),
+        question('Боль: культя, рука или фантомная', PAIN_LEVELS, 'pain'),
         question('Усталость мышц', FATIGUE_LEVELS, 'fatigue'),
         sensors ? question('Кожа под датчиками', SKIN_LEVELS, 'skin') : null,
         advice,

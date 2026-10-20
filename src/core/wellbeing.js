@@ -55,19 +55,27 @@ export const SAFETY_RULES = [
 /** The person finished the onboarding with an older list of the safety rules than the current one. */
 export const safetyOutdated = (profile, version = SAFETY_VERSION) => !!profile?.onboarded && (profile.safetySeen ?? 1) < version;
 
-/** What today's session should be, given the check-in answers (`skin` — only when real sensors are used). */
+const LIGHT_TEXT = 'Сегодня план короче: одно упражнение и короткая проверка. Если появится или усилится боль — остановитесь. Если операция или травма были недавно, сначала согласуйте занятия с врачом.';
+
+/**
+ * What today's session should be, given the check-in answers (`skin` — only when real sensors are used). Irritated
+ * skin turns the electrodes off; moderate pain or strong fatigue on the same day still makes it a short day (`light`).
+ */
 export function checkInAdvice({ pain = 0, fatigue = 0, skin = 0 } = {}) {
   if (pain >= WELLBEING.painStop) {
     return { action: CHECKIN_ACTION.STOP, reason: 'pain', text: 'Сильная боль — сегодня без тренировки. Если боль повторяется или усиливается, обратитесь к врачу или протезисту.' };
   }
+  const lighter = pain >= WELLBEING.painLight || fatigue >= WELLBEING.fatigueLight;
   if (skin >= 1) {
-    return { action: CHECKIN_ACTION.STOP, reason: 'skin', text: 'Сегодня игра без датчиков — занятия идут на экране. Носить ли сегодня протез, решает ваш протезист. Если покраснение не проходит через 20–30 минут после снятия датчиков, появились сыпь, пузыри или боль — покажите кожу протезисту или врачу.' };
+    const text = 'Сегодня игра без датчиков — занятия идут на экране. Носить ли сегодня протез, решает ваш протезист. Если покраснение не проходит через 20–30 минут после снятия датчиков, появились сыпь, пузыри или боль — покажите кожу протезисту или врачу.';
+    return { action: CHECKIN_ACTION.STOP, reason: 'skin', ...(lighter ? { light: true } : {}), text: lighter ? `${text} ${LIGHT_TEXT}` : text };
   }
-  if (pain >= WELLBEING.painLight || fatigue >= WELLBEING.fatigueLight) {
-    return { action: CHECKIN_ACTION.LIGHT, reason: pain >= WELLBEING.painLight ? 'pain' : 'fatigue', text: 'Сегодня план короче: одно упражнение и короткая проверка. Если появится или усилится боль — остановитесь. Если операция или травма были недавно, сначала согласуйте занятия с врачом.' };
-  }
+  if (lighter) return { action: CHECKIN_ACTION.LIGHT, reason: pain >= WELLBEING.painLight ? 'pain' : 'fatigue', text: LIGHT_TEXT };
   return { action: CHECKIN_ACTION.GO, reason: null, text: 'Отлично, начинаем. Комфортная сила, без боли — максимум не нужен.' };
 }
+
+/** Today is a short day: a light answer, or irritated skin together with moderate pain or strong fatigue. */
+export const checkinLight = checkin => checkin?.action === CHECKIN_ACTION.LIGHT || (checkin?.reason === 'skin' && checkin.light === true);
 
 /**
  * Performance-based signs of fatigue within today's runs: the latest score dropped well below the

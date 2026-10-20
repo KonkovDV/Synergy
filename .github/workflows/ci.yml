@@ -4,9 +4,11 @@ on:
   pull_request:
 permissions: { contents: read }
 # Actions are pinned to commit SHAs (OpenSSF Scorecard «Pinned-Dependencies»); Dependabot bumps them.
+# Runner images are pinned too: ubuntu-latest moves to Ubuntu 26 from 19.10.2026, and Playwright 1.56 installs its
+# browser dependencies for Ubuntu 22.04 and 24.04.
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false, fetch-depth: 0 }
@@ -33,7 +35,7 @@ jobs:
         with: { name: web-build, path: dist/ }
   windows:
     # The jury and the external audit run Windows: tests and the build must not need sh or python3.
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false, fetch-depth: 0 }
@@ -43,7 +45,7 @@ jobs:
       - run: npm test
       - run: npm run build
   lab:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false }
@@ -52,8 +54,9 @@ jobs:
       - run: python -m unittest bridge/test_ws_bridge.py   # Red Team: Origin/token, frame limits (stdlib only)
       - run: pip install -r lab/requirements.txt && python -m unittest lab/test_lab7.py
   dependency-review:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    # The action needs a public repository or GitHub Advanced Security on a private one.
+    if: github.event_name == 'pull_request' && !github.event.repository.private
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false }

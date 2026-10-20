@@ -10,7 +10,7 @@
 // TP = mean(ID/MT) over completed trials («mean of means»), bits/s; plus path efficiency D / path.
 // Game metrics, not a clinically validated test; compare a person with themselves week to week.
 import { fmtFixed } from '../core/format.js';
-import { Game, ConfusionMeter, clamp01, pct } from './base.js';
+import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURE_IDS } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
 import { createRng } from '../core/rng.js';
@@ -113,7 +113,7 @@ export class AssessmentGame extends Game {
     if (this.phase === 'rest') {
       this.restWait += dt;
       this.restFor = intent.relaxed ? this.restFor + dt : 0; // both channels off (5.10: tension in both passed as rest)
-      this.hint = this.restWait > 3 ? 'Покой не получается — расслабьте обе мышцы' : 'Покой перед следующей попыткой';
+      this.hint = this.restWait > 3 ? REST_STUCK_HINT : 'Покой перед следующей попыткой';
       if (this.restFor >= ASSESS.restS) {
         this.phase = 'trial';
         this.restWait = 0;

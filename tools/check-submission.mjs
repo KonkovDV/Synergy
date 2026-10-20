@@ -7,7 +7,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
-import { NUMBER_DOCS } from './number-docs.mjs';
+import { NUMBER_DOCS, RUN_DOCS } from './number-docs.mjs';
 import { apkSigner } from './apk-signer.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -63,6 +63,17 @@ for (const doc of NUMBER_DOCS) {
     const block = readmeBlock(read('README.md'));
     if (block === null) fail('README.md: нет таблицы <!-- evidence:begin --> … <!-- evidence:end -->');
     else if (block !== renderTable(ev).trim()) fail('README.md: таблица «Главное» расходится с docs/evidence.json — node tools/evidence.mjs');
+    // 5.20 — the pitch and the jury strategy quoted 28 light states and a layout run of 5.11 while the table said 31
+    // and 62: the counts of the axe and layout runs come from the same evidence wherever they are quoted.
+    for (const doc of RUN_DOCS) {
+      const text = read(doc);
+      if (ev.a11y) for (const m of text.matchAll(/(\d+)\s+(?:состояни[а-яё]*\s+экранов\s+светлой\s+темы|светл[а-яё]*)\s+и\s+(\d+)\s+тёмн/gi)) {
+        if (Number(m[1]) !== ev.a11y.light || Number(m[2]) !== ev.a11y.dark) fail(`${doc}: «${m[0]}», а axe — ${ev.a11y.light} светлых и ${ev.a11y.dark} тёмных (docs/evidence.json)`);
+      }
+      if (ev.layout) for (const m of text.matchAll(/(\d+)\s+состояни[а-яё]*\s+×\s+(\d+)\s+экран/g)) {
+        if (Number(m[1]) !== ev.layout.states || Number(m[2]) !== ev.layout.viewports) fail(`${doc}: «${m[0]}», а линтер раскладки — ${ev.layout.states} × ${ev.layout.viewports} (docs/evidence.json)`);
+      }
+    }
   }
 }
 

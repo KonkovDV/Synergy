@@ -4,7 +4,7 @@
 // (Kristoffersen et al. 2020, 25 able-bodied participants: about 51 % more separated patterns after game training;
 // the 2021 study with limb-absent users found no consistent gain, so this is a design idea, not a promise).
 import { SESSION } from '../config.js';
-import { Game, ConfusionMeter, clamp01, pct } from './base.js';
+import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES, GESTURES } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand, panel, backdrop, scene } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
@@ -104,7 +104,7 @@ export class SafeGame extends Game {
       // A clean transition: every code digit starts from rest. A muscle that never switches off must not trap the game.
       this.restWait += dt;
       this.restFor = resting ? this.restFor + dt : 0;
-      this.hint = this.restWait > 3 ? 'Покой не получается — расслабьте обе мышцы' : 'Покой — расслабьте мышцы';
+      this.hint = this.restWait > 3 ? REST_STUCK_HINT : 'Покой — расслабьте мышцы';
       if (this.restFor >= REST_BEFORE_S) { this.phase = 'show'; this.cardTime = 0; this.holdFor = 0; this.firstMatch = null; this.restWait = 0; }
       else if (this.restWait >= REST_GIVE_UP_S && card) {
         card.state = 'fail'; card.rest = true;

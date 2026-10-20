@@ -6,7 +6,7 @@ import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabular
 import { skillProfile, playerLevel, shiftDay, dayKey } from '../core/progress.js';
 import { everydayDays } from '../core/everyday.js';
 import { confusionMatrix, assessmentHistory, completionChange } from '../core/analytics.js';
-import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS } from '../core/wellbeing.js';
+import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS, checkinLight } from '../core/wellbeing.js';
 
 export const DISCLAIMER = 'Тренажёр, не медицинское изделие. Игровая статистика без клинической валидации: не для оценки состояния, подбора нагрузки или решений о лечении. Не медицинская документация и не согласие на обработку персональных данных.';
 
@@ -27,7 +27,15 @@ const realRuns = state => state.runs.filter(r => !r.demo);
 export function wellbeingLog(profile, days = 28) {
   return Object.entries(profile.days).filter(([, d]) => d.checkin || Number.isFinite(d.effort))
     .sort(([a], [b]) => (a < b ? 1 : -1)).slice(0, days)
-    .map(([day, d]) => ({ day, pain: d.checkin?.pain ?? null, fatigue: d.checkin?.fatigue ?? null, skin: d.checkin?.skin ?? null, action: d.checkin?.action ?? (d.checkin?.skipped ? 'skipped' : null), effort: d.effort ?? null, minutes: Math.round((d.seconds ?? 0) / 60) }));
+    .map(([day, d]) => ({ day, pain: d.checkin?.pain ?? null, fatigue: d.checkin?.fatigue ?? null, skin: d.checkin?.skin ?? null, action: d.checkin?.action ?? (d.checkin?.skipped ? 'skipped' : null), decision: decisionOf(d.checkin), effort: d.effort ?? null, minutes: Math.round((d.seconds ?? 0) / 60) }));
+}
+
+/** The day's decision in the specialist's words: a skin day trains on the screen, it is not a rest day. */
+export function decisionOf(checkin) {
+  if (!checkin) return '—';
+  if (checkin.skipped) return 'пропущено';
+  if (checkin.reason === 'skin') return checkinLight(checkin) ? 'короткий план без датчиков' : 'без датчиков, на экране';
+  return { go: 'обычный план', light: 'короткий план', stop: 'отдых' }[checkin.action] ?? '—';
 }
 
 /**
@@ -205,7 +213,7 @@ ${conf.top.length ? table(['Нужен жест', 'Распознан как', '
   + `<p class="muted">Чаще всего: ${escapeHtml(gname(conf.top[0].wanted))} → ${escapeHtml(gname(conf.top[0].seen))}. Если пара повторяется неделями, её стоит проверить при настройке распознавания протеза (запись жеста заново, положение датчиков).</p>` : '<p class="muted">нет данных в режиме жестов</p>'}
 <h2>Самочувствие (14 последних записей)</h2>
 ${table(['День', 'Боль', 'Усталость', 'Кожа под датчиками', 'Решение', 'Нагрузка', 'Минут'],
-  log.map(l => [ruDate(`${l.day}T12:00:00`), label(PAIN_LEVELS, l.pain), label(FATIGUE_LEVELS, l.fatigue), label(SKIN_LEVELS, l.skin), { go: 'обычный план', light: 'короткий план', stop: 'отдых', skipped: 'пропущено' }[l.action] ?? '—', label(EFFORT_LEVELS, l.effort), l.minutes]))}
+  log.map(l => [ruDate(`${l.day}T12:00:00`), label(PAIN_LEVELS, l.pain), label(FATIGUE_LEVELS, l.fatigue), label(SKIN_LEVELS, l.skin), l.decision, label(EFFORT_LEVELS, l.effort), l.minutes]))}
 <h2>Последние упражнения</h2>
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки', 'Заметка'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '',

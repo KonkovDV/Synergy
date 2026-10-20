@@ -173,7 +173,9 @@ test('«Мастерская»: a carried object that is never opened ends as «
 test('a contraction that never rests does not trap the next «Сейф» digit or the skill check', () => {
   const tense = { command: 'close', relaxed: false, valid: true, a: 0.8, b: 0, intensity: 0.8, level: 0.8, gesture: 'fist' };
   const safe = createGame('safe', { levelNumber: 1, scheme: 'proportional', seed: 1 });
-  for (let i = 0; i < (REST_GIVE_UP_S + 0.2) * 60; i++) safe.update(1 / 60, tense, null);
+  for (let i = 0; i < 3.2 * 60; i++) safe.update(1 / 60, tense, null);
+  assert.match(safe.hint, /не ошибка/, 'a muscle that will not relax is not blamed, and the next step is named');
+  for (let i = 0; i < (REST_GIVE_UP_S - 3) * 60; i++) safe.update(1 / 60, tense, null);
   assert.equal(safe.code[0].rest, true);
   assert.equal(safe.index, 1);
   assert.equal(safe.wrongTime, 0, 'a digit that never started is not a wrong gesture');
