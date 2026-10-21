@@ -12,7 +12,7 @@ import { bleSupported } from '../input/ble.js';
 import { createTwoChannelPads } from './controls.js';
 import { picture } from './pictures.js';
 import { fmtOffset } from './audiosync.js';
-import { hashPin, validPin, pinGateScreen } from './pin.js';
+import { hashPin, pinConfirmed, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { MAX_BACKUP_BYTES } from '../core/storage.js';
 import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK, GRIP_SWITCH } from '../config.js';
@@ -94,14 +94,20 @@ export function settingsScreen(app, { back = null } = {}) {
   };
 
   const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'new-password', placeholder: '4–6 цифр', 'aria-label': 'Новый PIN родителя' });
+  const pinAgain = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'new-password', placeholder: 'ещё раз', 'aria-label': 'Повторите PIN' });
+  const savePin = () => {
+    const verdict = pinConfirmed(pinInput.value, pinAgain.value);
+    if (verdict === 'short') { toast('Оба поля — от 4 до 6 цифр', 'bad'); return; }
+    if (verdict === 'mismatch') { toast('PIN не совпал. Введите его дважды', 'bad'); pinAgain.value = ''; pinAgain.focus(); return; }
+    app.updateSettings({ parentPin: hashPin(pinInput.value), pinLock: { fails: 0, until: 0 } });
+    app.pinOk = true; pinInput.value = ''; pinAgain.value = ''; toast('PIN установлен', 'good');
+  };
   const childBox = h('div', { hidden: s.audience !== 'child' },
     h('label', { class: 'row' }, h('span', {}, 'PIN родителя для настроек', h('small', {}, s.parentPin ? 'установлен' : 'не установлен')), pinInput),
+    h('label', { class: 'row' }, h('span', {}, 'Повторите PIN', h('small', {}, 'так опечатка не закроет настройки')), pinAgain),
     h('div', { class: 'row-actions' },
-      h('button', { class: 'btn ghost', onclick: () => {
-        if (!validPin(pinInput.value)) { toast('PIN — от 4 до 6 цифр', 'bad'); return; }
-        app.updateSettings({ parentPin: hashPin(pinInput.value), pinLock: { fails: 0, until: 0 } }); app.pinOk = true; pinInput.value = ''; toast('PIN установлен', 'good');
-      } }, 'Сохранить PIN'),
-      s.parentPin ? h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ parentPin: '' }); toast('PIN снят'); app.go('settings'); } }, 'Снять PIN') : null));
+      h('button', { class: 'btn ghost', onclick: savePin }, 'Сохранить PIN'),
+      s.parentPin ? h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Снять PIN? Настройки снова откроются без кода.')) return; app.updateSettings({ parentPin: '' }); toast('PIN снят'); app.go('settings'); } }, 'Снять PIN') : null));
 
   const node = h('div', { class: 'screen settings' },
     h('main', { class: 'scroll' },

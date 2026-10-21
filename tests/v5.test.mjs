@@ -12,7 +12,7 @@ import { assessmentTrials, FITTS } from '../src/games/assess.js';
 import { PLAN_CATALOG, GAMES } from '../src/games/registry.js';
 import { parseExternal } from '../src/input/bridge.js';
 import { LineAssembler } from '../src/input/ble.js';
-import { hashPin, validPin } from '../src/ui/pin.js';
+import { hashPin, validPin, pinConfirmed } from '../src/ui/pin.js';
 import { reportHtml, reportCsv, escapeHtml, reminderIcs } from '../src/services/report.js';
 import { play } from './helpers.mjs';
 import { guidanceFor, showsFeedback } from '../src/core/guidance.js';
@@ -162,9 +162,13 @@ test('external input: oversized messages and BLE chunking', () => {
   l.push('x'.repeat(600)); assert.equal(l.buffer, '', 'garbage without newlines is dropped');
 });
 
-test('parent PIN: 4 digits, stored as a hash', () => {
+test('parent PIN: 4 digits, stored as a hash, saved only when typed twice', () => {
   assert.ok(validPin('0420')); assert.ok(!validPin('42')); assert.ok(!validPin('abcd'));
   assert.equal(hashPin('1234'), hashPin('1234')); assert.notEqual(hashPin('1234'), hashPin('1243')); assert.ok(!hashPin('1234').includes('1234'));
+  assert.equal(pinConfirmed('1234', '1234'), 'ok');
+  assert.equal(pinConfirmed('1234', '1235'), 'mismatch');
+  assert.equal(pinConfirmed('1234', ''), 'short');
+  assert.equal(pinConfirmed('12', '12'), 'short');
 });
 
 test('report: HTML escaping and CSV formula guard', () => {
