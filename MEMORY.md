@@ -315,6 +315,10 @@ python tools/import-art.py --src ../SYNERGY_GRAPHICS --sheets ../art-qa   # 5.16
 
 На Windows (5.16): APK — `"C:\Program Files\Git\bin\bash.exe" -lc "cd /c/…/synergy && sh tools/build-apk.sh"`; BlueStacks — `HD-Adb.exe` из папки BlueStacks (системный `adb` без своих DLL не запускается). Файлы с кириллицей правьте Node или редактором, не `Get-Content`/`Set-Content` PowerShell 5 (читают UTF-8 как Windows-1251).
 
+## Статус на 21.10.2026 (v5.26.0)
+
+- ✅ 5.26.0 — версия для жюри: из приложения и шаблона коммита убраны служебные следы инструментов. Отчёт об ИИ остаётся, без имён моделей. APK `versionCode` 35.
+
 ## Статус на 21.10.2026 (v5.25.2)
 
 - ✅ 5.25.2 — ответ жюри в самой игре: «Спросить Мио» → «Почему нет монет, энергии и грустной птицы?». Эти механики балл не поднимают: они наказывают пропуск. APK `versionCode` 34.
