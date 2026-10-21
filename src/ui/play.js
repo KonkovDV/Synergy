@@ -107,7 +107,9 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     const caution = demo ? null : freePlayCaution({ checkin: app.checkin(), secondsToday: secondsToday(app.profile, dayKey()), softCapMin: app.rules.softCapMin });
     const legend = s.scheme === SCHEME.GESTURE
       ? gestureLegend()
-      : 'A — сжатие · B — раскрытие · A+B разом — коактивация (смена хвата) · покой — протез держит';
+      : s.gripSwitch === 'co'
+        ? 'A — сжатие · B — раскрытие · A+B разом — коактивация (смена хвата) · покой — протез держит'
+        : `A — сжатие · B — раскрытие · снова B у раскрытой кисти ${String(s.holdOpenS).replace('.', ',')} с — смена хвата · A+B — коактивация · покой — протез держит`;
     overlay.replaceChildren(h('div', { class: 'sheet' },
       h('p', { class: 'eyebrow' }, `${SCHEME_INFO[s.scheme].mode}${retention ? ' · без подсказки' : ''}`),
       // 5.16: before the weekly skill check Мио is focused with the player (the illustrations' «перед проверкой»).

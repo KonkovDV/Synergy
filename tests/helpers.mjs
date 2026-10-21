@@ -6,11 +6,12 @@ import { EmgEmulator } from '../src/input/emulator.js';
 import { SignalPipeline } from '../src/core/signal.js';
 import { BionicHand } from '../src/core/hand.js';
 
-export function play(id, { scheme, levelNumber, realism = 0.5, seed = 3, autopilot = true, retention = false, maxS = 240, onThreshold }) {
+export function play(id, { scheme, levelNumber, realism = 0.5, seed = 3, autopilot = true, retention = false, maxS = 240, onThreshold, switchMode }) {
   const game = createGame(id, { levelNumber, scheme, seed, retention, onThreshold });
   const emulator = new EmgEmulator({ realism, seed });
   const params = onThreshold === undefined ? {} : { onThreshold };
-  const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme, params }), hand: new BionicHand(), source: emulator, emulator, autopilot });
+  const hand = new BionicHand(switchMode ? { switchMode } : {});
+  const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme, params }), hand, source: emulator, emulator, autopilot });
   const dt = 1 / 60;
   for (let t = 0; !game.done && t < maxS * 1000; t += dt * 1000) runner.step(t, dt);
   assert.ok(game.done, `${id} L${levelNumber} ${scheme} did not finish`);

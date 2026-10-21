@@ -111,7 +111,9 @@ export class GripGame extends Game {
       o.needSwitchAt ??= this.time;
       this.hint = this.scheme === SCHEME.GESTURE
         ? `Покажите жест «${GRIP_NAME[o.grip]}» при раскрытой кисти`
-        : `Нужен хват «${GRIP_NAME[o.grip]}»: раскройте кисть, затем коактивация (A+B разом), затем покой`;
+        : hand.switchMode === 'open'
+          ? `Нужен хват «${GRIP_NAME[o.grip]}»: раскройте кисть, отпустите и снова держите B ${String(hand.holdOpenS).replace('.', ',')} с`
+          : `Нужен хват «${GRIP_NAME[o.grip]}»: раскройте кисть, затем коактивация (A+B разом), затем покой`;
     } else if (o.overClosed) {
       this.hint = this.say('Кисть уже сжата — сначала раскройте её (B)', `Кисть уже сжата — сначала «${OPENING_GESTURE.name}»`);
     } else {
@@ -180,8 +182,10 @@ export class GripGame extends Game {
     const center = (o.min + o.max) / 2;
     if (o.phase === 'carry') return o.heavy && hand.force < o.min + 0.06 ? this.closeTarget(center + 0.05, o.grip) : this.restTarget();
     if (hand.grip !== o.grip || o.overClosed) {
-      if (hand.force > 0 || hand.closure > 0.3) return this.openTarget(0.7);
+      const open = this.scheme !== SCHEME.GESTURE && hand.switchMode === 'open';
+      if (hand.force > 0 || hand.closure > (open ? 0 : 0.3)) return this.openTarget(0.7);
       if (this.scheme === SCHEME.GESTURE) return { gesture: o.grip, effort: 0.3 };
+      if (open) return hand.grip === o.grip ? this.restTarget() : hand.openReady ? this.openTarget(0.7) : { a: 0, b: 0 }; // let go, then open again
       if (!hand.armed) return { a: 0, b: 0 };
       return { a: 0.75, b: 0.75 };
     }

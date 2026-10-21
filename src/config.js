@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.22.0',
+  version: '5.23.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -145,6 +145,15 @@ export const TEXT_SCALES = [1, 1.15, 1.3];
  * unlocking with a co-contraction held this long; the time is the player's setting, to match their prosthesis.
  */
 export const LOCK = { holdDefaultS: 1, minS: 0.3, maxS: 3, stepS: 0.1 };
+
+/**
+ * Grip switching (5.23). Motorica's prosthesis takes the next gesture when the hand is fully open and the opening
+ * signal is given again for longer than «peak length»; co-contraction there is the lock (the Motorica Start manual:
+ * app/src/main/res/values/strings.xml of github.com/HakerFromRussia-XD/2_Android_bluetooth_master_stradivary). Other
+ * hands switch by co-contraction. The default follows the customer's prosthesis; the hold is our choice — the manual
+ * gives no default.
+ */
+export const GRIP_SWITCH = { defaultMode: 'open', holdDefaultS: 0.8, minS: 0.3, maxS: 2, stepS: 0.1 };
 
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 

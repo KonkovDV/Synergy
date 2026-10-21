@@ -200,6 +200,11 @@
 | Блокировка: удержание, минимум в настройке, с | `0.3` | `src/config.js:LOCK.minS` |
 | Блокировка: удержание, максимум в настройке, с | `3` | `src/config.js:LOCK.maxS` |
 | Блокировка: шаг настройки, с | `0.1` | `src/config.js:LOCK.stepS` |
+| Смена хвата по умолчанию: снова раскрытие у раскрытой кисти (как у «Моторики») | `"open"` | `src/config.js:GRIP_SWITCH.defaultMode` |
+| Смена хвата: удержание повторного раскрытия по умолчанию, с | `0.8` | `src/config.js:GRIP_SWITCH.holdDefaultS` |
+| Смена хвата: удержание, минимум в настройке, с | `0.3` | `src/config.js:GRIP_SWITCH.minS` |
+| Смена хвата: удержание, максимум в настройке, с | `2` | `src/config.js:GRIP_SWITCH.maxS` |
+| Смена хвата: шаг настройки, с | `0.1` | `src/config.js:GRIP_SWITCH.stepS` |
 | Порог включения канала | `0.22` | `src/config.js:SIGNAL.onThreshold` |
 | Жар-птица: имя по умолчанию | `"Искра"` | `src/config.js:PET.defaultName` |
 | Жар-птица: яйцо, дней | `0` | `src/config.js:PET.stages[0].from` |
