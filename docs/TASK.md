@@ -37,7 +37,7 @@
 
 ## Публичные данные кейса (API Codenrock, прочитано 19.10.2026, сверено 21.10.2026)
 
-Источники: [страница](https://codenrock.com/contests/motorika-kod-dvizheniya), [API](https://codenrock.com/api/contests/motorika-kod-dvizheniya), [этапы](https://codenrock.com/api/contests/motorika-kod-dvizheniya/stages). Подробности и выводы — `docs/RESEARCH.md` §9 и §14.
+Источники: [страница](https://codenrock.com/contests/motorika-kod-dvizheniya), [API](https://codenrock.com/api/contests/motorika-kod-dvizheniya), [этапы](https://codenrock.com/api/contests/motorika-kod-dvizheniya/stages). Подробности и выводы — `docs/RESEARCH.md` §9, §14 и §16. Страница 21.10.2026 показывает призы и несколько разных часов; срок разработки берём из правил, не из витрины.
 
 | Что | Статус |
 |---|---|
@@ -52,4 +52,5 @@
 | Механики проверяются на эмуляторе | из публичных данных |
 | `submissionAttempts: 1` в настройках трека | из API; смысл («одна попытка загрузки»?) — **вопрос организатору** |
 | Жюри и пять критериев | не опубликованы |
+| Призы на витрине страницы: 500 000 / 300 000 / 200 000 ₽ | прочитано 21.10.2026; в цитате правил выше этого нет |
 
