@@ -120,3 +120,17 @@ test('design: every badge named in the interface exists in the catalog (no silen
   assert.deepEqual([...named].filter(n => !known.has(n)), []);
 });
 
+// 5.24 — a mint ring on a white card is about 1.7:1. Keyboard focus has to change those pixels by ≥ 3:1
+// (WCAG 2.4.7 in practice, 2.4.13's contrast). The ring is the text colour of the theme.
+test('design: the keyboard focus ring contrasts at ≥ 3:1; the mint accent on white does not', () => {
+  assert.ok(contrast('#16e182', '#ffffff') < 3, 'mint on white is the ring this release replaced');
+  for (const [name, theme] of [['light', LIGHT], ['dark', DARK], ['high contrast', HC]]) {
+    for (const bg of ['bg', 'card', 'bg2']) {
+      const ratio = contrast(theme.focus, theme[bg]);
+      assert.ok(ratio >= 3, `${name}: --focus on ${bg} is ${ratio.toFixed(2)}`);
+    }
+  }
+  assert.equal(css.includes('outline: 3px solid var(--accent)'), false);
+  assert.match(css, /\.btn\.primary:disabled \{[^}]*opacity: 1/);
+});
+

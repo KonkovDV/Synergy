@@ -3,7 +3,7 @@
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, BRIDGE_STATUS, icon } from './widgets.js';
-import { SCHEME_INFO } from '../core/vocabulary.js';
+import { SCHEME_INFO, twoChannelControls } from '../core/vocabulary.js';
 import { CalibrationRecorder, CALIBRATION_STEPS } from '../core/calibration.js';
 import { defaultCalibration } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
@@ -75,6 +75,23 @@ export function settingsScreen(app, { back = null } = {}) {
   };
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); };
+  // Two-channel laws only. Switching the grip method shows or hides the hold time without rebuilding the screen
+  // (a rebuild would fold this section shut).
+  const twoChannelSensitivity = () => {
+    const hold = sliderRow('Смена хвата: удержание B', { min: GRIP_SWITCH.minS, max: GRIP_SWITCH.maxS, step: GRIP_SWITCH.stepS, value: s.holdOpenS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ holdOpenS: Math.round(v * 10) / 10 }) });
+    const openNote = h('p', { class: 'note', hidden: s.gripSwitch !== 'open' }, 'В протезах «Моторики» хват меняется так: кисть раскрыта до конца, раскрытие отпущено и подано снова дольше этого времени. Это «peak length» в приложении протеза — его настраивает протезист. A+B там — блокировка.');
+    const coNote = h('p', { class: 'note', hidden: s.gripSwitch === 'open' }, 'Сейчас хват меняет коактивация A+B. В протезах «Моторики» хват меняет повторное раскрытие, а A+B — блокировка. Время удержания появится, если выбрать «Снова раскрыть».');
+    if (s.gripSwitch !== 'open') hold.hidden = true;
+    const pick = v => { app.updateSettings({ gripSwitch: v }); hold.hidden = v !== 'open'; openNote.hidden = v !== 'open'; coNote.hidden = v === 'open'; };
+    return [
+      sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); meter.setThresholds(); } }),
+      sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }) }),
+      h('p', { class: 'note' }, 'Время удержания для блокировки — как в приложении вашего протеза; его настраивает протезист.'),
+      h('div', { class: 'row' }, h('span', {}, 'Смена хвата'),
+        segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, pick, 'Смена хвата')),
+      hold, openNote, coNote,
+    ];
+  };
 
   const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'new-password', placeholder: '4–6 цифр', 'aria-label': 'Новый PIN родителя' });
   const childBox = h('div', { hidden: s.audience !== 'child' },
@@ -108,16 +125,11 @@ export function settingsScreen(app, { back = null } = {}) {
       section('Чувствительность',
         h('p', { class: 'note' }, 'Это пороги игры. Настройки протеза они не меняют: их меняет протезист в приложении протеза.'),
         sliderRow('Порог включения канала', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); meter.setThresholds(); } }),
-        sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); meter.setThresholds(); } }),
-        // 5.14 — the lock of the prosthesis (Motorica Start: both sensors held for 0.1–10 s): «Первые шаги» teach it
-        // with the same hold as the person's prosthesis.
-        sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }) }),
-        h('p', { class: 'note' }, 'Время удержания для блокировки — как в приложении вашего протеза; его настраивает протезист.'),
-        // 5.23 — the grip switch of the person's prosthesis: Motorica's opens again at full opening (GRIP_SWITCH).
-        h('div', { class: 'row' }, h('span', {}, 'Смена хвата'),
-          segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, v => app.updateSettings({ gripSwitch: v }), 'Смена хвата')),
-        sliderRow('Смена хвата: удержание B', { min: GRIP_SWITCH.minS, max: GRIP_SWITCH.maxS, step: GRIP_SWITCH.stepS, value: s.holdOpenS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ holdOpenS: Math.round(v * 10) / 10 }) }),
-        h('p', { class: 'note' }, 'В протезах «Моторики» хват меняется так: кисть раскрыта до конца, раскрытие отпущено и подано снова дольше этого времени. Это «peak length» в приложении протеза — его настраивает протезист. A+B там — блокировка.'),
+        // 5.24 — co-contraction, the lock and the grip switch do nothing in the gesture scheme (the grip is the gesture).
+        // Showing them asked the person to tune a control that never fired (W3C COGA). The saved values stay.
+        ...(twoChannelControls(s.scheme) ? twoChannelSensitivity() : [
+          h('p', { class: 'note' }, 'Схема жестов: хват выбирает сам жест. Порог коактивации, блокировка и смена хвата — для двух каналов. Значения сохранены и вернутся, если выбрать другую схему.'),
+        ]),
         h('p', { class: 'note' }, 'Проверка вживую — напрягите мышцы или используйте площадки ниже:'),
         meter.node,
         s.source === 'touch' && s.scheme !== 'gesture' ? createTwoChannelPads(app.emulator) : null,

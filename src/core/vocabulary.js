@@ -27,6 +27,15 @@ export const SCHEME_INFO = {
 };
 
 /**
+ * Co-contraction threshold, the prosthesis lock and the grip switch are laws of the two channels.
+ * The gesture scheme selects the grip by the gesture itself, so those controls do not apply (5.24, W3C COGA:
+ * do not show a control that does not change anything).
+ */
+export function twoChannelControls(scheme) {
+  return scheme === SCHEME.THRESHOLD || scheme === SCHEME.PROPORTIONAL;
+}
+
+/**
  * Seven gestures: rest + six active gestures (Omni Hand recognizes up to six «phantom» gestures).
  * THE ONLY PLACE the gesture set is defined: games, tutorial, legend, skill check, emulator and analytics
  * derive from it (replacement checklist — docs/INTEGRATION.md, «Замена набора жестов»).
