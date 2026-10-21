@@ -15,6 +15,11 @@ import { GAMES, createGame } from '../src/games/registry.js';
 import { GameRunner } from '../src/games/runner.js';
 import { EmgEmulator } from '../src/input/emulator.js';
 import { BionicHand } from '../src/core/hand.js';
+import { acquireDistLock } from '../tools/dist-lock.mjs';
+
+// Held for the whole file: the second test reads the worker the first one built, and another file must not wipe dist/.
+const releaseDist = acquireDistLock();
+process.on('exit', releaseDist);
 
 /** Runs dist/sw.js in a sandbox with an in-memory Cache Storage and a network that is either up or down. */
 function serviceWorker({ online }) {
@@ -51,7 +56,7 @@ function serviceWorker({ online }) {
 }
 
 test('5.27 service worker: a host may open the app offline with a query (?game=…&host=…)', async () => {
-  execFileSync(process.execPath, ['tools/build.mjs'], { stdio: 'pipe' });
+  execFileSync(process.execPath, ['tools/build.mjs'], { stdio: 'pipe', env: { ...process.env, SYNERGY_DIST_OWNER: String(process.pid) } });
   const sw = serviceWorker({ online: false });
   await sw.install();
   const launch = await sw.get('index.html?game=grip&level=2&host=https%3A%2F%2Fapp.example', 'navigate');

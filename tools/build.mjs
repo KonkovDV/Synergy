@@ -3,11 +3,24 @@ import { build } from 'esbuild';
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { acquireDistLock } from './dist-lock.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-rmSync(dist, { recursive: true, force: true });
+// A test file that already holds the lock (it reads dist/ after this process exits) passes its pid.
+const lockNote = (() => { try { return readFileSync(join(root, '.dist-build.lock'), 'utf8').trim(); } catch { return ''; } })();
+const heldByParent = !!process.env.SYNERGY_DIST_OWNER && process.env.SYNERGY_DIST_OWNER === lockNote;
+const releaseLock = heldByParent ? () => {} : acquireDistLock();
+const pause = ms => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+try {
+for (let attempt = 0; ; attempt++) {
+  try { rmSync(dist, { recursive: true, force: true }); break; }
+  catch (e) {
+    if ((e.code !== 'EPERM' && e.code !== 'EBUSY') || attempt >= 30) throw e;
+    pause(100);
+  }
+}
 mkdirSync(join(dist, 'icons'), { recursive: true });
 
 const result = await build({
@@ -92,3 +105,4 @@ const standalone = page({
 writeFileSync(join(dist, 'synergy-standalone.html'), standalone);
 const kb = text => (Buffer.byteLength(text) / 1024).toFixed(0);
 console.log(`Built v${pkg.version}: dist/ (${kb(js)} KB JS, ${art.length} pictures) + synergy-standalone.html (${kb(standalone)} KB)`);
+} finally { releaseLock(); }

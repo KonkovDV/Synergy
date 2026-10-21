@@ -2,6 +2,7 @@ node_modules
 tools/.cache/
 android/build/
 dist/
+.dist-build.lock
 __pycache__/
 *.pyc
 .DS_Store
