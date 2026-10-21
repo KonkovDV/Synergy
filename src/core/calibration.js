@@ -1,7 +1,8 @@
 // Calibration — maps raw channel amplitude to 0..1 per user (like per-sensor sensitivity in Motorica Start).
 // Comfortable contraction (≈ 70 % effort, not maximum) becomes 1.0 to avoid fatigue.
 // RestTracker keeps the rest baseline right during a session with real sensors (co-adaptive calibration).
-import { CALIBRATION_ADAPT, SIGNAL } from '../config.js';
+import { CALIBRATION_ADAPT, CALIBRATION_QUALITY, SIGNAL } from '../config.js';
+import { offThreshold } from './signal.js';
 
 export const CALIBRATION_STEPS = [
   { id: 'rest', channel: null, seconds: 3, title: 'Покой', text: 'Положите руку удобно и полностью расслабьте мышцы.' },
@@ -14,6 +15,12 @@ const percentile = (values, p) => {
   if (!values.length) return 0;
   const sorted = [...values].sort((x, y) => x - y);
   return sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1)))];
+};
+
+/** Robust standard deviation: 1.4826 × the median absolute deviation (one outlier — a twitch — does not inflate it). */
+export const robustSd = values => {
+  const m = percentile(values, 0.5);
+  return 1.4826 * percentile(values.map(v => Math.abs(v - m)), 0.5);
 };
 
 export class CalibrationRecorder {
@@ -49,8 +56,16 @@ export class CalibrationRecorder {
     const signal = !issues.length; // without signal the span and the crosstalk say nothing about the muscles
     // A flat channel (electrode off the skin, a dead sensor) is not saved either: its span collapses to ~0 and
     // every ripple of the rest level becomes a full command (5.10 — until then «Сохранить» was offered).
-    const flat = signal ? [0, 1].filter(ch => max[ch] - rest[ch] <= Math.max(1e-6, 0.25 * Math.abs(max[ch]))) : [];
+    // 5.27: «flat» is measured against the channel's own rest noise (CALIBRATION_QUALITY), so a source with an offset
+    // calibrates and a squeeze lost in the rest noise does not.
+    const noise = [0, 1].map(ch => robustSd(restSamples.map(s => s[ch])));
+    const span = [0, 1].map(ch => max[ch] - rest[ch]);
+    const flat = signal ? [0, 1].filter(ch => span[ch] <= Math.max(1e-6, CALIBRATION_QUALITY.flatNoise * noise[ch])) : [];
     flat.forEach(ch => issues.push(`Канал ${ch ? 'B' : 'A'}: напряжение почти не отличается от покоя — проверьте датчик или напрягите мышцу сильнее. Калибровка не сохранена.`));
+    // Rest that ripples up to the switch-off level of the default sensitivity will switch the channel on by itself.
+    const off = offThreshold(SIGNAL.onThreshold);
+    const noisy = signal ? [0, 1].filter(ch => !flat.includes(ch) && CALIBRATION_QUALITY.restPeakNoise * noise[ch] >= off * span[ch]) : [];
+    noisy.forEach(ch => issues.push(`Канал ${ch ? 'B' : 'A'}: в покое сигнал дрожит почти до порога — возможны ложные срабатывания. Проверьте, как прилегает датчик, и повторите калибровку.`));
     const usable = signal && !flat.length;
     // Crosstalk: while contracting A, B should stay well below its own comfortable level.
     const crossA = percentile(this.samples.a.map(s => s[1]), 0.8);

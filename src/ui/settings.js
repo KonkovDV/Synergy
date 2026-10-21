@@ -15,6 +15,7 @@ import { fmtOffset } from './audiosync.js';
 import { hashPin, pinConfirmed, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { MAX_BACKUP_BYTES } from '../core/storage.js';
+import { ELECTRICAL_SAFETY } from '../core/wellbeing.js';
 import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK, GRIP_SWITCH } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
@@ -64,6 +65,9 @@ export function settingsScreen(app, { back = null } = {}) {
     h('p', { class: 'note' }, bleSupported()
       ? 'Датчики ESP32/nRF с сервисом Nordic UART (например, MyoWare 2.0 + беспроводной модуль) — прошивка-пример в bridge/firmware. После подключения выполните калибровку.'
       : 'Bluetooth из браузера работает в Chrome на Android и ПК. В приложении APK и на iOS используйте мост (WebSocket) или нативный pushFrame().'),
+    // 5.27 (medical review): electrodes on the skin are a patient connection. Home-made sensors carry no isolation from
+    // the mains, so the only safe supply is a battery — the reference firmware said so, the screen did not.
+    h('p', { class: 'note warn' }, ELECTRICAL_SAFETY),
     h('p', { class: 'note' }, 'Также принимаются кадры через window.postMessage({type:"synergy-frame", a, b}) и window.Synergy.feed(frame). Формат — docs/INTEGRATION.md.'));
 
   // Progressive disclosure (W3C COGA «help users focus»): everyday sections are open, the rest fold (native <details>).

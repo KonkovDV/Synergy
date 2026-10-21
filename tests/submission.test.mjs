@@ -8,8 +8,45 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { crc32 } from 'node:zlib';
+import { apkSigner } from '../tools/apk-signer.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const VERSION = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+const builtApk = join(root, 'release', `Synergy-${VERSION}.apk`);
+
+/**
+ * A zip of stored (uncompressed) entries — enough for tools/apk-signer.mjs, which reads the central directory.
+ * 5.27: the release files are built, not tracked, so a fresh clone (and the CI jobs, which run `npm test` before
+ * tools/build-apk.sh, or never build an APK at all — Windows) had none and three tests of this file failed.
+ */
+function storedZip(entries) {
+  const locals = [], centrals = [];
+  let offset = 0;
+  for (const [name, data] of entries) {
+    const n = Buffer.from(name), crc = crc32(data);
+    const local = Buffer.alloc(30 + n.length);
+    local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(10, 4); local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(data.length, 18); local.writeUInt32LE(data.length, 22); local.writeUInt16LE(n.length, 26); n.copy(local, 30);
+    const central = Buffer.alloc(46 + n.length);
+    central.writeUInt32LE(0x02014b50, 0); central.writeUInt16LE(20, 4); central.writeUInt16LE(10, 6); central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(data.length, 20); central.writeUInt32LE(data.length, 24); central.writeUInt16LE(n.length, 28);
+    central.writeUInt32LE(offset, 42); n.copy(central, 46);
+    locals.push(local, data); centrals.push(central);
+    offset += local.length + data.length;
+  }
+  const cd = Buffer.concat(centrals), end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(entries.length, 8); end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(cd.length, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, cd, end]);
+}
+
+/** An APK-shaped zip signed by `subject` and padded to `bytes`, so the size quoted in the documents still matches. */
+function fakeApk(subject, bytes = 0) {
+  const cert = Buffer.from(`fake PKCS#7 block, CN=${subject}`);
+  const head = storedZip([['META-INF/CERT.RSA', cert]]).length + 46 + 30 + 2 * 'assets/pad.bin'.length;
+  return storedZip([['META-INF/CERT.RSA', cert], ['assets/pad.bin', Buffer.alloc(Math.max(0, bytes - head))]]);
+}
 const git = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=gate', '-c', 'user.email=gate@test', ...args], { cwd, encoding: 'utf8' });
 
 function copyRepo() {
@@ -22,10 +59,23 @@ function copyRepo() {
   return dir;
 }
 
-/** The release files are built, not tracked (5.17): the copy gets them the way the archive does (tools/pack.sh). */
+/**
+ * The release files are built, not tracked (5.17): the copy gets them the way the archive does (tools/pack.sh). When
+ * this version is not built here (a fresh clone, CI before tools/build-apk.sh, Windows CI), the copy gets stand-ins of
+ * the size docs/evidence.json records: a debug-signed APK and a page. The gate then sees «another build» (5.27: a
+ * warning in a draft, an error in the strict gate — CI cannot rebuild the team's binary byte for byte).
+ */
 function copyRelease(dir) {
   mkdirSync(join(dir, 'release'), { recursive: true });
-  for (const f of readdirSync(join(root, 'release')).filter(f => /\.(apk|html)$/.test(f))) copyFileSync(join(root, 'release', f), join(dir, 'release', f));
+  if (existsSync(builtApk)) {
+    for (const f of readdirSync(join(root, 'release')).filter(f => /\.(apk|html)$/.test(f))) copyFileSync(join(root, 'release', f), join(dir, 'release', f));
+    return;
+  }
+  const ev = JSON.parse(readFileSync(join(root, 'docs/evidence.json'), 'utf8'));
+  // No APK of this version recorded anywhere yet (the toolchain could not be fetched): the size the pitch quotes.
+  const quotedKb = Number(readFileSync(join(root, 'docs/PITCH.md'), 'utf8').match(/APK[^\n|]{0,24}?(\d+)\s*КБ/)?.[1] ?? 0);
+  writeFileSync(join(dir, 'release', `Synergy-${VERSION}.apk`), fakeApk('Synergy Debug', ev.apk?.bytes ?? quotedKb * 1024));
+  writeFileSync(join(dir, 'release', 'synergy-standalone.html'), '<!doctype html><title>stand-in</title>');
 }
 
 // Built from parts: the gate lints every tracked file, this one included.
@@ -45,6 +95,13 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
   try {
     const clean = gate(dir);
     assert.equal(clean.status, 0, clean.stdout);
+    if (!existsSync(builtApk)) {
+      // A stand-in APK is «another build»: the draft (CI) warns, the strict gate before the upload refuses it.
+      assert.ok(clean.stdout.includes('APK другой сборки'), clean.stdout);
+      const strict = spawnSync(process.execPath, ['tools/check-submission.mjs', '--no-tests'], { cwd: dir, encoding: 'utf8' });
+      assert.equal(strict.status, 1, strict.stdout);
+      assert.match(strict.stdout, /APK другой сборки/);
+    }
     const version = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).version;
     const cases = [
       ['no APK', () => rmSync(join(dir, 'release', `Synergy-${version}.apk`)), `нет release/Synergy-${version}.apk`],
@@ -96,10 +153,21 @@ test('submission gate: a published set must equal vocabulary.js', () => {
   }
 });
 
-test('APK signer: the release APK of a draft carries the local debug key — the strict gate refuses it (Red Team C-1)', async () => {
-  const { apkSigner } = await import('../tools/apk-signer.mjs');
-  const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
-  const sig = apkSigner(`release/Synergy-${version}.apk`);
+test('APK signer: a debug key, the team key and no signature are told apart (Red Team C-1)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'synergy-apk-'));
+  try {
+    const at = (name, buf) => { const f = join(dir, name); writeFileSync(f, buf); return f; };
+    assert.deepEqual(apkSigner(at('debug.apk', fakeApk('Synergy Debug'))), { signed: true, debug: true });
+    assert.deepEqual(apkSigner(at('team.apk', fakeApk('Synergy Team'))), { signed: true, debug: false });
+    assert.deepEqual(apkSigner(at('none.apk', storedZip([['AndroidManifest.xml', Buffer.from('<manifest/>')]]))), { signed: false, debug: false });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('APK signer: the release APK of a draft carries the local debug key — the strict gate refuses it (Red Team C-1)', t => {
+  if (!existsSync(builtApk)) { t.skip(`release/Synergy-${VERSION}.apk is not built here: sh tools/build-apk.sh`); return; }
+  const sig = apkSigner(builtApk);
   assert.equal(sig.signed, true);
   assert.equal(sig.debug, true, 'built by tools/build-apk.sh with the debug key; the team key comes from release.yml');
 });

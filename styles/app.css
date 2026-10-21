@@ -382,6 +382,10 @@ h2 { font-weight: 800; letter-spacing: -0.2px }
 .card h2 { display: flex; align-items: center; gap: 8px }
 .pill { background: var(--tint-green); color: var(--accent-ink); font-weight: 800; padding: 3px 11px }
 .with-art { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px } /* the text column shrinks and wraps */
+/* 5.27 — the heading's text is an anonymous grid item: its minimum is its longest word. Where the browser has no
+   hyphenation dictionary (Linux headless Chromium has none) «Самочувствие» at 200 % text ran past 320 px; with one it
+   hyphenates as before. The last resort of 200 % text, as for the other headings below. */
+h2.with-art { overflow-wrap: anywhere }
 .with-art .art { width: 1.75rem; height: 1.75rem }
 .tinted { position: relative; overflow: hidden; background: var(--tint); border-color: transparent }
 .tinted::after { content: ''; position: absolute; right: -36px; bottom: -48px; width: 128px; height: 128px; border-radius: 50%; background: var(--deco); pointer-events: none }

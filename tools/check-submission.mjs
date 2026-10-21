@@ -33,7 +33,8 @@ if (existsSync(apk)) {
   if (!sig.signed) fail(`release/Synergy-${version}.apk не подписан`);
   else if (sig.debug) (draft ? warn : fail)(`APK подписан отладочным ключом — для раздачи соберите релиз с ключом команды (release.yml, секреты KEYSTORE_*)`);
 }
-const stale = readdirSync(join(root, 'release')).filter(f => f.endsWith('.apk') && f !== `Synergy-${version}.apk`);
+// 5.27: a fresh clone has no release/ at all — report the missing files above, do not crash on reading the folder.
+const stale = existsSync(join(root, 'release')) ? readdirSync(join(root, 'release')).filter(f => f.endsWith('.apk') && f !== `Synergy-${version}.apk`) : [];
 if (stale.length) fail(`старые APK в release/: ${stale.join(', ')}`);
 
 // 2. Numbers quoted in the pitch documents match reality (no \b after Cyrillic: it is ASCII-only, PLAN C.1.1).
@@ -59,7 +60,9 @@ for (const doc of NUMBER_DOCS) {
   else {
     if (ev.version !== version) fail(`docs/evidence.json: версия ${ev.version}, а ${version} — node tools/evidence.mjs`);
     if (tests !== null && ev.tests?.total !== tests) fail(`docs/evidence.json: тестов ${ev.tests?.total}, а ${tests} — node tools/evidence.mjs`);
-    if (existsSync(apk) && ev.apk?.sha256 !== createHash('sha256').update(readFileSync(apk)).digest('hex')) fail('docs/evidence.json: APK другой сборки — node tools/evidence.mjs');
+    // 5.27: CI rebuilds the APK with its own throwaway debug key, so its bytes never equal the team's build the
+    // evidence names — in a draft (CI) that is a warning; the strict gate before the upload still refuses it.
+    if (existsSync(apk) && ev.apk?.sha256 !== createHash('sha256').update(readFileSync(apk)).digest('hex')) (draft ? warn : fail)('docs/evidence.json: APK другой сборки — node tools/evidence.mjs');
     const block = readmeBlock(read('README.md'));
     if (block === null) fail('README.md: нет таблицы <!-- evidence:begin --> … <!-- evidence:end -->');
     else if (block !== renderTable(ev).trim()) fail('README.md: таблица «Главное» расходится с docs/evidence.json — node tools/evidence.mjs');

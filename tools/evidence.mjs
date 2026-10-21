@@ -33,7 +33,9 @@ export function renderTable(e) {
     ['Раскладка', l ? `${l.states} ${plural(l.states, ['состояние', 'состояния', 'состояний'])} × ${l.viewports} ${plural(l.viewports, ['экран', 'экрана', 'экранов'])} × текст 100/130/200 % = ${l.combinations} — ${l.findings} ${plural(l.findings, ['находка', 'находки', 'находок'])} (${day(l.at)})` : 'не измерено', '`npm run audit:layout`'],
     ['Контраст', 'каждая пара цветов ≥ 4,5:1 в трёх темах', '`tests/design.test.mjs`'],
     ['Графика', e.art ? `${e.art.pictures} иллюстраций, ${mb(e.art.bytes)} МБ, у каждой есть место на экране` : '—', '`docs/ART.md`, `tests/v516.test.mjs`'],
-    ['Офлайн', e.apk && e.html ? `APK ${e.apk.kb} КБ, HTML ${mb(e.html.bytes)} МБ, без сети и аккаунта` : 'нет файлов выпуска', '`release/`, `docs/evidence.json`'],
+    // 5.27: a build without the APK (the Android toolchain could not be fetched) says what exists and what is missing.
+    ['Офлайн', e.apk && e.html ? `APK ${e.apk.kb} КБ, HTML ${mb(e.html.bytes)} МБ, без сети и аккаунта`
+      : e.html ? `HTML ${mb(e.html.bytes)} МБ, без сети и аккаунта; APK этой версии ещё не собран (\`sh tools/build-apk.sh\`)` : 'нет файлов выпуска', '`release/`, `docs/evidence.json`'],
   ];
   return ['| Главное | Цифра | Где проверить |', '|---|---|---|', ...rows.map(r => `| ${r.join(' | ')} |`)].join('\n');
 }

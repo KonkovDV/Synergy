@@ -16,7 +16,8 @@ const TRIPOD = "{ id: 'tripod', name: 'Трипод', command: 'close', grip: 't
 
 const tmp = mkdtempSync(join(tmpdir(), 'synergy-drill-'));
 try {
-  for (const dir of ['src', 'tests', 'public', 'styles']) cpSync(join(root, dir), join(tmp, dir), { recursive: true }); // styles: the design tokens test (5.12)
+  // styles: the design tokens test (5.12); bridge: the reference firmware test (5.27)
+  for (const dir of ['src', 'tests', 'public', 'styles', 'bridge']) cpSync(join(root, dir), join(tmp, dir), { recursive: true, filter: src => !src.includes('__pycache__') });
   // Tests of the servers and the build read tools/ and index.html (5.10–5.11); the tool cache (131 MB, a key) stays out.
   cpSync(join(root, 'tools'), join(tmp, 'tools'), { recursive: true, filter: src => !src.includes(`${join('tools', '.cache')}`) });
   // The APK resources the launcher-icon test reads (5.16), without the built APK.

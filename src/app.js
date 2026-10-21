@@ -5,11 +5,11 @@ import { SignalPipeline } from './core/signal.js';
 import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
-import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile, assessmentStatus, weekIndex, trainingDays } from './core/progress.js';
+import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile, assessmentStatus, weekIndex, trainingDays, recordDayNote } from './core/progress.js';
 import { missionOffers } from './core/missions.js';
 import { guidanceFor } from './core/guidance.js';
 import { FpsGuard } from './core/fps.js';
-import { CHECKIN_ACTION, needsCheckin, safetyOutdated, checkinLight } from './core/wellbeing.js';
+import { CHECKIN_ACTION, needsCheckin, safetyOutdated, checkinLight, electrodesOff, painStopDuring, PAIN_STOP_TEXT } from './core/wellbeing.js';
 import { exportState, importState } from './core/storage.js';
 import { buildShowcaseState } from './core/showcase.js';
 import { EmgEmulator } from './input/emulator.js';
@@ -279,7 +279,7 @@ export class App {
     if (this.settings.source === 'bridge') {
       this.ble?.disconnect(); this.ble = null;
       this.bridge?.stop();
-      this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s), swap: () => this.settings.swapChannels });
+      this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s), swap: () => this.settings.swapChannels, hostOrigin: this.launch?.hostOrigin ?? null });
       this.bridge.start();
     } else if (this.bridge) {
       this.ble?.disconnect(); this.ble = null;
@@ -294,7 +294,7 @@ export class App {
    * external, BridgeSource hears the frames itself (no frame is fed twice).
    */
   onHostCommand(e) {
-    if (!trustedMessageSource(e, window)) return;
+    if (!trustedMessageSource(e, window, this.launch?.hostOrigin ?? null)) return;
     const cmd = parseHostCommand(e.data, gameInfo);
     if (!cmd) return;
     if (cmd.kind === 'ping') { this.notifyReady(); return; }
@@ -385,8 +385,24 @@ export class App {
     return fresh;
   }
 
-  /** Irritated skin under the electrodes: no sensor signal today. The saved source is left as it is. */
-  sensorsPaused() { return this.checkin()?.reason === 'skin'; }
+  /**
+   * Irritated skin under the electrodes: no sensor signal today. The saved source is left as it is. 5.27: also when
+   * severe pain closed the day — the skin answer of that day used to be lost and the sensors stayed on for free play.
+   */
+  sensorsPaused() { return electrodesOff(this.checkin()); }
+
+  /**
+   * «Стало больно» in the pause (5.27, medical review): today closes like a severe-pain answer — no plan, the series is
+   * kept — and the unfinished exercise is not saved. The morning answers stay, marked as pain during the session.
+   * Changing the answer on the check-in screen opens the day again (a mis-tap is not a lost day).
+   */
+  stopForPain() {
+    const today = dayKey();
+    recordDayNote(this.profile, today, { checkin: painStopDuring(this.checkin()) });
+    this.save();
+    this.say(PAIN_STOP_TEXT, { interrupt: true });
+    this.go('home');
+  }
 
   sourceKind() { return this.settings.source === 'bridge' ? 'bridge' : 'touch'; }
 

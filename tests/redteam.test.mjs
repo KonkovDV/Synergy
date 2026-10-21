@@ -111,6 +111,35 @@ test('red team: postMessage frames only from the embedding parent or a native ho
   assert.ok(!trustedMessageSource({ source: {} }, framed));
 });
 
+test('RT-13 (5.27): a host that named itself in ?host= is the only embedding origin the game listens to', () => {
+  const parent = {}, framed = { parent };
+  const host = 'https://app.example';
+  assert.ok(trustedMessageSource({ source: parent, origin: host }, framed, host), 'the declared host');
+  assert.ok(!trustedMessageSource({ source: parent, origin: 'https://evil.example' }, framed, host), 'another site framing the game with someone else’s ?host=');
+  assert.ok(!trustedMessageSource({ source: parent, origin: 'null' }, framed, host), 'a sandboxed frame is not the declared host');
+  assert.ok(trustedMessageSource({ source: null, origin: '' }, framed, host), 'a native WebMessage has no window and no web origin');
+  assert.ok(trustedMessageSource({ source: framed, origin: 'https://game.example' }, framed, host), 'the page itself');
+  assert.ok(trustedMessageSource({ source: parent, origin: 'https://any.example' }, framed), 'no ?host= — any embedding page, as before');
+  const top = { parent: null }; top.parent = top;
+  assert.ok(!trustedMessageSource({ source: {}, origin: host }, top, host), 'an opener tab, even from the host’s origin');
+});
+
+test('RT-13 (5.27): BridgeSource takes posted frames only from the declared host', async () => {
+  const { BridgeSource } = await import('../src/input/bridge.js');
+  const parent = {}, win = { parent, addEventListener() {}, removeEventListener() {} };
+  const saved = globalThis.window;
+  globalThis.window = win;
+  try {
+    const bridge = new BridgeSource({ hostOrigin: 'https://app.example', clock: () => 1000 });
+    bridge.onMessage({ source: parent, origin: 'https://evil.example', data: { type: 'synergy-frame', a: 0.9, b: 0 } });
+    assert.equal(bridge.sample(), null, 'a frame from another origin is dropped');
+    bridge.onMessage({ source: parent, origin: 'https://app.example', data: { type: 'synergy-frame', a: 0.9, b: 0 } });
+    assert.equal(bridge.sample()?.a, 0.9, 'the declared host is heard');
+  } finally {
+    globalThis.window = saved;
+  }
+});
+
 test('RT-12 (5.10): a crafted backup cannot freeze or blank the app — nested progress is checked against the game catalog', async () => {
   const { importState, emptyState } = await import('../src/core/storage.js');
   const { playerLevel } = await import('../src/core/progress.js');
