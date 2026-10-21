@@ -315,6 +315,10 @@ python tools/import-art.py --src ../SYNERGY_GRAPHICS --sheets ../art-qa   # 5.16
 
 На Windows (5.16): APK — `"C:\Program Files\Git\bin\bash.exe" -lc "cd /c/…/synergy && sh tools/build-apk.sh"`; BlueStacks — `HD-Adb.exe` из папки BlueStacks (системный `adb` без своих DLL не запускается). Файлы с кириллицей правьте Node или редактором, не `Get-Content`/`Set-Content` PowerShell 5 (читают UTF-8 как Windows-1251).
 
+## Статус на 21.10.2026 (v5.26.1)
+
+- ✅ 5.26.1 — карточка лаборатории LDA (`docs/MODEL_CARD.md`), практика карточек моделей из репозиториев команды. Синтетика, порог теста выше 0,85, не модель пациента. APK `versionCode` 36.
+
 ## Статус на 21.10.2026 (v5.26.0)
 
 - ✅ 5.26.0 — версия для жюри: из приложения и шаблона коммита убраны служебные следы инструментов. Отчёт об ИИ остаётся, без имён моделей. APK `versionCode` 35.

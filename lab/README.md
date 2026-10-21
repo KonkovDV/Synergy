@@ -9,4 +9,4 @@ pip install -r lab/requirements.txt
 python -m unittest lab/test_lab7.py
 python3 bridge/ws_bridge.py --lab      # поток в игру: Настройки → Внешний → ws://127.0.0.1:8765
 ```
-Только синтетические данные; не модель пациента.
+Только синтетические данные; не модель пациента. Что обещает и чего не обещает — [карточка модели](../docs/MODEL_CARD.md).
