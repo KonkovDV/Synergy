@@ -39,6 +39,8 @@ export function twoChannelControls(scheme) {
  * Seven gestures: rest + six active gestures (Omni Hand recognizes up to six «phantom» gestures).
  * THE ONLY PLACE the gesture set is defined: games, tutorial, legend, skill check, emulator and analytics
  * derive from it (replacement checklist — docs/INTEGRATION.md, «Замена набора жестов»).
+ * The 2022 Motorica/Skillfactory labels (open, grab, ok, gun, single fingers) are optomyography, not EMG.
+ * They stay a hypothesis for 28.10 and are not training data (docs/RESEARCH.md §16).
  * pose = flexion of [thumb, index, middle, ring, little], 0 — straight, 1 — fully bent.
  * command — what the gesture does to the hand; grip — which grip it selects;
  * cue — how to show it (tutorial); introducedAt — «Сейф» level where it first appears.
