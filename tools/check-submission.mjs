@@ -149,7 +149,8 @@ else if (/^не опубликован/i.test(gestureLine)) {
 
 // 3b. Documents name the current release (README kept «Synergy-5.0.0.apk» and a 5.0.0 badge through 5.2.0).
 for (const f of textFiles.filter(f => f.endsWith('.md') && f !== 'CHANGELOG.md')) {
-  for (const m of read(f).matchAll(/Synergy-(\d+\.\d+\.\d+)\.apk|версия-(\d+\.\d+\.\d+)/g)) if ((m[1] ?? m[2]) !== version) fail(`${f}: «${m[0]}», а версия ${version}`);
+  // 5.21: «Границы «Синергии» 5.20.0» stayed in the title of LIMITS.md one release after it changed.
+  for (const m of read(f).matchAll(/Synergy-(\d+\.\d+\.\d+)\.apk|версия-(\d+\.\d+\.\d+)|«Синерги[ия]» (\d+\.\d+\.\d+)/g)) if ((m[1] ?? m[2] ?? m[3]) !== version) fail(`${f}: «${m[0]}», а версия ${version}`);
 }
 
 // 3c. Promises the product makes in its own metadata (5.7): the intended purpose is a training game, not a medical

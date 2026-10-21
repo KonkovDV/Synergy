@@ -2,7 +2,7 @@
 // Hands-free flow: the intro can be confirmed by holding A for 1 s — the phone is in the sound hand,
 // the sensors are on the other arm, so the player should not need to touch the screen to continue.
 import { h, toast } from './dom.js';
-import { signalMeter, icon, handsFreeText, BRIDGE_STATUS } from './widgets.js';
+import { signalMeter, icon, handsFreeText, BRIDGE_STATUS, lostSignalHint } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
 import { COLORS, circle, text } from '../render/draw.js';
@@ -214,7 +214,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     const lost = bridgeMode && session.runner.signalLost && phase === 'running';
     node.classList.toggle('lost', lost);
     // The countdown goes to the live hint too: a screen-reader user without the app's own voice hears it (5.10).
-    const hintText = lost ? 'Нет сигнала от источника — упражнение на паузе, прогресс сохранён'
+    const hintText = lost ? lostSignalHint(app.bridge?.status)
       : phase === 'countdown' ? `Старт через ${Math.max(1, Math.ceil(countdown))}… расслабьтесь`
       : retention && phase === 'running' ? 'Без подсказки: доверьтесь ощущениям' : session.game.hint;
     if (hint.textContent !== hintText) hint.textContent = hintText;

@@ -51,6 +51,47 @@ test('Motorica Start snapshot: «connected: false» drops the last frame and say
   assert.deepEqual(statuses, ['streaming', 'offline', 'streaming']);
 });
 
+test('Motorica Start before the game-control service: «Sensor_levels» — sensor 1 is open (B), sensor 2 is close (A)', () => {
+  // DataTransferToService of the 2023–2024 integrations (drone, ballista, space platformer); the thresholds come along.
+  assert.deepEqual(parseExternal({ sensor_level_1: 51, sensor_level_2: 255, open_ch_num: 30, close_ch_num: 40 }), { a: 1, b: 0.2 });
+  assert.deepEqual(parseExternal('{"sensor_level_1":0,"sensor_level_2":102}'), { a: 0.4, b: 0 });
+  assert.equal(parseExternal({ sensor_level_1: 'x', sensor_level_2: 3 }), null);
+});
+
+test('swapped channels: a source that sends A and B the other way round, as the inverted control of Motorica\'s games', async () => {
+  let swapped = true;
+  const source = new BridgeSource({ clock: () => 0, swap: () => swapped });
+  source.feed({ a: 0.8, b: 0.1 });
+  assert.deepEqual([source.sample().a, source.sample().b], [0.1, 0.8]);
+  swapped = false;
+  source.feed({ a: 0.8, b: 0.1 });
+  assert.deepEqual([source.sample().a, source.sample().b], [0.8, 0.1], 'the setting is read on every frame, no restart');
+  const { emptyState, parseState } = await import('../src/core/storage.js');
+  assert.equal(emptyState().settings.swapChannels, false);
+  assert.equal(parseState(JSON.stringify({ version: 4, settings: { swapChannels: 'yes' } })).settings.swapChannels, false, 'a backup is untrusted');
+  assert.equal(parseState(JSON.stringify({ version: 4, settings: { swapChannels: true } })).settings.swapChannels, true);
+});
+
+test('lost signal: the hint says the exercise goes on by itself, and names a device that is not connected', async () => {
+  const { lostSignalHint, BRIDGE_STATUS } = await import('../src/ui/widgets.js');
+  assert.match(lostSignalHint('streaming'), /Нет сигнала[\s\S]*Продолжим сами/);
+  assert.match(lostSignalHint('offline'), /Протез не на связи[\s\S]*Продолжим сами/);
+  assert.equal(BRIDGE_STATUS.offline, 'протез не на связи');
+  // The promise is true: GameRunner freezes the game while the signal is lost and runs it again with the next frame.
+  const { GameRunner } = await import('../src/games/runner.js');
+  let now = 0, updates = 0;
+  const source = new BridgeSource({ clock: () => now });
+  const game = { paused: false, speed: 1, update() { updates++; } };
+  const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme: 'proportional' }), hand: { update() {} }, source });
+  source.feed(snap(1, 100, 0)); runner.step(now, 0.016);
+  now = 40; source.feed(snap(2, 0, 0, false)); now = 400; runner.step(now, 0.016);
+  assert.equal(runner.signalLost, true);
+  const frozen = updates;
+  now = 420; source.feed(snap(3, 100, 0)); runner.step(now, 0.016);
+  assert.equal(runner.signalLost, false);
+  assert.equal(updates, frozen + 1, 'the game runs again with the first fresh frame');
+});
+
 test('Motorica Start: the docs name the contract and the Android host binds the same service', () => {
   const integration = readFileSync('docs/INTEGRATION.md', 'utf8');
   for (const field of ['openLevel', 'closeLevel', 'connected', 'seq']) assert.ok(integration.includes(field), field);

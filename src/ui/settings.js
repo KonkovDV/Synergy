@@ -56,6 +56,8 @@ export function settingsScreen(app, { back = null } = {}) {
       h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ wsUrl: urlInput.value.trim() }); toast('Подключаемся…'); } }, 'Подключить'),
       h('button', { class: 'btn ghost', 'data-return': 'calibration', onclick: () => app.go('calibration') }, 'Калибровка')),
     status,
+    toggleRow('Поменять каналы A и B', s.swapChannels, v => { app.updateSettings({ swapChannels: v }); toast('Каналы поменялись — пройдите калибровку'); },
+      'если сжатие на экране раскрывает кисть: источник шлёт каналы наоборот. Как инверсия управления в играх Motorica Start'),
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn ghost', disabled: !bleSupported() || app.sensorsPaused(), onclick: connectBle }, 'Bluetooth-датчик (BLE UART)')),
     bleStatus,

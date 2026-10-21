@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS = {
   showMeters: true,
   weeklyGoal: SESSION.weeklyGoalDefault,
   wsUrl: 'ws://127.0.0.1:8765',
+  swapChannels: false,      // внешний источник шлёт A и B наоборот (как инверсия управления в играх Motorica Start)
   reminder: '19:00',
   name: '',
   petName: '',              // имя Жар-птицы (пусто — «Искра»)
