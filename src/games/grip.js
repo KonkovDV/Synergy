@@ -1,6 +1,6 @@
 // «Мастерская» — the functional task: grasp → transport → release (task-specific transfer).
 // Force is dosed by how strongly you squeeze; the hand then holds on its own (relax!),
-// B lowers excess force, wrong grip must be switched by co-contraction (or a gesture).
+// B lowers excess force, a wrong grip is switched the way that hand is set (open again, or co-contraction) or by a gesture.
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
 import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
