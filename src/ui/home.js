@@ -81,7 +81,9 @@ export function homeScreen(app) {
   // on a 390 × 844 phone and was not visible without scrolling. The list below says what is inside.
   const restText = app.checkin()?.reason === 'skin'
     ? 'Сегодня игра без датчиков: занятия идут на экране. Если покраснение не проходит, покажите кожу протезисту.'
-    : 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.';
+    : answer?.during // 5.27: «Стало больно» in the pause of an exercise
+      ? 'Вы остановили занятие из-за боли — день отдыха: серия не прерывается. Если боль не проходит или повторяется, обратитесь к врачу или протезисту.'
+      : 'Сегодня вы отметили сильную боль — день отдыха: серия не прерывается. Если боль повторяется, обратитесь к врачу или протезисту.';
   const planCard = h('section', { class: 'card plan', 'data-tour': 'home.plan' },
     h('div', { class: 'card-head' }, h('h2', { class: 'with-art' }, sectionArt('plan', 32), plan.light ? 'Тренировка дня · лёгкая' : 'Тренировка дня'), h('span', { class: 'pill' }, `${doneCount}/${plan.items.length}`)),
     overCap ? h('p', { class: 'note warn' }, capAdvice(app.rules.softCapMin)) : null,

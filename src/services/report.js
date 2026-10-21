@@ -35,6 +35,7 @@ export function decisionOf(checkin) {
   if (!checkin) return '—';
   if (checkin.skipped) return 'пропущено';
   if (checkin.reason === 'skin') return checkinLight(checkin) ? 'короткий план без датчиков' : 'без датчиков, на экране';
+  if (checkin.during) return 'остановлено: боль во время занятия'; // 5.27 — «Стало больно» in the pause
   return { go: 'обычный план', light: 'короткий план', stop: 'отдых' }[checkin.action] ?? '—';
 }
 
@@ -54,13 +55,15 @@ export function periodKeys(profile, periodDays, today = dayKey()) {
 
 /**
  * How complete the period is (the sample's «incomplete summary is marked»): days with training, declared rest days
- * (pain or skin) without training, days without data — and the self-reported «дела в быту».
+ * (pain or skin) without training, days without data — and the self-reported «дела в быту». 5.27 (rehabilitation
+ * review): the minutes of the period too — the dose a specialist reads first; the summary showed only all-time minutes.
  */
 export function periodSummary(profile, keys) {
   const day = k => profile.days?.[k] ?? {};
   const trained = keys.filter(k => (day(k).runs ?? 0) > 0).length;
   const rest = keys.filter(k => !(day(k).runs > 0) && day(k).checkin?.action === 'stop').length;
-  return { days: keys.length, trained, rest, empty: keys.length - trained - rest, everyday: everydayDays(profile, keys) };
+  const minutes = Math.round(keys.reduce((s, k) => s + (Number.isFinite(day(k).seconds) ? day(k).seconds : 0), 0) / 60);
+  return { days: keys.length, trained, rest, empty: keys.length - trained - rest, everyday: everydayDays(profile, keys), minutes };
 }
 
 const inPeriod = (runs, keys) => { const set = new Set(keys); return keys.length ? runs.filter(r => set.has(dayKey(new Date(r.at)))) : []; };
@@ -83,7 +86,9 @@ export function protocolMetrics(state, today = dayKey()) {
     quick: { runs: quick.length, days: new Set(quick.map(r => dayKey(new Date(r.at)))).size },
     check: checks.length >= 2 ? { first: checks[0].completionRate, last: checks.at(-1).completionRate, count: checks.length, change: completionChange(checks[0], checks.at(-1)) } : { count: checks.length },
     restDays: all.rest,
-    painDays: Object.entries(p.days ?? {}).filter(([k, d]) => k <= today && d.checkin?.action === 'stop' && d.checkin?.reason !== 'skin').length,
+    painDays: Object.entries(p.days ?? {}).filter(([k, d]) => k <= today && d.checkin?.action === 'stop' && d.checkin?.reason !== 'skin' && !d.checkin?.during).length,
+    // 5.27 — pain that stopped an exercise is its own row: H5 asks about pain linked to the game.
+    painDuringDays: Object.entries(p.days ?? {}).filter(([k, d]) => k <= today && d.checkin?.during === true).length,
     skinDays: Object.entries(p.days ?? {}).filter(([k, d]) => k <= today && d.checkin?.reason === 'skin').length,
   };
 }
@@ -100,6 +105,7 @@ export function protocolRows(m) {
     ['H2. Открыто быстрым стартом', `${m.quick.runs} из ${m.runs} упражнений; дней — ${m.quick.days}`],
     [`H3. Проверка навыка (${SCHEME_INFO[m.scheme]?.abbr ?? m.scheme ?? '—'}): первая и последняя`, check],
     ['H5. Дни сильной боли', String(m.painDays ?? m.restDays)],
+    ['H5. Дни, когда боль остановила занятие', String(m.painDuringDays ?? 0)],
     ['H5. Дни раздражения кожи', String(m.skinDays ?? 0)],
   ];
 }
@@ -192,8 +198,8 @@ table{border-collapse:collapse;width:100%;margin:6px 0}th,td{border:1px solid #9
 <p class="muted">${name} · сформирован ${escapeHtml(new Date().toLocaleString('ru-RU'))} · ${escapeHtml(APP.name)} ${escapeHtml(APP.version)}</p>
 <p class="warn">${escapeHtml(DISCLAIMER)}</p>
 <h2>Сводка${periodDays ? ` за ${periodDays} дн.` : ' за всё время'}</h2>
-${table(['Схема управления', 'Сторона', 'Протез', 'Упражнений', 'Минут (всего)', 'Уровень игрока', 'Серия (лучшая)'],
-  [[SCHEME_INFO[s.scheme]?.name ?? s.scheme, s.side === 'left' ? 'левая' : 'правая', s.prosthesis === 'waiting' ? 'ожидает' : 'есть', runs.length, Math.round(p.totals.seconds / 60), playerLevel(p.xp).level, `${p.streak.current} (${p.streak.best})`]])}
+${table(['Схема управления', 'Сторона', 'Протез', 'Упражнений', 'Минут за период', 'Минут (всего)', 'Уровень игрока', 'Серия (лучшая)'],
+  [[SCHEME_INFO[s.scheme]?.name ?? s.scheme, s.side === 'left' ? 'левая' : 'правая', s.prosthesis === 'waiting' ? 'ожидает' : 'есть', runs.length, period.minutes, Math.round(p.totals.seconds / 60), playerLevel(p.xp).level, `${p.streak.current} (${p.streak.best})`]])}
 <p class="muted">Полнота периода: дней — ${period.days}; с тренировкой — ${period.trained}; день отдыха (боль, кожа) — ${period.rest}; без данных — ${period.empty}. «Дело дня в быту» отмечено в ${period.everyday} дн. — это самоотчёт человека, не измерение.</p>
 <h2>Для проверки гипотез (протокол — docs/USABILITY_PROTOCOL.md)</h2>
 ${table(['Гипотеза и мера', 'Что посчитало приложение'], protocolRows(protocolMetrics(state, today)))}

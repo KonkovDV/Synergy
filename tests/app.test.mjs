@@ -248,3 +248,32 @@ test('5.15 embedding: a host\'s exercise waits for the onboarding; posted frames
     app?.bridge?.stop(); globalThis.WebSocket = ws;
   }
 });
+
+test('5.27: severe pain with irritated skin keeps the sensors off for free play (the skin answer was lost)', () => {
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  recordDayNote(app.profile, dayKey(), { checkin: { pain: 3, fatigue: 0, skin: 1, action: 'stop', reason: 'pain' } });
+  assert.equal(app.sensorsPaused(), true);
+  assert.equal(app.liveSource(), 'touch', 'free play stays open on a pain day — on the emulator, not on the electrodes');
+  assert.equal(app.signalSource(), app.emulator);
+});
+
+test('5.27: «Стало больно» in the pause closes today — no plan, the morning answers kept, the exercise not saved', () => {
+  const app = fresh();
+  app.profile.onboarded = true;
+  recordDayNote(app.profile, dayKey(), { checkin: { pain: 0, fatigue: 1, action: 'go', reason: null } });
+  const first = app.dailyPlan().items[0];
+  app.createSession({ game: first.game, level: first.level, plan: true }); // started, then paused and stopped
+  const runs = app.state.runs.length;
+  let went = null;
+  app.go = name => { went = name; }; // screens are not rendered here (e2e covers them)
+  app.stopForPain();
+  assert.equal(went, 'home');
+  const c = app.checkin();
+  assert.deepEqual([c.action, c.reason, c.during, c.pain, c.fatigue], ['stop', 'pain', true, 0, 1]);
+  assert.equal(app.state.runs.length, runs, 'an exercise left in pain is not a result');
+  went = null;
+  app.startPlan();
+  assert.equal(went, 'home', 'the plan does not start again today');
+  assert.ok(JSON.parse(store.get('synergy.v4')).profile.days[dayKey()].checkin.during, 'saved');
+});

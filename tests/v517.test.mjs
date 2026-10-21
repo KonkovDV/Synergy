@@ -69,6 +69,9 @@ test('evidence: the README table is rendered from docs/evidence.json — words a
   assert.match(table, /APK 2095 КБ, HTML 2,49 МБ/);
   assert.match(renderTable({ ...ev, tests: { total: 251, failed: 0 } }), /251 тест, 0 упали/);
   assert.match(renderTable({ ...ev, a11y: null, layout: null }), /не измерено.*\n.*не измерено/, 'a missing measurement is said, not invented');
+  // 5.27 — only the web build: the HTML is named, the missing APK is said; nothing at all — «нет файлов выпуска».
+  assert.match(renderTable({ ...ev, apk: null }), /\| Офлайн \| HTML [\d,]+ МБ, без сети и аккаунта; APK этой версии ещё не собран/);
+  assert.match(renderTable({ ...ev, apk: null, html: null }), /\| Офлайн \| нет файлов выпуска \|/);
   const [b, e] = README_MARKERS;
   assert.equal(readmeBlock(`x\n${b}\n${table}\n${e}\ny`), table);
   assert.equal(readmeBlock('no markers'), null);

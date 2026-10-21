@@ -1,5 +1,5 @@
 // BionicHand — model of a myoelectric hand, faithful to how a real one behaves
-// (task-specific transfer needs the same control law: Garske et al. 2021):
+// (transfer to the prosthesis is shown only for trainers with its task — Garske et al. 2021, a viewpoint):
 //  • CLOSE moves fingers with speed ∝ intensity; after contact the grip force grows;
 //  • REST keeps position and force (non-backdrivable drive — the hand holds by itself);
 //  • OPEN first releases force, then opens the fingers;

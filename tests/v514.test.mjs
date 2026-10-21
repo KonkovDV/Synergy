@@ -135,7 +135,7 @@ test('report: a period with its completeness; the self-reports are named as such
   st.runs = [{ at: '2026-10-19T09:00:00', game: 'grip', level: 1, score: 70, stars: 2, skills: {} }, { at: '2026-09-01T09:00:00', game: 'grip', level: 1, score: 50, stars: 1, skills: {} }];
   assert.equal(periodKeys(st.profile, 7, '2026-10-19').length, 7);
   assert.equal(periodKeys(st.profile, null, '2026-10-19').length, 49, 'everything — from the first day on record');
-  assert.deepEqual(periodSummary(st.profile, periodKeys(st.profile, 7, '2026-10-19')), { days: 7, trained: 1, rest: 1, empty: 5, everyday: 1 });
+  assert.deepEqual(periodSummary(st.profile, periodKeys(st.profile, 7, '2026-10-19')), { days: 7, trained: 1, rest: 1, empty: 5, everyday: 1, minutes: 1 }); // 5.27: the period's own minutes
   assert.equal(buildReport(st, { periodDays: 7, today: '2026-10-19' }).runs.length, 1);
   assert.equal(buildReport(st, { today: '2026-10-19' }).runs.length, 2);
   const html = reportHtml(st, id => id, { periodDays: 30, today: '2026-10-19' });

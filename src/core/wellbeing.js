@@ -52,6 +52,14 @@ export const SAFETY_RULES = [
   'Датчики — только на здоровую кожу. Покраснение, которое не проходит, или усиление фантомной боли — повод остановиться и сказать специалисту.',
 ];
 
+/**
+ * Electrical safety of home-made sensors (5.27, medical review). Electrodes on the skin are a patient connection; a
+ * hobby board has no isolation from the mains, so a laptop on its charger can put leakage current through the arm
+ * (IEC 60601-1 limits it for medical devices; a hobby board was never tested against it). Shown with the external
+ * source, not in the onboarding: a certified prosthesis or sensor follows its manufacturer's instructions.
+ */
+export const ELECTRICAL_SAFETY = 'Самодельные датчики на коже — только от батареи. Если датчик соединён проводом с компьютером или телефоном, это устройство работает без зарядного устройства. Протез и сертифицированные датчики — по инструкции производителя.';
+
 /** The person finished the onboarding with an older list of the safety rules than the current one. */
 export const safetyOutdated = (profile, version = SAFETY_VERSION) => !!profile?.onboarded && (profile.safetySeen ?? 1) < version;
 
@@ -76,6 +84,27 @@ export function checkInAdvice({ pain = 0, fatigue = 0, skin = 0 } = {}) {
 
 /** Today is a short day: a light answer, or irritated skin together with moderate pain or strong fatigue. */
 export const checkinLight = checkin => checkin?.action === CHECKIN_ACTION.LIGHT || (checkin?.reason === 'skin' && checkin.light === true);
+
+/**
+ * Electrodes stay off today (5.27, medical review): irritated skin turns them off whatever else was answered. Severe
+ * pain is checked first and closes the day with reason «pain», so until 5.27 severe pain together with irritated skin
+ * left the sensors on for free play — the one combination where the skin answer was lost.
+ */
+export const electrodesOff = checkin => checkin?.reason === 'skin' || (checkin?.skin ?? 0) >= 1;
+
+/**
+ * Pain that starts or grows during an exercise (5.27, medical review). The morning check-in was the only place to say
+ * it: a person in pain mid-plan could only leave, the plan stayed open and the specialist's report never knew. «Стало
+ * больно» in the pause closes today like a severe-pain answer (no plan, the series is kept). The morning answers stay,
+ * marked `during`, so the report tells pain before the session from pain that came with it. A short day is not kept:
+ * the day is closed.
+ */
+export function painStopDuring(previous, at = new Date().toISOString()) {
+  const kept = previous && typeof previous === 'object' && !previous.skipped ? { ...previous } : {};
+  delete kept.light;
+  return { ...kept, action: CHECKIN_ACTION.STOP, reason: 'pain', during: true, at };
+}
+export const PAIN_STOP_TEXT = 'Остановиться было правильно. На сегодня тренировка закончена, серия не прерывается. Если боль не проходит или повторяется, обратитесь к врачу или протезисту.';
 
 /**
  * Performance-based signs of fatigue within today's runs: the latest score dropped well below the
@@ -118,9 +147,11 @@ export function adviseStop(runsToday, secondsToday, softCapMin, history = []) {
  */
 export function freePlayCaution({ checkin, secondsToday, softCapMin }) {
   if (checkin?.action === CHECKIN_ACTION.STOP) {
-    return checkin.reason === 'skin'
-      ? 'Датчики сегодня выключены — игра идёт на эмуляторе.'
-      : 'Сегодня вы отметили сильную боль — сегодня без тренировки. Игра открыта, но при сильной боли напрягать мышцы не нужно. Если боль повторяется или усиливается — обратитесь к врачу или протезисту.';
+    if (checkin.reason === 'skin') return 'Датчики сегодня выключены — игра идёт на эмуляторе.';
+    const sensors = electrodesOff(checkin) ? ' Датчики сегодня выключены — игра идёт на эмуляторе.' : '';
+    return checkin.during
+      ? `Сегодня вы остановили занятие из-за боли. Игра открыта, но напрягать мышцы через боль не нужно. Если боль не проходит или повторяется — обратитесь к врачу или протезисту.${sensors}`
+      : `Сегодня вы отметили сильную боль — сегодня без тренировки. Игра открыта, но при сильной боли напрягать мышцы не нужно. Если боль повторяется или усиливается — обратитесь к врачу или протезисту.${sensors}`;
   }
   return overDailyCap(secondsToday, softCapMin) ? capAdvice(softCapMin) : null;
 }

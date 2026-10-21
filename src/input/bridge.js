@@ -138,10 +138,15 @@ export class EnvelopeFilter {
 /**
  * RT-7: postMessage frames are accepted only from the page that embeds the game, from the page itself or from a
  * native host (WebView WebMessage has no source window) — not from an opener tab or a child frame.
+ * 5.27 (RT-13): a host that named itself in `?host=<origin>` is the only origin the game answers; now it is also the
+ * only embedding origin it listens to. Before, any site that framed the game with someone else's `?host=` could still
+ * start exercises and inject signal frames into the person's results. Without `?host=` the old rule stays.
  */
-export function trustedMessageSource(event, win) {
+export function trustedMessageSource(event, win, hostOrigin = null) {
   const src = event.source;
-  return src === null || src === undefined || src === win || (win.parent !== win && src === win.parent);
+  if (src === null || src === undefined || src === win) return true;
+  if (win.parent === win || src !== win.parent) return false;
+  return !hostOrigin || event.origin === hostOrigin;
 }
 
 /**
@@ -151,11 +156,15 @@ export function trustedMessageSource(event, win) {
 export const CONNECT_TIMEOUT_MS = 6000;
 
 export class BridgeSource {
-  /** `swap()` — the source sends A and B the other way round (the «inverted control» of Motorica's own games). */
-  constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {}, swap = () => false } = {}) {
+  /**
+   * `swap()` — the source sends A and B the other way round (the «inverted control» of Motorica's own games).
+   * `hostOrigin` — the origin from `?host=`: frames posted by the embedding page are taken only from it (RT-13).
+   */
+  constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {}, swap = () => false, hostOrigin = null } = {}) {
     this.url = url;
     this.map = map;
     this.swap = swap;
+    this.hostOrigin = hostOrigin;
     this.clock = clock;
     this.onStatus = onStatus;
     this.latest = null;
@@ -164,7 +173,7 @@ export class BridgeSource {
     this.envelope = null;
     this.status = 'idle';
     this.retryMs = 500;
-    this.onMessage = e => { if (e.data?.type === 'synergy-frame' && trustedMessageSource(e, window)) this.feed(e.data); };
+    this.onMessage = e => { if (e.data?.type === 'synergy-frame' && trustedMessageSource(e, window, this.hostOrigin)) this.feed(e.data); };
   }
 
   /** Stamps local arrival time, so remote clocks never matter. A negative value switches to the raw-EMG envelope. */

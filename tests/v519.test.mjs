@@ -30,7 +30,7 @@ test('protocol metrics: training days in the first 7 and 14 days, quick starts, 
   assert.equal(m.painDays, 1, 'an older stop without a reason counts as pain');
   assert.equal(m.skinDays, 0);
   const rows = protocolRows(m);
-  assert.deepEqual(rows.map(r => r[0].slice(0, 2)), ['H1', 'H1', 'H2', 'H3', 'H5', 'H5']);
+  assert.deepEqual(rows.map(r => r[0].slice(0, 2)), ['H1', 'H1', 'H2', 'H3', 'H5', 'H5', 'H5']); // 5.27: pain that stopped an exercise
   assert.match(rows[2][1], /^2 из 7 упражнений; дней — 2$/);
   assert.match(rows[3][1], /^50 % → 100 % \(проверок: 2\): больше погрешности ±\d+ п\. п\.$/);
   assert.match(rows[3][0], /Пропорц\./, 'the comparison is of one scheme, and the row names it');

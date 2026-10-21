@@ -73,8 +73,13 @@ self.addEventListener('fetch', e => {
   // Only the app's own files, from the app's own cache (5.10): on a shared origin (user.github.io/…) another site's
   // cache must not answer, and requests outside the app's scope are not cached.
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.registration.scope)) return;
-  // Cache-first; only successful responses are cached (an error page must not stick until the next version).
-  e.respondWith(caches.open(CACHE).then(c => c.match(e.request).then(hit => hit || fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }))));
+  // 5.27: a host opens the app as index.html?game=…&level=…&host=… — one page for every query, read by the script. A
+  // navigation is answered by the cached page whatever its query: before, offline, such a launch missed the cache
+  // (only ./ and ./index.html were there) and the person saw the browser's network error instead of the exercise.
+  const nav = e.request.mode === 'navigate', query = new URL(e.request.url).search !== '';
+  // Cache-first; only successful responses are cached (an error page must not stick until the next version), and a
+  // page with a query is not stored again under each query.
+  e.respondWith(caches.open(CACHE).then(c => c.match(e.request, { ignoreSearch: nav }).then(hit => hit || fetch(e.request).then(r => { if (r.ok && !(nav && query)) c.put(e.request, r.clone()); return r; }))));
 });
 `);
 const icon = readFileSync(join(root, 'public/icons/icon-48.png'));

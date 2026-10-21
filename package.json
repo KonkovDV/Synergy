@@ -1,6 +1,6 @@
 {
   "name": "synergy-motion-trainer",
-  "version": "5.26.4",
+  "version": "5.27.0",
   "private": true,
   "type": "module",
   "description": "Синергия — мобильная игра-тренажёр управления бионическим протезом (ЭМГ: 2 канала и 7 жестов)",
