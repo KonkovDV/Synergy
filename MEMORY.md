@@ -315,6 +315,10 @@ python tools/import-art.py --src ../SYNERGY_GRAPHICS --sheets ../art-qa   # 5.16
 
 На Windows (5.16): APK — `"C:\Program Files\Git\bin\bash.exe" -lc "cd /c/…/synergy && sh tools/build-apk.sh"`; BlueStacks — `HD-Adb.exe` из папки BlueStacks (системный `adb` без своих DLL не запускается). Файлы с кириллицей правьте Node или редактором, не `Get-Content`/`Set-Content` PowerShell 5 (читают UTF-8 как Windows-1251).
 
+## Статус на 21.10.2026 (v5.26.3)
+
+- ✅ 5.26.3 — имя жеста в игре — это поза на картинке: так сказано у Мио и в «Азбуке». Путаница в отчёте не переучивает протез. В README — статус возможностей. APK `versionCode` 38.
+
 ## Статус на 21.10.2026 (v5.26.2)
 
 - ✅ 5.26.2 — пороги игры не пишутся в протез: так сказано в настройках и у Мио. Лаборатория не учится на оптомиографии Skillfactory. APK `versionCode` 37.

@@ -200,7 +200,7 @@ export function progressScreen(app) {
     sameScheme.length >= 2 ? h('p', { class: 'note' }, trendText(sameScheme)) : null);
   const confSection = conf.runs ? h('section', { class: 'card' }, h('h2', {}, 'Ошибки распознавания жестов'),
     confusionTable(conf),
-    h('p', { class: 'note' }, conf.top.length ? `Чаще всего: ${conf.top.map(t => `${name(t.wanted)} → ${name(t.seen)} (${t.seconds} с)`).join('; ')}. Тренируйте эти пары в «Сейфе»; если путаница не уходит — обсудите с протезистом переобучение распознавания.` : 'Ошибок нет — отличная разделимость жестов.')) : null;
+    h('p', { class: 'note' }, conf.top.length ? `Чаще всего: ${conf.top.map(t => `${name(t.wanted)} → ${name(t.seen)} (${t.seconds} с)`).join('; ')}. Тренируйте эти пары в «Сейфе». Это путаница в игре: протез она не переучивает. Если на самом протезе жесты тоже путаются — к протезисту.` : 'В этих занятиях жесты игры не путались.')) : null;
   const wellSection = log.length ? h('section', { class: 'card' }, h('h2', { class: 'with-art' }, sectionArt('checkin', 32), 'Самочувствие'),
     dataTable('Последние 7 записей', ['День', 'Боль', 'Усталость', 'Минут'],
       log.map(l => [fmtDay(`${l.day}T12:00:00`), PAIN_LEVELS.find(x => x.id === l.pain)?.label ?? '—', FATIGUE_LEVELS.find(x => x.id === l.fatigue)?.label ?? '—', l.minutes]))) : null;
