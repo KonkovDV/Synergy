@@ -14,6 +14,12 @@ export function hashPin(pin) {
 
 export const validPin = pin => /^\d{4,6}$/.test(pin);
 
+/** A new PIN is stored only when it is typed twice and both copies match (the sample's parent PIN setup). */
+export function pinConfirmed(first, again) {
+  if (!validPin(first) || !validPin(again)) return 'short';
+  return first === again ? 'ok' : 'mismatch';
+}
+
 /** Brute-force brake: 5 free tries, then 30 s doubling up to 15 min. The real control for a child at the screen. */
 export const PIN_LOCK = { freeTries: 5, baseS: 30, maxS: 900 };
 
