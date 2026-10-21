@@ -1,6 +1,6 @@
 // Signal pipeline: SignalFrame → (validate, watchdog, calibrate, smooth) → ChannelState → Intent.
 // Pure module: no DOM, deterministic, unit-tested in tests/core.test.mjs.
-import { SIGNAL } from '../config.js';
+import { SIGNAL, PROSTHESIS_THRESHOLDS } from '../config.js';
 import { COMMAND, SCHEME, GESTURE_BY_ID } from './vocabulary.js';
 
 export const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
@@ -43,6 +43,18 @@ export function reachableBand([lo, hi], onThreshold = SIGNAL.onThreshold, ref = 
 /** Calibration — rest baseline and comfortable maximum per channel, in source units. */
 export function defaultCalibration() {
   return { rest: [0, 0], max: [1, 1], at: null };
+}
+
+/**
+ * The prosthesis's switch-on thresholds (source units, [A, B]) as shares of the calibrated span of each channel, kept
+ * within PROSTHESIS_THRESHOLDS; a missing one is `fallback` (the game's own threshold). 5.29.
+ */
+export function thresholdShares(raw, calibration, fallback = SIGNAL.onThreshold) {
+  return [0, 1].map(ch => {
+    if (!Array.isArray(raw) || !Number.isFinite(raw[ch])) return fallback;
+    const rest = calibration.rest[ch], span = Math.max(1e-6, calibration.max[ch] - rest);
+    return clamp((raw[ch] - rest) / span, PROSTHESIS_THRESHOLDS.min, PROSTHESIS_THRESHOLDS.max);
+  });
 }
 
 export function normalize(value, channel, calibration) {
@@ -118,18 +130,27 @@ export class SignalPipeline {
     if (frame.gesture) this.updateGesture(frame, frame.t);
   }
 
+  /**
+   * Switch-on level of each channel, as a share of its calibrated span. The game's own threshold, or (5.29) the
+   * prosthesis's threshold in source units passed by the host (`params.prosthesisThresholds`, [A, B]) — mapped through
+   * the current calibration, so a rest baseline that follows drift keeps the prosthesis's line where it is.
+   */
+  channelThresholds() { return thresholdShares(this.params.prosthesisThresholds, this.calibration, this.params.onThreshold); }
+
   updateChannels(t) {
-    const { onThreshold, hysteresis, hysteresisMinRatio, coThreshold, coHysteresis } = this.params;
-    const off = offThreshold(onThreshold, { hysteresis, hysteresisMinRatio });
-    this.aOn = this.aOn ? this.a >= off : this.a >= onThreshold;
-    this.bOn = this.bOn ? this.b >= off : this.b >= onThreshold;
+    const { hysteresis, hysteresisMinRatio, coThreshold, coHysteresis } = this.params;
+    const on = this.channelThresholds();
+    this.on = on;
+    const off = on.map(x => offThreshold(x, { hysteresis, hysteresisMinRatio }));
+    this.aOn = this.aOn ? this.a >= off[0] : this.a >= on[0];
+    this.bOn = this.bOn ? this.b >= off[1] : this.b >= on[1];
     // Onset of the «high» zone used to recognise a deliberate co-contraction; kept through small dips.
     // Never below the switch-on threshold (5.11): at sensitivity 0.45 with co-contraction 0.25 two muscles that did
-    // not even switch on changed the grip, while «покой» checks read them as relaxed.
-    const coT = Math.max(coThreshold, onThreshold);
-    const high = (x, since) => (x >= coT ? (since ?? t) : since !== null && x >= coT - coHysteresis ? since : null);
-    this.aHighSince = high(this.a, this.aHighSince);
-    this.bHighSince = high(this.b, this.bHighSince);
+    // not even switch on changed the grip, while «покой» checks read them as relaxed. Per channel since 5.29.
+    const coT = on.map(x => Math.max(coThreshold, x));
+    const high = (x, since, ch) => (x >= coT[ch] ? (since ?? t) : since !== null && x >= coT[ch] - coHysteresis ? since : null);
+    this.aHighSince = high(this.a, this.aHighSince, 0);
+    this.bHighSince = high(this.b, this.bHighSince, 1);
   }
 
   updateGesture(frame, t) {
@@ -152,6 +173,7 @@ export class SignalPipeline {
       valid: true, scheme: this.scheme, t: now,
       a: this.a, b: this.b, aOn: this.aOn, bOn: this.bOn, co: this.isCoContraction(), relaxed: !this.aOn && !this.bOn && !this.isCoContraction(),
       gesture: null, confidence: 1, uncertain: false,
+      on: this.on ?? this.channelThresholds(), // 5.29: where each channel switches on (the meter draws its marks there)
     };
     if (this.scheme === SCHEME.GESTURE && this.lastFrame?.gesture) return { ...base, ...this.fromGesture() };
     return { ...base, ...this.fromChannels(base.co) };

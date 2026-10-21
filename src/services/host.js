@@ -21,7 +21,7 @@ export const HOST_PROTOCOL = 1;
 export const HOST_TYPES = { ready: 'synergy:ready', result: 'synergy:result', close: 'synergy:close' };
 export const HOST_MESSAGE = HOST_TYPES.result;
 /** Commands a host may post (WebView WebMessage or the embedding frame). */
-export const HOST_COMMANDS = { frame: 'synergy-frame', start: 'synergy-start', ping: 'synergy-ping' };
+export const HOST_COMMANDS = { frame: 'synergy-frame', start: 'synergy-start', ping: 'synergy-ping', thresholds: 'synergy-thresholds' };
 /** Why the app hands control back: the person tapped «Вернуться в приложение», or pressed back on the home screen. */
 export const CLOSE_REASONS = ['done', 'back'];
 
@@ -62,7 +62,8 @@ export function parseLaunch(search, gameInfo) {
  */
 export function parseHostCommand(data, gameInfo) {
   if (!data || typeof data !== 'object') return null;
-  if (data.type === HOST_COMMANDS.frame) return { kind: 'frame', frame: data };
+  // 5.29: the prosthesis's thresholds travel the signal path too (`parseExternal` reads them; they are not a frame).
+  if (data.type === HOST_COMMANDS.frame || data.type === HOST_COMMANDS.thresholds) return { kind: 'frame', frame: data };
   if (data.type === HOST_COMMANDS.ping) return { kind: 'ping' };
   if (data.type === HOST_COMMANDS.start) {
     const gl = gameLevel(data.game, data.level, gameInfo);

@@ -14,10 +14,34 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cache = join(root, 'tools', '.cache', 'evidence');
 const where = () => ({ at: new Date().toISOString(), platform: `${platform()} ${release()}`, node: process.version });
 
-/** A check run leaves its numbers here (tests/e2e/v5.mjs, tests/e2e/layout.mjs). */
+/**
+ * What the browser checks run on (5.29): every file of src/ and styles/ and index.html, path and bytes, in one SHA-256.
+ * 5.28.0 changed «Азбука» after the last e2e; the e2e then stopped on it, and the README still quoted the 5.27 run. A
+ * run records this fingerprint, and the gate compares it with the code being submitted. Line endings are LF on every
+ * system (.gitattributes), so Windows and Linux agree.
+ */
+export function sourceFingerprint(dir = root) {
+  const files = [];
+  const walk = rel => {
+    for (const e of readdirSync(join(dir, rel), { withFileTypes: true })) {
+      const path = `${rel}/${e.name}`;
+      if (e.isDirectory()) walk(path); else files.push(path);
+    }
+  };
+  for (const d of ['src', 'styles']) if (existsSync(join(dir, d))) walk(d);
+  if (existsSync(join(dir, 'index.html'))) files.push('index.html');
+  const hash = createHash('sha256');
+  for (const f of files.sort()) hash.update(`${f}\0`).update(readFileSync(join(dir, f))).update('\0');
+  return hash.digest('hex').slice(0, 16);
+}
+
+/** The code at the start of a check run: the e2e scripts import this module first, so a later edit is not stamped on it. */
+const RUN_SOURCE = sourceFingerprint();
+
+/** A check run leaves its numbers here (tests/e2e/v5.mjs, tests/e2e/layout.mjs), with the code it ran on. */
 export function writeEvidence(name, data) {
   mkdirSync(cache, { recursive: true });
-  writeFileSync(join(cache, `${name}.json`), `${JSON.stringify({ ...data, ...where() }, null, 1)}\n`);
+  writeFileSync(join(cache, `${name}.json`), `${JSON.stringify({ ...data, source: RUN_SOURCE, ...where() }, null, 1)}\n`);
 }
 
 const plural = (n, [one, few, many]) => (n % 10 === 1 && n % 100 !== 11 ? one : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? few : many);

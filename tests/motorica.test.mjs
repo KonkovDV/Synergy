@@ -53,7 +53,8 @@ test('Motorica Start snapshot: «connected: false» drops the last frame and say
 
 test('Motorica Start before the game-control service: «Sensor_levels» — sensor 1 is open (B), sensor 2 is close (A)', () => {
   // DataTransferToService of the 2023–2024 integrations (drone, ballista, space platformer); the thresholds come along.
-  assert.deepEqual(parseExternal({ sensor_level_1: 51, sensor_level_2: 255, open_ch_num: 30, close_ch_num: 40 }), { a: 1, b: 0.2 });
+  // 5.29: the thresholds that come along are read too (tests/v529.test.mjs) — they set where the channels switch on.
+  assert.deepEqual(parseExternal({ sensor_level_1: 51, sensor_level_2: 255, open_ch_num: 30, close_ch_num: 40 }), { a: 1, b: 0.2, thresholds: [40 / 255, 30 / 255] });
   assert.deepEqual(parseExternal('{"sensor_level_1":0,"sensor_level_2":102}'), { a: 0.4, b: 0 });
   assert.equal(parseExternal({ sensor_level_1: 'x', sensor_level_2: 3 }), null);
 });

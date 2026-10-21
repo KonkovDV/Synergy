@@ -15,7 +15,10 @@ class SynergyHostActivity : Activity() {
     private lateinit var web: WebView
 
     // Motorica Start's two levels go to the game as they are (MotoricaStartLink.kt); without Motorica Start nothing comes.
-    private val motorica = MotoricaStartLink(this) { snapshot ->
+    // 5.29: the prosthesis's thresholds too, when this Motorica Start has getLatestThresholds().
+    private val motorica = MotoricaStartLink(this, onThresholds = { open, close ->
+        runOnUiThread { web.evaluateJavascript("window.Synergy&&window.Synergy.feed(${thresholdsJson(open, close)})", null) }
+    }) { snapshot ->
         runOnUiThread { web.evaluateJavascript("window.Synergy&&window.Synergy.feed(${snapshot.toJson()})", null) }
     }
 

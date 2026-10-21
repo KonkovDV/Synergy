@@ -37,6 +37,7 @@
 | `postMessage({ type: 'synergy-start', game, level })` | запуск из страницы другого origin (вызвать `window.Synergy` ей нельзя) |
 | `postMessage({ type: 'synergy-frame', a, b, gesture })` | кадр из страницы другого origin; первый кадр сам переключает источник на «Внешний», как `feed` |
 | `postMessage({ type: 'synergy-ping' })` | спросить ещё раз `synergy:ready` (слушатель подключился поздно) |
+| `Synergy.feed({ type: 'synergy-thresholds', openThreshold, closeThreshold })` или тот же `postMessage` | 5.29: пороги протеза 0…255 (Motorica Start `getLatestThresholds`). Каналы включаются на том же уровне сигнала, что и кисть, если включено «Пороги как у протеза». Это не кадр |
 
 Команды через `postMessage` принимаются только от встраивающей страницы, самой страницы или нативного `WebMessage` без окна-источника (RT-7, `trustedMessageSource`). Неизвестная игра и уровень вне диапазона отбрасываются так же, как в адресе. `feed` иногда не принимает кадр: это решение игры, причина хосту не сообщается.
 
@@ -94,7 +95,9 @@ Motorica Start уже передаёт сигнал протеза своей и
 </queries>
 ```
 
-Если Motorica Start не установлен или не пускает приложение к службе, `bind()` вернёт `false`, и игра останется на других источниках. Вероятно, разрешение `CONTROL_GAME` выдаётся только приложениям «Моторики»: это вопрос организатору.
+Если Motorica Start не установлен или не пускает приложение к службе, `bind()` вернёт `false`, и игра останется на других источниках. В открытом коде Motorica Start (ветка `kmm_ubi4_integrationV3` от 20.10.2026) `CONTROL_GAME` объявлено с `protectionLevel="signature"`: привязаться может только приложение, подписанное ключом «Моторики». Поэтому этот пример заработает в хосте самой «Моторики», а не в стороннем APK.
+
+После привязки пример вызывает `getLatestThresholds()`: этот метод добавлен в ту же службу. Пороги протеза уходят в игру через `Synergy.feed(thresholdsJson(open, close))`. Если в этой версии Motorica Start метода нет, вызов останется без ответа, и игра оставит свой порог.
 
 ## iOS (Swift)
 
@@ -121,7 +124,7 @@ Motorica Start уже передаёт сигнал протеза своей и
 | Платформа | Проверка | Что не проверено |
 |---|---|---|
 | Web | **выполнено** `node tests/e2e/embed.mjs`: два сервера — два origin; хост получает `synergy:ready` (не пройдено знакомство), человек проходит знакомство внутри `iframe`, открывается упражнение из адреса, хост шлёт кадры — источник сам переключается на «Внешний», приходит `synergy:result` без самочувствия, «Вернуться в приложение» даёт `synergy:close`, `synergy-start` открывает другое упражнение; чужой origin сообщений не получает | Safari |
-| Android | **скомпилировано** Kotlin 2.1.21 против Android API 29 (android-all, Robolectric — тот же jar, которым `VERIFY_API=1` сверяет заглушки APK), `-Werror`; с 5.21 — вместе с `MotoricaStartLink.kt` | на устройстве не запускался; с настоящим Motorica Start не проверено — ни приложения, ни протеза у нас нет |
+| Android | **скомпилировано** Kotlin 2.1.21 против Android API 29 (android-all, Robolectric — тот же jar, которым `VERIFY_API=1` сверяет заглушки APK), `-Werror`; с 5.21 — вместе с `MotoricaStartLink.kt`. 5.29: правка с `getLatestThresholds()` скомпилирована Kotlin 2.1.21 с `-Werror` против заглушек `android.os.Binder/IBinder/Parcel` и `android.content.*`: Maven Central со стенда закрыт, поэтому проверку против API 29 (`npm run verify:embed`) повторяет команда | на устройстве не запускался; с настоящим Motorica Start не проверено — ни приложения, ни протеза у нас нет |
 | iOS | **не компилировалось**: в среде сборки нет Swift. Написано по документированным API WebKit (`WKScriptMessageHandler`, `loadFileURL`) | всё |
 | Flutter | **не компилировалось**: в среде нет Flutter SDK. Написано по API `webview_flutter` 4.x | всё |
 | React Native | **типы проверены** `tsc --noEmit --strict` против `react-native-webview` 14.0.1 и `react-native` 0.87.1 | на устройстве не запускался |

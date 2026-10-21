@@ -27,6 +27,7 @@ export const DEFAULT_SETTINGS = {
   weeklyGoal: SESSION.weeklyGoalDefault,
   wsUrl: 'ws://127.0.0.1:8765',
   swapChannels: false,      // внешний источник шлёт A и B наоборот (как инверсия управления в играх Motorica Start)
+  prosthesisThresholds: true, // 5.29: пороги протеза от хоста (Motorica Start getLatestThresholds) — каналы включаются там же
   reminder: '19:00',
   name: '',
   petName: '',              // имя Жар-птицы (пусто — «Искра»)
@@ -238,6 +239,7 @@ export function parseState(raw, catalog = null) {
   const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS).map(r => {
     if (r.pose !== undefined && !POSE_IDS.includes(r.pose)) { const { pose, ...rest } = r; r = rest; } // the report prints it
     if (r.quick !== true) { const { quick, ...rest } = r; r = rest; } // 5.19: only a real quick start; a backup must not invent them
+    if (r.thresholds !== undefined && r.thresholds !== 'prosthesis') { const { thresholds, ...rest } = r; r = rest; } // 5.29: one known value
     if (!isObject(r.details) || r.details.confusion === undefined) return r;
     return { ...r, details: { ...r.details, confusion: cleanConfusion(r.details.confusion) } };
   }) : [];

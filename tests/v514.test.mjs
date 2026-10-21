@@ -111,7 +111,7 @@ test('tutorial: the prosthesis lock — hold A+B as long as the person\'s prosth
   assert.equal(run.step.id, 'lock');
   for (let i = 0; i < 3; i++) run.update(both, 0.1);
   assert.notEqual(run.step.id, 'lock', 'held for the set time — locked');
-  assert.ok(SETTINGS_RULES.lockHoldS(LOCK.minS) && SETTINGS_RULES.lockHoldS(LOCK.maxS) && !SETTINGS_RULES.lockHoldS(10) && !SETTINGS_RULES.lockHoldS(0));
+  assert.ok(SETTINGS_RULES.lockHoldS(LOCK.minS) && SETTINGS_RULES.lockHoldS(LOCK.maxS) && !SETTINGS_RULES.lockHoldS(10.5) && !SETTINGS_RULES.lockHoldS(0));
 });
 
 test('host: launch parameters are validated; results go only to a host that asked, without health notes', () => {

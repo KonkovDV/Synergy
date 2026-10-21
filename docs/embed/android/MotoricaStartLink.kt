@@ -2,7 +2,10 @@
 // service Motorica Start offers its own game, Motorica Kart (github.com/HakerFromRussia-XD/1_game_stk —
 // IGameControlService.aidl, IGameControlCallback.aidl, GameControlSnapshot.java, SuperTuxKartActivity.java).
 // The binder calls are written out by hand — what the aidl tool generates from those files — so the host needs no
-// extra build step. Motorica Start may let only its own games bind (permission CONTROL_GAME): bind() then says false.
+// extra build step. 5.29: Motorica Start's own manifest (public branch kmm_ubi4_integrationV3, 20.10.2026) declares
+// CONTROL_GAME with protectionLevel="signature": only an app signed with Motorica's key may bind. For any other app
+// bind() says false; the realistic path is Motorica's own signed host opening «Синергия» in its WebView.
+// The same branch appended getLatestThresholds() → [open, close]: the prosthesis's switch-on thresholds, 0…255.
 package com.example.synergyhost
 
 import android.content.ComponentName
@@ -28,8 +31,16 @@ data class MotoricaSnapshot(
     }
 }
 
+/** The prosthesis's thresholds as window.Synergy.feed reads them (5.29): not a frame, they set where channels switch on. */
+fun thresholdsJson(open: Int, close: Int): String =
+    "{\"type\":\"synergy-thresholds\",\"openThreshold\":$open,\"closeThreshold\":$close}"
+
 /** Called on a binder thread: post to the UI thread before touching the WebView. */
-class MotoricaStartLink(private val context: Context, private val onSnapshot: (MotoricaSnapshot) -> Unit) {
+class MotoricaStartLink(
+    private val context: Context,
+    private val onThresholds: (open: Int, close: Int) -> Unit = { _, _ -> },
+    private val onSnapshot: (MotoricaSnapshot) -> Unit,
+) {
     private var service: IBinder? = null
     private var bound = false
 
@@ -48,6 +59,8 @@ class MotoricaStartLink(private val context: Context, private val onSnapshot: (M
         override fun onServiceConnected(name: ComponentName, binder: IBinder) {
             service = binder
             call(GET_LATEST, read = { if (it.readInt() != 0) onSnapshot(MotoricaSnapshot.read(it)) })
+            // An older Motorica Start has no such method: the call is not answered and the game keeps its own threshold.
+            call(GET_THRESHOLDS, read = { val t = it.createIntArray(); if (t != null && t.size >= 2) onThresholds(t[0], t[1]) })
             call(REGISTER, write = { it.writeStrongBinder(callback) })
         }
 
@@ -80,7 +93,7 @@ class MotoricaStartLink(private val context: Context, private val onSnapshot: (M
         try {
             data.writeInterfaceToken(SERVICE)
             write(data)
-            remote.transact(code, data, reply, 0)
+            if (!remote.transact(code, data, reply, 0)) return // a method this Motorica Start does not have
             reply.readException()
             read(reply)
         } catch (e: Exception) {
@@ -100,6 +113,7 @@ class MotoricaStartLink(private val context: Context, private val onSnapshot: (M
         private const val GET_LATEST = IBinder.FIRST_CALL_TRANSACTION
         private const val REGISTER = IBinder.FIRST_CALL_TRANSACTION + 1
         private const val UNREGISTER = IBinder.FIRST_CALL_TRANSACTION + 2
+        private const val GET_THRESHOLDS = IBinder.FIRST_CALL_TRANSACTION + 3 // appended in 2026 («Append only» in the .aidl)
         private const val ON_SNAPSHOT = IBinder.FIRST_CALL_TRANSACTION
     }
 }

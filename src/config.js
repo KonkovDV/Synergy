@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.28.0',
+  version: '5.29.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -84,6 +84,15 @@ export const CALIBRATION_ADAPT = {
 export const CALIBRATION_QUALITY = { flatNoise: 3, restPeakNoise: 3 };
 
 /**
+ * The prosthesis's own switch-on thresholds (5.29). Motorica Start 3.3.1876 (public branch of 20.10.2026) gives a game
+ * `getLatestThresholds()` → [open, close] next to the snapshot, on the same 0…255 scale as the levels: the line above
+ * which the hand moves. A host that passes them makes each channel of the game switch on at that level instead of at
+ * the game's own «Порог включения канала». They are read, never written. The bounds keep a threshold set below the
+ * calibrated rest or above the comfortable level playable: shares of the calibrated span.
+ */
+export const PROSTHESIS_THRESHOLDS = { min: 0.05, max: 0.9 };
+
+/**
  * Challenge point inside an exercise: keep ~75 % of trials successful. The idea is the challenge point framework
  * (Guadagnoli & Lee, 2004: the best difficulty depends on the learner's skill); the framework gives no number, so 75 %
  * is our choice. The «85 % rule» (Wilson et al. 2019) was derived for gradient-descent learning of binary
@@ -158,16 +167,22 @@ export const TEXT_SCALES = [1, 1.15, 1.3];
  * set time of 0.1–10 s; users ask for it against false triggers when the arm moves). «Первые шаги» teach locking and
  * unlocking with a co-contraction held this long; the time is the player's setting, to match their prosthesis.
  */
-export const LOCK = { holdDefaultS: 1, minS: 0.3, maxS: 3, stepS: 0.1 };
+export const LOCK = { holdDefaultS: 1.6, minS: 0.1, maxS: 10, stepS: 0.1 };
+// 5.29 — the defaults of Motorica Start's own settings screen (public source, branch kmm_ubi4_integrationV3, 20.10.2026,
+// AdvancedSettingsFragment + layout_advanced_settings.xml): hold-to-lock is (progress + 1) × 0.1 s on a 0…99 slider —
+// 0.1–10 s, stored default 15 → 1.6 s. The game's range now covers the app's, so a person can set the same number.
 
 /**
  * Grip switching (5.23). Motorica's prosthesis takes the next gesture when the hand is fully open and the opening
  * signal is given again for longer than «peak length»; co-contraction there is the lock (the Motorica Start manual:
  * app/src/main/res/values/strings.xml of github.com/HakerFromRussia-XD/2_Android_bluetooth_master_stradivary). Other
- * hands switch by co-contraction. The default follows the customer's prosthesis; the hold is our choice — the manual
- * gives no default.
+ * hands switch by co-contraction. The default follows the customer's prosthesis; the manual gives no hold time, the
+ * app's settings screen does (5.29, below).
  */
-export const GRIP_SWITCH = { defaultMode: 'open', holdDefaultS: 0.8, minS: 0.3, maxS: 2, stepS: 0.1 };
+export const GRIP_SWITCH = { defaultMode: 'open', holdDefaultS: 1, minS: 0.1, maxS: 2, stepS: 0.05 };
+// 5.29 — «время пиков» in Motorica Start (the same source): (progress + 5) × 0.05 s on a 0…25 slider — 0.25–1.5 s, the
+// screen's default text «1,00c»; on FEST-H hands progress × 0.04 s, up to 1.0 s. Until 5.28 the game's 0.8 s was a
+// guess («the manual gives no default»). A default of the app's screen, not a measurement on a prosthesis.
 
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 
