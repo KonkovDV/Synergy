@@ -74,7 +74,7 @@ test('everyday: one task a day, the same all day, all ten in ten days; storage k
 
 test('faq: questions are unique, answers are not empty, numbers come from the config', () => {
   assert.equal(new Set(FAQ_IDS).size, FAQ_IDS.length);
-  for (const id of ['weak', 'false', 'terms', 'pain', 'skin', 'waiting', 'path', 'transfer', 'grow']) assert.ok(FAQ_IDS.includes(id), id);
+  for (const id of ['weak', 'false', 'terms', 'pain', 'skin', 'waiting', 'path', 'transfer', 'grow', 'nopressure']) assert.ok(FAQ_IDS.includes(id), id);
   const text = id => FAQ.flatMap(g => g.items).find(i => i.id === id).a().join(' ');
   for (const g of FAQ) for (const i of g.items) assert.ok(i.a().length && i.a().every(p => p.length > 20), i.id);
   assert.match(text('howmuch'), new RegExp(`${SESSION.dailySoftCapMin} минут`));

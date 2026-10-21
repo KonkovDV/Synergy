@@ -315,6 +315,10 @@ python tools/import-art.py --src ../SYNERGY_GRAPHICS --sheets ../art-qa   # 5.16
 
 На Windows (5.16): APK — `"C:\Program Files\Git\bin\bash.exe" -lc "cd /c/…/synergy && sh tools/build-apk.sh"`; BlueStacks — `HD-Adb.exe` из папки BlueStacks (системный `adb` без своих DLL не запускается). Файлы с кириллицей правьте Node или редактором, не `Get-Content`/`Set-Content` PowerShell 5 (читают UTF-8 как Windows-1251).
 
+## Статус на 21.10.2026 (v5.25.2)
+
+- ✅ 5.25.2 — ответ жюри в самой игре: «Спросить Мио» → «Почему нет монет, энергии и грустной птицы?». Эти механики балл не поднимают: они наказывают пропуск. APK `versionCode` 34.
+
 ## Статус на 21.10.2026 (v5.25.1)
 
 - ✅ 5.25.1 — «Сейчас тяжело» оставляет ту же игру на 1★ (`docs/AUDIT.md` §31). В 5.25.0 ключ отказа не различал звёзды, и 1★ выбрасывалась вместе с 2★. APK `versionCode` 33.
