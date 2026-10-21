@@ -22,7 +22,9 @@ const version = JSON.parse(read('package.json')).version;
 const appVersion = read('src/config.js').match(/version: '([^']+)'/)?.[1];
 const apkVersion = read('android/AndroidManifest.xml').match(/versionName="([^"]+)"/)?.[1];
 const changelog = read('CHANGELOG.md').match(/^## (\S+)/m)?.[1];
-for (const [name, v] of [['src/config.js', appVersion], ['AndroidManifest.xml', apkVersion], ['CHANGELOG.md', changelog]]) if (v !== version) fail(`версия ${name} = ${v}, package.json = ${version}`);
+// 5.29: CITATION.cff still said 5.11.0 (18.10) at 5.28.0 — the citation metadata names the release too.
+const citation = read('CITATION.cff').match(/^version:\s*["']?([^\s"']+)/m)?.[1];
+for (const [name, v] of [['src/config.js', appVersion], ['AndroidManifest.xml', apkVersion], ['CHANGELOG.md', changelog], ['CITATION.cff', citation]]) if (v !== version) fail(`версия ${name} = ${v}, package.json = ${version}`);
 const apk = join(root, 'release', `Synergy-${version}.apk`);
 if (!existsSync(apk)) fail(`нет release/Synergy-${version}.apk`);
 if (!existsSync(join(root, 'release/synergy-standalone.html'))) fail('нет release/synergy-standalone.html');
@@ -63,6 +65,14 @@ for (const doc of NUMBER_DOCS) {
     // 5.27: CI rebuilds the APK with its own throwaway debug key, so its bytes never equal the team's build the
     // evidence names — in a draft (CI) that is a warning; the strict gate before the upload still refuses it.
     if (existsSync(apk) && ev.apk?.sha256 !== createHash('sha256').update(readFileSync(apk)).digest('hex')) (draft ? warn : fail)('docs/evidence.json: APK другой сборки — node tools/evidence.mjs');
+    // 5.29 — the browser checks must have run on this code: 5.28.0 quoted the axe run of 5.27 while its own e2e stopped.
+    const { sourceFingerprint } = await import(pathToFileURL(join(root, 'tools/evidence.mjs')).href);
+    const code = sourceFingerprint(root);
+    for (const [key, how] of [['a11y', 'npm run e2e:a11y'], ['layout', 'npm run audit:layout']]) {
+      if (!ev[key]) continue;
+      if (!ev[key].source) warn(`docs/evidence.json: у «${key}» нет отпечатка кода — повторите ${how}, затем node tools/evidence.mjs`);
+      else if (ev[key].source !== code) (draft ? warn : fail)(`docs/evidence.json: «${key}» снят на другом коде — повторите ${how}, затем node tools/evidence.mjs`);
+    }
     const block = readmeBlock(read('README.md'));
     if (block === null) fail('README.md: нет таблицы <!-- evidence:begin --> … <!-- evidence:end -->');
     else if (block !== renderTable(ev).trim()) fail('README.md: таблица «Главное» расходится с docs/evidence.json — node tools/evidence.mjs');

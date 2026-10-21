@@ -72,7 +72,23 @@ function sensorLevelsFrame(s) {
   const open = num(s.sensor_level_1), close = num(s.sensor_level_2);
   if (!Number.isFinite(open) || !Number.isFinite(close)) return null;
   const level = x => Math.min(1, Math.max(0, x / MOTORICA_LEVEL_MAX));
-  return { a: level(close), b: level(open) };
+  // 5.29: the prosthesis's thresholds ride along (open_ch_num, close_ch_num — what «Арканоид» compares the sensors with).
+  const limits = thresholdsOf({ openThreshold: s.open_ch_num, closeThreshold: s.close_ch_num });
+  return { a: level(close), b: level(open), ...(limits ? limits : {}) };
+}
+
+/**
+ * The prosthesis's thresholds (5.29): Motorica Start `getLatestThresholds()` → [open, close] 0…255, appended to the same
+ * service as the snapshot (public branch of 20.10.2026). Accepted as `{openThreshold, closeThreshold}` or as the service
+ * returns them, `{thresholds: [open, close]}`, with or without `type: 'synergy-thresholds'`. Scaled like the levels;
+ * close is A, open is B. Not a signal frame: it sets where the channels switch on.
+ */
+function thresholdsOf(d) {
+  const pair = Array.isArray(d.thresholds) ? { open: num(d.thresholds[0]), close: num(d.thresholds[1]) }
+    : 'openThreshold' in d || 'closeThreshold' in d ? { open: num(d.openThreshold), close: num(d.closeThreshold) } : null;
+  if (!pair) return undefined;
+  if (!Number.isFinite(pair.open) || !Number.isFinite(pair.close) || pair.open < 0 || pair.close < 0 || pair.open > MOTORICA_LEVEL_MAX || pair.close > MOTORICA_LEVEL_MAX) return null;
+  return { thresholds: [pair.close / MOTORICA_LEVEL_MAX, pair.open / MOTORICA_LEVEL_MAX] };
 }
 
 export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
@@ -89,6 +105,8 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   }
   if (Array.isArray(data)) data = { channels: data };
   if (!data || typeof data !== 'object') return null;
+  const limits = thresholdsOf(data);
+  if (limits !== undefined) return limits; // null: a malformed threshold message is dropped, not read as a frame
   const snapshot = data.snapshot && typeof data.snapshot === 'object' ? data.snapshot : data; // iOS App Group keeps it under «snapshot»
   if ('openLevel' in snapshot || 'closeLevel' in snapshot) return motoricaFrame(snapshot);
   if ('sensor_level_1' in data || 'sensor_level_2' in data) return sensorLevelsFrame(data);
@@ -160,7 +178,7 @@ export class BridgeSource {
    * `swap()` — the source sends A and B the other way round (the «inverted control» of Motorica's own games).
    * `hostOrigin` — the origin from `?host=`: frames posted by the embedding page are taken only from it (RT-13).
    */
-  constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {}, swap = () => false, hostOrigin = null } = {}) {
+  constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {}, swap = () => false, hostOrigin = null, thresholds = null, onThresholds = () => {} } = {}) {
     this.url = url;
     this.map = map;
     this.swap = swap;
@@ -168,19 +186,30 @@ export class BridgeSource {
     this.clock = clock;
     this.onStatus = onStatus;
     this.latest = null;
+    // 5.29: the prosthesis's switch-on thresholds as the host sent them ([close, open] → [A, B] before a swap). Passed on
+    // when the source is rebuilt (a settings change), so they are not lost until the host sends them again.
+    this.rawThresholds = Array.isArray(thresholds) ? thresholds : null;
+    this.onThresholds = onThresholds;
     this.received = 0;
     this.raw = false;      // raw bipolar EMG detected → envelope (EnvelopeFilter)
     this.envelope = null;
     this.status = 'idle';
     this.retryMs = 500;
-    this.onMessage = e => { if (e.data?.type === 'synergy-frame' && trustedMessageSource(e, window, this.hostOrigin)) this.feed(e.data); };
+    this.onMessage = e => { if ((e.data?.type === 'synergy-frame' || e.data?.type === 'synergy-thresholds') && trustedMessageSource(e, window, this.hostOrigin)) this.feed(e.data); };
   }
 
   /** Stamps local arrival time, so remote clocks never matter. A negative value switches to the raw-EMG envelope. */
   feed(msg) {
     const parsed = parseExternal(msg, this.map);
     if (!parsed) return false;
+    if (parsed.thresholds) {
+      // Told only when they change: the 2023–2024 broadcast repeats them with every frame.
+      if (parsed.thresholds.join() !== this.rawThresholds?.join()) { this.rawThresholds = parsed.thresholds; this.onThresholds(this.rawThresholds); }
+      // A threshold message alone is not a frame: the watchdog and the frame count stay as they are.
+      if (!('a' in parsed)) return false;
+    }
     const { seq, offline, ...frame } = parsed;
+    delete frame.thresholds;
     // The device itself says it is not there: no frame, the watchdog turns it into «нет сигнала».
     if (offline) { this.latest = null; this.lastSeq = seq; if (this.status !== 'offline') this.setStatus('offline'); return false; }
     // A host that relays Motorica Start's latest snapshot resends it unchanged: the same seq is no new frame, so a
@@ -240,6 +269,12 @@ export class BridgeSource {
   }
 
   setStatus(status) { this.status = status; this.onStatus(status); }
+
+  /** The prosthesis's thresholds [A, B] in frame units, swapped like the channels (a threshold goes with its level). */
+  get thresholds() {
+    const t = this.rawThresholds;
+    return t ? (this.swap() ? [t[1], t[0]] : [...t]) : null;
+  }
 
   sample() { return this.latest; }
 }

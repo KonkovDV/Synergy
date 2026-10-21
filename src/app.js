@@ -1,7 +1,7 @@
 // Composition root: state, signal sources, routing, the frame loop and training sessions.
 import { APP, ARM_POSES, ADAPT } from './config.js';
 import { Store, memoryStorage } from './core/storage.js';
-import { SignalPipeline } from './core/signal.js';
+import { SignalPipeline, thresholdShares } from './core/signal.js';
 import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
@@ -279,7 +279,8 @@ export class App {
     if (this.settings.source === 'bridge') {
       this.ble?.disconnect(); this.ble = null;
       this.bridge?.stop();
-      this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s), swap: () => this.settings.swapChannels, hostOrigin: this.launch?.hostOrigin ?? null });
+      this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s), swap: () => this.settings.swapChannels, hostOrigin: this.launch?.hostOrigin ?? null,
+        thresholds: this.bridge?.rawThresholds ?? null, onThresholds: () => this.screen?.onThresholds?.() });
       this.bridge.start();
     } else if (this.bridge) {
       this.ble?.disconnect(); this.ble = null;
@@ -417,11 +418,29 @@ export class App {
   }
   calibration(kind = this.sourceKind()) { return this.state.calibrations[kind]; }
 
+  /**
+   * The prosthesis's switch-on thresholds [A, B] in frame units (5.29): only when the host passed them, the live source
+   * is the external one and «Пороги как у протеза» is on. Else null — the game's own «Порог включения канала».
+   */
+  prosthesisThresholds(demo = false) {
+    if (demo || !this.settings.prosthesisThresholds || this.liveSource() !== 'bridge') return null;
+    return this.bridge?.thresholds ?? null;
+  }
+
+  /**
+   * Where the channels switch on, as shares of the calibrated span: the prosthesis's two thresholds when they are used,
+   * else the game's threshold twice. Games place their force bands above the higher one, so every band stays reachable.
+   */
+  switchOn(demo = false) {
+    const raw = this.prosthesisThresholds(demo);
+    return raw ? thresholdShares(raw, this.calibration(), this.settings.sensitivity) : [this.settings.sensitivity, this.settings.sensitivity];
+  }
+
   createPipeline(demo = false, { adaptRest = false } = {}) {
     const s = this.settings;
     const calibration = demo || this.sensorsPaused() ? this.state.calibrations.touch : this.calibration();
-    const restTracker = adaptRest ? new RestTracker(calibration, { onThreshold: s.sensitivity }) : null;
-    return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, coThreshold: s.coThreshold }, restTracker });
+    const restTracker = adaptRest ? new RestTracker(calibration, { onThreshold: Math.max(...this.switchOn(demo)) }) : null;
+    return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, coThreshold: s.coThreshold, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
   }
 
   /** The grip switches the way the person's prosthesis does it (Настройки → «Смена хвата»). */
@@ -454,7 +473,7 @@ export class App {
   createSession({ game, level, retention = false, demo = false, plan = false, pose = null, quick = false }) {
     const s = this.settings;
     const instance = createGame(game, { levelNumber: level, scheme: s.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
-      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: s.sensitivity,
+      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: Math.max(...this.switchOn(demo)),
       successTarget: trainingDays(this.profile) < ADAPT.firstWeekDays ? ADAPT.firstWeekTarget : null });
     const hand = this.createHand();
     const live = this.liveSource();
@@ -479,7 +498,9 @@ export class App {
       id: crypto.randomUUID?.() ?? String(Date.now()), at: new Date().toISOString(),
       game: session.id, level: session.level, levelCount: session.entry.Game.levels.length,
       scheme: this.settings.scheme, source: session.demo ? 'demo' : this.liveSource(),
-      retention: session.retention, demo: session.demo, plan: !!session.plan, ...(session.quick ? { quick: true } : {}), ...(session.pose ? { pose: session.pose.id } : {}), ...r,
+      retention: session.retention, demo: session.demo, plan: !!session.plan, ...(session.quick ? { quick: true } : {}), ...(session.pose ? { pose: session.pose.id } : {}),
+      // 5.29: the channels switched on at the prosthesis's thresholds — a weekly check is compared like with like.
+      ...(session.runner.pipeline.params.prosthesisThresholds ? { thresholds: 'prosthesis' } : {}), ...r,
     };
     const replay = session.game.replay?.() ?? null; // shown on the results screen, never saved
     if (session.demo) return { run, report: null, planBonus: 0, replay };

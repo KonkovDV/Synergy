@@ -43,6 +43,9 @@ export function twoChannelControls(scheme) {
  * They stay a hypothesis for 28.10 and are not training data (docs/RESEARCH.md §16).
  * The Manifesto Hand 3.0 catalog (read 21.10.2026) uses the same Russian names for different poses:
  * its «щепоть» is three fingers, its «щипок» is thumb and index, its «пистолет» is not the 2022 gun.
+ * Motorica Start itself (gesture menu, public branch of 20.10.2026) agrees: «Щёпоть» there is thumb, index and middle;
+ * thumb and index are «Ок» (other fingers straight) or «Пинцет» (others bent). Its Кулак, Ключ and Класс are the poses
+ * of the same names here; its «Указательный» keeps the thumb raised, ours bends it (docs/RESEARCH.md §18).
  * Do not rename this set from that page (docs/RESEARCH.md §17).
  * pose = flexion of [thumb, index, middle, ring, little], 0 — straight, 1 — fully bent.
  * command — what the gesture does to the hand; grip — which grip it selects;

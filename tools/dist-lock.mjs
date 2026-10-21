@@ -4,7 +4,8 @@ import { openSync, closeSync, unlinkSync, readFileSync, writeSync, statSync } fr
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const lockPath = join(dirname(fileURLToPath(import.meta.url)), '..', '.dist-build.lock');
+// SYNERGY_DIST_LOCK — another lock file, for the test of the lock itself: it must not free the real one under parallel tests.
+const lockPath = process.env.SYNERGY_DIST_LOCK || join(dirname(fileURLToPath(import.meta.url)), '..', '.dist-build.lock');
 
 const pause = ms => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 const owner = () => { try { return readFileSync(lockPath, 'utf8').trim(); } catch { return ''; } };
@@ -24,8 +25,12 @@ export function acquireDistLock() {
       if (e.code !== 'EEXIST') throw e;
       const who = owner();
       if (who === me) return () => {};
-      let stale = !who || !alive(who);
-      try { if (Date.now() - statSync(lockPath).mtimeMs > 120000) stale = true; } catch { stale = true; }
+      // 5.29: an empty file is a lock being created (its owner writes the pid right after opening it), not a dead one —
+      // treating it as stale let two builds hold the lock at once. Empty for more than 2 s is a crash between the two.
+      let age = 0;
+      try { age = Date.now() - statSync(lockPath).mtimeMs; } catch { continue; } // released meanwhile: try again
+      let stale = who ? !alive(who) : age > 2000;
+      if (age > 120000) stale = true;
       if (stale) { try { unlinkSync(lockPath); } catch { /* the owner released it */ } continue; }
       if (Date.now() - started > 120000) throw e;
       pause(100);

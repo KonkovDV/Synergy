@@ -6,14 +6,16 @@
  Источник сигнала (SignalSource.sample(now) → SignalFrame)
  ├─ EmgEmulator ← площадки на экране / клавиатура / автопилот демо
  ├─ BridgeSource ← WebSocket · postMessage · window.Synergy.feed · Android pushFrame
- │
+ │    parseExternal: кадр {a, b, gesture?} · снимок Motorica Start v1 · Sensor_levels
+ │                   · пороги протеза [A, B] (5.29: getLatestThresholds, open/close_ch_num) — не кадр
  ▼
  SignalPipeline (core/signal.js)
-   readFrame → сторож 300 мс → калибровка (+ RestTracker: подстройка покоя, только внешний источник)
-   → сглаживание → пороги с гистерезисом
-   → коактивация (≥40 %, ≤350 мс) → схема: пороговая | пропорциональная | жесты
+   readFrame → сторож 300 мс (жест после обрыва — с покоя) → калибровка
+   (+ RestTracker: подстройка покоя, только внешний источник) → сглаживание
+   → порог включения каждого канала: порог игры или порог протеза через калибровку (thresholdShares, 5–90 %)
+   → гистерезис → коактивация (≥40 %, ≤350 мс) → схема: пороговая | пропорциональная | жесты
  ▼
- Intent {valid, command, intensity, level, a, b, gesture, confidence}
+ Intent {valid, command, intensity, level, a, b, on: [A, B], gesture, confidence}
  ▼
  BionicHand (core/hand.js) — закон управления протезом (скорость ∝ сигналу, хват держится сам)
  ▼
@@ -147,3 +149,13 @@
 | `tools/import-art.py` | инструмент | пакет PNG → вырезка (маска rembg + colour-to-alpha), WebP по ролям, каталог, рамки вещей по глазам птицы, иконки PWA и APK, заставка; контактные листы для просмотра (`--sheets`) |
 | `tools/build.mjs` (расширен) | сборка | `dist/art/` в офлайн-кэше сервис-воркера; в автономном файле — `window.SYNERGY_ART` с data URI |
 | `android/res` (расширен) | оболочка | адаптивная иконка (`mipmap-anydpi-v26`), заставка в теме окна `Synergy` (день и ночь), WebView прозрачен до первой отрисовки |
+
+## v5.27–v5.29: что изменилось в потоке (те же правила слоёв)
+
+| Где | Что | Почему |
+|---|---|---|
+| `core/signal.js` | сторож сбрасывает жест в покой; `thresholdShares()` и `channelThresholds()` — свой порог у каждого канала; `intent.on` | протез не исполняет жест до обрыва; пороги протеза от хоста (`docs/INTEGRATION.md`) |
+| `input/bridge.js` | `trustedMessageSource(…, hostOrigin)`; разбор порогов; `BridgeSource.thresholds` (меняются местами с каналами, переживают пересоздание источника) | RT-13; пороги — не кадр и не трогают сторож |
+| `app.js` | `prosthesisThresholds()`, `switchOn()`: пороги протеза только для живого внешнего источника и при включённой настройке; силы игр — выше большего порога; `stopForPain()`; `sensorsPaused()` — раздражённая кожа всегда | один источник решения для конвейера, игры, экрана и записи упражнения |
+| `core/calibration.js` | «плоский» канал и дрожь покоя — по устойчивому шуму покоя (`CALIBRATION_QUALITY`) | источник со смещением калибруется |
+| `tools/evidence.mjs`, `tools/check-submission.mjs` | отпечаток кода у прогонов e2e; версия `CITATION.cff` | доказательства относятся к тому коду, который сдаётся |

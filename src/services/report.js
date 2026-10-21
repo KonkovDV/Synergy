@@ -116,7 +116,7 @@ export function buildReport(state, { periodDays = null, today = dayKey() } = {})
   return {
     app: APP.name, version: APP.version, exported_at: new Date().toISOString(),
     disclaimer: DISCLAIMER,
-    settings: { scheme: state.settings.scheme, source: state.settings.source, side: state.settings.side, sensitivity: state.settings.sensitivity, coThreshold: state.settings.coThreshold, adaptive: state.settings.adaptive, audience: state.settings.audience, prosthesis: state.settings.prosthesis },
+    settings: { scheme: state.settings.scheme, source: state.settings.source, side: state.settings.side, sensitivity: state.settings.sensitivity, prosthesisThresholds: state.settings.prosthesisThresholds, coThreshold: state.settings.coThreshold, lockHoldS: state.settings.lockHoldS, gripSwitch: state.settings.gripSwitch, holdOpenS: state.settings.holdOpenS, adaptive: state.settings.adaptive, audience: state.settings.audience, prosthesis: state.settings.prosthesis },
     period: { days: periodDays, ...periodSummary(state.profile, keys) },
     calibration: state.calibrations,
     summary: { runs: runs.length, minutes: Math.round(state.profile.totals.seconds / 60), streak: state.profile.streak, skills: skillProfile(runs, 30) },
@@ -159,9 +159,9 @@ const csvCell = v => {
 };
 
 export function reportCsv(state) {
-  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'arm_pose', 'unreleased', 'rest_missed'];
+  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'thresholds', 'arm_pose', 'unreleased', 'rest_missed'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
-    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '']);
+    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '']);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
 
@@ -223,7 +223,7 @@ ${table(['День', 'Боль', 'Усталость', 'Кожа под датч
 <h2>Последние упражнения</h2>
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки', 'Заметка'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '',
-    [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : ''].filter(Boolean).join('; ')]))}
+    [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : ''].filter(Boolean).join('; ')]))}
 <p class="muted">«Не отпустили» и «покой не получился» — игровая статистика, не оценка тонуса и не диагноз.</p>
 <h2>Чем это проверяют в клинике</h2>
 <p class="muted">Игровые метрики — данные между визитами, а не замена теста: с клиническими тестами игра не сверена. Ближайшие по смыслу тесты, которые проводит специалист: «Мастерская» (взять — перенести — отпустить) — Box and Block Test, SHAP; «Проверка навыка» (выбор и выполнение движения) — Motion Test / TAC (виртуальный тест, по данным Hargrove et al. 2018 связан с SHAP, Box and Block и ACMC у 9 пользователей); управление протезом в повседневных задачах — ACMC, AM-ULA.</p>

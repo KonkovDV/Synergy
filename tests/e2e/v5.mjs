@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { baseUrl } from '../../tools/static-server.mjs';
 import { writeEvidence } from '../../tools/evidence.mjs';
+import { PRIMER } from '../../src/core/primer.js';
 const require = createRequire(import.meta.url);
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require('/opt/node22/lib/node_modules/playwright'); }
@@ -27,7 +28,10 @@ const a11y = [], audited = [];
 async function audit(screen) {
   audited.push(screen);
   if (!(await page.evaluate(() => !!window.axe))) await page.evaluate(axeSource);
-  const result = await page.evaluate(() => window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] }));
+  // 5.29: a toast fades in (0.25 s) and out (0.4 s). A run that lands in a fade sees its text blended with the page and
+  // flagged contrast at random (once, under load). Wait for the toasts' animations; one fading out is not checked.
+  await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.effect?.target?.closest?.('#toasts')).map(a => a.finished.catch(() => null))));
+  const result = await page.evaluate(() => window.axe.run({ include: [document], exclude: [['.toast.out']] }, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] }));
   for (const v of result.violations) {
     a11y.push({ screen, rule: v.id, impact: v.impact, nodes: v.nodes.slice(0, 3).map(n => n.target.join(' ')) });
   }
@@ -109,13 +113,20 @@ await go('rest', { next: { game: 'flight', level: 1, retention: false } }); awai
 await go('pin'); await wait(300); await audit('pin');
 // 5.15 — «Азбука протеза» (topics, a turned card, an answered check, the result) and the safety re-read.
 await go('primer'); await wait(300); await audit('primer');
-for (let k = 0; k < 5; k++) { await go('primer', { deck: 'signal', card: k }); await wait(120); await page.locator('.flash-face').click(); await wait(120); }
+// 5.29: every card of the deck, from the deck itself. 5.28 added a sixth card, the loop still opened five, the check
+// never unlocked and the run stopped here — so the a11y numbers of 5.28.0 were those of 5.27.
+const signalCards = PRIMER.find(d => d.id === 'signal').cards.length;
+for (let k = 0; k < signalCards; k++) { await go('primer', { deck: 'signal', card: k }); await wait(120); await page.locator('.flash-face').click(); await wait(120); }
+const seenCards = await page.evaluate(() => (window.Synergy.state().profile.primer?.signal?.seen ?? []).length);
+if (seenCards !== signalCards) errors.push(`«Азбука»: ${seenCards} of ${signalCards} cards of «Сигнал» marked read`);
 await audit('primer-card-open');
 await go('primer', { deck: 'signal', check: true }); await wait(300); await page.locator('.primer-options .option').nth(1).click(); await wait(200); await audit('primer-check');
-for (let k = 0; k < 3 && !(await page.locator('.primer-summary').count()); k++) {
+const signalQuestions = PRIMER.find(d => d.id === 'signal').check().length; // 5.29: from the deck, like the cards
+for (let k = 0; k < signalQuestions && !(await page.locator('.primer-summary').count()); k++) {
   if (!(await page.locator('.primer-why').count())) await page.locator('.primer-options .option').first().click();
   await page.locator('.primer-check ~ .sticky-actions .btn.primary').click(); await wait(150);
 }
+if (!(await page.locator('.primer-summary').count())) errors.push('«Азбука»: the check of «Сигнал» did not reach its result');
 await audit('primer-result');
 await go('onboarding', { safety: true }); await wait(300); await audit('safety-update');
 await page.evaluate(() => { document.documentElement.classList.add('hc'); document.documentElement.style.setProperty('--text-scale', '1.3'); });

@@ -88,6 +88,8 @@ export function signalMeter(app) {
     update(intent) {
       A.fill.style.width = `${Math.round(intent.a * 100)}%`;
       B.fill.style.width = `${Math.round(intent.b * 100)}%`;
+      // 5.29: each channel's own switch-on line — the prosthesis's thresholds differ per channel when the host sends them.
+      if (Array.isArray(intent.on)) [A, B].forEach((bar, ch) => { const left = `${Math.round(intent.on[ch] * 1000) / 10}%`; if (bar.on.style.left !== left) bar.on.style.left = left; });
       const label = !intent.valid ? 'Нет сигнала'
         : intent.gesture ? `${GESTURE_BY_ID[intent.gesture].name}${intent.uncertain ? '?' : ''}`
         : COMMAND_NAME[intent.command];

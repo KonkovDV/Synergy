@@ -227,3 +227,25 @@ test('5.27 render: every game, scheme, first and last level, with and without hi
     }
   }
 });
+
+test('5.29 dist lock: a lock file still empty (being created) is not taken over, a dead owner\'s is', async () => {
+  const { writeFileSync: write, utimesSync, mkdtempSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  // A lock file of its own: the real one is held by this file, and bundle/v516 tests wait on it in parallel.
+  const dir = mkdtempSync(join(tmpdir(), 'synergy-lock-')), lock = join(dir, 'dist.lock');
+  const probe = `import { acquireDistLock } from './tools/dist-lock.mjs'; const t = Date.now(); const release = acquireDistLock(); console.log(Date.now() - t); release();`;
+  const child = () => Number(execFileSync(process.execPath, ['--input-type=module', '-e', probe], { encoding: 'utf8', timeout: 20000, env: { ...process.env, SYNERGY_DIST_LOCK: lock } }).trim());
+  try {
+    write(lock, ''); // fresh and empty: another process between open and write
+    const waited = child();
+    assert.ok(waited >= 1500, `an empty lock younger than 2 s was taken over after ${waited} ms`);
+    write(lock, '999999999'); // a pid that does not run
+    assert.ok(child() < 1000, 'a dead owner\'s lock is taken at once');
+    write(lock, '');
+    const old = new Date(Date.now() - 5000); utimesSync(lock, old, old);
+    assert.ok(child() < 1000, 'empty for 5 s — a crash between open and write');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

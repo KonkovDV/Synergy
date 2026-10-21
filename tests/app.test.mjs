@@ -277,3 +277,41 @@ test('5.27: «Стало больно» in the pause closes today — no plan, t
   assert.equal(went, 'home', 'the plan does not start again today');
   assert.ok(JSON.parse(store.get('synergy.v4')).profile.days[dayKey()].checkin.during, 'saved');
 });
+
+test('5.29: the prosthesis\'s thresholds from the host — used for the external source only, with the setting on', () => {
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  app.state.calibrations.bridge = { rest: [10 / 255, 20 / 255], max: [210 / 255, 220 / 255], at: '2026-10-21T10:00:00Z' };
+  assert.equal(app.prosthesisThresholds(), null, 'nothing passed yet');
+  window.Synergy.feed({ openThreshold: 140, closeThreshold: 90 }); // what MotoricaStartLink.kt forwards from getLatestThresholds()
+  assert.deepEqual(app.prosthesisThresholds(), [90 / 255, 140 / 255]);
+  assert.deepEqual(app.switchOn().map(x => Math.round(x * 100)), [40, 60]);
+  const session = app.createSession({ game: 'grip', level: 1 });
+  assert.deepEqual(session.runner.pipeline.params.prosthesisThresholds, [90 / 255, 140 / 255]);
+  assert.equal(Math.round(session.game.onThreshold * 100), 60, 'force bands sit above the higher line');
+  assert.equal(app.bridge.received, 0, 'thresholds are not signal frames');
+  session.game.done = true;
+  assert.equal(app.finishSession(session).run.thresholds, 'prosthesis', 'the run says which line it was played on');
+  // The demo, the setting off, the emulator, a skin day: the game's own threshold.
+  assert.equal(app.createSession({ game: 'grip', level: 1, demo: true }).runner.pipeline.params.prosthesisThresholds, null);
+  app.updateSettings({ prosthesisThresholds: false });
+  assert.equal(app.prosthesisThresholds(), null);
+  assert.equal(app.createSession({ game: 'grip', level: 1 }).game.onThreshold, app.settings.sensitivity);
+  app.updateSettings({ prosthesisThresholds: true, swapChannels: true });
+  assert.deepEqual(app.prosthesisThresholds(), [140 / 255, 90 / 255], 'kept through the rebuilt source, swapped with the channels');
+  app.updateSettings({ swapChannels: false });
+  recordDayNote(app.profile, dayKey(), { checkin: { pain: 0, fatigue: 0, skin: 1, action: 'stop', reason: 'skin' } });
+  assert.equal(app.prosthesisThresholds(), null, 'no sensors today — no sensor thresholds');
+});
+
+test('5.29: settings say whether the prosthesis\'s thresholds came and are used', async () => {
+  const { settingsScreen } = await import('../src/ui/settings.js');
+  globalThis.location ??= { protocol: 'https:', search: '' }; // the «Данные» section names where the page was opened from
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  assert.match(textOf(settingsScreen(app).node), /Сейчас их нет — работает порог игры/);
+  window.Synergy.feed({ thresholds: [140, 90] });
+  assert.match(textOf(settingsScreen(app).node), /Пороги протеза получены: канал A включается на \d+\s?%, B — на \d+\s?%/);
+  app.updateSettings({ prosthesisThresholds: false });
+  assert.match(textOf(settingsScreen(app).node), /получены, но не используются/);
+});
