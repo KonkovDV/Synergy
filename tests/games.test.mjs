@@ -10,6 +10,16 @@ import { COLORS } from '../src/render/draw.js';
 import { rhythmLayout } from '../src/games/rhythm.js';
 import { play } from './helpers.mjs';
 
+// 5.23 — the default grip switch is Motorica's (open again at full opening); hands that switch by co-contraction too.
+for (const scheme of ['threshold', 'proportional']) {
+  test(`grip · ${scheme} · co-contraction switch: autopilot wins every level`, () => {
+    GAMES.find(g => g.id === 'grip').Game.levels.forEach((_, i) => {
+      const r = play('grip', { scheme, levelNumber: i + 1, switchMode: 'co' });
+      assert.ok(r.stars >= 2, `grip L${i + 1} ${scheme} co: ${r.score} points`);
+    });
+  });
+}
+
 for (const entry of GAMES) {
   for (const scheme of entry.schemes) {
     test(`${entry.id} · ${scheme}: autopilot wins every level`, () => {

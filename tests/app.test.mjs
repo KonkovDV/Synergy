@@ -79,6 +79,14 @@ test('a skin day trains on the emulator: «Первые шаги» show its pads
   for (const f of ['play.js', 'tutorial.js']) assert.doesNotMatch(readFileSync(new URL(`../src/ui/${f}`, import.meta.url), 'utf8'), /\bs\.source\b/, f);
 });
 
+test('the hand of every exercise switches its grip the way the settings say (5.23)', () => {
+  const app = fresh();
+  assert.equal(app.createHand().switchMode, 'open');
+  app.updateSettings({ gripSwitch: 'co', holdOpenS: 1.4 });
+  const hand = app.createSession({ game: 'grip', level: 1 }).hand;
+  assert.deepEqual([hand.switchMode, hand.holdOpenS], ['co', 1.4]);
+});
+
 test('irritated skin with moderate pain is a short day without sensors; the pain answer is not lost', () => {
   const app = fresh();
   const full = app.dailyPlan().items.length;

@@ -15,7 +15,7 @@ import { fmtOffset } from './audiosync.js';
 import { hashPin, validPin, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { MAX_BACKUP_BYTES } from '../core/storage.js';
-import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK } from '../config.js';
+import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK, GRIP_SWITCH } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
 /** Section glyph and its tile tint (5.12): the sections are told apart at a glance, the title stays the name. */
@@ -113,6 +113,11 @@ export function settingsScreen(app, { back = null } = {}) {
         // with the same hold as the person's prosthesis.
         sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }) }),
         h('p', { class: 'note' }, 'Время удержания для блокировки — как в приложении вашего протеза; его настраивает протезист.'),
+        // 5.23 — the grip switch of the person's prosthesis: Motorica's opens again at full opening (GRIP_SWITCH).
+        h('div', { class: 'row' }, h('span', {}, 'Смена хвата'),
+          segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, v => app.updateSettings({ gripSwitch: v }), 'Смена хвата')),
+        sliderRow('Смена хвата: удержание B', { min: GRIP_SWITCH.minS, max: GRIP_SWITCH.maxS, step: GRIP_SWITCH.stepS, value: s.holdOpenS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ holdOpenS: Math.round(v * 10) / 10 }) }),
+        h('p', { class: 'note' }, 'В протезах «Моторики» хват меняется так: кисть раскрыта до конца, раскрытие отпущено и подано снова дольше этого времени. Это «peak length» в приложении протеза — его настраивает протезист. A+B там — блокировка.'),
         h('p', { class: 'note' }, 'Проверка вживую — напрягите мышцы или используйте площадки ниже:'),
         meter.node,
         s.source === 'touch' && s.scheme !== 'gesture' ? createTwoChannelPads(app.emulator) : null,

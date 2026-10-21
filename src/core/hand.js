@@ -3,16 +3,19 @@
 //  • CLOSE moves fingers with speed ∝ intensity; after contact the grip force grows;
 //  • REST keeps position and force (non-backdrivable drive — the hand holds by itself);
 //  • OPEN first releases force, then opens the fingers;
-//  • SWITCH (co-contraction) cycles the grip, re-armed only after full relaxation.
-import { HAND } from '../config.js';
+//  • the grip switches the way the person's prosthesis does it (GRIP_SWITCH): «open» — at full opening a new
+//    opening signal held for holdOpenS (Motorica); «co» — a co-contraction, re-armed only after full relaxation.
+import { HAND, GRIP_SWITCH } from '../config.js';
 import { COMMAND, SCHEME, GESTURE_BY_ID, COMMAND_POSE } from './vocabulary.js';
 
 const OPEN_POSE = COMMAND_POSE.open;
 const lerp = (a, b, k) => a + (b - a) * k;
 
 export class BionicHand {
-  constructor({ grips = HAND.twoChannelGrips } = {}) {
+  constructor({ grips = HAND.twoChannelGrips, switchMode = GRIP_SWITCH.defaultMode, holdOpenS = GRIP_SWITCH.holdDefaultS } = {}) {
     this.grips = grips;
+    this.switchMode = switchMode;
+    this.holdOpenS = holdOpenS;
     this.reset();
   }
 
@@ -21,6 +24,8 @@ export class BionicHand {
     this.closure = 0;      // 0 — раскрыта, 1 — сжата полностью
     this.force = 0;        // условная сила хвата 0..1 (не ньютоны)
     this.armed = true;     // коактивация снова доступна после покоя
+    this.openReady = false; // «open»: кисть раскрыта и раскрытие отпущено — следующее раскрытие может сменить хват
+    this.openFor = 0;
     this.switches = 0;
     this.contactAt = null; // closure at which fingers touch the current object (null — пусто)
   }
@@ -35,10 +40,11 @@ export class BionicHand {
     if (!intent.valid) return; // signal lost: the drive holds its position, like the real hand
     if (!intent.aOn && !intent.bOn && !intent.co) this.armed = true;
     if (intent.gesture) this.selectGestureGrip(intent.gesture);
+    else if (this.switchMode === 'open') this.trackOpenHold(intent, dt);
     const fixedSpeed = intent.scheme === SCHEME.THRESHOLD;
     const speed = fixedSpeed ? 1 : Math.max(0.25, intent.intensity);
     switch (intent.command) {
-      case COMMAND.SWITCH: this.trySwitch(); break;
+      case COMMAND.SWITCH: if (this.switchMode === 'co') this.trySwitch(); break; // «open»: A+B is the lock, the hand holds
       case COMMAND.CLOSE: this.close(speed, intent, dt); break;
       case COMMAND.OPEN: this.open(speed, dt); break;
       default: break; // REST — hold
@@ -54,9 +60,26 @@ export class BionicHand {
 
   trySwitch() {
     if (!this.armed || this.force > 0) return;
+    this.cycleGrip();
+    this.armed = false;
+  }
+
+  /**
+   * Motorica's switch: the hand is fully open, the opening signal was let go, and a new one lasts holdOpenS — the next
+   * grip, once per signal. Opening a closed hand all the way in one long signal does not switch («triggers the opening
+   * signal again» in the manual).
+   */
+  trackOpenHold(intent, dt) {
+    if (this.closure > 0 || this.force > 0) { this.openReady = false; this.openFor = 0; return; }
+    if (!intent.bOn) { this.openReady = true; this.openFor = 0; return; }
+    if (!this.openReady || intent.command !== COMMAND.OPEN) { this.openFor = 0; return; }
+    this.openFor += dt;
+    if (this.openFor >= this.holdOpenS) { this.cycleGrip(); this.openReady = false; this.openFor = 0; }
+  }
+
+  cycleGrip() {
     const i = this.grips.indexOf(this.grip);
     this.grip = this.grips[(i + 1) % this.grips.length];
-    this.armed = false;
     this.switches++;
   }
 

@@ -135,8 +135,10 @@ test('«Мастерская»: a crush leaves its force marked on the gauge for
   const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme: 'proportional' }), hand: new BionicHand(), source: emulator, emulator, autopilot: false });
   const events = [];
   let t = 0;
-  // Open while the object comes, then squeeze as hard as possible (a closed hand has to open first).
-  const squeeze = () => (game.current?.phase === 'grasp' && (game.current.t ?? 0) > 0.4 ? { a: 1, b: 0 } : { a: 0, b: 0.5 });
+  // Open while the object comes, then squeeze as hard as possible (a closed hand has to open first). Opening stops at
+  // full opening: holding it there would switch the grip, as on a Motorica prosthesis.
+  const squeeze = () => (game.current?.phase === 'grasp' && (game.current.t ?? 0) > 0.4 ? { a: 1, b: 0 }
+    : { a: 0, b: runner.hand.closure > 0 || runner.hand.force > 0 ? 0.5 : 0 });
   for (; !game.peakMark && t < 60; t += 1 / 60) { emulator.setTarget(toEmulatorTarget(squeeze())); runner.step(t * 1000, 1 / 60); events.push(...game.drainEvents()); }
   assert.ok(game.peakMark, 'squeezing at full force crushes something');
   assert.equal(game.peakMark.reason, 'crush');

@@ -408,7 +408,8 @@ export class App {
     return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, coThreshold: s.coThreshold }, restTracker });
   }
 
-  createHand() { return new BionicHand({ grips: HAND.twoChannelGrips }); }
+  /** The grip switches the way the person's prosthesis does it (Настройки → «Смена хвата»). */
+  createHand() { return new BionicHand({ grips: HAND.twoChannelGrips, switchMode: this.settings.gripSwitch, holdOpenS: this.settings.holdOpenS }); }
 
   /** Today's wellbeing check-in ({pain, fatigue, action} | {skipped} | undefined). */
   checkin() { return this.profile.days[dayKey()]?.checkin; }

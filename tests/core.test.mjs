@@ -87,10 +87,39 @@ test('hand: latches force on rest, B releases, switch needs re-arm', () => {
   assert.equal(hand.force, 0); assert.ok(hand.closure < 0.4);
   hand.clearObject();
   const sw = { ...rest, command: 'switch', intensity: 0.7, aOn: true, bOn: true, co: true };
-  hand.update(sw, 1 / 60); hand.update(sw, 1 / 60);
-  assert.equal(hand.grip, 'pinch'); assert.equal(hand.switches, 1, 'held co-contraction switches once');
-  hand.update(rest, 1 / 60); hand.update(sw, 1 / 60);
+  hand.update(sw, 1 / 60);
+  assert.equal(hand.grip, 'fist', 'Motorica: A+B is the lock, not a grip switch');
+  const co = new BionicHand({ switchMode: 'co' });
+  co.update(sw, 1 / 60); co.update(sw, 1 / 60);
+  assert.equal(co.grip, 'pinch'); assert.equal(co.switches, 1, 'held co-contraction switches once');
+  co.update(rest, 1 / 60); co.update(sw, 1 / 60);
+  assert.equal(co.grip, 'key');
+});
+
+test('hand (5.23): the Motorica switch — at full opening, let go, then open again for holdOpenS', () => {
+  const hand = new BionicHand({ holdOpenS: 0.8 });
+  assert.equal(hand.switchMode, 'open', 'the default follows the customer\'s prosthesis');
+  const rest = { valid: true, scheme: 'proportional', command: 'rest', intensity: 0, aOn: false, bOn: false, co: false };
+  const open = { ...rest, command: 'open', intensity: 0.6, bOn: true };
+  const close = { ...rest, command: 'close', intensity: 0.6, aOn: true };
+  const hold = (intent, s) => { for (let t = 0; t < s; t += 1 / 60) hand.update(intent, 1 / 60); };
+  hold(close, 0.5);
+  hold(open, 2);
+  assert.equal(hand.closure, 0);
+  assert.equal(hand.grip, 'fist', 'opening a closed hand all the way in one long signal does not switch');
+  hold(rest, 0.2);
+  hold(open, 0.6);
+  assert.equal(hand.grip, 'fist', 'shorter than holdOpenS: no switch');
+  hold(rest, 0.2);
+  hold(open, 0.9);
+  assert.equal(hand.grip, 'pinch');
+  hold(open, 2);
+  assert.equal(hand.grip, 'pinch', 'once per signal');
+  hold(rest, 0.2); hold(open, 0.9);
   assert.equal(hand.grip, 'key');
+  hold(rest, 0.2); hold(open, 0.9);
+  assert.equal(hand.grip, 'fist', 'the group wraps around');
+  assert.equal(hand.switches, 3);
 });
 
 test('hand: lost signal holds position', () => {
