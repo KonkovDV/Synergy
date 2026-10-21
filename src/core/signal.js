@@ -96,6 +96,10 @@ export class SignalPipeline {
     if (now - this.lastValidAt > this.params.frameTimeoutMs) {
       this.a = 0; this.b = 0; this.aOn = false; this.bOn = false;
       this.aHighSince = null; this.bHighSince = null;
+      // 5.27 — after a dropout the gesture starts from rest. The last gesture before the loss stayed «stable» and was
+      // executed for gestureStableMs once the signal came back: «Ладонь» shown, «Кулак» closing the hand.
+      this.stableGesture = 'rest'; this.pendingGesture = 'rest'; this.pendingSince = now;
+      this.confidence = 0; this.uncertain = false;
       return restIntent(this.scheme, false, now);
     }
     return this.interpret(now);

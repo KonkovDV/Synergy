@@ -142,7 +142,11 @@ await textScale.getByRole('radio', { name: '100 %' }).click(); await wait(100);
 await page.locator('summary', { hasText: 'Тренировка' }).click(); await wait(150);
 await page.getByRole('radiogroup', { name: 'Кто занимается' }).getByRole('radio', { name: /Ребёнок/ }).click(); await wait(150);
 await page.getByLabel('Новый PIN родителя').fill('1234');
+// 5.26.4 saves a PIN only when it is typed twice; the script kept typing it once, so from 5.26.4 the PIN was never set
+// and the run stopped at the gate below (found by the 5.27 audit — the e2e had not been run after that change).
+await page.getByLabel('Повторите PIN').fill('1234');
 await page.getByRole('button', { name: 'Сохранить PIN' }).click(); await wait(200);
+if (!(await page.evaluate(() => window.Synergy.state().settings.parentPin))) errors.push('a PIN typed twice was not saved');
 await go('home'); await wait(200); await go('settings'); await wait(300);
 await page.getByLabel('PIN родителя').fill('0000'); await page.keyboard.press('Enter'); await wait(200);
 const fails = await page.evaluate(() => window.Synergy.state().settings.pinLock.fails);
@@ -214,6 +218,19 @@ for (const [name, params] of [['home'], ['progress'], ['levels', { game: 'rhythm
   if (name === 'home') await shot('v5-13-home-dark');
 }
 await page.emulateMedia({ colorScheme: 'light' }); await page.reload(); await wait(400);
+
+// 5.27 (medical review) — «Стало больно» in the pause of a real (not demo) run closes today: home shows the rest day.
+await go('play', { game: 'grip', level: 1 }); await wait(300);
+await page.getByRole('button', { name: 'Старт' }).click(); await wait(4200);
+await page.getByRole('button', { name: 'Пауза' }).click(); await wait(300);
+await audit('pause-pain');
+await page.getByRole('button', { name: 'Стало больно — закончить на сегодня' }).click(); await wait(500);
+const painStop = await page.evaluate(() => {
+  const d = new Date(), key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const st = window.Synergy.state();
+  return { screen: st.screen, checkin: st.profile.days[key]?.checkin ?? null, text: document.querySelector('.card.plan')?.textContent ?? '' };
+});
+if (painStop.screen !== 'home' || !painStop.checkin?.during || !/остановили занятие из-за боли/.test(painStop.text)) errors.push(`«Стало больно»: ${JSON.stringify({ ...painStop, text: painStop.text.slice(0, 120) })}`);
 
 // 5.7 — landscape (WCAG 1.3.4: orientation not locked): the pads fit, nothing is cut off, no axe violations.
 const land = await browser.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });

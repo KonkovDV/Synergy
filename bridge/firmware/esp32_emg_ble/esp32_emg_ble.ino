@@ -35,9 +35,12 @@ void setup() {
 }
 
 void loop() {
-  static uint32_t next = 0;
-  if (millis() < next) return;
-  next = millis() + PERIOD_MS;
+  // 5.27: elapsed time by unsigned subtraction — it stays right when millis() wraps after ~49.7 days; the old
+  // «millis() < next» stopped or flooded the stream at the wrap.
+  static uint32_t last = 0;
+  uint32_t now = millis();
+  if (now - last < PERIOD_MS) return;
+  last = now;
   if (!connected) return;
   char line[24];
   int n = snprintf(line, sizeof line, "%d %d\n", analogRead(PIN_A), analogRead(PIN_B));

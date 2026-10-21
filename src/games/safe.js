@@ -9,6 +9,7 @@ import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GEST
 import { COLORS, text, circle, fillRound, drawHand, panel, backdrop, scene } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 import { reachableBand } from '../core/signal.js';
+import { fmtFixed } from '../core/format.js';
 
 /** Prompt pools per scheme; `from` = level where the prompt is introduced (gestures: GESTURES[].introducedAt). */
 export const PROMPTS = {

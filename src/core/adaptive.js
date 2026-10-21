@@ -1,4 +1,4 @@
-// AdaptiveDifficulty — challenge point inside one exercise (Guadagnoli & Lee, 2004):
+// AdaptiveDifficulty — challenge point inside one exercise (Guadagnoli & Lee, 2004 — the idea; the target share is ours):
 // after every trial the share of successes over the last few trials is compared with the target;
 // too easy → tolerances shrink, too hard → they widen. Disabled for the retention probe and the
 // skill check, so those stay comparable from week to week. Pure and deterministic.

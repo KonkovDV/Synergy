@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.26.4',
+  version: '5.27.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -74,7 +74,21 @@ export const CALIBRATION_ADAPT = {
   reportShift: 0.02, // smaller shifts are noise: not saved, not reported
 };
 
-/** Challenge point inside an exercise: keep ~75 % of trials successful (Guadagnoli & Lee, 2004). */
+/**
+ * Calibration quality (5.27). A channel is judged against the noise of its own rest — the robust SD of the rest samples
+ * (1.4826 × MAD) — not against its absolute level: «comfortable ≤ 1.33 × rest» refused any source with a DC offset (an
+ * envelope at 1.00 V at rest and 1.20 V squeezed) and let a zero-based one through at a contrast of 2.5 dB.
+ *   flatNoise — span ≤ 3 SD of rest: the squeeze cannot be told from rest, the calibration is not saved;
+ *   restPeakNoise — 3 SD of rest reach the switch-off level: rest alone may switch the channel on (a warning).
+ */
+export const CALIBRATION_QUALITY = { flatNoise: 3, restPeakNoise: 3 };
+
+/**
+ * Challenge point inside an exercise: keep ~75 % of trials successful. The idea is the challenge point framework
+ * (Guadagnoli & Lee, 2004: the best difficulty depends on the learner's skill); the framework gives no number, so 75 %
+ * is our choice. The «85 % rule» (Wilson et al. 2019) was derived for gradient-descent learning of binary
+ * classification, not for motor skill — not cited as support (5.27, academic review).
+ */
 export const ADAPT = {
   window: 4,        // last N trials decide
   target: 0.75,     // desired success share
