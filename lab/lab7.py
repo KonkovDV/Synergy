@@ -1,7 +1,9 @@
 """Seven-gesture synthetic EMG lab: 4-channel raw sEMG → band-pass → time-domain features → LDA.
 Extends the team's v3 pipeline (signals.py: Preprocessor, features) from 5 classes to the
 7 gestures of the game (rest + 6 active, as Omni Hand recognizes up to six phantom gestures).
-Synthetic data only — never a patient model."""
+Synthetic data only — never a patient model.
+Do not fit this classifier on the Skillfactory/Motorica cuff set: those sensors are optomyography, not EMG,
+and a retest after the cuff is taken off and put back on was not published (docs/RESEARCH.md §16)."""
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.pipeline import make_pipeline

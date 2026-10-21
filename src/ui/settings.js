@@ -123,7 +123,7 @@ export function settingsScreen(app, { back = null } = {}) {
         bridgeBox,
         sliderRow('Реалистичность эмулятора', { ...R.realism, value: s.realism, format: v => v < 0.2 ? 'чистый сигнал' : v < 0.7 ? 'как у датчика' : 'шумно', onInput: v => app.updateSettings({ realism: v }) })),
       section('Чувствительность',
-        h('p', { class: 'note' }, 'Это пороги игры. Настройки протеза они не меняют: их меняет протезист в приложении протеза.'),
+        h('p', { class: 'note' }, 'Это пороги игры. В протез они не записываются: их меняет протезист в приложении протеза или на экране кисти.'),
         sliderRow('Порог включения канала', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); meter.setThresholds(); } }),
         // 5.24 — co-contraction, the lock and the grip switch do nothing in the gesture scheme (the grip is the gesture).
         // Showing them asked the person to tune a control that never fired (W3C COGA). The saved values stay.
