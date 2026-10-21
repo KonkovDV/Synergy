@@ -126,7 +126,10 @@ export function homeScreen(app) {
         h('button', { class: 'btn ghost', 'aria-pressed': String(ticked), onclick: () => { recordDayNote(p, today, { everyday: ticked ? undefined : task.id }); app.save(); app.go('home'); } },
           ticked ? 'Снять отметку' : 'Получилось'));
   const tutorialCard = !p.tutorialDone ? h('section', { class: 'card tutorial-card' },
-    h('b', { class: 'with-art' }, gameArt('tutorial', 36), 'Первые шаги · 2 минуты'), h('p', {}, 'Покой, сжатие, раскрытие, сила и коактивация — с живой подсказкой, до первой игры.'),
+    h('b', { class: 'with-art' }, gameArt('tutorial', 36), 'Первые шаги · 2 минуты'),
+    h('p', {}, s.scheme === 'gesture'
+      ? 'Покой и жесты — с живой подсказкой, до первой игры.'
+      : 'Покой, сжатие, раскрытие и смена хвата — с живой подсказкой, до первой игры.'),
     h('button', { class: 'btn primary', onclick: () => app.go('tutorial') }, 'Пройти обучение')) : null;
   // The weekly check appears after the first exercise, and is primary only when a week has really passed (5.11).
   const checkCard = !app.state.runs.some(r => !r.demo) ? null : h('section', { class: `card g-check ${check.due ? 'due' : ''}` },

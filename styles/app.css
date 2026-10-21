@@ -18,7 +18,7 @@
 :root {
   color-scheme: light;
   --bg: #f3f5f7; --bg2: #e8edf0; --card: #ffffff; --card2: #f3f5f7; --line: #e1e6ea; --line-strong: #c6d0d8;
-  --text: #05101a; --muted: #56616d; --accent: #16e182; --accent-ink: #0a7a47; --on-accent: #05101a;
+  --text: #05101a; --muted: #56616d; --accent: #16e182; --accent-ink: #0a7a47; --on-accent: #05101a; --focus: #05101a;
   --a: #ff7a45; --a-ink: #b53d0d; --b: #3b82f6; --b-ink: #1d5fbf; --violet: #6d4ef0; --co-ink: #5b3fd6;
   --good: #16e182; --good-ink: #0a7a47; --warn: #f5a524; --warn-ink: #8a4f00; --bad: #ef4444; --bad-ink: #c21b2e;
   --track: #e6ebef; --star-empty: #d0d9e0; --switch-off: #e8edf0; --switch-edge: #6f7b87; --switch-knob: #56616d;
@@ -47,7 +47,7 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #071019; --bg2: #0e1a24; --card: #101c27; --card2: #15232f; --line: #213140; --line-strong: #34495a;
-    --text: #eef3f6; --muted: #a3b3c0; --accent-ink: #3ef0a0;
+    --text: #eef3f6; --muted: #a3b3c0; --accent-ink: #3ef0a0; --focus: #eef3f6;
     --a: #ff8a52; --a-ink: #ffb084; --b: #4d94ff; --b-ink: #8ab8ff; --violet: #8a6dff; --co-ink: #c3b3ff;
     --good-ink: #4cf0a6; --warn-ink: #ffd27a; --bad-ink: #ff9aa4;
     --track: #1b2a37; --star-empty: #34495a; --switch-off: #15232f; --switch-edge: #8a9caa; --switch-knob: #a3b3c0;
@@ -63,7 +63,7 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #071019; --bg2: #0e1a24; --card: #101c27; --card2: #15232f; --line: #213140; --line-strong: #34495a;
-  --text: #eef3f6; --muted: #a3b3c0; --accent-ink: #3ef0a0;
+  --text: #eef3f6; --muted: #a3b3c0; --accent-ink: #3ef0a0; --focus: #eef3f6;
   --a: #ff8a52; --a-ink: #ffb084; --b: #4d94ff; --b-ink: #8ab8ff; --violet: #8a6dff; --co-ink: #c3b3ff;
   --good-ink: #4cf0a6; --warn-ink: #ffd27a; --bad-ink: #ff9aa4;
   --track: #1b2a37; --star-empty: #34495a; --switch-off: #15232f; --switch-edge: #8a9caa; --switch-knob: #a3b3c0;
@@ -79,7 +79,7 @@
 :root.hc {
   color-scheme: dark;
   --bg: #000; --bg2: #000; --card: #000; --card2: #101010; --line: #ffffff; --line-strong: #ffffff;
-  --text: #ffffff; --muted: #e8ecff; --accent: #ffe14d; --accent-ink: #ffe14d; --on-accent: #000;
+  --text: #ffffff; --muted: #e8ecff; --accent: #ffe14d; --accent-ink: #ffe14d; --on-accent: #000; --focus: #ffe14d;
   --a: #ffb547; --a-ink: #ffb547; --b: #5ad1ff; --b-ink: #5ad1ff; --violet: #e879f9; --co-ink: #f0abfc;
   --good: #3fe0a0; --good-ink: #3fe0a0; --warn: #ffcc4d; --warn-ink: #ffcc4d; --bad: #ff6b6b; --bad-ink: #ff8a8a;
   --track: #333; --star-empty: #555; --switch-off: #000; --switch-edge: #fff; --switch-knob: #fff;
@@ -103,7 +103,9 @@ h1 { line-height: 1.15; margin: 4px 0 8px }
 h2 { font-size: 1.125rem; margin: 0 0 10px }
 p { margin: 8px 0 }
 button { font: inherit; color: inherit }
-:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+/* 5.24 — mint #16e182 is about 1.7:1 on white, so a keyboard ring in the accent disappears.
+   The ring uses the text colour (WCAG 2.4.7; the 3:1 change in 2.4.13). tests/design.test.mjs measures it. */
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
 
 .screen { display: flex; flex-direction: column; min-height: 100dvh }
 .scroll { flex: 1; padding: 16px 16px 120px }
@@ -396,7 +398,9 @@ h2 { font-weight: 800; letter-spacing: -0.2px }
 .btn:hover { filter: brightness(1.03) }
 .btn:active { transform: scale(.96) }
 .btn.primary { background: var(--grad-primary); color: var(--on-accent); border-color: transparent; box-shadow: var(--glow-accent) }
-.btn.primary:disabled { box-shadow: none; filter: saturate(.4) }
+/* A disabled primary is a status («Сегодня — отдых», «План выполнен»), not a faded green button:
+   full text contrast on the page grey, so the words stay readable (1.4.3; disabled text is exempt, the meaning is not). */
+.btn.primary:disabled { opacity: 1; background: var(--bg2); color: var(--text); border: 1px solid var(--line-strong); box-shadow: none; filter: none }
 .btn.big { min-height: 64px; font-size: 1.125rem; letter-spacing: .1px }
 .btn.ghost { background: var(--card) }
 .btn.danger { background: var(--card); border-color: var(--bad-ink); color: var(--bad-ink) }
@@ -440,6 +444,7 @@ h2 { font-weight: 800; letter-spacing: -0.2px }
 .game-card::after { content: ''; position: absolute; right: -34px; bottom: -46px; width: 130px; height: 130px; border-radius: 50%; background: var(--deco); pointer-events: none }
 .game-card > * { position: relative; z-index: 1 }
 .game-card:active { transform: scale(.97) }
+.game-card:focus-visible { outline-offset: -6px } /* the card clips overflow: the ring stays inside the tile */
 .game-card b { font-size: 1.0625rem }
 .game-icon { display: grid; place-items: center; border-radius: 18px; background: var(--card); box-shadow: var(--shadow-1) }
 .game-icon .art { width: 84%; height: 84% }
@@ -767,13 +772,14 @@ html { scroll-padding-top: calc(3rem + 24px) } /* sticky top bar / showcase bann
 .ico { width: 1.5rem; height: 1.5rem; display: block }
 .icon-btn { display: inline-grid; place-items: center }
 .nav-icon .ico { width: 1.375rem; height: 1.375rem }
-.pad:focus-visible, .gkey:focus-visible, .pad-co:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.pad:focus-visible, .gkey:focus-visible, .pad-co:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
 :root .showcase-banner small, :root.hc .showcase-banner small { color: inherit }
 .plan .plan-start { margin: 4px 0 12px }
 .plan .plan-list { margin-bottom: 0 }
 
 /* Windows high contrast (forced colors, 5.9): backgrounds are replaced by system colours — state must not rely on them. */
 @media (forced-colors: active) {
+  :focus-visible { outline: 3px solid Highlight; outline-offset: 2px }
   .seg.active, .nav-item.active, .level.rec, .skin.active, .pad.on, .gkey.on, .pad-co.on { outline: 3px solid Highlight; outline-offset: -3px }
   .meter-bar .fill, .pad-fill, .xp-track i, .skill-track i, .play-progress i, .day.done i, .confirm-ring, .cal-ring { forced-color-adjust: none }
   .btn, .seg, .card, .pad, .gkey { border: 1px solid CanvasText }
@@ -955,7 +961,7 @@ table.data th { font-size: 0.75rem }
    Motion: short one-shots and an idle that stops by itself within 5 s (WCAG 2.2.2); all of it off with .rm and
    prefers-reduced-motion (the rules at the end of the file). No flashes: the «evolve» glow changes slowly. ===== */
 .pet-card .pet-art { display: grid; place-items: center; padding: 0; margin: 0; border: 0; background: transparent; border-radius: 24px; cursor: pointer; min-width: 48px; min-height: 48px; color: inherit }
-.pet-card .pet-art:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.pet-card .pet-art:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
 .pet-card .pet-art .art { width: 104px; height: 104px }
 .pet-say { position: relative; margin: 10px 0 0; padding: 8px 12px; border-radius: 16px; background: #ffffff; color: #05101a; font-size: 0.875rem; font-weight: 600; line-height: 1.4 }
 .pet-say::before { content: ""; position: absolute; left: -7px; top: 14px; border: 7px solid transparent; border-left: 0; border-right-color: #ffffff }
@@ -1009,7 +1015,7 @@ table.data th { font-size: 0.75rem }
 
 /* Hint tours: a card above the bottom bar (beside the rail in landscape) and a ring around the element it explains. */
 .tour { position: fixed; z-index: 25; left: 12px; right: 12px; bottom: 96px; max-width: 520px; margin: 0 auto; max-height: 48vh; display: flex; flex-direction: column;
-  background: var(--card); color: var(--text); border: 2px solid var(--accent); border-radius: 24px; padding: 14px 16px 12px; box-shadow: var(--shadow-2); animation: rise .25s ease }
+  background: var(--card); color: var(--text); border: 2px solid var(--accent-ink); border-radius: 24px; padding: 14px 16px 12px; box-shadow: var(--shadow-2); animation: rise .25s ease }
 /* The text scrolls inside the card, the buttons stay (a 390 px high landscape screen at 200 % text). */
 .tour-text { overflow: auto; min-height: 0; flex: 1 1 auto }
 .tour-count { margin: 0; color: var(--muted); font-size: 0.8125rem; font-weight: 700 }
@@ -1017,7 +1023,7 @@ table.data th { font-size: 0.75rem }
 .tour p.tour-body { margin: 0 0 10px }
 .tour .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; flex: 0 0 auto }
 .tour .row-actions .btn { flex: 1 1 9rem; margin: 0 }
-.tour-target { outline: 3px solid var(--accent) !important; outline-offset: 4px; box-shadow: 0 0 0 9px var(--deco-green, rgba(22, 225, 130, .25)) !important; scroll-margin-top: 72px; animation: tour-ring 1.6s ease-in-out 3 }
+.tour-target { outline: 3px solid var(--focus) !important; outline-offset: 4px; box-shadow: 0 0 0 9px var(--deco-green, rgba(22, 225, 130, .25)) !important; scroll-margin-top: 72px; animation: tour-ring 1.6s ease-in-out 3 }
 @keyframes tour-ring { 0%, 100% { outline-offset: 4px } 50% { outline-offset: 7px } }
 /* Short screens (a 568 × 320 phone in landscape): a smaller card and the explained element right under the top (or the
    demo banner), so both are on screen at once — the full layout run found the card over the element. */
@@ -1048,6 +1054,7 @@ table.data th { font-size: 0.75rem }
 :root.hc .stats div, :root.hc .pet-card { background: #000; color: #fff; border: 2px solid var(--line); box-shadow: none }
 :root.hc .hero > .trails, :root.hc .onb-hero > .trails, :root.hc .game-card::after, :root.hc .tinted::after, :root.hc .g-check.card::after, :root.hc .tutorial-card.card::after { display: none }
 :root.hc .btn.primary, :root.hc .seg.active, :root.hc .level.rec, :root.hc .nav-item.active .nav-icon { background: #ffe14d; color: #000; box-shadow: none }
+:root.hc .btn.primary:disabled { background: #000; color: #fff; border-color: #fff }
 :root.hc .avatar, :root.hc .streak, :root.hc .game-icon { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none }
 :root.hc .hero .xp-track i, :root.hc .day.done i { background: #3fe0a0; border-color: #3fe0a0 }
 :root.hc .day.today i { box-shadow: none }
@@ -1078,7 +1085,7 @@ table.data th { font-size: 0.75rem }
 .nest-aura { position: absolute !important; top: 0; left: 50%; width: 240px; height: 240px; margin-left: -120px; border-radius: 50%; pointer-events: none; opacity: var(--aura, .5);
   background: radial-gradient(circle, rgba(255, 210, 122, .6) 0%, rgba(255, 154, 82, .28) 40%, rgba(109, 78, 240, .16) 60%, transparent 72%) }
 .nest-bird { display: grid; place-items: center; padding: 0; margin: 0; border: 0; background: transparent; border-radius: 50%; cursor: pointer; color: inherit; min-width: 48px; min-height: 48px }
-.nest-bird:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px }
+.nest-bird:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px }
 .nest-bird .art { width: min(196px, 54vw); height: auto; filter: drop-shadow(0 16px 24px rgba(0, 0, 0, .5)) }
 .nest-info { display: grid; gap: 4px; justify-items: center; width: 100%; max-width: 30rem }
 .nest-info h1 { color: var(--cover-text); margin: 0; font-size: clamp(1.5rem, 7vw, 2rem); overflow-wrap: anywhere }
@@ -1152,7 +1159,7 @@ span.evo { position: relative; display: inline-grid; place-items: center; flex: 
 .faq-item > summary::-webkit-details-marker { display: none }
 .faq-item > summary::after { content: ""; position: absolute; right: 10px; top: 50%; width: 9px; height: 9px; margin-top: -7px; border-right: 2.5px solid var(--muted); border-bottom: 2.5px solid var(--muted); transform: rotate(45deg); transition: transform .2s ease }
 .faq-item[open] > summary::after { transform: rotate(225deg); margin-top: -2px }
-.faq-item > summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.faq-item > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
 .faq-item > p { margin: 0 0 10px; color: var(--text) }
 .faq-item > p + p { color: var(--muted) }
 :root.rm .faq-item > summary::after { transition: none }
@@ -1179,7 +1186,7 @@ span.evo { position: relative; display: inline-grid; place-items: center; flex: 
 .flash-face small { color: var(--muted) }
 .flashcard.flipped { border-color: var(--accent); background: var(--tint-green); animation: flash-turn .32s var(--spring) }
 .flashcard.flipped .flash-face { min-height: 0; padding-bottom: 8px }
-.flash-face:focus-visible { outline: 3px solid var(--accent); outline-offset: -5px }
+.flash-face:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px }
 .flash-back { padding: 0 20px 20px }
 .flash-back p { margin: 0; font-size: 1.0625rem; line-height: 1.5 }
 .flash-back:empty { display: none }
@@ -1197,7 +1204,7 @@ span.evo { position: relative; display: inline-grid; place-items: center; flex: 
 .primer-options .option[aria-disabled="true"]:not(.right):not(.wrong) { opacity: .72 }
 .primer-why { display: grid; gap: 6px }
 .primer-why p { margin: 0 }
-.primer-why:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.primer-why:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
 .primer-summary { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
 .primer-summary li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; overflow-wrap: break-word }
 :root.rm .flashcard.flipped { animation: none }

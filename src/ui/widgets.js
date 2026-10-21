@@ -1,7 +1,7 @@
 // Reusable UI pieces (DRY): bottom navigation, live signal meter, form rows.
 import { h, longestWord } from './dom.js';
 import { fmtSec } from '../core/format.js';
-import { COMMAND_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
+import { COMMAND_NAME, GESTURE_BY_ID, twoChannelControls } from '../core/vocabulary.js';
 import { mio } from './art.js';
 import { picture } from './pictures.js';
 
@@ -70,7 +70,7 @@ export function signalMeter(app) {
   const bar = cls => {
     const fill = h('i', { class: 'fill' });
     const on = h('b', { class: 'mark on', style: { left: `${s.sensitivity * 100}%` }, title: 'порог' });
-    const co = h('b', { class: 'mark co', style: { left: `${s.coThreshold * 100}%` }, title: 'коактивация' });
+    const co = h('b', { class: 'mark co', hidden: !twoChannelControls(s.scheme), style: { left: `${s.coThreshold * 100}%` }, title: 'коактивация' });
     return { node: h('div', { class: `meter-bar ${cls}` }, fill, on, co), fill, on, co };
   };
   const A = bar('a'), B = bar('b');
