@@ -16,6 +16,7 @@
 //                 bar shows through around it (5.12.1, found on a device: the onboarding dots over a half-visible line).
 // Usage: npm run build && npm run audit:layout [-- baseUrl] [-- --quick] [-- --view=568x320 --state=a,b]   (no URL — serves dist/ itself)
 import { createRequire } from 'node:module';
+import { PRIMER } from '../../src/core/primer.js';
 import { baseUrl } from '../../tools/static-server.mjs';
 import { writeEvidence } from '../../tools/evidence.mjs';
 const require = createRequire(import.meta.url);
@@ -316,7 +317,7 @@ const STATES = [
   ['safety-update', async p => go(p, 'onboarding', { safety: true })], // 5.15: the re-read after the rules change
   ['primer', async p => go(p, 'primer')],
   ['primer-card', async p => go(p, 'primer', { deck: 'grip', card: 0 })],
-  ['primer-card-open', async p => { await go(p, 'primer', { deck: 'grip', card: 4 }); await p.locator('.flash-face').click(); }],
+  ['primer-card-open', async p => { await go(p, 'primer', { deck: 'grip', card: PRIMER.find(d => d.id === 'grip').cards.length - 1 }); await p.locator('.flash-face').click(); }],
   ['primer-check', gripCheck],
   ['primer-check-answered', async p => { if (!(await p.locator('.primer-options').count())) await gripCheck(p); await p.locator('.primer-options .option').first().click(); }],
   ['primer-result', async p => {
@@ -368,7 +369,7 @@ const STATES = [
 const go = (p, name, params = {}) => p.evaluate(([n, q]) => window.Synergy.go(n, q), [name, params]);
 /** «Азбука протеза» (5.15): every card of «Сила и хват» turned, then its check. */
 async function gripCheck(p) {
-  for (let k = 0; k < 5; k++) {
+  for (let k = 0; k < PRIMER.find(d => d.id === 'grip').cards.length; k++) {
     await go(p, 'primer', { deck: 'grip', card: k });
     if ((await p.locator('.flash-face').getAttribute('aria-expanded')) !== 'true') await p.locator('.flash-face').click();
   }

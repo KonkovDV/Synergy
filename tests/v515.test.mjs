@@ -175,6 +175,8 @@ test('primer: numbers follow the config, grips follow the gesture set (the set o
   const grip = PRIMER.find(d => d.id === 'grip');
   const text = grip.cards.find(c => c.id === 'grips').back();
   for (const g of CLOSING_GESTURES) assert.ok(text.includes(`«${g.name}»`), g.id);
+  assert.match(grip.cards.find(c => c.id === 'names').back(), /большой и указательный/);
+  assert.match(PRIMER.find(d => d.id === 'signal').cards.find(c => c.id === 'terms').back(), /не записываются/);
   const q = grip.check().find(x => x.id === 'grip-use');
   assert.ok(q && q.options[q.answer] === CLOSING_GESTURES[1].use && q.q.includes(CLOSING_GESTURES[1].name));
 });
