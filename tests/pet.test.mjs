@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { PET, MISSIONS, XP } from '../src/config.js';
 import { petState, petReaction, petTap, PET_ANIMATIONS, PET_ITEMS, PET_SLOTS, wornItems, autoEquip, equipItem, itemsFor, cleanOutfit, slotOpen, petName } from '../src/core/pet.js';
 import { createProfile, recordRun, unlockAchievements, ACHIEVEMENTS } from '../src/core/progress.js';
-import { missionOffers, validMission, takeMission, dropMission, advanceMission, missionMatches, missionText, missionXp, MISSION_KINDS } from '../src/core/missions.js';
+import { missionOffers, validMission, takeMission, dropMission, advanceMission, missionMatches, missionText, missionXp, missionKey, cleanMissionPass, MISSION_KINDS } from '../src/core/missions.js';
 import { TOURS, TourSession, pendingTour, mergeTourState, mergeTours, tourProblems, validTourState, TOUR_STATUS } from '../src/core/tours.js';
 import { emptyState, parseState, exportState } from '../src/core/storage.js';
 import { buildShowcaseState } from '../src/core/showcase.js';
@@ -110,6 +110,26 @@ test('goals: offers follow the weakest skills and the scheme, one goal at a time
   assert.equal(p.mission.since, '2026-10-19'); assert.equal(p.mission.done, 0);
   dropMission(p); assert.equal(p.mission, null);
   assert.equal(takeMission(p, { kind: 'weak', game: 'grip', minStars: 2, target: 99 }, PLAN_CATALOG, '2026-10-19'), false, 'an outsized goal is refused');
+});
+
+test('goals (5.25): setting a goal aside replaces it, and «hard» asks for less', () => {
+  const skills = { precision: 30, switching: 80, stability: 80, timing: 80, separation: 80, retention: 80 };
+  const base = { skills, catalog: PLAN_CATALOG, scheme: 'proportional', week: 0, checkDue: false };
+  const offers = missionOffers(base);
+  const p = createProfile();
+  takeMission(p, offers[0], PLAN_CATALOG, '2026-10-19');
+  dropMission(p, { key: missionKey(offers[0]), week: 0, bias: 'hard' });
+  assert.equal(p.mission, null);
+  assert.deepEqual(p.missionPass.keys, [missionKey(offers[0])]);
+  assert.equal(p.missionPass.bias, 'hard');
+  const again = missionOffers({ ...base, passed: p.missionPass.keys, bias: 'hard' });
+  assert.equal(again.length, 3);
+  assert.ok(!again.some(o => missionKey(o) === missionKey(offers[0])), 'the set-aside goal does not return');
+  assert.ok(again.every(o => (o.minStars ?? 1) <= 1 || o.kind === 'idle'), 'a hard week does not ask for 2★ or 3★');
+  dropMission(p, { key: missionKey(again[0]), week: 0, bias: 'other' });
+  assert.equal(p.missionPass.bias, 'hard', '«another goal» does not cancel a hard week');
+  assert.equal(cleanMissionPass({ week: 0, keys: ['weak:nope', 'check', '__proto__', 'weak:grip'], bias: 'nope' }, PLAN_CATALOG).keys.includes('weak:nope'), false);
+  assert.equal(cleanMissionPass({ week: 'x', keys: ['check'] }, PLAN_CATALOG), null);
 });
 
 test('goals: runs move the goal, demo and other games do not; the end pays once and marks the day', () => {

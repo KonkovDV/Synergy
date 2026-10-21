@@ -6,7 +6,7 @@ import { createProfile, SKINS } from './progress.js';
 import { defaultCalibration } from './signal.js';
 import { SCHEME, GESTURE_BY_ID } from './vocabulary.js';
 import { cleanOutfit } from './pet.js';
-import { validMission } from './missions.js';
+import { validMission, cleanMissionPass } from './missions.js';
 import { validTourState } from './tours.js';
 import { validEverydayId } from './everyday.js';
 import { cleanPrimer } from './primer.js';
@@ -117,7 +117,9 @@ export function sanitizeProgress(state, catalog) {
     if (!p.plan.items.length) p.plan = null;
   }
   // The goal the player took (5.13): a known kind about a known game, a bounded target — else no goal.
-  p.mission = validMission(p.mission, Object.keys(catalog).map(id => ({ id })));
+  const catalogList = Object.keys(catalog).map(id => ({ id }));
+  p.mission = validMission(p.mission, catalogList);
+  p.missionPass = cleanMissionPass(p.missionPass, catalogList);
   return state; // runs of an unknown game stay: history is never deleted silently, and no screen needs their game
 }
 

@@ -491,8 +491,10 @@ export class App {
   missionOffers() {
     const today = dayKey(), runs = this.state.runs.filter(r => !r.demo);
     const lastPlayed = Object.fromEntries(PLAN_CATALOG.map(g => [g.id, runs.filter(r => r.game === g.id).reduce((m, r) => (r.at > m ? r.at : m), '')]));
-    return missionOffers({ skills: skillProfile(runs), lastPlayed, catalog: PLAN_CATALOG, scheme: this.settings.scheme, week: weekIndex(today),
-      checkDue: assessmentStatus(runs, this.settings.scheme, today).due });
+    const week = weekIndex(today);
+    const pass = this.profile.missionPass?.week === week ? this.profile.missionPass : null;
+    return missionOffers({ skills: skillProfile(runs), lastPlayed, catalog: PLAN_CATALOG, scheme: this.settings.scheme, week,
+      checkDue: assessmentStatus(runs, this.settings.scheme, today).due, passed: pass?.keys ?? [], bias: pass?.bias ?? 'other' });
   }
 
   /** Next unfinished item of today's plan, or null. */
