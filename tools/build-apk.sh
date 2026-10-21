@@ -13,7 +13,9 @@ mkdir -p "$CACHE"
 # Downloads are retried (Maven Central answers 429 under load) and pinned by SHA-256 (supply chain).
 sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -c1-64; }
 fetch() { # fetch <file> <maven path> <sha256>
-  [ -f "$CACHE/$1" ] || { curl -sSfL --retry 4 --retry-delay 5 -o "$CACHE/$1.part" "$MAVEN/$2" && mv "$CACHE/$1.part" "$CACHE/$1"; }
+  # 5.27: a failed download is said as such — before, it ended in «SHA-256 mismatch» for a file that was never there.
+  [ -f "$CACHE/$1" ] || { curl -sSfL --retry 4 --retry-delay 5 -o "$CACHE/$1.part" "$MAVEN/$2" && mv "$CACHE/$1.part" "$CACHE/$1"; } \
+    || { rm -f "$CACHE/$1.part"; echo "Не удалось скачать $MAVEN/$2 — проверьте сеть или прокси (нужен доступ к Maven Central)"; exit 1; }
   [ "$(sha256 "$CACHE/$1")" = "$3" ] || { echo "SHA-256 mismatch: $1 — удалите tools/.cache/$1 и повторите"; exit 1; }
 }
 fetch apktool-lib.jar org/apktool/apktool-lib/3.0.3/apktool-lib-3.0.3.jar 983773879fd89ede2cd938858e3efce2a90ac1123f6a5140e9d949dcf4464e3e

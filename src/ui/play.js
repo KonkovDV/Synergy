@@ -153,7 +153,10 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       h('div', { class: 'row-actions col' },
         h('button', { class: 'btn primary big', onclick: () => { setDialog(false); phase = 'running'; session.game.paused = false; focusIn(pauseBtn()); } }, 'Продолжить'),
         h('button', { class: 'btn ghost', onclick: () => restart(demo) }, 'Начать заново'),
-        h('button', { class: 'btn ghost', onclick: () => exit() }, 'Выйти'))));
+        h('button', { class: 'btn ghost', onclick: () => exit() }, 'Выйти'),
+        // 5.27 (medical review): pain that came with the exercise is said here, not only in the morning check-in — today
+        // closes like a severe-pain answer and the report shows it. Not in the demo: it is not the person's training.
+        demo ? null : h('button', { class: 'btn ghost pain-stop', onclick: () => { phase = 'leaving'; app.stopForPain(); } }, 'Стало больно — закончить на сегодня'))));
     setDialog(true);
     focusIn(overlay.querySelector('.btn.primary'));
   }
