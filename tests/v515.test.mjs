@@ -144,7 +144,7 @@ import { PRIMER, deckProgress, resumeIndex, markSeen, checkOpen, recordCheck, pr
 import { createProfile, unlockAchievements, ACHIEVEMENTS, trainingDays } from '../src/core/progress.js';
 import { PET_ITEMS } from '../src/core/pet.js';
 import { CLOSING_GESTURES } from '../src/core/vocabulary.js';
-import { SESSION, CHILD } from '../src/config.js';
+import { SESSION, CHILD, SIGNAL } from '../src/config.js';
 import { emptyState, exportState, parseState } from '../src/core/storage.js';
 
 test('primer: every topic has cards to read and a check whose answer is one of its options', () => {
@@ -177,6 +177,12 @@ test('primer: numbers follow the config, grips follow the gesture set (the set o
   for (const g of CLOSING_GESTURES) assert.ok(text.includes(`«${g.name}»`), g.id);
   assert.match(grip.cards.find(c => c.id === 'names').back(), /большой и указательный/);
   assert.match(PRIMER.find(d => d.id === 'signal').cards.find(c => c.id === 'terms').back(), /не записываются/);
+  const signal = PRIMER.find(d => d.id === 'signal');
+  assert.match(signal.cards.find(c => c.id === 'dropout').back(), new RegExp(`${SIGNAL.frameTimeoutMs} мс`));
+  assert.equal(signal.check().find(q => q.id === 'dropout').answer, 1);
+  assert.match(comfort.cards.find(c => c.id === 'pain').back(), /Стало больно/);
+  assert.match(comfort.cards.find(c => c.id === 'skin').back(), /даже вместе с сильной болью/);
+  assert.match(comfort.check().find(q => q.id === 'during').why, /не сохраняется/);
   const q = grip.check().find(x => x.id === 'grip-use');
   assert.ok(q && q.options[q.answer] === CLOSING_GESTURES[1].use && q.q.includes(CLOSING_GESTURES[1].name));
 });
