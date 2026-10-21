@@ -41,6 +41,9 @@ export function twoChannelControls(scheme) {
  * derive from it (replacement checklist — docs/INTEGRATION.md, «Замена набора жестов»).
  * The 2022 Motorica/Skillfactory labels (open, grab, ok, gun, single fingers) are optomyography, not EMG.
  * They stay a hypothesis for 28.10 and are not training data (docs/RESEARCH.md §16).
+ * The Manifesto Hand 3.0 catalog (read 21.10.2026) uses the same Russian names for different poses:
+ * its «щепоть» is three fingers, its «щипок» is thumb and index, its «пистолет» is not the 2022 gun.
+ * Do not rename this set from that page (docs/RESEARCH.md §17).
  * pose = flexion of [thumb, index, middle, ring, little], 0 — straight, 1 — fully bent.
  * command — what the gesture does to the hand; grip — which grip it selects;
  * cue — how to show it (tutorial); introducedAt — «Сейф» level where it first appears.
