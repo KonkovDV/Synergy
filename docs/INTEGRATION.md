@@ -19,6 +19,28 @@
 
 **Когда 28.10 опубликуют эмулятор:** изменить только `src/input/bridge.js → parseExternal()` (+ тест в `tests/core.test.mjs`). Если эмулятор — программа с выводом в консоль, используйте `--stdin` без изменения кода игры.
 
+### Снимок Motorica Start (контракт v1, 5.21)
+
+Так Motorica Start передаёт сигнал своей игре Motorica Kart. Контракт открыт в её исходном коде: [HakerFromRussia-XD/1_game_stk](https://github.com/HakerFromRussia-XD/1_game_stk) (`GameControlSnapshot.java`, `IGameControlService.aidl`, `motorica_game_control.cpp`; «Motorica-maintained SuperTuxKart fork for Motorica Start controller integration»). «Синергия» принимает снимок как есть, через любой транспорт выше:
+
+```json
+{ "version": 1, "seq": 1842, "timestampMs": 1792540800000, "openLevel": 12, "closeLevel": 168, "connected": true }
+```
+
+| Поле | Как читает «Синергия» |
+|---|---|
+| `closeLevel` | канал A (сжатие): 0…255 → 0…1 |
+| `openLevel` | канал B (раскрытие): 0…255 → 0…1 |
+| `connected: false` | протез не на связи: последний кадр сбрасывается, через 300 мс — «нет сигнала» и пауза. Уровни 0/0 при этом не считаются покоем |
+| `seq` | тот же номер — не новый кадр. Хост, который пересылает последний снимок каждые 33 мс, не продлевает жизнь остановившемуся устройству |
+| `version` | только 1: другая версия может означать другие уровни |
+| `timestampMs` | не используется: время кадра ставится при получении, как и у Motorica Kart |
+| `{ "snapshot": {…} }` | тот же снимок в обёртке — так он лежит в общем хранилище App Group на iOS |
+
+Жестов в снимке нет — только два уровня, которые считает сам Motorica Start (как именно, в коде игры не описано). Поэтому с Motorica Start работают пороговая и пропорциональная схемы. Схеме жестов нужен другой источник. Motorica Kart рулит разностью `closeLevel − openLevel` с мёртвой зоной 8 из 255 и через 500 мс без снимка встаёт на паузу. Сторож «Синергии» — 300 мс.
+
+На Android игра привязывается к службе Motorica Start: пакет `com.bailout.stickk`, действие `com.motorica.gamecontrol.BIND`, разрешение `com.motorica.gamecontrol.permission.CONTROL_GAME`, обратный вызов `IGameControlCallback`. Пример хоста — `docs/embed/android/MotoricaStartLink.kt`. На iOS снимок лежит в общем хранилище App Group, игру открывают адресом `motorica-stk://`. **Не проверено с настоящим Motorica Start:** у нас нет ни приложения, ни протеза. Вероятно, разрешение `CONTROL_GAME` выдаётся только играм «Моторики» — это вопрос организатору (`PLAN.md` 0.3).
+
 ## Замена набора жестов (день публикации задачи)
 
 Набор жестов задан **в одном месте** — `src/core/vocabulary.js → GESTURES`. Игры, «Первые шаги», легенда, «Проверка навыка», «Сейф», эмулятор, аналитика и мост берут его оттуда. Жест «Покой» сохраняет id `rest`.

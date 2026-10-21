@@ -26,3 +26,5 @@
 | ESP32 Arduino core (BLEDevice) | Apache-2.0 / LGPL-2.1 (части ядра) | прошивка-пример `bridge/firmware/` (собирается пользователем) |
 
 Платформенные API (WebView, Web Bluetooth, Web Speech, TextToSpeech, PrintManager) используются через интерфейсы ОС и браузера.
+
+Формат снимка Motorica Start (5.21) взят из открытого кода Motorica Kart ([HakerFromRussia-XD/1_game_stk](https://github.com/HakerFromRussia-XD/1_game_stk), GPL-3.0). Это сведения для совместимости, не код: ни строки этого проекта в «Синергии» нет (`docs/LEGAL.md` §1).
