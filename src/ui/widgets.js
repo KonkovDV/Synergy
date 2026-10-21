@@ -51,7 +51,7 @@ export function bottomNav(app, active) {
 
 /** The arrow is the screen's «back»: the Android button, the browser back gesture and Esc press it too (App.handleBack). */
 /** Status words of the external source — one copy for the game and the settings (5.11: two had to be kept in sync). */
-export const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', unreachable: 'нет ответа, повторяем…', error: 'ошибка адреса' };
+export const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', unreachable: 'нет ответа, повторяем…', error: 'ошибка адреса', offline: 'протез не на связи' };
 
 export function topBar(title, onBack, extra = null) {
   return h('header', { class: 'top-bar' },

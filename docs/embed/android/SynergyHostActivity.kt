@@ -14,6 +14,11 @@ import org.json.JSONObject
 class SynergyHostActivity : Activity() {
     private lateinit var web: WebView
 
+    // Motorica Start's two levels go to the game as they are (MotoricaStartLink.kt); without Motorica Start nothing comes.
+    private val motorica = MotoricaStartLink(this) { snapshot ->
+        runOnUiThread { web.evaluateJavascript("window.Synergy&&window.Synergy.feed(${snapshot.toJson()})", null) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         web = WebView(this)
@@ -39,6 +44,16 @@ class SynergyHostActivity : Activity() {
     fun pushFrame(a: Float, b: Float, gesture: String? = null) {
         val g = gesture?.filter { it in 'a'..'z' }?.let { ",gesture:'$it'" } ?: ""
         runOnUiThread { web.evaluateJavascript("window.Synergy&&window.Synergy.feed({a:$a,b:$b$g})", null) }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        motorica.bind()
+    }
+
+    override fun onStop() {
+        motorica.unbind()
+        super.onStop()
     }
 
     @Deprecated("Android 13+: OnBackInvokedCallback; the game's own back is the same call")

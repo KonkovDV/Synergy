@@ -42,6 +42,25 @@ function gestureOf(value) {
  */
 export const MAX_MESSAGE_CHARS = 4096; // a frame is ~50 bytes; anything larger is not a frame (DoS guard)
 
+/**
+ * Motorica Start game control, contract v1 — the snapshot Motorica Start hands to its own game (Motorica Kart:
+ * `GameControlSnapshot`, github.com/HakerFromRussia-XD/1_game_stk): {version, seq, timestampMs, openLevel,
+ * closeLevel, connected}. Two levels 0…255 computed by Motorica Start, no gestures. Close is A (сжатие),
+ * open is B (раскрытие). `connected: false` with levels 0/0 is a device that is not there, never a rest.
+ */
+export const MOTORICA_LEVEL_MAX = 255;
+
+function motoricaFrame(s) {
+  if (s.version !== undefined && num(s.version) !== 1) return null; // another contract version may mean other levels
+  const seq = num(s.seq);
+  const tag = Number.isFinite(seq) ? { seq } : {};
+  if (s.connected === false || s.connected === 0) return { a: 0, b: 0, offline: true, ...tag };
+  const open = num(s.openLevel), close = num(s.closeLevel);
+  if (!Number.isFinite(open) || !Number.isFinite(close)) return null;
+  const level = x => Math.min(1, Math.max(0, x / MOTORICA_LEVEL_MAX));
+  return { a: level(close), b: level(open), ...tag };
+}
+
 export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   let data = msg;
   if (typeof data === 'string') {
@@ -56,6 +75,8 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   }
   if (Array.isArray(data)) data = { channels: data };
   if (!data || typeof data !== 'object') return null;
+  const snapshot = data.snapshot && typeof data.snapshot === 'object' ? data.snapshot : data; // iOS App Group keeps it under «snapshot»
+  if ('openLevel' in snapshot || 'closeLevel' in snapshot) return motoricaFrame(snapshot);
   const list = data.ch ?? data.channels ?? data.emg ?? data.values;
   let a = num(data.a), b = num(data.b);
   if (Array.isArray(list)) { a = num(list[map.channelA]); b = num(list[map.channelB] ?? 0); }
@@ -131,8 +152,14 @@ export class BridgeSource {
 
   /** Stamps local arrival time, so remote clocks never matter. A negative value switches to the raw-EMG envelope. */
   feed(msg) {
-    const frame = parseExternal(msg, this.map);
-    if (!frame) return false;
+    const parsed = parseExternal(msg, this.map);
+    if (!parsed) return false;
+    const { seq, offline, ...frame } = parsed;
+    // The device itself says it is not there: no frame, the watchdog turns it into «нет сигнала».
+    if (offline) { this.latest = null; this.lastSeq = seq; if (this.status !== 'offline') this.setStatus('offline'); return false; }
+    // A host that relays Motorica Start's latest snapshot resends it unchanged: the same seq is no new frame, so a
+    // stalled device still trips the watchdog (Motorica Kart does the same).
+    if (seq !== undefined) { if (seq === this.lastSeq) return false; this.lastSeq = seq; }
     const t = this.clock();
     if (!this.raw && (frame.a < 0 || frame.b < 0)) { this.raw = true; this.envelope = new EnvelopeFilter(); }
     if (this.raw) [frame.a, frame.b] = this.envelope.push(t, frame.a, frame.b);

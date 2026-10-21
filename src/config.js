@@ -3,7 +3,7 @@
 
 export const APP = {
   name: 'Синергия',
-  version: '5.20.1',
+  version: '5.21.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };

@@ -15,8 +15,8 @@ fetch android-all-29.jar https://repo.maven.apache.org/maven2/org/robolectric/an
 fetch kotlin-compiler-2.1.21.zip https://github.com/JetBrains/kotlin/releases/download/v2.1.21/kotlin-compiler-2.1.21.zip 1ba08a8b45da99339a0601134cc037b54cf85e9bc0edbe76dcbd27c2d684a977
 [ -x "$CACHE/kotlinc/bin/kotlinc" ] || (cd "$CACHE" && unzip -q -o kotlin-compiler-2.1.21.zip)
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-"$CACHE/kotlinc/bin/kotlinc" "$ROOT/docs/embed/android/SynergyHostActivity.kt" -cp "$CACHE/android-all-29.jar" -jvm-target 1.8 -Werror -d "$TMP/kt" 2>/dev/null
-echo "Android: SynergyHostActivity.kt скомпилирован (Kotlin 2.1.21, API 29, без предупреждений)"
+"$CACHE/kotlinc/bin/kotlinc" "$ROOT/docs/embed/android/SynergyHostActivity.kt" "$ROOT/docs/embed/android/MotoricaStartLink.kt" -cp "$CACHE/android-all-29.jar" -jvm-target 1.8 -Werror -d "$TMP/kt" 2>/dev/null
+echo "Android: SynergyHostActivity.kt и MotoricaStartLink.kt скомпилированы (Kotlin 2.1.21, API 29, без предупреждений)"
 
 mkdir -p "$TMP/rn" && cp "$ROOT/docs/embed/react-native/SynergyHost.tsx" "$TMP/rn/"
 (cd "$TMP/rn" && echo '{"name":"rn-check","private":true}' > package.json \

@@ -8,6 +8,7 @@
 |---|---|---|
 | Web (сайт, PWA) | [web/host.html](web/host.html) | `postMessage` между `iframe` и страницей |
 | Android (Kotlin) | [android/SynergyHostActivity.kt](android/SynergyHostActivity.kt) | `addJavascriptInterface(obj, "SynergyHost")` с методом `onMessage` |
+| Motorica Start (Android) | [android/MotoricaStartLink.kt](android/MotoricaStartLink.kt) | сигнал: снимки службы `com.motorica.gamecontrol` → `Synergy.feed` |
 | iOS (Swift) | [ios/SynergyHostView.swift](ios/SynergyHostView.swift) | `userContentController.add(handler, name: "synergyHost")` |
 | Flutter | [flutter/synergy_host.dart](flutter/synergy_host.dart) | `addJavaScriptChannel('SynergyHost', …)` |
 | React Native | [react-native/SynergyHost.tsx](react-native/SynergyHost.tsx) | `onMessage` у `react-native-webview` |
@@ -79,6 +80,22 @@ frame.contentWindow.postMessage({ type: 'synergy-frame', a: 0.4, b: 0 }, GAME.or
 
 [android/SynergyHostActivity.kt](android/SynergyHostActivity.kt) — `Activity` только на API платформы (AndroidX не нужен): `WebView` из `assets/synergy`, интерфейс `SynergyHost` с `onMessage` (вызывается в потоке binder — интерфейс переводится в `runOnUiThread`), `pushFrame(a, b)` для колбэка SDK, «Назад» через `Synergy.back()`, `finish()` на `synergy:close`. Тот же механизм (`addJavascriptInterface`, `evaluateJavascript`) работает в нашем APK.
 
+## Motorica Start (Android, 5.21)
+
+Motorica Start уже передаёт сигнал протеза своей игре — Motorica Kart. Как именно, видно в её открытом коде ([HakerFromRussia-XD/1_game_stk](https://github.com/HakerFromRussia-XD/1_game_stk), «Motorica-maintained SuperTuxKart fork for Motorica Start controller integration»). [android/MotoricaStartLink.kt](android/MotoricaStartLink.kt) привязывается к той же службе: пакет `com.bailout.stickk`, действие `com.motorica.gamecontrol.BIND`. Он берёт последний снимок, подписывается на обратный вызов и отдаёт каждый снимок в `Synergy.feed` как есть. Хост в `SynergyHostActivity.kt` привязывается в `onStart` и отвязывается в `onStop`. Что «Синергия» делает с полями снимка — [INTEGRATION.md](../INTEGRATION.md), «Снимок Motorica Start».
+
+В манифест хоста — как у Motorica Kart:
+
+```xml
+<uses-permission android:name="com.motorica.gamecontrol.permission.CONTROL_GAME" />
+<queries>
+    <package android:name="com.bailout.stickk" />
+    <intent><action android:name="com.motorica.gamecontrol.BIND" /></intent>
+</queries>
+```
+
+Если Motorica Start не установлен или не пускает приложение к службе, `bind()` вернёт `false`, и игра останется на других источниках. Вероятно, разрешение `CONTROL_GAME` выдаётся только приложениям «Моторики»: это вопрос организатору.
+
 ## iOS (Swift)
 
 [ios/SynergyHostView.swift](ios/SynergyHostView.swift) — `UIViewRepresentable` для SwiftUI: `WKWebView` с `loadFileURL`, обработчик `synergyHost`, запуск упражнения после `synergy:ready`, `pushFrame`. Обработчик снимается в `dismantleUIView`: контроллер держит его сильной ссылкой.
@@ -104,7 +121,7 @@ frame.contentWindow.postMessage({ type: 'synergy-frame', a: 0.4, b: 0 }, GAME.or
 | Платформа | Проверка | Что не проверено |
 |---|---|---|
 | Web | **выполнено** `node tests/e2e/embed.mjs`: два сервера — два origin; хост получает `synergy:ready` (не пройдено знакомство), человек проходит знакомство внутри `iframe`, открывается упражнение из адреса, хост шлёт кадры — источник сам переключается на «Внешний», приходит `synergy:result` без самочувствия, «Вернуться в приложение» даёт `synergy:close`, `synergy-start` открывает другое упражнение; чужой origin сообщений не получает | Safari |
-| Android | **скомпилировано** Kotlin 2.1.21 против Android API 29 (android-all, Robolectric — тот же jar, которым `VERIFY_API=1` сверяет заглушки APK) | на устройстве не запускался |
+| Android | **скомпилировано** Kotlin 2.1.21 против Android API 29 (android-all, Robolectric — тот же jar, которым `VERIFY_API=1` сверяет заглушки APK), `-Werror`; с 5.21 — вместе с `MotoricaStartLink.kt` | на устройстве не запускался; с настоящим Motorica Start не проверено — ни приложения, ни протеза у нас нет |
 | iOS | **не компилировалось**: в среде сборки нет Swift. Написано по документированным API WebKit (`WKScriptMessageHandler`, `loadFileURL`) | всё |
 | Flutter | **не компилировалось**: в среде нет Flutter SDK. Написано по API `webview_flutter` 4.x | всё |
 | React Native | **типы проверены** `tsc --noEmit --strict` против `react-native-webview` 14.0.1 и `react-native` 0.87.1 | на устройстве не запускался |
@@ -113,4 +130,4 @@ frame.contentWindow.postMessage({ type: 'synergy-frame', a: 0.4, b: 0 }, GAME.or
 
 Повторить проверки Android и React Native: `npm run verify:embed` (`tools/verify-embed.sh`: kotlinc и типы — с закреплёнными версиями и SHA-256, кэш `tools/.cache`); Web — `npm run build && npm run e2e:embed`.
 
-Для всех платформ канал проверен юнит-тестом на поддельных окнах (`tests/v515.test.mjs`): каждый из пяти каналов получает каждое сообщение ровно один раз, хост 5.14 с `onResult` получает только результаты, ошибка или враждебный объект хоста не ломают игру. Встраивание в настоящий Motorica Start или ATTILAN не проверено: их SDK и формат данных не опубликованы. Если хост ждёт другой формат, правится одна функция — `resultMessage()`.
+Для всех платформ канал проверен юнит-тестом на поддельных окнах (`tests/v515.test.mjs`): каждый из пяти каналов получает каждое сообщение ровно один раз, хост 5.14 с `onResult` получает только результаты, ошибка или враждебный объект хоста не ломают игру. Встраивание в настоящий Motorica Start или ATTILAN не проверено. Для Motorica Start известен формат входа — снимок v1 из кода Motorica Kart, его разбор проверен тестами (`tests/motorica.test.mjs`). Формат результата и запуска для сторонних игр не опубликован. Если хост ждёт другой формат результата, правится одна функция — `resultMessage()`.
