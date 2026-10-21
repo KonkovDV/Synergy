@@ -124,8 +124,15 @@ test('goals (5.25): setting a goal aside replaces it, and «hard» asks for less
   assert.equal(p.missionPass.bias, 'hard');
   const again = missionOffers({ ...base, passed: p.missionPass.keys, bias: 'hard' });
   assert.equal(again.length, 3);
-  assert.ok(!again.some(o => missionKey(o) === missionKey(offers[0])), 'the set-aside goal does not return');
+  assert.ok(!again.some(o => missionKey(o) === missionKey(offers[0])), 'the 2★ goal does not return');
+  assert.ok(again.some(o => o.kind === 'weak' && o.game === offers[0].game && o.minStars === 1), 'the same game stays, at 1★');
   assert.ok(again.every(o => (o.minStars ?? 1) <= 1 || o.kind === 'idle'), 'a hard week does not ask for 2★ or 3★');
+  const legacy = missionOffers({ ...base, passed: [missionKey(offers[0]).replace(/:[1-3]$/, '')], bias: 'hard' });
+  assert.ok(!legacy.some(o => o.kind === 'weak' && o.game === offers[0].game), 'a 5.25 key without a star still blocks every difficulty');
+  const easier = createProfile();
+  dropMission(easier, { key: missionKey(offers[0]), week: 0, bias: 'easy' });
+  const harder = missionOffers({ ...base, passed: easier.missionPass.keys, bias: 'easy' });
+  assert.ok(harder.some(o => o.kind === 'weak' && o.game === offers[0].game && o.minStars === 3));
   dropMission(p, { key: missionKey(again[0]), week: 0, bias: 'other' });
   assert.equal(p.missionPass.bias, 'hard', '«another goal» does not cancel a hard week');
   assert.equal(cleanMissionPass({ week: 0, keys: ['weak:nope', 'check', '__proto__', 'weak:grip'], bias: 'nope' }, PLAN_CATALOG).keys.includes('weak:nope'), false);

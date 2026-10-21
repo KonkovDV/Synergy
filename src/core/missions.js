@@ -106,12 +106,43 @@ export function missionOffers({ skills = {}, lastPlayed = {}, catalog = [], sche
     push({ kind: 'weak', game: g.id, minStars: stars, target: 3 });
   }
   const skip = new Set(passed);
-  return pool.filter(o => !skip.has(missionKey(o))).slice(0, MISSIONS.offers);
+  return pool.filter(o => !goalBlocked(missionKey(o), skip)).slice(0, MISSIONS.offers);
 }
 
-/** A stable id of a goal, so a set-aside one cannot return under a different spelling (the sample's title key). */
+/**
+ * A stable id of one difficulty of a goal. The star is part of the id (5.25.1): «Сейчас тяжело» must be able to
+ * offer the same game at 1★ after the player set aside the 2★ one. Without the star both were `weak:grip`,
+ * so the easier goal was thrown out together with the harder one.
+ */
 export function missionKey(m) {
-  return m?.game ? `${m.kind}:${m.game}` : (m?.kind ?? '');
+  if (!m?.kind) return '';
+  const star = Number.isInteger(m.minStars) ? `:${m.minStars}` : '';
+  return m.game ? `${m.kind}:${m.game}${star}` : `${m.kind}${star}`;
+}
+
+/** 5.25 stored `weak:grip` with no star. That still blocks every difficulty. A starred id blocks only itself. */
+function goalBlocked(key, passed) {
+  if (passed.has(key)) return true;
+  const broad = key.replace(/:[1-3]$/, '');
+  return broad !== key && passed.has(broad);
+}
+
+function keyParts(k) {
+  const parts = String(k).split(':');
+  if (parts.length < 1 || parts.length > 3) return null;
+  const [kind, a, b] = parts;
+  if (!Object.hasOwn(MISSION_KINDS, kind ?? '')) return null;
+  let game, stars;
+  if (MISSION_KINDS[kind].game) {
+    if (!a) return null;
+    game = a;
+    stars = b;
+  } else {
+    if (parts.length > 2) return null;
+    stars = a;
+  }
+  if (stars !== undefined && !/^[1-3]$/.test(stars)) return null;
+  return { kind, game, stars };
 }
 
 const PASS_BIAS = new Set(['hard', 'easy', 'other']);
@@ -126,10 +157,8 @@ export function cleanMissionPass(raw, catalog) {
   const keys = [];
   for (const k of Array.isArray(raw.keys) ? raw.keys : []) {
     if (typeof k !== 'string' || keys.includes(k) || keys.length >= 12) continue;
-    const [kind, game, extra] = k.split(':');
-    if (extra !== undefined || !Object.hasOwn(MISSION_KINDS, kind ?? '')) continue;
-    if (MISSION_KINDS[kind].game) { if (!games.has(game)) continue; }
-    else if (game) continue;
+    const parts = keyParts(k);
+    if (!parts || (parts.game && !games.has(parts.game))) continue;
     keys.push(k);
   }
   const bias = PASS_BIAS.has(raw.bias) ? raw.bias : 'other';
@@ -152,9 +181,10 @@ export function takeMission(profile, offer, catalog, today) {
  */
 export function dropMission(profile, { key, week, bias } = {}) {
   profile.mission = null;
-  if (typeof key !== 'string' || !Number.isInteger(week)) return;
+  if (typeof key !== 'string' || !Number.isInteger(week) || !keyParts(key)) return;
   const prev = profile.missionPass?.week === week ? profile.missionPass : { week, keys: [] };
-  const keys = prev.keys?.includes(key) ? prev.keys : [...(prev.keys ?? []), key].slice(0, 12);
+  const prevKeys = Array.isArray(prev.keys) ? prev.keys : [];
+  const keys = prevKeys.includes(key) ? prevKeys : [...prevKeys, key].slice(0, 12);
   const next = bias === 'hard' || bias === 'easy' ? bias : (prev.bias ?? 'other');
   profile.missionPass = { week, keys, ...(next !== 'other' ? { bias: next } : {}) };
 }

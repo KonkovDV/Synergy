@@ -26,7 +26,7 @@ export function goalsScreen(app) {
           ...[['hard', 'Сейчас тяжело'], ['easy', 'Хочу сложнее'], ['other', 'Другая цель']].map(([bias, label]) =>
             h('button', { class: 'btn ghost', onclick: () => {
               dropMission(p, { key: missionKey(m), week: weekIndex(today), bias });
-              app.save(); toast('Цель снята. Другая — без штрафа.'); app.go('goals');
+              app.save(); toast(m.done > 0 ? 'Цель снята. Её шаги не переносятся, штрафа нет.' : 'Цель снята. Другая — без штрафа.'); app.go('goals');
             } }, label)))
         : h('button', { class: 'btn primary', onclick: () => { if (takeMission(p, m, PLAN_CATALOG, today)) { app.save(); toast('Цель взята'); } app.go('goals'); } }, 'Взять цель'));
   };
@@ -40,6 +40,7 @@ export function goalsScreen(app) {
           h('p', {}, `${name} предлагает цели на эту неделю — по вашим навыкам. Шаги отмечают сами упражнения. Срока нет. Не подходит — скажите почему: будет другая, без штрафа.`)),
         p.mission ? card(p.mission, true) : null,
         p.mission ? h('p', { class: 'note' }, 'Новую цель можно взять, когда эта будет выполнена или снята.') : h('h2', {}, 'Цели недели'),
+        !p.mission && !offers.length ? h('p', { class: 'note' }, 'На этой неделе подходящие цели кончились. В понедельник список обновится.') : null,
         ...offers.map(m => card(m, false)))),
   };
 }
