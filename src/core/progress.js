@@ -82,6 +82,7 @@ export function createProfile() {
     skin: 'graphite',
     pet: emptyOutfit(),                         // what the Firebird wears: slot → item id (5.13)
     mission: null,                              // the goal the player took (core/missions.js), or null
+    missionPass: null,                          // goals set aside this week, and whether the week should be easier or harder (5.25)
     primer: {},                                 // «Азбука протеза»: deckId → { seen: [cardId], best, at } (5.15)
     plan: null,
     onboarded: false,

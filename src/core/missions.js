@@ -79,18 +79,62 @@ export function missionText(m, catalog) {
  *   skills — skill → 0..100|null (skillProfile); lastPlayed — game id → ISO time of its last run ('' never);
  *   week — a week number (any integer that changes weekly)
  */
-export function missionOffers({ skills = {}, lastPlayed = {}, catalog = [], scheme, week = 0, checkDue = false }) {
+export function missionOffers({ skills = {}, lastPlayed = {}, catalog = [], scheme, week = 0, checkDue = false, passed = [], bias = 'other' }) {
   const games = catalog.filter(g => !scheme || g.schemes.includes(scheme));
   if (!games.length) return [];
   const weakness = g => g.skills.reduce((s, k) => s + (skills[k] ?? 50), 0) / g.skills.length;
-  const weak = [...games].sort((x, y) => weakness(x) - weakness(y) || x.id.localeCompare(y.id))[0];
+  const ranked = [...games].sort((x, y) => weakness(x) - weakness(y) || x.id.localeCompare(y.id));
+  const weak = ranked[0];
   const idle = [...games].filter(g => g.id !== weak.id).sort((x, y) => (lastPlayed[x.id] ?? '').localeCompare(lastPlayed[y.id] ?? '') || x.id.localeCompare(y.id))[0] ?? weak;
-  const offers = [
-    { kind: 'weak', game: weak.id, minStars: 2, target: 3 },
-    week % 2 ? { kind: 'perfect', minStars: 3, target: 1 } : { kind: 'retention', minStars: 2, target: 2 },
-    checkDue ? { kind: 'check', target: 1 } : { kind: 'idle', game: idle.id, target: 2 },
-  ];
-  return offers.slice(0, MISSIONS.offers).map(o => validMission({ ...o, done: 0 }, catalog)).filter(Boolean);
+  const stars = bias === 'hard' ? 1 : 2;
+  const pool = [];
+  const push = raw => {
+    const m = validMission({ ...raw, done: 0 }, catalog);
+    if (m && !pool.some(x => missionKey(x) === missionKey(m))) pool.push(m);
+  };
+  // The first three are the week's ordinary offers. The rest exist so a set-aside goal has a replacement.
+  push(bias === 'easy'
+    ? { kind: 'weak', game: weak.id, minStars: 3, target: 2 }
+    : { kind: 'weak', game: weak.id, minStars: stars, target: 3 });
+  if (bias === 'hard') push({ kind: 'retention', minStars: 1, target: 2 });
+  else push(week % 2 ? { kind: 'perfect', minStars: 3, target: 1 } : { kind: 'retention', minStars: stars, target: 2 });
+  if (bias === 'easy') push(week % 2 ? { kind: 'retention', minStars: 2, target: 2 } : { kind: 'perfect', minStars: 3, target: 1 });
+  if (checkDue && bias !== 'hard') push({ kind: 'check', target: 1 });
+  else if (bias !== 'easy') push({ kind: 'idle', game: idle.id, target: 2 });
+  for (const g of ranked) {
+    push({ kind: 'idle', game: g.id, target: 2 });
+    push({ kind: 'weak', game: g.id, minStars: stars, target: 3 });
+  }
+  const skip = new Set(passed);
+  return pool.filter(o => !skip.has(missionKey(o))).slice(0, MISSIONS.offers);
+}
+
+/** A stable id of a goal, so a set-aside one cannot return under a different spelling (the sample's title key). */
+export function missionKey(m) {
+  return m?.game ? `${m.kind}:${m.game}` : (m?.kind ?? '');
+}
+
+const PASS_BIAS = new Set(['hard', 'easy', 'other']);
+
+/**
+ * Goals the player set aside this week (5.25 — the sample's veto, done by the player, not a parent).
+ * A backup may only name known goals. A different week is kept; offers ignore it until that week.
+ */
+export function cleanMissionPass(raw, catalog) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !Number.isInteger(raw.week)) return null;
+  const games = new Set(catalog.map(g => g.id));
+  const keys = [];
+  for (const k of Array.isArray(raw.keys) ? raw.keys : []) {
+    if (typeof k !== 'string' || keys.includes(k) || keys.length >= 12) continue;
+    const [kind, game, extra] = k.split(':');
+    if (extra !== undefined || !Object.hasOwn(MISSION_KINDS, kind ?? '')) continue;
+    if (MISSION_KINDS[kind].game) { if (!games.has(game)) continue; }
+    else if (game) continue;
+    keys.push(k);
+  }
+  const bias = PASS_BIAS.has(raw.bias) ? raw.bias : 'other';
+  if (!keys.length) return null;
+  return { week: raw.week, keys, ...(bias !== 'other' ? { bias } : {}) };
 }
 
 /** Takes an offered goal (only one at a time): false if a goal is active or the offer is not a valid goal. */
@@ -102,8 +146,18 @@ export function takeMission(profile, offer, catalog, today) {
   return true;
 }
 
-/** Gives the goal up: no penalty, the offers stay. */
-export function dropMission(profile) { profile.mission = null; }
+/**
+ * Gives the goal up: no penalty and no reward. With a week and a key, that goal is not offered again this week
+ * and another one takes its place. `hard` asks for less force for the rest of the week; `easy` asks for more.
+ */
+export function dropMission(profile, { key, week, bias } = {}) {
+  profile.mission = null;
+  if (typeof key !== 'string' || !Number.isInteger(week)) return;
+  const prev = profile.missionPass?.week === week ? profile.missionPass : { week, keys: [] };
+  const keys = prev.keys?.includes(key) ? prev.keys : [...(prev.keys ?? []), key].slice(0, 12);
+  const next = bias === 'hard' || bias === 'easy' ? bias : (prev.bias ?? 'other');
+  profile.missionPass = { week, keys, ...(next !== 'other' ? { bias: next } : {}) };
+}
 
 /**
  * A finished run moves the active goal. When the goal is reached its reward is added and the goal ends; the day keeps
