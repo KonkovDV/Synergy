@@ -279,7 +279,7 @@ export class App {
     if (this.settings.source === 'bridge') {
       this.ble?.disconnect(); this.ble = null;
       this.bridge?.stop();
-      this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s) });
+      this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s), swap: () => this.settings.swapChannels });
       this.bridge.start();
     } else if (this.bridge) {
       this.ble?.disconnect(); this.ble = null;

@@ -64,6 +64,7 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['«no competitors» on a slide', () => edit(dir, 'tools/build-deck.py', s => `${s}\n# ${UNIQUE_CLAIM}\n`), 'есть свои игры'],
       ['a field result without its session', () => edit(dir, 'docs/USABILITY_RESULTS.md', s => s.replace('|---|---|---|---|---|---|---|---|\n', '|---|---|---|---|---|---|---|---|\n| в среднем | | | | 90 % | 81 | нет | |\n')), 'строка без ссылки на сессию'],
       ['stale APK name in README', () => edit(dir, 'README.md', s => `${s}\nrelease/Synergy-0.0.1.apk\n`), 'Synergy-0.0.1.apk'],
+      ['stale version in the LIMITS title', () => edit(dir, 'LIMITS.md', s => s.replace(/^# Границы «Синергии» \S+/m, '# Границы «Синергии» 0.0.1')), '«Синергии» 0.0.1'],
       ['overstated claim', () => edit(dir, 'README.md', s => `${s}\n${OVERSTATED}\n`), 'README.md:'], // the wording lint names the file and line
       ['manifest declares a medical app', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"games",', '"games", "medical",')), 'категория «medical»'],
       ['PWA locked to portrait', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"display"', '"orientation": "portrait",\n  "display"')), 'WCAG 1.3.4'],

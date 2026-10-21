@@ -61,6 +61,20 @@ function motoricaFrame(s) {
   return { a: level(close), b: level(open), ...tag };
 }
 
+/**
+ * Motorica Start before the game-control service (2023–2024 integrations: drone, ballista, space platformer —
+ * `DataTransferToService`, github.com/HakerFromRussia-XD/2_Android_bluetooth_master_stradivary): the broadcast
+ * «Sensor_levels» with sensor_level_1, sensor_level_2 and the prosthesis thresholds open_ch_num, close_ch_num. The
+ * built-in «Арканоид» compares sensor 1 with the open threshold, so sensor 1 is B (раскрытие) and sensor 2 is A.
+ * Units are not documented: scaled like v1, the calibration takes care of any other scale.
+ */
+function sensorLevelsFrame(s) {
+  const open = num(s.sensor_level_1), close = num(s.sensor_level_2);
+  if (!Number.isFinite(open) || !Number.isFinite(close)) return null;
+  const level = x => Math.min(1, Math.max(0, x / MOTORICA_LEVEL_MAX));
+  return { a: level(close), b: level(open) };
+}
+
 export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   let data = msg;
   if (typeof data === 'string') {
@@ -77,6 +91,7 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   if (!data || typeof data !== 'object') return null;
   const snapshot = data.snapshot && typeof data.snapshot === 'object' ? data.snapshot : data; // iOS App Group keeps it under «snapshot»
   if ('openLevel' in snapshot || 'closeLevel' in snapshot) return motoricaFrame(snapshot);
+  if ('sensor_level_1' in data || 'sensor_level_2' in data) return sensorLevelsFrame(data);
   const list = data.ch ?? data.channels ?? data.emg ?? data.values;
   let a = num(data.a), b = num(data.b);
   if (Array.isArray(list)) { a = num(list[map.channelA]); b = num(list[map.channelB] ?? 0); }
@@ -136,9 +151,11 @@ export function trustedMessageSource(event, win) {
 export const CONNECT_TIMEOUT_MS = 6000;
 
 export class BridgeSource {
-  constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {} } = {}) {
+  /** `swap()` — the source sends A and B the other way round (the «inverted control» of Motorica's own games). */
+  constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {}, swap = () => false } = {}) {
     this.url = url;
     this.map = map;
+    this.swap = swap;
     this.clock = clock;
     this.onStatus = onStatus;
     this.latest = null;
@@ -160,6 +177,7 @@ export class BridgeSource {
     // A host that relays Motorica Start's latest snapshot resends it unchanged: the same seq is no new frame, so a
     // stalled device still trips the watchdog (Motorica Kart does the same).
     if (seq !== undefined) { if (seq === this.lastSeq) return false; this.lastSeq = seq; }
+    if (this.swap()) [frame.a, frame.b] = [frame.b, frame.a];
     const t = this.clock();
     if (!this.raw && (frame.a < 0 || frame.b < 0)) { this.raw = true; this.envelope = new EnvelopeFilter(); }
     if (this.raw) [frame.a, frame.b] = this.envelope.push(t, frame.a, frame.b);

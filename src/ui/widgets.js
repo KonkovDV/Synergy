@@ -53,6 +53,11 @@ export function bottomNav(app, active) {
 /** Status words of the external source — one copy for the game and the settings (5.11: two had to be kept in sync). */
 export const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', unreachable: 'нет ответа, повторяем…', error: 'ошибка адреса', offline: 'протез не на связи' };
 
+/** The hint while the signal is lost: the exercise waits and goes on by itself (GameRunner), as Motorica Kart says too. */
+export const lostSignalHint = status => (status === 'offline'
+  ? 'Протез не на связи — пауза. Продолжим сами, когда связь вернётся'
+  : 'Нет сигнала — пауза. Продолжим сами, когда сигнал вернётся');
+
 export function topBar(title, onBack, extra = null) {
   return h('header', { class: 'top-bar' },
     onBack ? h('button', { class: 'icon-btn back-btn', 'aria-label': 'Назад', onclick: onBack }, icon('back')) : h('span'),

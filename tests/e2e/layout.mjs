@@ -294,6 +294,9 @@ const STATES = [
   ['tutorial', async p => go(p, 'tutorial')],
   ['checkin', async p => { await go(p, 'checkin'); await p.getByRole('radio', { name: /Умеренная/ }).click(); await p.getByRole('radio', { name: /Есть усталость/ }).click(); }],
   ['checkin-sensors', async p => { await p.evaluate(() => window.Synergy.useBridge('')); await go(p, 'checkin'); }],
+  // 5.22 — the settings of an external source (address, status, «Поменять каналы A и B», Bluetooth): every other
+  // settings state runs on the on-screen emulator, where this box is hidden.
+  ['settings-bridge', async p => { await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
   ['play-bridge', async p => { await go(p, 'play', { game: 'grip', level: 1 }); await p.evaluate(() => window.Synergy.useTouch()); }],
   ...['grip', 'flight', 'rhythm', 'safe', 'check'].map(g => [`levels-${g}`, async p => go(p, 'levels', { game: g })]),
   ...['grip', 'flight', 'rhythm', 'safe', 'check'].map(g => [`play-intro-${g}`, async p => go(p, 'play', { game: g, level: 1 })]),
