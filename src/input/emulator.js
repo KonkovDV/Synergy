@@ -2,7 +2,8 @@
 // realistic EMG *envelope*: muscle rise/decay, band-limited noise, ~9 Hz tremor, channel crosstalk,
 // and, for gestures, recognition latency, confidence jitter and short misclassifications.
 // Same SignalFrame contract as the organizers' emulator or a real prosthesis.
-import { GESTURE_BY_ID, COMMAND } from '../core/vocabulary.js';
+import { GESTURE_BY_ID, GESTURE_CLASS_ORDER, COMMAND } from '../core/vocabulary.js';
+import { GESTURE_CONFUSION } from '../config.js';
 import { confusionRow, pickWeighted } from '../core/confusion.js';
 import { createRng } from '../core/rng.js';
 
@@ -74,7 +75,7 @@ export class EmgEmulator {
     const wanted = this.target.gesture;
     const r = this.realism;
     const sinceChange = t - this.gestureSince;
-    if (this.glitchUntil > t) return { gesture: this.glitchGesture, confidence: 0.62, effort: Math.max(...this.env) };
+    if (this.glitchUntil > t) return { gesture: this.glitchGesture, confidence: 0.62, probs: classProbabilities(this.glitchGesture, 0.62), effort: Math.max(...this.env) };
     // ≈ one confusion every 6 s at realism 0.5 and medium effort, more when the effort is weak;
     // most are shorter than the pipeline debounce. Similar gestures are picked more often.
     const weak = 1.5 - Math.max(0, Math.min(1, this.target.effort ?? 0.6));
@@ -85,6 +86,22 @@ export class EmgEmulator {
     const gesture = sinceChange < 110 ? this.shownGesture : wanted;
     this.shownGesture = gesture;
     const confidence = Math.max(0, Math.min(1, 0.93 - 0.12 * r + 0.05 * r * this.rng.gauss()));
-    return { gesture, confidence, effort: Math.max(...this.env) }; // effort = EMG amplitude, not the wish
+    // 5.29: the frame also carries what a recognizer (СППР) sends — a probability per class of the set (meetup 21.10).
+    return { gesture, confidence, probs: classProbabilities(gesture, confidence), effort: Math.max(...this.env) }; // effort = EMG amplitude, not the wish
   }
+}
+
+/**
+ * The probability vector a recognizer would send for `gesture` at `confidence`, in the class order of the set
+ * (GESTURE_CLASS_ORDER): the rest of the mass goes to the gestures it is confused with (GESTURE_CONFUSION), a little to the
+ * others, never as much as the shown gesture — decoding it (bridge.js, decodeProbabilities) gives back the same gesture.
+ */
+export function classProbabilities(gesture, confidence) {
+  const row = gesture === 'rest' ? {} : confusionRow(gesture);
+  const weights = GESTURE_CLASS_ORDER.map(id => (id === gesture ? 0 : row[id] ?? GESTURE_CONFUSION.other));
+  const total = weights.reduce((s, w) => s + w, 0) || 1;
+  let others = weights.map(w => (1 - confidence) * w / total);
+  const top = Math.max(...others);
+  if (top >= confidence) others = others.map(p => p * 0.95 * confidence / top);
+  return GESTURE_CLASS_ORDER.map((id, i) => Math.round(1000 * (id === gesture ? confidence : others[i])) / 1000);
 }

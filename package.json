@@ -1,11 +1,12 @@
 {
   "name": "synergy-motion-trainer",
-  "version": "5.28.0",
+  "version": "5.30.0",
   "private": true,
   "type": "module",
   "description": "Синергия — мобильная игра-тренажёр управления бионическим протезом (ЭМГ: 2 канала и 7 жестов)",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
+    "test:ubi4": "node tools/test-ubi4.mjs",
     "build": "node tools/build.mjs",
     "e2e": "node tests/e2e/smoke.mjs",
     "start": "node tools/static-server.mjs",
@@ -15,10 +16,11 @@
     "audit:layout": "node tests/e2e/layout.mjs",
     "e2e:a11y": "node tests/e2e/v5.mjs",
     "e2e:embed": "node tests/e2e/embed.mjs",
-    "verify:embed": "sh tools/verify-embed.sh"
+    "verify:embed": "sh tools/verify-embed.sh",
+    "check:supply-chain": "node tools/supply-chain.mjs"
   },
   "devDependencies": {
-    "axe-core": "4.13.0",
+    "axe-core": "4.14.0",
     "esbuild": "0.28.2"
   }
 }

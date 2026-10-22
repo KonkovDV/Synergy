@@ -106,17 +106,33 @@ function padView(label, sub, cls, keys, channel) {
   return { el, show };
 }
 
-export function createTwoChannelPads(emulator) {
+export function createTwoChannelPads(emulator, { forceOrder = false, keys = true, co: withCo = true, shortcuts = ['F ArrowLeft', 'J ArrowRight'] } = {}) {
   const state = { a: 0, b: 0, co: 0 };
   const apply = () => emulator.setTarget({ gesture: null, a: Math.max(state.a, state.co), b: Math.max(state.b, state.co) });
-  const A = padView('A', 'сжатие', 'pad-a', 'F ArrowLeft', 'a');
-  const B = padView('B', 'раскрытие', 'pad-b', 'J ArrowRight', 'b');
-  const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'Коактивация: оба канала сразу' }, h('span', {}, 'A+B'));
+  const A = padView('A', 'сжатие', 'pad-a', shortcuts[0], 'a');
+  const B = padView('B', 'раскрытие', 'pad-b', shortcuts[1], 'b');
+  const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'A+B — коактивация: оба канала сразу' }, h('span', {}, 'A+B')); // 5.29: the name starts with the visible label (WCAG 2.5.3, axe 4.14)
   const onA = v => { state.a = v; A.show(v); apply(); }, onB = v => { state.b = v; B.show(v); apply(); }, onCo = v => { state.co = v ? 0.75 : 0; apply(); };
   bindPad(A.el, onA); bindPadKeys(A.el, onA, 'a');
   bindPad(B.el, onB); bindPadKeys(B.el, onB, 'b');
   bindPad(co, onCo); bindPadKeys(co, onCo, null, KB_FIXED.co);
-  return h('div', { class: 'pads two' }, A.el, co, B.el);
+  // 5.30: A (the grasp, used most) under the thumb of the hand that taps — right hand: A on the right. DOM order, not CSS
+  // order, so focus moves the way the eye does (WCAG 2.4.3).
+  const right = !forceOrder && globalThis.document?.documentElement?.dataset?.hand === 'right';
+  // 5.30 — on a computer (a mouse, no touch; CSS shows it only then): the keys, so Windows and macOS play without a mouse.
+  const hint = keys ? h('p', { class: 'pads-keys' }, 'Клавиатура: F — A, J — B, пробел — A+B, «+» и «−» — сила') : null;
+  // 5.30 — «Две руки» asks no co-contraction: each arm has A and B only (a 36 px A+B between them was too narrow).
+  const middle = withCo ? [co] : [];
+  return h('div', { class: `pads two${withCo ? '' : ' no-co'}` }, ...(right ? [B.el, ...middle, A.el] : [A.el, ...middle, B.el]), hint);
+}
+
+/**
+ * 5.30 — «Две руки» on the on-screen emulator: a pair of pads per arm, in the order of the arms (left, right); keys F/D
+ * press A/B of the left arm and J/K of the right one (bindKeyboard, `duo`).
+ */
+export function createDuoPads(left, right) {
+  const arm = (emulator, name, shortcuts) => h('div', { class: 'duo-arm', role: 'group', 'aria-label': `${name} протез` }, h('b', { class: 'duo-name' }, name), createTwoChannelPads(emulator, { forceOrder: true, keys: false, co: false, shortcuts }));
+  return h('div', { class: 'pads duo' }, arm(left, 'Левый', ['F', 'D']), arm(right, 'Правый', ['J', 'K']), h('p', { class: 'pads-note' }, 'Клавиши: левая — F (A) и D (B), правая — J (A) и K (B)'));
 }
 
 export function gestureIcon(gesture, skin = 'icon', size = 44) {
@@ -127,7 +143,7 @@ export function gestureIcon(gesture, skin = 'icon', size = 44) {
   const canvas = h('canvas', { width: size * 2, height: size * 2, class: 'gesture-icon', 'aria-hidden': 'true' });
   const ctx = canvas.getContext('2d');
   ctx.scale(2, 2);
-  drawHand(ctx, { x: size / 2, y: size * 0.95, size: size * 0.42, pose: gesture.pose, skin, sleeve: false });
+  drawHand(ctx, { x: size / 2, y: size * 0.95, size: size * 0.42, pose: gesture.pose, wrist: gesture.wrist ?? 0, skin, sleeve: false });
   return canvas;
 }
 
@@ -143,7 +159,9 @@ export function createGesturePads(emulator) {
     return el;
   });
   emulator.setTarget({ gesture: 'rest', effort: 0 });
-  return h('div', { class: 'pads gestures', style: { '--word': longestWord(ACTIVE_GESTURES.map(g => g.name)) } }, ...keys, h('p', { class: 'pads-note' }, 'Удерживайте жест; выше палец — сильнее'));
+  // 5.30: a set with more than six gestures (UBI4: seven) marks itself — a short landscape screen drops the icons (styles/app.css).
+  return h('div', { class: 'pads gestures', ...(ACTIVE_GESTURES.length > 6 ? { 'data-many': '' } : {}), style: { '--word': longestWord(ACTIVE_GESTURES.map(g => g.name)) } }, ...keys, h('p', { class: 'pads-note' }, 'Удерживайте жест; выше палец — сильнее'),
+    h('p', { class: 'pads-keys' }, `Клавиатура: цифры 1–${GESTURES.length} — жесты по порядку (1 — покой)`)); // 5.30: a computer
 }
 
 /**
@@ -151,12 +169,17 @@ export function createGesturePads(emulator) {
  * GESTURES order (1 = rest). With «Площадки без удержания» a press latches and the next press releases.
  */
 const capOf = code => (/^(KeyF|ArrowLeft)$/.test(code) ? kbStrength.a : /^(KeyJ|ArrowRight)$/.test(code) ? kbStrength.b : code === 'Space' ? KB_FIXED.co : KB_FIXED.gesture);
-export function bindKeyboard(emulator, getScheme) {
+export function bindKeyboard(emulator, getScheme, getDuo = () => null) {
   const held = new Map();
   let raf = 0;
   const tick = () => {
     const level = key => (held.has(key) ? rampTo(capOf(key), held.get(key)) : 0);
-    if (getScheme() === 'gesture') {
+    const duo = getDuo();
+    if (duo) { // 5.30 «Две руки»: F/D — A/B of the left arm, J/K — of the right one
+      const lv = (key, ch) => (held.has(key) ? rampTo(kbStrength[ch], held.get(key)) : 0);
+      duo.left.setTarget({ gesture: null, a: lv('KeyF', 'a'), b: lv('KeyD', 'b') });
+      duo.right.setTarget({ gesture: null, a: lv('KeyJ', 'a'), b: lv('KeyK', 'b') });
+    } else if (getScheme() === 'gesture') {
       const g = [...held.keys()].find(k => /^Digit[1-9]$/.test(k));
       const gesture = (g && GESTURES[Number(g.slice(5)) - 1]?.id) || 'rest';
       emulator.setTarget({ gesture, effort: g ? level(g) : 0 });
@@ -166,7 +189,7 @@ export function bindKeyboard(emulator, getScheme) {
     }
     raf = held.size ? requestAnimationFrame(tick) : 0;
   };
-  const relevant = code => /^(KeyF|KeyJ|ArrowLeft|ArrowRight|Space|Digit[1-9]|Equal|Minus|NumpadAdd|NumpadSubtract)$/.test(code);
+  const relevant = code => /^(KeyF|KeyJ|ArrowLeft|ArrowRight|Space|Digit[1-9]|Equal|Minus|NumpadAdd|NumpadSubtract)$/.test(code) || (!!getDuo() && /^(KeyD|KeyK)$/.test(code));
   const releaseKeys = () => { latchedPads.delete(releaseKeys); held.clear(); tick(); };
   const down = e => {
     if (!relevant(e.code) || e.repeat) return;

@@ -16,6 +16,7 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci --ignore-scripts   # no install scripts in jobs that hold tokens and secrets (esbuild works without)
       - run: npm test
+      - run: npm run test:ubi4   # 5.29–5.30: the whole suite on the UBI4 gesture set of Motorica Start
       - run: node tools/gesture-drill.mjs
       - run: npm run build
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
@@ -24,7 +25,7 @@ jobs:
       - run: node tools/check-submission.mjs --draft
       - name: e2e (mobile smoke + axe-core accessibility audit + layout audit, Playwright)
         run: |
-          npm i --no-save playwright@1.56.1
+          npm i --no-save --ignore-scripts playwright@1.56.1   # Playwright has no install scripts; browsers come next
           npx playwright install --with-deps chromium
           # The scripts serve dist/ (or the source) themselves: tools/static-server.mjs, no Python
           node tests/e2e/v5.mjs /tmp/shots

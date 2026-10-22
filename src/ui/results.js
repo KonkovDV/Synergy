@@ -7,13 +7,14 @@ import { missionText } from '../core/missions.js';
 import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
 import { SKILL_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
-import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest } from '../core/progress.js';
+import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest, sessionTopUp } from '../core/progress.js';
 import { RestMotion, restMotionAllowed } from '../core/restmotion.js';
 import { difficultyLabel } from '../core/adaptive.js';
-import { adviseStop, EFFORT_LEVELS } from '../core/wellbeing.js';
+import { adviseStop, EFFORT_LEVELS, checkinLight } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
 import { coachFeedback, coachMood } from './coach.js';
-import { CALIBRATION_ADAPT, HANDS_FREE, PET } from '../config.js';
+import { CALIBRATION_ADAPT, HANDS_FREE, PET, SESSION } from '../config.js';
+import { QUALITY_TIPS, signalIssuesText } from '../core/signalquality.js';
 import { signalMeter, segmented, mioAvatar } from './widgets.js';
 
 /** Hands-free confirm of the primary action (results and rest): the same rule as the game start, a bit longer. */
@@ -210,6 +211,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
   const stopAdvice = stopAdviceApplies({ demo, plan, next }) ? adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs)?.text ?? null : null;
+  // 5.30 — under 5 minutes of active play today: one more exercise is offered after the plan (core/progress.js).
+  const topUp = planDone ? sessionTopUp({ plan: app.dailyPlan(), secondsToday: secondsToday(app.profile, today), stopAdvice: adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs)?.text ?? null, light: checkinLight(app.checkin()) }) : null;
   const action = resultsAction({ run, plan, demo, next, stopAdvice, restS: app.rules.restS, titleOf: id => GAME_BY_ID[id]?.title ?? id, pose: run.pose ?? pose });
   const primary = { label: action.label, go: () => app.go(action.kind, action.params) };
   // The hands-free «дальше» needs sensors: with the on-screen emulator there are no pads on this screen (5.10).
@@ -234,6 +237,12 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     : calibrationNote ? h('p', { class: 'note' }, calibrationNote.shiftPct >= 1
       ? `Калибровка подстроилась под датчик: покой сдвинут на ${fmtPct(calibrationNote.shiftPct)} диапазона.`
       : 'Калибровка подстроилась под датчик: покой вернулся к уровню калибровки.') : null;
+  // 5.30 — «Тренер качества сигнала»: what got in the way, the first thing to do about it; not the player's fault.
+  const issues = run.signalIssues ?? [];
+  const signalCard = issues.length ? h('div', { class: 'card warn-card signal-card', role: 'status' },
+    h('b', { class: 'with-art' }, badgeArt('warning', 28), 'Мешал сигнал, а не вы'),
+    h('p', {}, `За упражнение: ${signalIssuesText(issues)}. ${QUALITY_TIPS[issues[0].id].tip}.`),
+    h('p', { class: 'note' }, 'Это отметится в отчёте специалисту. Если повторяется — покажите отчёт протезисту.')) : null;
   const difficulty = !demo && !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
   const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', { class: 'with-art' }, sectionArt('effort', 32), 'Насколько тяжело было?'),
@@ -253,8 +262,11 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       petCard,
       rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, r.pic?.() ?? badgeArt(r.art, 24), r.text))) : null,
       difficulty,
+      signalCard,
       calibrationCard,
-      planDone ? h('div', { class: 'card celebrate tinted' }, h('b', { class: 'with-art' }, badgeArt('trophy', 30), 'Тренировка дня выполнена'), h('p', {}, 'Отличная работа! День отдыха серию не прерывает.')) : null,
+      planDone ? h('div', { class: 'card celebrate tinted' }, h('b', { class: 'with-art' }, badgeArt('trophy', 30), 'Тренировка дня выполнена'), h('p', {}, 'Отличная работа! День отдыха серию не прерывает.'),
+        topUp ? h('p', { class: 'note' }, `Сегодня активной игры — ${topUp.minutes ? count(topUp.minutes, FORMS.minutes) : 'меньше минуты'}. Обычно хватает ${SESSION.activeMin[0]}–${SESSION.activeMin[1]} минут в день: если рука не устала, можно ещё одно упражнение.`) : null,
+        topUp ? h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: topUp.game, level: topUp.level }) }, `Ещё одно: ${GAME_BY_ID[topUp.game]?.title ?? topUp.game}`) : null) : null,
       stopAdvice ? h('div', { class: 'card warn-card' }, h('b', { class: 'with-art' }, badgeArt('moon', 28), 'Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
       effortCard,
       assessmentCard,

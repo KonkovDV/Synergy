@@ -47,6 +47,10 @@ const page = ({ head, body, inline = false }) => `<!doctype html>
 ${csp(inline)}
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3f5f7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Синергия">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="description" content="Синергия — мобильная игра-тренажёр управления бионическим протезом по ЭМГ">
 <title>Синергия — тренажёр протеза</title>
 ${head}

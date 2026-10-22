@@ -1,0 +1,141 @@
+# Передача работы: «Синергия» 5.27 → 5.30.0
+
+Внутренний документ для ИИ-ассистента команды и для разработчика, который продолжит работу. Не вход для жюри: жюри читает `README.md` и `submission/README.md`. Дата: 22.10.2026. Ветка `audit/5.29-osint`, PR [#3](https://github.com/KonkovDV/Synergy/pull/3).
+
+## 0. Как читать и что нельзя нарушать
+
+Если этот файл расходится с кодом, верен код, а затем `LIMITS.md`. Числа README пишет `node tools/evidence.mjs`, ворота `npm run check:submission` проверяют их расхождение с кодом.
+
+Правила, которые держит команда (нарушение ломает тесты или ворота):
+
+1. **Слои.** `src/core` — домен без DOM и браузера; `src/input` → core; `src/games` → core, render; `src/ui` и `src/app.js` — композиция. Проверка — `tests/architecture.test.mjs` (даже слово «window» в комментарии строки кода домена считается нарушением).
+2. **Одно место для правила.** Параметры — `src/config.js`; набор жестов — `src/core/vocabulary.js`; формат внешних данных — `parseExternal()` в `src/input/bridge.js`; шаг конвейера — `GameRunner`/`DuoRunner`. Каждая числовая константа правил из групп `SESSION`, `XP`, `ADAPT` и др. должна иметь строку в `docs/GAME_RULES.md` «Константы» (`tests/rules.test.mjs`).
+3. **Сначала тест, который падает на старом коде,** потом код. Так сделаны все пункты 5.27–5.30.
+4. **Код «Моторики» не копируется.** У репозитория Motorica Start нет лицензии: берутся только факты для совместимости (имена, номера, форматы, значения по умолчанию). Код, картинки и анимации — нет (`THIRD_PARTY.md`).
+5. **Доказательства привязаны к коду.** Прогоны axe и линтера раскладки пишут отпечаток `src/`, `styles/`, `index.html`. Любая правка экрана после прогона → ворота говорят «снят на другом коде». Порядок перед коммитом: сборка → e2e → линтер → `node tools/set-test-count.mjs` → `node tools/evidence.mjs` → ворота.
+6. **Снимки экрана e2e не коммитятся** (`git checkout -- docs/screenshots` после прогонов).
+7. **Ничего не пишется в протез.** Игра только читает сигнал и пороги.
+8. **Формулировки о науке и пользе** — по `PLAN.md` C.2.2 и `LIMITS.md`: «игровая метрика», «не проверено», без обещаний переноса на протез.
+
+## 1. Контекст
+
+- Геймджем «Моторика: Код движения» (Codenrock, ГК «Моторика» + Фонд «Сколково»). Задача публикуется **28.10.2026 в 18:00**, загрузка до **11.11, 13:00 МСК**, финал 18.11.
+- Продукт — офлайн веб-игра (ванильный JS, Canvas 2D) в трёх упаковках: PWA и автономный HTML, APK (WebView, `android/`), оболочка iPhone/iPad (WKWebView, `ios/`, с 5.30). Плюс встраивание в приложение заказчика (`docs/embed/`).
+- Репозиторий приватный, CI на GitHub не запускается (оплата аккаунта, `LIMITS.md`). Все числа — локальные прогоны, дата и среда в `docs/evidence.json`.
+
+## 2. Что сделано в этой серии сессий
+
+| Версия | Суть | Журнал |
+|---|---|---|
+| 5.27.0 | Аудит по ролям: «Сейф» зависал (P0), боль во время упражнения, кожа и сильная боль, электробезопасность самодельных датчиков, RT-13 (`?host=`) | `docs/AUDIT.md` §33 |
+| 5.28.0 | Одно правило в коде, у Мио и в витрине | §34 |
+| 5.29.0 | OSINT открытого кода Motorica Start: пороги протеза (`getLatestThresholds`), значения смены хвата 1,00 с и блокировки 1,6 с, `CONTROL_GAME` — signature; e2e снова доходит до конца; отпечаток кода у доказательств | §35, `docs/RESEARCH.md` §18 |
+| 5.29.0, второй проход | Обучение жестам UBI4 в открытом коде, класс не из набора — покой; LibEMG, MyoGestic, BioPatRec; цепочка поставки в воротах; axe-core 4.14 | §36, `docs/RESEARCH.md` §19 |
+| **5.30.0** | Митап 21.10: требования заказчика в коде; набор UBI4; СППР; кнопки под руку; два протеза и «Две руки»; тренер качества сигнала; отклик измерен; 5–10 минут; iPhone; запуск APK из хоста; компьютер; исправлен «залипший» источник | §37, `docs/RESEARCH.md` §20, `docs/TASK.md` «Митап» |
+
+### 5.30 по пунктам
+
+| Что | Где в коде | Тест |
+|---|---|---|
+| Набор UBI4: покой + 7 (закрытие и раскрытие ладони, щипок, указатель, сгиб большого пальца, флексия, экстензия); команда `wrist` для запястья; набор «Синергии» остаётся по умолчанию | `src/core/vocabulary.js` (`GESTURE_SETS`), `src/core/gesture-set.js`, `src/render/draw.js` (наклон кисти) | `tests/ubi4.test.mjs`; весь набор — `npm run test:ubi4` |
+| Выбор набора: `?gestures=` → `localStorage['synergy.gestureSet']` → `SYNERGY_GESTURE_SET` → `synergy`; смена перезагружает страницу | `src/core/gesture-set.js`, `src/ui/settings.js` | `tests/ubi4.test.mjs` |
+| Поток вероятностей СППР: массив в порядке классов или «имя → p»; argmax; сумма > 1 нормируется; три лучших под шкалой; метка + распределение (лаборатория) | `src/input/bridge.js` `decodeProbabilities`, `src/core/signal.js`, `src/ui/widgets.js` `probabilityLine`, `lab/lab7.py` | `tests/ubi4.test.mjs`, `tests/v530.test.mjs`, `lab/test_lab7.py` |
+| Кнопки под руку: `controlHand` = авто (под здоровую; два протеза → правая) / левая / правая; A под большим пальцем; порядок DOM меняется вместе с видом; альбомная колонка к руке | `src/core/hands.js`, `src/ui/controls.js`, `styles/app.css` (`data-hand`) | `tests/v530.test.mjs`, линтер раскладки |
+| Два протеза: `side`/`hand`, пара `{left, right}`, `{sides: …}`; на сторону — номер кадра, сторож, огибающая; `sample()` (ведущая сторона) и `sampleSide()`; калибровки `bridge-left`/`bridge-right`; сторона в записи, CSV, отчёте | `src/input/bridge.js` `BridgeSource`, `src/app.js` `calibrationKey`, `src/core/storage.js`, `src/services/report.js` | `tests/v530.test.mjs`, `tests/app.test.mjs` |
+| «Две руки»: 8 уровней, карточки команд для каждой руки, навык разделения; только две схемы с каналами; экранный эмулятор на каждую руку (клавиши F/D и J/K) | `src/games/duo.js`, `src/games/runner.js` `DuoRunner`, `src/games/registry.js`, `src/ui/controls.js` `createDuoPads` | `tests/v530.test.mjs`, `tests/app.test.mjs`, автопилот `tests/games.test.mjs` |
+| Тренер качества сигнала: помехи в покое (медианный разброс > 0,06), скачки (0,45 за 0,12 с, 3 за 4 с), застывший канал (2 с), упор в предел (0,98, 2 с); совет на экране и голосом один раз; `run.signalIssues` (≥ 3 с); карточка в итогах; раздел отчёта; CSV `signal_issues` | `src/core/signalquality.js`, `src/games/runner.js`, `src/app.js` `qualityMonitor`, `src/ui/play.js`, `src/ui/results.js`, `src/services/report.js`, `src/core/storage.js` | `tests/v530.test.mjs`, `tests/app.test.mjs` |
+| Отклик: два канала 0–33 мс, жесты 100 мс от первого кадра сжатия | — | `tests/v530.test.mjs` |
+| 5–10 минут: `SESSION.activeMin = [5, 10]`; `sessionTopUp()` предлагает ещё одно упражнение после плана, если за день < 5 мин и нет усталости или лёгкого дня | `src/config.js`, `src/core/progress.js`, `src/ui/results.js` | `tests/v530.test.mjs` (с замером плана ботом новичка) |
+| iOS: SwiftUI + WKWebView, `SynergyNative` (speak, stop, haptic, share, print, nightMode), обработчик `synergyNative`, `LaunchRequest`, XcodeGen, workflow на macOS | `ios/`, `.github/workflows/ios.yml` | `tests/v530.test.mjs` (сверка с Android); **Swift не компилировался** |
+| Android: extras `game`, `level`, `gestures` и `synergy://play` → `launchQuery()` + `self=1`; `singleTask`, `onNewIntent`; `versionCode` 43 | `android/src/ru/synergy/trainer/MainActivity.java`, `android/AndroidManifest.xml` | javac + обвязка в `tests/v530.test.mjs` |
+| Компьютер: две колонки игры при ширине ≥ 1024 и высоте ≥ 600; подсказка клавиш при мыши; ярлыки PWA; линтер раскладки — 1366 × 768 без сенсора | `styles/app.css`, `public/manifest.webmanifest`, `tests/e2e/layout.mjs` | линтер раскладки |
+| Ошибка: первый кадр хоста пересоздавал источник, а упражнение держало старый («нет сигнала» до конца) | `src/app.js` `liveFrames()` | `tests/app.test.mjs` |
+
+## 3. Требования митапа 21.10.2026
+
+Полная таблица «что сказано → где в игре → тест» — `docs/TASK.md`, раздел «Митап». Коротко: два канала — основной режим; СППР — поток вероятностей; эмулятор свой; ≥ 3 уровней; Android или iOS; 12+; меню — здоровой рукой, кнопки под левую или правую; два протеза не исключены; новички; 5–10 минут; ~150 мс; коактивация — особая команда; плохой контакт и наводки — причина бросить; русский язык. Открытый пункт — доля управления касанием из задачи 28.10 (`PLAN.md` 1.13).
+
+## 4. Форматы данных (для хоста и эмулятора)
+
+```json
+{ "a": 0.42, "b": 0.05 }
+{ "gesture": "pinch", "confidence": 0.9, "probs": { "rest": 0.05, "pinch": 0.9, "fist": 0.05 } }
+{ "probs": [0.05, 0.10, 0.02, 0.71, 0.04, 0.05, 0.03] }
+{ "side": "left", "openLevel": 12, "closeLevel": 168, "version": 1, "seq": 7 }
+{ "left": { "a": 0.1, "b": 0 }, "right": { "a": 0.7, "b": 0 } }
+```
+
+- Массив вероятностей — в порядке классов текущего набора; порядок сообщает `synergy:ready` → `gestures.classes`.
+- Хост «Моторики» (Android) открывает APK явным интентом: `setClassName("ru.synergy.trainer", "ru.synergy.trainer.MainActivity")` + extras `game`, `level`, `gestures`. Или ссылкой `synergy://play?game=duo&level=1&gestures=synergy` (Android и iOS).
+- Подробно — `docs/INTEGRATION.md` «Митап 21.10.2026» и `docs/embed/README.md`.
+
+## 5. Архитектура и точки расширения
+
+Схема потока и таблица модулей 5.30 — `docs/ARCHITECTURE.md`, раздел «v5.30». Куда добавлять:
+
+| Расширение | Что сделать |
+|---|---|
+| Новый набор жестов | запись в `GESTURE_SETS` и id в `GESTURE_SET_IDS`; синонимы в `GESTURE_ALIASES`; `npm test` и `npm run test:ubi4` |
+| Другой формат СППР | `decodeProbabilities()` + тест |
+| Новый признак качества сигнала | детектор в `SignalQualityMonitor.issues()`, строка в `QUALITY_TIPS`, строка в `docs/GAME_RULES.md` «Качество сигнала» |
+| Игра на две руки | `static bimanual = true`; игра получает `intent.sides` и `{left, right}` кисти |
+| Жесты двумя протезами | схема жестов в `games/duo.js` (`DuoRunner` уже ведёт конвейер на сторону) |
+| Новый параметр запуска | шаблон в `MainActivity.launchQuery`, `LaunchRequest` (Swift) и `parseLaunch` (`src/services/host.js`); тест сверяет оболочки |
+| Новый нативный метод | в обеих оболочках (`MainActivity.java`, `NativeBridge.swift`); тест сверяет списки |
+
+## 6. Как проверить
+
+```bash
+npm ci
+npm test                         # 381 тест (1 пропущен: подпись APK без собранного APK)
+npm run test:ubi4                # тот же набор на наборе жестов UBI4
+npm run build
+npm run e2e                      # smoke
+npm run e2e:a11y                 # e2e + axe-core
+npm run e2e:embed                # хост другого origin
+npm run audit:layout             # линтер раскладки, ≈ 15 мин
+npm run check:supply-chain
+python3 -m unittest lab/test_lab7.py bridge/test_ws_bridge.py   # нужны пакеты lab/requirements.txt
+node tools/set-test-count.mjs && node tools/evidence.mjs
+node tools/check-submission.mjs --draft
+```
+
+Результаты прогонов 22.10.2026 (Linux, Node 22, Chromium 141): 381 тест — 0 упали, 1 пропущен, на обоих наборах жестов; учебная замена — OK; Python — 10 тестов; smoke — 0 ошибок; e2e + axe — 0 нарушений (32 светлых и 10 тёмных состояний); встраивание — все проверки; линтер раскладки — 75 состояний × 8 экранов × 3 размера текста = 1800, 0 находок (до исправлений — 22, `docs/AUDIT.md` §37 LAY-5); цепочка поставки — OK. Подробно — `docs/evidence.json` и таблица README. Ожидаемые предупреждения ворот в черновике на машине команды: пустой `AUTHORS.md`, дата первого коммита, отладочная подпись APK. APK 5.30.0 собран здесь 22.10.2026: 2123 КБ, `versionCode` 43. На стенде Linux файла не было, поэтому тот прогон пропускал проверку подписи. На телефон сборка не ставилась.
+
+## 7. Что не проверено и риски
+
+| Что | Почему | Как закрыть |
+|---|---|---|
+| Swift не компилировался, приложение iOS не запускалось | нет macOS на стенде; CI не стартует | Mac с Xcode 16+: `xcodegen generate --spec ios/project.yml`, Run; или оплатить Actions и запустить `ios.yml` |
+| APK 5.30.0 собран отладочным ключом, на телефон не ставился | ключ команды — секреты `KEYSTORE_*`; живой телефон — PLAN 0.2 | релизный ключ и установка на 3+ Android |
+| Живые протезы (один или два), живой Motorica Start | нет устройств и доступа | плейтест с «Моторикой»; `docs/USABILITY_PROTOCOL.md` |
+| Пороги тренера качества сигнала | откалиброваны на синтетике | записать покой и движения с живыми электродами, пересмотреть `QUALITY` |
+| Набор жестов задачи | публикуется 28.10 | выбрать набор по умолчанию или заменить `GESTURES` (`docs/INTEGRATION.md`, «Замена набора жестов») |
+| Формат СППР и эмулятора | публикуется 28.10 | одна функция `decodeProbabilities()` / `parseExternal()` |
+| Safari на macOS, браузеры Windows | не открывались вживую | открыть автономный HTML, сыграть план |
+
+## 8. Что делать дальше
+
+1. До 28.10: Mac-сборка iOS (или CI), установка APK 5.30.0 на 3+ Android-телефона (PLAN 0.2), релизный ключ, заполнить `AUTHORS.md`, письменный вопрос организатору о наработках до 28.10. APK этой версии уже собран на машине команды.
+2. 28.10 после 18:00: прочитать задачу; набор жестов и формат эмулятора — правки в одном месте; переписать таблицу критериев в `docs/JURY_STRATEGY.md`; пункт 1.13 PLAN.
+3. Плейтест: тренер качества сигнала и «Две руки» на живых людях; протокол H1–H5.
+4. Питч: слайд 8а «Сверх задания» (`docs/PITCH.md`), ответы жюри 5.30 (`docs/JURY_STRATEGY.md` §5).
+
+## 9. Карта файлов 5.30
+
+```
+src/core/gesture-set.js      выбор набора жестов до загрузки модулей
+src/core/hands.js            стороны, кнопки под руку
+src/core/signalquality.js    тренер качества сигнала
+src/core/vocabulary.js       GESTURE_SETS (Синергия, UBI4), команда wrist
+src/input/bridge.js          СППР, сторона, пара, sampleSide
+src/games/duo.js             «Две руки»
+src/games/runner.js          GameRunner.quality, DuoRunner
+src/app.js                   liveFrames, qualityMonitor, calibrationKey, сторона в записи
+src/ui/play.js               строка качества сигнала, пары кнопок
+src/ui/results.js            карточка «Мешал сигнал, а не вы», добор до 5 минут
+src/services/report.js       CSV gesture_set, prosthesis_side, signal_issues; раздел отчёта
+android/…/MainActivity.java  extras и synergy://play
+ios/                         оболочка iPhone и iPad
+tests/ubi4.test.mjs, tests/v530.test.mjs, tools/test-ubi4.mjs
+```

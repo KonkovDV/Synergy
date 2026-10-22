@@ -53,7 +53,7 @@ test('host: ready lists the games and levels a host may start; close says why; n
   assert.equal(ready.type, HOST_TYPES.ready);
   assert.equal(ready.protocol, HOST_PROTOCOL);
   assert.equal(ready.onboarded, false);
-  assert.deepEqual(ready.games.map(g => g.id), ['grip', 'flight', 'rhythm', 'safe', 'check']);
+  assert.deepEqual(ready.games.map(g => g.id), ['grip', 'flight', 'rhythm', 'safe', 'duo', 'check']);
   assert.ok(ready.games.every(g => Object.keys(g).join() === 'id,title,levels' && g.levels >= 1));
   assert.deepEqual(CLOSE_REASONS, ['done', 'back']);
   assert.equal(closeMessage('back', 'x').reason, 'back');

@@ -5,6 +5,8 @@ const POSE_IDS = ARM_POSES.map(p => p.id);
 import { createProfile, SKINS } from './progress.js';
 import { defaultCalibration } from './signal.js';
 import { SCHEME, GESTURE_BY_ID } from './vocabulary.js';
+import { GESTURE_SET_IDS } from './gesture-set.js';
+import { cleanSignalIssues } from './signalquality.js';
 import { cleanOutfit } from './pet.js';
 import { validMission, cleanMissionPass } from './missions.js';
 import { validTourState } from './tours.js';
@@ -15,7 +17,9 @@ import { SAFETY_VERSION } from './wellbeing.js';
 export const DEFAULT_SETTINGS = {
   scheme: 'proportional',
   source: 'touch',          // touch | bridge | demo
-  side: 'right',            // сторона протеза: зеркалит каналы и раскладку
+  side: 'right',            // сторона протеза: зеркалит каналы и раскладку; при двух протезах — тот, что ведёт упражнение
+  controlHand: 'auto',      // 5.30: кнопки на экране под руку — auto (здоровая: напротив протеза) | left | right (митап 21.10)
+  prostheses: 'one',        // 5.30: один протез или два (left и right — у каждого свой поток и калибровка)
   sensitivity: SIGNAL.onThreshold,
   coThreshold: SIGNAL.coThreshold,
   realism: 0.5,             // шум и перекрёстные помехи эмулятора
@@ -27,6 +31,7 @@ export const DEFAULT_SETTINGS = {
   weeklyGoal: SESSION.weeklyGoalDefault,
   wsUrl: 'ws://127.0.0.1:8765',
   swapChannels: false,      // внешний источник шлёт A и B наоборот (как инверсия управления в играх Motorica Start)
+  prosthesisThresholds: true, // 5.29: пороги протеза от хоста (Motorica Start getLatestThresholds) — каналы включаются там же
   reminder: '19:00',
   name: '',
   petName: '',              // имя Жар-птицы (пусто — «Искра»)
@@ -65,6 +70,8 @@ export const SETTINGS_RULES = {
   scheme: oneOf(...Object.values(SCHEME)),
   source: oneOf('touch', 'bridge', 'demo'),
   side: oneOf('right', 'left'),
+  controlHand: oneOf('auto', 'left', 'right'),
+  prostheses: oneOf('one', 'two'),
   audience: oneOf('adult', 'child'),
   prosthesis: oneOf('yes', 'waiting'),
   lockHoldS: range(LOCK.minS, LOCK.maxS),
@@ -181,7 +188,7 @@ function validRun(r) {
 
 export function emptyState() {
   // Calibration is per source: the on-screen emulator is already normalized, an external one is not.
-  return { version: 4, profile: createProfile(), settings: { ...DEFAULT_SETTINGS, tours: {} }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration() }, runs: [] };
+  return { version: 4, profile: createProfile(), settings: { ...DEFAULT_SETTINGS, tours: {} }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration(), 'bridge-left': defaultCalibration(), 'bridge-right': defaultCalibration() }, runs: [] };
 }
 
 /** Merges stored JSON over defaults so that new fields appear after updates; `catalog` checks nested progress. */
@@ -238,6 +245,10 @@ export function parseState(raw, catalog = null) {
   const runs = Array.isArray(data.runs) ? data.runs.filter(validRun).slice(-MAX_RUNS).map(r => {
     if (r.pose !== undefined && !POSE_IDS.includes(r.pose)) { const { pose, ...rest } = r; r = rest; } // the report prints it
     if (r.quick !== true) { const { quick, ...rest } = r; r = rest; } // 5.19: only a real quick start; a backup must not invent them
+    if (r.thresholds !== undefined && r.thresholds !== 'prosthesis') { const { thresholds, ...rest } = r; r = rest; } // 5.29: one known value
+    if (r.side !== undefined && r.side !== 'left' && r.side !== 'right') { const { side, ...rest } = r; r = rest; } // 5.30: which arm, of two
+    if (r.gestureSet !== undefined && !(GESTURE_SET_IDS.includes(r.gestureSet) && r.gestureSet !== 'synergy')) { const { gestureSet, ...rest } = r; r = rest; } // 5.29: only another known set
+    if (r.signalIssues !== undefined) { const { signalIssues, ...rest } = r; r = rest; const kept = cleanSignalIssues(signalIssues); if (kept.length) r.signalIssues = kept; } // 5.30
     if (!isObject(r.details) || r.details.confusion === undefined) return r;
     return { ...r, details: { ...r.details, confusion: cleanConfusion(r.details.confusion) } };
   }) : [];

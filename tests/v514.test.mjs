@@ -111,12 +111,12 @@ test('tutorial: the prosthesis lock — hold A+B as long as the person\'s prosth
   assert.equal(run.step.id, 'lock');
   for (let i = 0; i < 3; i++) run.update(both, 0.1);
   assert.notEqual(run.step.id, 'lock', 'held for the set time — locked');
-  assert.ok(SETTINGS_RULES.lockHoldS(LOCK.minS) && SETTINGS_RULES.lockHoldS(LOCK.maxS) && !SETTINGS_RULES.lockHoldS(10) && !SETTINGS_RULES.lockHoldS(0));
+  assert.ok(SETTINGS_RULES.lockHoldS(LOCK.minS) && SETTINGS_RULES.lockHoldS(LOCK.maxS) && !SETTINGS_RULES.lockHoldS(10.5) && !SETTINGS_RULES.lockHoldS(0));
 });
 
 test('host: launch parameters are validated; results go only to a host that asked, without health notes', () => {
   const info = id => ({ grip: { levels: 8 }, check: { levels: 1 } }[id] ?? null);
-  assert.deepEqual(parseLaunch('?game=grip&level=3', info), { game: 'grip', level: 3, hostOrigin: null, embed: false });
+  assert.deepEqual(parseLaunch('?game=grip&level=3', info), { game: 'grip', level: 3, hostOrigin: null, embed: false, self: false });
   assert.equal(parseLaunch('?game=grip&level=99', info).level, 1, 'a level out of range starts at 1');
   assert.equal(parseLaunch('?game=__proto__', info).game, null);
   assert.equal(parseLaunch('?game=nope', info).game, null);

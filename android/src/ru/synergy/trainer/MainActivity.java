@@ -55,7 +55,7 @@ public class MainActivity extends Activity {
                 if (ttsReady) tts.setLanguage(new Locale("ru", "RU"));
             }
         });
-        if (state == null) web.loadUrl(ASSETS + "www/index.html");
+        if (state == null) web.loadUrl(startUrl(getIntent()));
         else web.restoreState(state);
     }
 
@@ -90,6 +90,40 @@ public class MainActivity extends Activity {
         });
         view.addJavascriptInterface(new NativeBridge(), "SynergyNative");
         return view;
+    }
+
+    /**
+     * 5.30 — Motorica Start opens its games by package and activity (docs/RESEARCH.md §18); a link opens one too:
+     * synergy://play?game=grip&level=2&gestures=ubi4. Extras or query: game, level, gestures. Only known shapes pass —
+     * a game id, a level 1–99, a gesture set — the page checks them again (services/host.js parseLaunch).
+     */
+    static String launchQuery(String game, String level, String gestures) {
+        StringBuilder q = new StringBuilder();
+        if (game != null && game.matches("[a-z]{2,16}")) q.append("&game=").append(game);
+        if (level != null && level.matches("[1-9][0-9]?")) q.append("&level=").append(level);
+        if (gestures != null && gestures.matches("synergy|ubi4")) q.append("&gestures=").append(gestures);
+        // self=1: the app opened its own exercise — not a host waiting for «synergy:close» (services/host.js).
+        return q.length() == 0 ? "" : "?" + q.substring(1) + "&self=1";
+    }
+
+    private String startUrl(Intent intent) {
+        String page = ASSETS + "www/index.html";
+        if (intent == null) return page;
+        Uri link = intent.getData();
+        if (link != null && "synergy".equals(link.getScheme())) {
+            return page + launchQuery(link.getQueryParameter("game"), link.getQueryParameter("level"), link.getQueryParameter("gestures"));
+        }
+        String level = intent.getStringExtra("level");
+        if (level == null && intent.hasExtra("level")) level = String.valueOf(intent.getIntExtra("level", 0));
+        return page + launchQuery(intent.getStringExtra("game"), level, intent.getStringExtra("gestures"));
+    }
+
+    /** A second launch (another game from the host's list, a link) while the app is open: open what it asks. */
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (web != null) web.loadUrl(startUrl(intent));
     }
 
     /** Forward one EMG frame from a native source (BLE prosthesis, SDK) into the game. */

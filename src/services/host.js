@@ -16,12 +16,14 @@
 // The messages have no wellbeing answers and no name: health notes leave the device only in the report the person
 // saves themselves.
 
+import { GESTURE_SET, GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
+
 export const HOST_PROTOCOL = 1;
 /** Message types (additive within protocol 1: a 5.14 host reads `synergy:result` as before). */
 export const HOST_TYPES = { ready: 'synergy:ready', result: 'synergy:result', close: 'synergy:close' };
 export const HOST_MESSAGE = HOST_TYPES.result;
 /** Commands a host may post (WebView WebMessage or the embedding frame). */
-export const HOST_COMMANDS = { frame: 'synergy-frame', start: 'synergy-start', ping: 'synergy-ping' };
+export const HOST_COMMANDS = { frame: 'synergy-frame', start: 'synergy-start', ping: 'synergy-ping', thresholds: 'synergy-thresholds' };
 /** Why the app hands control back: the person tapped «Вернуться в приложение», or pressed back on the home screen. */
 export const CLOSE_REASONS = ['done', 'back'];
 
@@ -43,7 +45,9 @@ function gameLevel(game, level, gameInfo) {
  */
 export function parseLaunch(search, gameInfo) {
   const q = new URLSearchParams(search ?? '');
-  const out = { game: null, level: null, hostOrigin: null, embed: q.get('embed') === '1' };
+  // 5.30: `self=1` — opened by the app itself (an APK or iPhone link, a shortcut of the installed PWA), not by a host:
+  // an exercise opens, but nobody waits for «synergy:close» and the person's own signal source stays.
+  const out = { game: null, level: null, hostOrigin: null, embed: q.get('embed') === '1', self: q.get('self') === '1' };
   const gl = gameLevel(q.get('game'), q.get('level'), gameInfo);
   if (gl) Object.assign(out, gl);
   const host = q.get('host');
@@ -62,7 +66,8 @@ export function parseLaunch(search, gameInfo) {
  */
 export function parseHostCommand(data, gameInfo) {
   if (!data || typeof data !== 'object') return null;
-  if (data.type === HOST_COMMANDS.frame) return { kind: 'frame', frame: data };
+  // 5.29: the prosthesis's thresholds travel the signal path too (`parseExternal` reads them; they are not a frame).
+  if (data.type === HOST_COMMANDS.frame || data.type === HOST_COMMANDS.thresholds) return { kind: 'frame', frame: data };
   if (data.type === HOST_COMMANDS.ping) return { kind: 'ping' };
   if (data.type === HOST_COMMANDS.start) {
     const gl = gameLevel(data.game, data.level, gameInfo);
@@ -74,7 +79,10 @@ export function parseHostCommand(data, gameInfo) {
 /** «I am up»: what a host needs before it starts anything — the games and their levels, and whether onboarding comes first. */
 export function readyMessage({ version, onboarded, games }) {
   return { type: HOST_TYPES.ready, protocol: HOST_PROTOCOL, version, onboarded: !!onboarded,
-    games: games.map(g => ({ id: g.id, title: g.title, levels: g.levels })) };
+    games: games.map(g => ({ id: g.id, title: g.title, levels: g.levels })),
+    // 5.29 (additive): the gesture set of this page and its class order, so a host can send a class number or name
+    // in the same numbering (UBI4 — config.json of Motorica Start; open with ?gestures=ubi4).
+    gestures: { set: GESTURE_SET.id, classes: [...GESTURE_CLASS_ORDER] } };
 }
 
 /** The result summary a host receives (no wellbeing, no name; numbers only). */
@@ -118,7 +126,7 @@ export function hostChannel(win = globalThis) {
 
 /** Embedded: started by a host (a game, an origin, `embed=1`) or inside a WebView that listens (a native channel). */
 export function isEmbedded(launch, win = globalThis) {
-  return !!(launch?.game || launch?.hostOrigin || launch?.embed || hostChannel(win) || typeof win?.SynergyHost?.onResult === 'function');
+  return !!((launch?.game && !launch?.self) || launch?.hostOrigin || launch?.embed || hostChannel(win) || typeof win?.SynergyHost?.onResult === 'function');
 }
 
 /** Delivers a message to whoever embeds the app; never throws (a broken host must not break the game). */

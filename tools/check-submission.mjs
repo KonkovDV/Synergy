@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { NUMBER_DOCS, RUN_DOCS } from './number-docs.mjs';
 import { apkSigner } from './apk-signer.mjs';
+import { checkSupplyChain } from './supply-chain.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const draft = process.argv.includes('--draft');
@@ -22,7 +23,14 @@ const version = JSON.parse(read('package.json')).version;
 const appVersion = read('src/config.js').match(/version: '([^']+)'/)?.[1];
 const apkVersion = read('android/AndroidManifest.xml').match(/versionName="([^"]+)"/)?.[1];
 const changelog = read('CHANGELOG.md').match(/^## (\S+)/m)?.[1];
-for (const [name, v] of [['src/config.js', appVersion], ['AndroidManifest.xml', apkVersion], ['CHANGELOG.md', changelog]]) if (v !== version) fail(`версия ${name} = ${v}, package.json = ${version}`);
+// 5.29: CITATION.cff still said 5.11.0 (18.10) at 5.28.0 — the citation metadata names the release too.
+const citation = read('CITATION.cff').match(/^version:\s*["']?([^\s"']+)/m)?.[1];
+// 5.30: the iPhone app carries the version and the build number of the APK.
+const iosVersion = existsSync(join(root, 'ios/project.yml')) ? read('ios/project.yml').match(/MARKETING_VERSION: "([^"]+)"/)?.[1] : version;
+for (const [name, v] of [['src/config.js', appVersion], ['AndroidManifest.xml', apkVersion], ['CHANGELOG.md', changelog], ['CITATION.cff', citation], ['ios/project.yml', iosVersion]]) if (v !== version) fail(`версия ${name} = ${v}, package.json = ${version}`);
+const iosBuild = existsSync(join(root, 'ios/project.yml')) ? read('ios/project.yml').match(/CURRENT_PROJECT_VERSION: "(\d+)"/)?.[1] : null;
+const apkBuild = read('android/AndroidManifest.xml').match(/versionCode="(\d+)"/)?.[1];
+if (iosBuild && iosBuild !== apkBuild) fail(`номер сборки ios/project.yml = ${iosBuild}, versionCode APK = ${apkBuild}`);
 const apk = join(root, 'release', `Synergy-${version}.apk`);
 if (!existsSync(apk)) fail(`нет release/Synergy-${version}.apk`);
 if (!existsSync(join(root, 'release/synergy-standalone.html'))) fail('нет release/synergy-standalone.html');
@@ -63,6 +71,14 @@ for (const doc of NUMBER_DOCS) {
     // 5.27: CI rebuilds the APK with its own throwaway debug key, so its bytes never equal the team's build the
     // evidence names — in a draft (CI) that is a warning; the strict gate before the upload still refuses it.
     if (existsSync(apk) && ev.apk?.sha256 !== createHash('sha256').update(readFileSync(apk)).digest('hex')) (draft ? warn : fail)('docs/evidence.json: APK другой сборки — node tools/evidence.mjs');
+    // 5.29 — the browser checks must have run on this code: 5.28.0 quoted the axe run of 5.27 while its own e2e stopped.
+    const { sourceFingerprint } = await import(pathToFileURL(join(root, 'tools/evidence.mjs')).href);
+    const code = sourceFingerprint(root);
+    for (const [key, how] of [['a11y', 'npm run e2e:a11y'], ['layout', 'npm run audit:layout']]) {
+      if (!ev[key]) continue;
+      if (!ev[key].source) warn(`docs/evidence.json: у «${key}» нет отпечатка кода — повторите ${how}, затем node tools/evidence.mjs`);
+      else if (ev[key].source !== code) (draft ? warn : fail)(`docs/evidence.json: «${key}» снят на другом коде — повторите ${how}, затем node tools/evidence.mjs`);
+    }
     const block = readmeBlock(read('README.md'));
     if (block === null) fail('README.md: нет таблицы <!-- evidence:begin --> … <!-- evidence:end -->');
     else if (block !== renderTable(ev).trim()) fail('README.md: таблица «Главное» расходится с docs/evidence.json — node tools/evidence.mjs');
@@ -128,7 +144,11 @@ if (existsSync(join(root, 'docs/USABILITY_RESULTS.md'))) {
   });
 }
 
-const { GESTURE_IDS } = await import(pathToFileURL(join(root, 'src/core/vocabulary.js')).href);
+// 5.29: two gesture sets; the submitted product starts in the default one, so the lists are checked against it — whatever
+// SYNERGY_GESTURE_SET the shell has (the suite runs once per set).
+const { GESTURE_SETS } = await import(pathToFileURL(join(root, 'src/core/vocabulary.js')).href);
+const { DEFAULT_GESTURE_SET } = await import(pathToFileURL(join(root, 'src/core/gesture-set.js')).href);
+const GESTURE_IDS = GESTURE_SETS[DEFAULT_GESTURE_SET].gestures.map(g => g.id);
 // Python cannot import vocabulary.js: its class lists (order = class index) must mirror it (PLAN C.3, step 6).
 for (const f of ['lab/lab7.py', 'bridge/ws_bridge.py'].filter(f => existsSync(join(root, f)))) {
   const list = read(f).match(/^GESTURES\s*=\s*[[(]([^\])]*)[\])]/m)?.[1];
@@ -168,6 +188,8 @@ if (/android:screenOrientation="(portrait|landscape|sensorPortrait|sensorLandsca
 if (/_заполнить_/.test(read('AUTHORS.md'))) (draft ? warn : fail)('AUTHORS.md не заполнен (ФИО и вклад — п. 6.6)');
 if (/\b(MIT License|Apache License|GNU General Public|Creative Commons)\b/i.test(read('LICENSE'))) fail('LICENSE открытый — конфликт с отчуждением права (п. 6.6)');
 if (tracked.some(f => /\.(keystore|jks)$/.test(f))) fail('ключ подписи в репозитории');
+// 5.29 — supply chain: actions by SHA, no install scripts, cooldown, exact versions, hashes (tools/supply-chain.mjs).
+for (const m of checkSupplyChain(root)) fail(`цепочка поставки: ${m}`);
 if (tracked.some(f => /customer\/rules\./.test(f))) fail('текст правил организатора в репозитории (п. 5.5) — только ссылка и цитаты в docs/TASK.md');
 const firstCommit = execFileSync('git', ['log', '--reverse', '--format=%cs', '--max-parents=0'], { cwd: root, encoding: 'utf8' }).trim().split('\n')[0];
 if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md; ответ организатора на вопрос PLAN 0.6 записать в MEMORY.md`);
