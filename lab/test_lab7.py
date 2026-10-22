@@ -27,5 +27,9 @@ class Lab7(unittest.TestCase):
         f = self.clf.predict(w)
         self.assertIn(f['gesture'], GESTURES)
         for k in ('a', 'b', 'effort', 'confidence'): self.assertTrue(0 <= f[k] <= 1)
+        # 5.30 — the probability stream (СППР): every class by name, a distribution, its argmax is the decision
+        self.assertEqual(sorted(f['probs']), sorted(GESTURES))
+        self.assertAlmostEqual(sum(f['probs'].values()), 1, delta=0.01)
+        self.assertEqual(max(f['probs'], key=f['probs'].get), f['gesture'])
 
 if __name__ == '__main__': unittest.main()

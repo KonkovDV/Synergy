@@ -3,7 +3,8 @@
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, BRIDGE_STATUS, icon } from './widgets.js';
-import { SCHEME_INFO, twoChannelControls } from '../core/vocabulary.js';
+import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS } from '../core/vocabulary.js';
+import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
 import { CalibrationRecorder, CALIBRATION_STEPS } from '../core/calibration.js';
 import { defaultCalibration } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
@@ -78,19 +79,31 @@ export function settingsScreen(app, { back = null } = {}) {
       h('summary', {}, h('span', { class: 'sec-head' }, h('span', { class: `sec-ico t-${tint}`, 'aria-hidden': 'true' }, picture(`ico-${SECTION_PICTURE[title]}`, 34, 'sec-pic', () => icon(glyph))), h('h2', {}, title))), ...children);
   };
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
-  const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); };
+  const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); paintLimits(); };
+  // 5.29 — the prosthesis's own thresholds, when the host (Motorica Start) passed them: read, never written.
+  const limitsNote = h('p', { class: 'note', 'aria-live': 'polite' });
+  function paintLimits() {
+    const raw = app.bridge?.thresholds, used = app.prosthesisThresholds();
+    const [a, b] = app.switchOn();
+    limitsNote.textContent = !raw
+      ? 'Пороги протеза приходят от приложения протеза, когда игра встроена в него. Сейчас их нет — работает порог игры выше.'
+      : used
+        ? `Пороги протеза получены: канал A включается на ${pct(a)}, B — на ${pct(b)} комфортного уровня. Ползунок порога выше на эти каналы не действует. Игра их только читает.`
+        : `Пороги протеза получены, но не используются: работает порог игры ${pct(s.sensitivity)}.`;
+  }
+  paintLimits();
   // Two-channel laws only. Switching the grip method shows or hides the hold time without rebuilding the screen
   // (a rebuild would fold this section shut).
   const twoChannelSensitivity = () => {
-    const hold = sliderRow('Смена хвата: удержание B', { min: GRIP_SWITCH.minS, max: GRIP_SWITCH.maxS, step: GRIP_SWITCH.stepS, value: s.holdOpenS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ holdOpenS: Math.round(v * 10) / 10 }) });
-    const openNote = h('p', { class: 'note', hidden: s.gripSwitch !== 'open' }, 'В протезах «Моторики» хват меняется так: кисть раскрыта до конца, раскрытие отпущено и подано снова дольше этого времени. Это «peak length» в приложении протеза — его настраивает протезист. A+B там — блокировка.');
+    const hold = sliderRow('Смена хвата: удержание B', { min: GRIP_SWITCH.minS, max: GRIP_SWITCH.maxS, step: GRIP_SWITCH.stepS, value: s.holdOpenS, format: v => fmtFixed(v, 2) + '\u00a0с', onInput: v => app.updateSettings({ holdOpenS: Math.round(v * 20) / 20 }) }); // 0,05 с, as in Motorica Start
+    const openNote = h('p', { class: 'note', hidden: s.gripSwitch !== 'open' }, 'В протезах «Моторики» хват меняется так: кисть раскрыта до конца, раскрытие отпущено и подано снова дольше этого времени. В Motorica Start это «время пиков», по умолчанию 1,00 с — его настраивает протезист. A+B там — блокировка.');
     const coNote = h('p', { class: 'note', hidden: s.gripSwitch === 'open' }, 'Сейчас хват меняет коактивация A+B. В протезах «Моторики» хват меняет повторное раскрытие, а A+B — блокировка. Время удержания появится, если выбрать «Снова раскрыть».');
     if (s.gripSwitch !== 'open') hold.hidden = true;
     const pick = v => { app.updateSettings({ gripSwitch: v }); hold.hidden = v !== 'open'; openNote.hidden = v !== 'open'; coNote.hidden = v === 'open'; };
     return [
       sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); meter.setThresholds(); } }),
       sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }) }),
-      h('p', { class: 'note' }, 'Время удержания для блокировки — как в приложении вашего протеза; его настраивает протезист.'),
+      h('p', { class: 'note' }, 'Как «время удержания для блокировки» в Motorica Start (там по умолчанию 1,6 с); его настраивает протезист.'),
       h('div', { class: 'row' }, h('span', {}, 'Смена хвата'),
         segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, pick, 'Смена хвата')),
       hold, openNote, coNote,
@@ -113,6 +126,22 @@ export function settingsScreen(app, { back = null } = {}) {
       h('button', { class: 'btn ghost', onclick: savePin }, 'Сохранить PIN'),
       s.parentPin ? h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Снять PIN? Настройки снова откроются без кода.')) return; app.updateSettings({ parentPin: '' }); toast('PIN снят'); app.go('settings'); } }, 'Снять PIN') : null));
 
+  // 5.29: which gesture set the game speaks — ours or the UBI4 set of Motorica Start's gesture training. A change reloads
+  // the page: every game derives its lists from the set once (core/gesture-set.js).
+  function gestureSetRow() {
+    if (gestureSetSource() === 'address') {
+      return h('p', { class: 'note' }, `Набор жестов «${GESTURE_SET.name}» задало приложение, которое открыло игру.`);
+    }
+    return h('div', { class: 'gesture-set' },
+      segmented(GESTURE_SET_IDS.map(id => ({ value: id, label: GESTURE_SETS[id].name, sub: GESTURE_SETS[id].short })), GESTURE_SET.id, v => {
+        if (v === GESTURE_SET.id) return;
+        if (!saveGestureSet(v)) { toast('Не удалось сохранить выбор: хранилище браузера недоступно'); return; }
+        toast(`Набор жестов «${GESTURE_SETS[v].name}»: перезапускаем игру`);
+        setTimeout(() => globalThis.location?.reload?.(), 600);
+      }, 'Набор жестов'),
+      h('p', { class: 'note' }, `Сейчас: ${GESTURE_SET.source}. Прежние упражнения сохраняются; в отчёте видно, в каком наборе каждое.`));
+  }
+
   const node = h('div', { class: 'screen settings' },
     h('main', { class: 'scroll' },
       h('h1', {}, 'Настройки'),
@@ -120,8 +149,17 @@ export function settingsScreen(app, { back = null } = {}) {
       section('Управление',
         segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { app.updateSettings({ scheme: v }); refreshPreview(); app.go('settings'); }, 'Схема управления'),
         h('p', { class: 'note' }, SCHEME_INFO[s.scheme].text),
-        h('div', { class: 'row' }, h('span', {}, 'Протез'),
-          segmented([{ value: 'right', label: 'Правая рука' }, { value: 'left', label: 'Левая рука' }], s.side, v => app.updateSettings({ side: v }), 'Рука с протезом')),
+        s.scheme === 'gesture' ? gestureSetRow() : null,
+        // 5.30 — two prostheses (meetup 21.10: «не исключена»): each has its own stream and calibration; the one chosen
+        // here leads the exercise, the other one waits (core/hands.js, input/bridge.js `side`).
+        h('div', { class: 'row' }, h('span', {}, 'Протезы'),
+          segmented([{ value: 'one', label: 'Один' }, { value: 'two', label: 'Два', sub: 'левый и правый' }], s.prostheses, v => { app.updateSettings({ prostheses: v }); app.go('settings'); }, 'Сколько протезов')),
+        h('div', { class: 'row' }, h('span', {}, s.prostheses === 'two' ? 'Упражнение ведёт' : 'Протез'),
+          segmented([{ value: 'right', label: s.prostheses === 'two' ? 'Правый' : 'Правая рука' }, { value: 'left', label: s.prostheses === 'two' ? 'Левый' : 'Левая рука' }], s.side, v => { app.updateSettings({ side: v }); app.go('settings'); }, s.prostheses === 'two' ? 'Какой протез ведёт упражнение' : 'Рука с протезом')),
+        // 5.30 — the on-screen controls under the hand that taps them (the expert's advice at the meetup of 21.10.2026).
+        h('div', { class: 'row' }, h('span', {}, 'Кнопки на экране'),
+          segmented([{ value: 'auto', label: 'Авто', sub: s.prostheses === 'two' ? 'под правую' : `под ${s.side === 'right' ? 'левую' : 'правую'}, здоровую` }, { value: 'left', label: 'Под левую' }, { value: 'right', label: 'Под правую' }],
+            s.controlHand, v => { app.updateSettings({ controlHand: v }); app.go('settings'); }, 'Кнопки на экране под руку')),
         // 5.14 — people wait 3–6 months for a prosthesis (the customer's annual report): «жду протез» trains the control
         // on the emulator and shows the path to the prosthesis instead of tasks that need one.
         h('div', { class: 'row' }, h('span', {}, 'Протез уже есть?'),
@@ -135,6 +173,8 @@ export function settingsScreen(app, { back = null } = {}) {
       section('Чувствительность',
         h('p', { class: 'note' }, 'Это пороги игры. В протез они не записываются: их меняет протезист в приложении протеза или на экране кисти.'),
         sliderRow('Порог включения канала', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); meter.setThresholds(); } }),
+        toggleRow('Пороги как у протеза', s.prosthesisThresholds, v => { app.updateSettings({ prosthesisThresholds: v }); refreshPreview(); }, 'каждый канал включается на том же уровне сигнала, что и кисть; работает, когда приложение протеза передаёт пороги'),
+        limitsNote,
         // 5.24 — co-contraction, the lock and the grip switch do nothing in the gesture scheme (the grip is the gesture).
         // Showing them asked the person to tune a control that never fired (W3C COGA). The saved values stay.
         ...(twoChannelControls(s.scheme) ? twoChannelSensitivity() : [
@@ -214,6 +254,7 @@ export function settingsScreen(app, { back = null } = {}) {
     focus: returnTo,
     tick(now) { meter.update(preview.pipeline.process(preview.source?.sample(now) ?? null, now)); },
     onBridgeStatus(st) { status.textContent = `Статус: ${BRIDGE_STATUS[st] ?? st}`; },
+    onThresholds() { refreshPreview(); },
     onBleStatus(st) { bleStatus.textContent = st === 'disconnected' ? 'Bluetooth: связь потеряна — переподключаемся…' : st === 'failed' ? 'Bluetooth: не удалось переподключиться' : `Bluetooth: ${st}`; },
   };
 }
@@ -256,11 +297,11 @@ export function calibrationScreen(app) {
     h('main', { class: 'frame-body center' },
       h('p', { class: 'note' }, kind === 'touch'
         ? 'Сейчас источник — эмулятор на экране: калибровка покажет процесс, а результат для эмулятора не нужен. Подключите внешний источник для настоящей калибровки.'
-        : 'Как «чувствительность датчиков» в приложении протеза: определяем покой и комфортное напряжение каждого канала.'),
+        : `Как «чувствительность датчиков» в приложении протеза: определяем покой и комфортное напряжение каждого канала${app.settings.prostheses === 'two' ? ` — ${app.settings.side === 'left' ? 'левого' : 'правого'} протеза. У второго своя калибровка: смените в настройках, какой протез ведёт` : ''}.`),
       ring, title, text, live, startButton, result,
       h('div', { class: 'row-actions' },
         again,
-        h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Сбросить калибровку этого источника к значениям по умолчанию? Сохранённую калибровку вернуть нельзя.')) return; app.state.calibrations[kind] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))),
+        h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Сбросить калибровку этого источника к значениям по умолчанию? Сохранённую калибровку вернуть нельзя.')) return; app.state.calibrations[app.calibrationKey(kind)] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))),
     h('div', { class: 'frame-dock' }, meter.node,
       kind === 'touch' ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, createTwoChannelPads(app.emulator)) : null));
   return {
@@ -290,7 +331,7 @@ export function calibrationScreen(app) {
         announce(`${title.textContent}. ${r.issues.join(' ')}`);
         // Without signal there is nothing to save: the previous calibration stays.
         const save = r.usable && kind !== 'touch';
-        const done = h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[kind] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings', { back: 'calibration' }); } }, save ? 'Сохранить' : 'Понятно');
+        const done = h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[app.calibrationKey(kind)] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings', { back: 'calibration' }); } }, save ? 'Сохранить' : 'Понятно');
         result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)), done);
         done.focus({ preventScroll: true });
       }

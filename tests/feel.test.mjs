@@ -20,6 +20,7 @@ import { FLICKER } from '../src/games/safe.js';
 import { coachFeedback } from '../src/ui/coach.js';
 import { reminderIcs, reminderTime } from '../src/services/report.js';
 import { replaySummary, gripReplaySummary, safeReplaySummary } from '../src/ui/results.js';
+import { runnerFor } from './helpers.mjs';
 
 /** A canvas that draws nothing (rendering must not throw). */
 const nullCanvas = () => new Proxy({}, {
@@ -46,7 +47,7 @@ test('sounds: no «lose»; every event a game emits has a sound', () => {
   assert.ok(!SOUND_NAMES.includes('lose'), 'a run below two stars ends with the calm «done»');
   for (const name of ['win', 'done', 'miss', 'crush']) assert.ok(SOUND_NAMES.includes(name), name);
   const emitted = new Set(['levelup']);
-  for (const file of ['base', 'flight', 'rhythm', 'grip', 'safe', 'assess']) {
+  for (const file of ['base', 'flight', 'rhythm', 'grip', 'safe', 'assess', 'duo']) {
     for (const call of readFileSync(`src/games/${file}.js`, 'utf8').matchAll(/this\.emit\(([^;]*?)\)\s*;/g)) {
       for (const [, name] of call[1].matchAll(/'([a-z]+)'/g)) emitted.add(name);
     }
@@ -58,8 +59,7 @@ test('sounds: no «lose»; every event a game emits has a sound', () => {
 /** Plays one exercise (the autopilot, or nobody: a resting arm) and returns the events frame by frame. */
 function frames(id, scheme, autopilot = true) {
   const game = createGame(id, { levelNumber: 1, scheme, seed: 4 });
-  const emulator = new EmgEmulator({ realism: 0.5, seed: 4 });
-  const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme }), hand: new BionicHand(), source: emulator, emulator, autopilot });
+  const runner = runnerFor(game, { scheme, realism: 0.5, seed: 4, autopilot }); // 5.30: «Две руки» runs two arms
   const out = [];
   const dt = 1 / 60;
   for (let t = 0; !game.done && t < 300 * 1000; t += dt * 1000) { runner.step(t, dt); out.push(game.drainEvents()); }

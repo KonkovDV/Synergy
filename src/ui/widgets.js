@@ -1,7 +1,7 @@
 // Reusable UI pieces (DRY): bottom navigation, live signal meter, form rows.
 import { h, longestWord } from './dom.js';
 import { fmtSec } from '../core/format.js';
-import { COMMAND_NAME, GESTURE_BY_ID, twoChannelControls } from '../core/vocabulary.js';
+import { COMMAND_NAME, GESTURE_BY_ID, twoChannelControls, GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
 import { mio } from './art.js';
 import { picture } from './pictures.js';
 
@@ -53,6 +53,15 @@ export function bottomNav(app, active) {
 /** Status words of the external source — one copy for the game and the settings (5.11: two had to be kept in sync). */
 export const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', unreachable: 'нет ответа, повторяем…', error: 'ошибка адреса', offline: 'протез не на связи' };
 
+/**
+ * The line under the field in external mode. 5.29: a class outside the gesture set (Motorica's Wrist_Flex, say) is rest;
+ * the line names it, so the person and whoever set up the emulator see why the hand does nothing.
+ */
+export const bridgeLine = (bridge, status = bridge?.status ?? 'idle') => `Статус: ${BRIDGE_STATUS[status] ?? status} · кадров: ${bridge?.received ?? 0}`
+  + `${bridge?.raw ? ' · сырая ЭМГ → огибающая 150 мс' : ''}${bridge?.unknownLabel ? ` · жест не из набора игры: ${bridge.unknownLabel}` : ''}`
+  // 5.30: two prostheses — how many frames each arm sent.
+  + (bridge?.receivedBySide && bridge.receivedBySide.left + bridge.receivedBySide.right > 0 ? ` · левый: ${bridge.receivedBySide.left}, правый: ${bridge.receivedBySide.right}` : '');
+
 /** The hint while the signal is lost: the exercise waits and goes on by itself (GameRunner), as Motorica Kart says too. */
 export const lostSignalHint = status => (status === 'offline'
   ? 'Протез не на связи — пауза. Продолжим сами, когда связь вернётся'
@@ -65,6 +74,12 @@ export function topBar(title, onBack, extra = null) {
 }
 
 /** Live A/B meter with thresholds: the «muscle-level» feedback next to the game («functional» feedback). */
+/** «Закрытие ладони 82 % · Флексия 9 % · Покой 4 %»: the three most probable classes, in steps of 5 % (no flicker). */
+export function probabilityLine(probs) {
+  return GESTURE_CLASS_ORDER.map((id, i) => [id, probs[i]]).filter(([, p]) => p >= 0.025).sort((x, y) => y[1] - x[1]).slice(0, 3)
+    .map(([id, p]) => `${GESTURE_BY_ID[id]?.name ?? id} ${Math.round(p * 20) * 5} %`).join(' · ');
+}
+
 export function signalMeter(app) {
   const s = app.settings;
   const bar = cls => {
@@ -75,10 +90,13 @@ export function signalMeter(app) {
   };
   const A = bar('a'), B = bar('b');
   const chip = h('div', { class: 'meter-chip' }, 'Покой');
+  // 5.29: what a recognizer (СППР) saw — the three most probable classes of its stream, in the gesture scheme only.
+  const probs = h('p', { class: 'meter-probs', hidden: true });
   const node = h('div', { class: 'meter', role: 'region', 'aria-label': 'Сигнал датчиков A и B' },
     h('div', { class: 'meter-row' }, h('span', { class: 'meter-label a' }, 'A'), A.node),
     chip,
-    h('div', { class: 'meter-row' }, B.node, h('span', { class: 'meter-label b' }, 'B')));
+    h('div', { class: 'meter-row' }, B.node, h('span', { class: 'meter-label b' }, 'B')),
+    probs);
   return {
     node,
     /** The marks follow the sliders (5.11: they stayed where the meter was built). */
@@ -88,10 +106,14 @@ export function signalMeter(app) {
     update(intent) {
       A.fill.style.width = `${Math.round(intent.a * 100)}%`;
       B.fill.style.width = `${Math.round(intent.b * 100)}%`;
+      // 5.29: each channel's own switch-on line — the prosthesis's thresholds differ per channel when the host sends them.
+      if (Array.isArray(intent.on)) [A, B].forEach((bar, ch) => { const left = `${Math.round(intent.on[ch] * 1000) / 10}%`; if (bar.on.style.left !== left) bar.on.style.left = left; });
       const label = !intent.valid ? 'Нет сигнала'
         : intent.gesture ? `${GESTURE_BY_ID[intent.gesture].name}${intent.uncertain ? '?' : ''}`
         : COMMAND_NAME[intent.command];
       if (chip.textContent !== label) chip.textContent = label;
+      const top = intent.valid && intent.probs ? probabilityLine(intent.probs) : '';
+      if (probs.textContent !== top) { probs.textContent = top; probs.hidden = !top; }
       const cmd = intent.valid ? intent.command : 'lost';
       if (chip.dataset.cmd !== cmd) chip.dataset.cmd = cmd; // no attribute write per frame (5.11: ~1.6 mutations a frame)
     },

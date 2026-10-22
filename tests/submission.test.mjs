@@ -111,6 +111,10 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['an old axe count in the pitch', () => edit(dir, 'docs/PITCH.md', s => `${s}\nНоль нарушений на 28 состояниях экранов светлой темы и 10 тёмной.\n`), 'а axe —'],
       ['an old layout run in the jury strategy', () => edit(dir, 'docs/JURY_STRATEGY.md', s => `${s}\nЛинтер: 37 состояний × 7 экранов.\n`), 'а линтер раскладки —'],
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
+      ['stale citation metadata', () => edit(dir, 'CITATION.cff', s => s.replace(/^version: .*$/m, 'version: 5.11.0')), 'версия CITATION.cff'],
+      ['stale iPhone version', () => edit(dir, 'ios/project.yml', s => s.replace(/MARKETING_VERSION: "[^"]+"/, 'MARKETING_VERSION: "5.11.0"')), 'версия ios/project.yml'],
+      // 5.29 — the supply-chain rules (tools/supply-chain.mjs, its own planted cases in tests/supplychain.test.mjs).
+      ['an action pinned by tag', () => edit(dir, '.github/workflows/ci.yml', s => s.replace(/@[0-9a-f]{40} # v7/, '@v7')), 'цепочка поставки'],
       ['unverified claim (fact-check)', () => edit(dir, 'README.md', s => `${s}\n${UNVERIFIED}\n`), 'README.md:'],
       ['«up to 44 %»', () => edit(dir, 'README.md', s => `${s}\n${UP_TO_44}\n`), 'README.md:'],
       ['«Fitts\' law measured»', () => edit(dir, 'README.md', s => `${s}\n${FITTS_LAW}\n`), 'по мотивам теста Фиттса'],
@@ -170,4 +174,49 @@ test('APK signer: the release APK of a draft carries the local debug key — the
   const sig = apkSigner(builtApk);
   assert.equal(sig.signed, true);
   assert.equal(sig.debug, true, 'built by tools/build-apk.sh with the debug key; the team key comes from release.yml');
+});
+
+test('submission gate (5.29): the axe and layout runs must have run on this code', async () => {
+  const { sourceFingerprint } = await import('../tools/evidence.mjs');
+  const dir = copyRepo();
+  try {
+    const strict = () => spawnSync(process.execPath, ['tools/check-submission.mjs', '--no-tests'], { cwd: dir, encoding: 'utf8' });
+    // The copy's evidence names the copy's code: no word about the runs.
+    edit(dir, 'docs/evidence.json', s => { const e = JSON.parse(s); for (const k of ['a11y', 'layout']) if (e[k]) e[k].source = sourceFingerprint(dir); return `${JSON.stringify(e, null, 1)}\n`; });
+    const same = strict();
+    assert.doesNotMatch(same.stdout, /снят на другом коде|нет отпечатка кода/, same.stdout);
+    // A screen changed after the e2e: the draft (CI) warns, the strict gate before the upload refuses it.
+    edit(dir, 'src/ui/home.js', s => `${s}\n// changed after the e2e\n`);
+    const draft = gate(dir);
+    assert.match(draft.stdout, /⚠ docs\/evidence\.json: «a11y» снят на другом коде/);
+    assert.match(draft.stdout, /⚠ docs\/evidence\.json: «layout» снят на другом коде/);
+    const after = strict();
+    assert.equal(after.status, 1, after.stdout);
+    assert.match(after.stdout, /✗ docs\/evidence\.json: «a11y» снят на другом коде/);
+    // A record without a fingerprint (before 5.29) is named, not trusted.
+    edit(dir, 'docs/evidence.json', s => { const e = JSON.parse(s); delete e.a11y.source; return `${JSON.stringify(e, null, 1)}\n`; });
+    assert.match(gate(dir).stdout, /у «a11y» нет отпечатка кода/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('evidence (5.29): the fingerprint follows the code of src/, styles/ and index.html, nothing else', async () => {
+  const { sourceFingerprint } = await import('../tools/evidence.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'synergy-fp-'));
+  try {
+    mkdirSync(join(dir, 'src', 'ui'), { recursive: true }); mkdirSync(join(dir, 'styles')); mkdirSync(join(dir, 'docs'));
+    writeFileSync(join(dir, 'src', 'ui', 'a.js'), 'a'); writeFileSync(join(dir, 'styles', 'app.css'), 'b'); writeFileSync(join(dir, 'index.html'), 'c');
+    const first = sourceFingerprint(dir);
+    assert.match(first, /^[0-9a-f]{16}$/);
+    writeFileSync(join(dir, 'docs', 'note.md'), 'a document is not the code');
+    assert.equal(sourceFingerprint(dir), first);
+    writeFileSync(join(dir, 'styles', 'app.css'), 'b2');
+    assert.notEqual(sourceFingerprint(dir), first);
+    writeFileSync(join(dir, 'styles', 'app.css'), 'b');
+    writeFileSync(join(dir, 'src', 'ui', 'b.js'), '');
+    assert.notEqual(sourceFingerprint(dir), first, 'a new empty file is a change');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

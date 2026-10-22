@@ -76,5 +76,8 @@ class Classifier7:
         p = self.model.predict_proba([f])[0]
         i = int(np.argmax(p))
         rms = np.clip((f[:4] - self.rest_ref) / (self.max_ref - self.rest_ref), 0, 1)
+        # 5.30 — the СППР stream of the meetup of 21.10.2026: the decision and the probability of every class, by name
+        # (the game aligns names to its own class order; src/input/bridge.js decodeProbabilities).
         return {'gesture': str(self.model.classes_[i]), 'confidence': float(p[i]),
+                'probs': {str(c): round(float(q), 4) for c, q in zip(self.model.classes_, p)},
                 'a': float(rms[0]), 'b': float(rms[1]), 'effort': float(np.max(rms))}

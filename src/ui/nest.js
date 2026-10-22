@@ -91,6 +91,7 @@ export function nestScreen(app) {
   const skins = h('section', { class: 'card' }, h('h2', { class: 'with-art' }, sectionArt('palette', 32), 'Облик протеза в играх'),
     h('div', { class: 'skins' }, ...SKINS.map(sk => {
       const open = skinUnlocked(p, sk);
+      const caption = open ? sk.name : sk.level ? `ур. ${sk.level}` : '7 дней';
       // 5.16: the team's picture of the hand in this look; the drawn game hand stands in for a missing one.
       const look = skinArt(sk.id, 56) ?? (() => {
         const { canvas, ctx } = hiDpiCanvas(56, 56, 'skin-icon');
@@ -98,9 +99,10 @@ export function nestScreen(app) {
         return canvas;
       })();
       return h('button', { class: `skin ${p.skin === sk.id ? 'active' : ''}`, disabled: !open, 'aria-pressed': String(p.skin === sk.id),
-        'aria-label': open ? `Облик «${sk.name}»` : `Облик «${sk.name}» — откроется ${sk.level ? `на уровне ${sk.level}` : 'за 7 дней подряд'}`,
+        // 5.29: the name starts with the word under the picture, so «нажми ур. 3» works by voice (WCAG 2.5.3, axe 4.14).
+        'aria-label': open ? `Облик «${sk.name}»` : `${caption} — облик «${sk.name}», откроется ${sk.level ? `на уровне ${sk.level}` : 'за 7 дней подряд'}`,
         onclick: () => { p.skin = sk.id; app.save(); app.go('nest'); } },
-        look, h('small', { 'aria-hidden': 'true' }, open ? sk.name : sk.level ? `ур. ${sk.level}` : '7 дней'));
+        look, h('small', { 'aria-hidden': 'true' }, caption));
     })));
 
   const restNote = resting ? h('p', { class: 'note' }, badgeArt('moon', 20), ' Сегодня день отдыха — птица отдыхает вместе с вами.') : null;

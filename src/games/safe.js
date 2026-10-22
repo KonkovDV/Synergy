@@ -13,7 +13,7 @@ import { fmtFixed } from '../core/format.js';
 
 /** Prompt pools per scheme; `from` = level where the prompt is introduced (gestures: GESTURES[].introducedAt). */
 export const PROMPTS = {
-  gesture: ACTIVE_GESTURES.map(g => ({ id: g.id, from: g.introducedAt ?? 1, name: g.name, pose: g.pose, gesture: g.id })),
+  gesture: ACTIVE_GESTURES.map(g => ({ id: g.id, from: g.introducedAt ?? 1, name: g.name, pose: g.pose, wrist: g.wrist ?? 0, gesture: g.id })),
   proportional: [
     { id: 'close', name: 'Сжатие', from: 1, command: 'close', band: [0.22, 1.01], pose: COMMAND_POSE.close },
     { id: 'open', name: 'Раскрытие', from: 1, command: 'open', band: [0.22, 1.01], pose: COMMAND_POSE.open },
@@ -240,7 +240,7 @@ export class SafeGame extends Game {
         // gesture of the vocabulary with that command (closing — the fist, opening — the palm).
         const pic = card.gesture ?? ACTIVE_GESTURES.find(g => g.command === card.command)?.id;
         if (!pic || !drawSprite(ctx, `gesture-${pic}`, w / 2 - cw * 0.22, y0 + ch * 0.5, Math.min(ch * 0.78, cw * 0.4), { sx: this.mirror ? -1 : 1 })) {
-          drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
+          drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, wrist: card.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.mirror });
         }
         text(ctx, card.name, w / 2 + cw * 0.14, y0 + ch * 0.4, { size: 18, weight: 800, maxWidth: cw * 0.6 });
         if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {

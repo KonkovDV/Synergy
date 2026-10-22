@@ -56,7 +56,7 @@ test('the specialist report and the CSV carry the protocol: its table, a quick_s
   assert.match(html, /H2\. Открыто быстрым стартом<\/td><td>1 из 2 упражнений; дней — 1/);
   const [head, ...rows] = reportCsv(st).split('\n');
   const col = head.split(';').indexOf('quick_start');
-  assert.ok(col > 0 && head.endsWith('rest_missed'));
+  assert.ok(col > 0 && head.endsWith('rest_missed;signal_issues')); // 5.30: signal quality is the last column
   assert.deepEqual(rows.map(r => r.split(';')[col]), ['1', '0']);
 });
 

@@ -118,7 +118,7 @@ const FINGERS = [ // index, middle, ring, little: x offset, length (× palm widt
  * Stylized bionic hand, palm toward the viewer, fingers up (rotate with `angle`).
  * pose — flexion [thumb, index, middle, ring, little] 0..1.
  */
-export function drawHand(ctx, { x, y, size, pose, skin = 'graphite', angle = 0, mirror = false, glow = 0, sleeve = true }) {
+export function drawHand(ctx, { x, y, size, pose, skin = 'graphite', angle = 0, mirror = false, glow = 0, sleeve = true, wrist = 0 }) {
   const c = SKIN_COLORS[skin] ?? SKIN_COLORS.graphite;
   const s = size;
   ctx.save();
@@ -129,6 +129,16 @@ export function drawHand(ctx, { x, y, size, pose, skin = 'graphite', angle = 0, 
     ctx.globalAlpha = 0.35 + 0.65 * glow;
     fillRound(ctx, -0.3 * s, 0.16 * s, 0.6 * s, 0.07 * s, 0.035 * s, c.glow);
     ctx.globalAlpha = 1;
+  }
+  // 5.29 — wrist flexion (1) and extension (−1) of the UBI4 set: palm and fingers turn about the wrist, a curved arrow
+  // shows the direction. A front view cannot show the sagittal plane, so this is a sign, not anatomy (cue says it in words).
+  if (wrist) {
+    ctx.rotate(0.55 * Math.max(-1, Math.min(1, wrist)));
+    ctx.strokeStyle = c.glow; ctx.lineWidth = 0.07 * s; ctx.lineCap = 'round';
+    const dir = wrist > 0 ? 1 : -1;
+    ctx.beginPath(); ctx.arc(0, -0.1 * s, 0.78 * s, -Math.PI / 2 - dir * 0.25, -Math.PI / 2 + dir * 0.45, dir < 0); ctx.stroke();
+    const end = -Math.PI / 2 + dir * 0.45, ex = Math.cos(end) * 0.78 * s, ey = -0.1 * s + Math.sin(end) * 0.78 * s;
+    ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - dir * 0.16 * s, ey - 0.06 * s); ctx.moveTo(ex, ey); ctx.lineTo(ex - dir * 0.02 * s, ey + 0.16 * s); ctx.stroke();
   }
   // Fingers behind the palm edge.
   FINGERS.forEach((f, i) => {

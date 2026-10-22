@@ -22,6 +22,9 @@ try {
   cpSync(join(root, 'tools'), join(tmp, 'tools'), { recursive: true, filter: src => !src.includes(`${join('tools', '.cache')}`) });
   // The APK resources the launcher-icon test reads (5.16), without the built APK.
   cpSync(join(root, 'android'), join(tmp, 'android'), { recursive: true, filter: src => !src.includes(`${join('android', 'build')}`) });
+  // 5.30: the iPhone shell, which the parity test reads next to the Android one (the generated Xcode project stays out).
+  cpSync(join(root, 'ios'), join(tmp, 'ios'), { recursive: true, filter: src => !src.includes('.xcodeproj') });
+  cpSync(join(root, '.github'), join(tmp, '.github'), { recursive: true }); // the same test checks how CI fetches XcodeGen
   for (const file of ['package.json', 'index.html']) cpSync(join(root, file), join(tmp, file));
   // The documents the tests read: the rules (checked against the code, 5.13), the host examples (against the contract,
   // 5.15) and the documents they link to — the text documents only, not the screenshots.
@@ -34,8 +37,10 @@ try {
   const after = before.replace(/^\s*\{ id: 'thumb'.*$/m, m => m.match(/^\s*/)[0] + TRIPOD);
   if (after === before) throw new Error("vocabulary.js: строка жеста 'thumb' не найдена — обновите скрипт под текущий набор");
   writeFileSync(file, after);
-  // submission.test.mjs checks the repository (git, release/, documents), not the code: not in the copy.
-  const tests = readdirSync(join(tmp, 'tests')).filter(f => f.endsWith('.test.mjs') && f !== 'submission.test.mjs').map(f => join(tmp, 'tests', f));
+  // submission.test.mjs and supplychain.test.mjs (5.29) check the repository (git, release/, documents, .github, lockfiles),
+  // not the code: not in the copy.
+  const REPO_TESTS = ['submission.test.mjs', 'supplychain.test.mjs'];
+  const tests = readdirSync(join(tmp, 'tests')).filter(f => f.endsWith('.test.mjs') && !REPO_TESTS.includes(f)).map(f => join(tmp, 'tests', f));
   const run = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...tests], { cwd: tmp, encoding: 'utf8' });
   const failed = [...run.stdout.matchAll(/^not ok \d+ - (.+)$/gm)].map(m => m[1].trim());
   const total = Number(run.stdout.match(/^# tests (\d+)/m)?.[1] ?? 0);
