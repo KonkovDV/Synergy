@@ -201,7 +201,8 @@ export class RhythmGame extends Game {
 
   details() {
     return { notes: this.notes.length, hits: this.onsetErrors.length, bestCombo: this.bestCombo, falseStarts: this.falseStarts,
-      meanOnsetMs: this.onsetErrors.length ? Math.round(1000 * this.onsetErrors.reduce((s, v) => s + v, 0) / this.onsetErrors.length) : null };
+      meanOnsetMs: this.onsetErrors.length ? Math.round(1000 * this.onsetErrors.reduce((s, v) => s + v, 0) / this.onsetErrors.length) : null,
+      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings }) };
   }
 
   render(ctx, view, hand, intent) {

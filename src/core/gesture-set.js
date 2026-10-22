@@ -5,7 +5,7 @@
 // (SYNERGY_GESTURE_SET — the whole suite runs on each set), then the default.
 
 /** Known sets; the definitions are in vocabulary.js. */
-export const GESTURE_SET_IDS = Object.freeze(['synergy', 'ubi4']);
+export const GESTURE_SET_IDS = Object.freeze(['synergy', 'ubi4', 'spr8']);
 export const DEFAULT_GESTURE_SET = 'synergy';
 /** localStorage key of the person's choice. */
 export const GESTURE_SET_KEY = 'synergy.gestureSet';

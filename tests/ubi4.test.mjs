@@ -28,7 +28,7 @@ test('UBI4 set: selected by the address, then the settings, then the test enviro
   const env = (search = '', stored = null, envSet = undefined) => ({
     location: { search }, localStorage: { getItem: k => (k === GESTURE_SET_KEY ? stored : null), setItem() {} }, process: { env: { SYNERGY_GESTURE_SET: envSet } },
   });
-  assert.deepEqual(GESTURE_SET_IDS, ['synergy', 'ubi4']);
+  assert.deepEqual(GESTURE_SET_IDS, ['synergy', 'ubi4', 'spr8']);
   assert.equal(DEFAULT_GESTURE_SET, 'synergy', 'the default stays ours until the task names its set (PLAN C.3)');
   assert.equal(selectedGestureSet(env('?gestures=ubi4', 'synergy')), 'ubi4');
   assert.equal(gestureSetSource(env('?gestures=ubi4')), 'address');

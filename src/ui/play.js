@@ -67,8 +67,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     }
     return r.qualities.left || r.qualities.right ? { ok: true, text: 'Сигнал: хороший' } : null;
   };
-  // Only a problem is shown (a good signal is the normal case and the pads need the room); on a short landscape screen
-  // the title only — the voice says the tip, the results repeat it (styles/app.css).
+  // Only a problem is shown (a good signal is the normal case and the pads need the room). On a short landscape
+  // phone and on a 320 px portrait the title only — the voice says the tip, the results repeat it (styles/app.css).
   const updateQuality = () => {
     const v = qualityVerdict();
     const bad = !!v && !v.ok;

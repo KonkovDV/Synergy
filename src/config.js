@@ -1,10 +1,10 @@
 // Single source of tunable parameters (DRY). Values are training-game defaults,
 // not clinical prescriptions and not Motorica firmware settings.
-import { GESTURE_BY_ID } from './core/vocabulary.js';
+import { CLOSING_GESTURES } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '5.30.0',
+  version: '5.31.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -47,9 +47,13 @@ export const HAND = {
   forceRiseRate: 1.4,       // max force growth / s (motor limit)
   forceDropRate: 1.8,       // force release / s at intensity 1 when opening
   thresholdForceRate: 0.35, // force growth / s in the threshold scheme: a 250 ms human reaction overshoots ≤ 0.09
-  // Cycled by co-contraction or by opening again: the first three grips of this list the gesture set has
-  // (Синергия: Кулак, Щепоть, Ключ; UBI4: Закрытие ладони, Щипок, Указатель — 5.29).
-  twoChannelGrips: ['fist', 'pinch', 'key', 'indication'].filter(id => GESTURE_BY_ID[id]?.grip).slice(0, 3),
+  // Preferred order is the one the levels were balanced on (fist, pinch, key); a set that lacks one
+  // falls through to its own closing grips (СППР has only the power grip).
+  twoChannelGrips: ['fist', 'pinch', 'key', 'indication']
+    .filter(id => CLOSING_GESTURES.some(g => g.grip === id))
+    .concat(CLOSING_GESTURES.map(g => g.grip).filter(id => !['fist', 'pinch', 'key', 'indication'].includes(id)))
+    .filter((id, i, all) => all.indexOf(id) === i)
+    .slice(0, 3),
 };
 
 export const SESSION = {

@@ -2,16 +2,20 @@
 // Force is dosed by how strongly you squeeze; the hand then holds on its own (relax!),
 // B lowers excess force, a wrong grip is switched the way that hand is set (open again, or co-contraction) or by a gesture.
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
-import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
 import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 
 /** The first of these grips the gesture set has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by «Щипок»). */
-const gripOf = (...ids) => ids.find(id => GRIP_NAME[id]) ?? ids.at(-1);
+/** A grip the set actually has; a set without «щепоть» takes the power grip (the СППР set of the meetup, 5.31). */
+const gripOf = (...ids) => ids.find(id => GRIP_NAME[id]) ?? CLOSING_GESTURES[0]?.grip ?? 'fist';
 
-/** Object catalog: force window [min,max], breakAt, grip, contact closure. Conditional units, not newtons. */
+/**
+ * Object catalog: force window [min,max], breakAt, grip, contact closure. Conditional units, not newtons. `art` — the
+ * picture of another kind (hot tea is drawn in the paper cup, the steam by the canvas).
+ */
 export const OBJECTS = {
   sponge: { name: 'Губка', grip: 'fist', min: 0.15, max: 0.85, breakAt: 9, contact: 0.45, color: '#ffd84d' },
   apple: { name: 'Яблоко', grip: 'fist', min: 0.3, max: 0.7, breakAt: 0.86, contact: 0.4, color: '#ff5d5d' },
@@ -19,20 +23,29 @@ export const OBJECTS = {
   cup: { name: 'Стаканчик', grip: 'fist', min: 0.2, max: 0.42, breakAt: 0.52, contact: 0.45, color: '#e8f1ff', fragile: true },
   can: { name: 'Банка', grip: 'fist', min: 0.45, max: 0.82, breakAt: 0.96, contact: 0.38, color: '#ff7a3d' },
   dumbbell: { name: 'Гантель', grip: 'fist', min: 0.62, max: 0.95, breakAt: 9, contact: 0.55, color: '#8fa1c7', heavy: true },
-  coin: { name: 'Монета', grip: 'pinch', min: 0.25, max: 0.6, breakAt: 9, contact: 0.8, color: '#ffc93c' },
-  berry: { name: 'Малина', grip: 'pinch', min: 0.12, max: 0.32, breakAt: 0.42, contact: 0.84, color: '#e8365d', fragile: true },
+  coin: { name: 'Монета', grip: gripOf('pinch'), min: 0.25, max: 0.6, breakAt: 9, contact: 0.8, color: '#ffc93c' },
+  berry: { name: 'Малина', grip: gripOf('pinch'), min: 0.12, max: 0.32, breakAt: 0.42, contact: 0.84, color: '#e8365d', fragile: true },
   card: { name: 'Карта', grip: gripOf('key', 'pinch'), min: 0.3, max: 0.7, breakAt: 9, contact: 0.74, color: '#5a8dff' },
   key: { name: 'Ключ', grip: gripOf('key', 'pinch'), min: 0.35, max: 0.75, breakAt: 9, contact: 0.72, color: '#f2c14e' },
+  tea: { name: 'Горячий чай', art: 'cup', grip: 'fist', min: 0.2, max: 0.42, breakAt: 0.52, contact: 0.45, color: '#e8f1ff', fragile: true, hot: true },
 };
+
+/**
+ * 5.31 — hot tea. At the meetup of 21.10.2026 Motorica's expert named a mug of boiling water as the everyday case where
+ * contracting both muscles is dangerous: the prosthesis then does whatever command came first. While the tea is carried,
+ * the passive channel rising to half its switch-on line, a co-contraction, or an opening gesture tilts the cup; spilling
+ * for `spillS` (the tilt settles at `settlePerS`) is «Расплескали». The tea feels the leak before the hand would move.
+ */
+export const HOT = { leakShare: 0.5, spillS: 0.4, settlePerS: 0.5, tiltMax: 0.45 };
 
 const LEVELS = [
   { items: ['sponge', 'apple', 'sponge', 'apple'], carry: 1.6, limit: 14 },
   { items: ['apple', 'can', 'egg', 'apple', 'can'], carry: 1.8, limit: 13 },
-  { items: ['egg', 'cup', 'apple', 'egg', 'can', 'cup'], carry: 2.0, limit: 12 },
+  { items: ['egg', 'cup', 'apple', 'egg', 'can', 'tea'], carry: 2.0, limit: 12 },
   { items: ['apple', 'coin', 'can', 'coin', 'egg', 'coin'], carry: 2.0, limit: 13 },
   { items: ['coin', 'berry', 'egg', 'berry', 'can', 'coin', 'cup'], carry: 2.2, limit: 12 },
   { items: ['card', 'apple', 'key', 'coin', 'card', 'egg', 'key'], carry: 2.2, limit: 12 },
-  { items: ['dumbbell', 'egg', 'key', 'berry', 'dumbbell', 'cup', 'coin', 'can'], carry: 2.6, limit: 11 },
+  { items: ['dumbbell', 'egg', 'key', 'berry', 'dumbbell', 'tea', 'coin', 'can'], carry: 2.6, limit: 11 },
   { items: ['berry', 'dumbbell', 'card', 'egg', 'coin', 'key', 'cup', 'dumbbell', 'berry'], carry: 2.8, limit: 10 },
 ];
 
@@ -57,6 +70,7 @@ export class GripGame extends Game {
     this.stability = new StabilityMeter(0.08);
     this.switchTimes = [];
     this.fragileSaved = 0;
+    this.teaDry = 0; // hot tea delivered without a drop
     this.nextObject();
   }
 
@@ -79,7 +93,7 @@ export class GripGame extends Game {
     const center = (bmin + bmax) / 2, half = this.adapt.widen((bmax - bmin) / 2);
     const min = Math.max(0.05, center - half), max = Math.min(0.97, center + half);
     this.current = { kind, ...base, min, max, breakAt: Math.max(breakAt, max + 0.06), limit: this.adapt.widen(this.level.limit),
-      phase: 'arrive', t: 0, restFor: 0, liftForce: 0, x: -0.4, needSwitchAt: null };
+      phase: 'arrive', t: 0, restFor: 0, liftForce: 0, x: -0.4, needSwitchAt: null, spill: 0, spilled: false };
     this.hint = `${this.current.name}: хват «${GRIP_NAME[this.current.grip]}», сила в зелёной зоне`;
   }
 
@@ -99,7 +113,9 @@ export class GripGame extends Game {
       return;
     }
     if (o.phase === 'grasp' || o.phase === 'carry' || o.phase === 'release') {
-      if (intent.command === COMMAND.CLOSE && o.phase !== 'release') this.separation.add(intent, true, dt);
+      // 5.31: with two channels the passive one is watched whatever the command — when it switches on with A, the
+      // command stops being «сжать», and that frame is exactly the leak.
+      if (o.phase !== 'release' && (this.scheme !== SCHEME.GESTURE || intent.command === COMMAND.CLOSE)) this.separation.add(intent, true, dt);
       o.peak = Math.max(o.peak ?? 0, hand.force);
       if (hand.force > o.breakAt) return this.fail('crush', hand);
     }
@@ -140,6 +156,15 @@ export class GripGame extends Game {
     this.stability.add(hand.force, dt);
     o.x = clamp01(o.t / this.level.carry);
     this.hint = o.heavy ? this.say('Тяжело! Подхватывайте (A) коротко, не выходя из зоны', 'Тяжело! Подхватывайте жестом коротко, не выходя из зоны') : 'Несите спокойно: не напрягайте мышцы';
+    if (o.hot) {
+      const leak = this.scheme === SCHEME.GESTURE ? intent.command === COMMAND.OPEN
+        : intent.co || intent.b >= HOT.leakShare * (intent.on?.[1] ?? this.onThreshold);
+      o.spill = leak ? o.spill + dt : Math.max(0, o.spill - HOT.settlePerS * dt);
+      if (leak) o.spilled = true;
+      this.hint = leak ? this.say('Чай качнулся — второй канал (B) в покой', 'Чай качнулся — жест в покой')
+        : this.say('Горячо! Несите ровно: B не напрягайте', 'Горячо! Несите ровно, без жестов');
+      if (o.spill >= HOT.spillS) return this.fail('spill', hand);
+    }
     if (hand.force < o.min * 0.8) return this.fail('drop', hand);
     if (o.t >= this.level.carry) { o.phase = 'release'; o.t = 0; this.emit('tick'); }
   }
@@ -156,9 +181,10 @@ export class GripGame extends Game {
       this.keep(o, 'ok', o.liftForce);
       this.adapt.record(true);
       if (o.fragile) this.fragileSaved++;
+      if (o.hot && !o.spilled) this.teaDry++;
       o.phase = 'done'; o.t = 0; o.delivered = true;
       this.emit('success');
-      this.flash = { text: precision > 0.75 ? 'Идеальная сила!' : 'Доставлено', color: COLORS.good, t: 0.8 };
+      this.flash = { text: o.hot && !o.spilled ? 'Ни капли!' : precision > 0.75 ? 'Идеальная сила!' : 'Доставлено', color: COLORS.good, t: 0.8 };
       return;
     }
     if (o.t > RELEASE_S) this.fail('release', hand);
@@ -166,16 +192,16 @@ export class GripGame extends Game {
 
   fail(reason, hand) {
     const o = this.current;
-    this.results.push({ kind: o.kind, ok: false, points: reason === 'drop' || reason === 'release' ? 10 : 0, reason });
+    this.results.push({ kind: o.kind, ok: false, points: reason === 'drop' || reason === 'release' || reason === 'spill' ? 10 : 0, reason });
     // A timeout keeps the strongest squeeze of the try (null if the object was never held).
     this.keep(o, reason, reason === 'timeout' ? (o.peak > 0 ? o.peak : null) : hand.force);
     this.adapt.record(false);
     o.phase = 'done'; o.t = 0; o.failed = reason;
     // 5.17 — where the force was when it went wrong, on the gauge for 1.2 s: the size of the error, not a verdict.
-    this.peakMark = reason === 'timeout' ? null : { force: clamp01(hand.force), reason, t: PEAK_MARK_S };
+    this.peakMark = reason === 'timeout' || reason === 'spill' ? null : { force: clamp01(hand.force), reason, t: PEAK_MARK_S };
     hand.clearObject();
     this.emit(reason === 'crush' ? 'crush' : 'miss');
-    this.flash = { text: reason === 'crush' ? 'Раздавлено' : reason === 'drop' ? 'Выскользнуло' : reason === 'release' ? 'Не отпустили' : 'Не успели', color: COLORS.bad, t: 0.8 };
+    this.flash = { text: { crush: 'Раздавлено', drop: 'Выскользнуло', release: 'Не отпустили', spill: 'Расплескали' }[reason] ?? 'Не успели', color: COLORS.bad, t: 0.8 };
   }
 
   autopilot(intent, hand) {
@@ -187,7 +213,7 @@ export class GripGame extends Game {
     if (hand.grip !== o.grip || o.overClosed) {
       const open = this.scheme !== SCHEME.GESTURE && hand.switchMode === 'open';
       if (hand.force > 0 || hand.closure > (open ? 0 : 0.3)) return this.openTarget(0.7);
-      if (this.scheme === SCHEME.GESTURE) return { gesture: o.grip, effort: 0.3 };
+      if (this.scheme === SCHEME.GESTURE) return { gesture: CLOSING_GESTURES.find(g => g.grip === o.grip)?.id ?? o.grip, effort: 0.3 };
       if (open) return hand.grip === o.grip ? this.restTarget() : hand.openReady ? this.openTarget(0.7) : { a: 0, b: 0 }; // let go, then open again
       if (!hand.armed) return { a: 0, b: 0 };
       return { a: 0.75, b: 0.75 };
@@ -197,8 +223,11 @@ export class GripGame extends Game {
     return want ? this.closeTarget(center, o.grip) : this.restTarget();
   }
 
-  closeTarget(level, grip) { return this.scheme === SCHEME.GESTURE ? { gesture: grip, effort: level } : { a: this.scheme === SCHEME.THRESHOLD ? 0.6 : level, b: 0 }; }
-  openTarget(level) { return this.scheme === SCHEME.GESTURE ? { gesture: 'open', effort: level } : { a: 0, b: level }; }
+  closeTarget(level, grip) {
+    const gesture = CLOSING_GESTURES.find(g => g.grip === grip)?.id ?? grip;
+    return this.scheme === SCHEME.GESTURE ? { gesture, effort: level } : { a: this.scheme === SCHEME.THRESHOLD ? 0.6 : level, b: 0 };
+  }
+  openTarget(level) { return this.scheme === SCHEME.GESTURE ? { gesture: OPENING_GESTURE.id, effort: level } : { a: 0, b: level }; }
   restTarget() { return this.scheme === SCHEME.GESTURE ? { gesture: 'rest', effort: 0 } : { a: 0, b: 0 }; }
 
   progress() { return clamp01((this.results.length + (this.current?.phase === 'release' ? 0.5 : 0)) / this.total); }
@@ -235,6 +264,8 @@ export class GripGame extends Game {
       dropped: this.results.filter(r => r.reason === 'drop').length,
       unreleased: this.results.filter(r => r.reason === 'release').length,
       fragileSaved: this.fragileSaved, switches: this.switchTimes.length,
+      ...(this.level.items.some(id => OBJECTS[id]?.hot) ? { spilled: this.results.filter(r => r.reason === 'spill').length, teaDry: this.teaDry } : {}),
+      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings }),
     };
   }
 
@@ -312,15 +343,37 @@ export class GripGame extends Game {
 
 /** Procedural objects; `squeeze` deforms soft ones, failed ones are drawn broken. */
 export function drawObject(ctx, o, x, y, s, squeeze = 0) {
-  const broken = o.failed === 'crush';
-  const sq = o.fragile || o.kind === 'apple' || o.kind === 'sponge' ? squeeze * 0.18 : 0;
+  const kind = o.art ?? o.kind;
   const r = s * 0.42;
+  // Hot tea leans about its base while the passive channel leaks; spilled, it lies further over.
+  const tilt = o.hot ? HOT.tiltMax * Math.min(1, o.spill / HOT.spillS) * (o.failed === 'spill' ? 1.6 : 1) : 0;
+  if (tilt) { ctx.save(); ctx.translate(x, y + r); ctx.rotate(tilt); ctx.translate(-x, -(y + r)); }
+  drawBody(ctx, o, kind, x, y, s, r, squeeze);
+  if (o.hot && o.failed !== 'spill') drawSteam(ctx, x, y - r * 1.15, r);
+  if (o.hot && o.spill > 0) for (let i = 0; i < 3; i++) circle(ctx, x + r * (0.75 + 0.18 * i), y - r * (0.9 - 0.35 * i), r * 0.07, '#5ad1ff');
+  if (tilt) ctx.restore();
+}
+
+/** Three wisps of steam over a hot drink. */
+function drawSteam(ctx, x, y, r) {
+  ctx.save(); ctx.strokeStyle = 'rgba(140,152,166,0.75)'; ctx.lineWidth = Math.max(2, r * 0.07); ctx.lineCap = 'round';
+  for (const dx of [-0.35, 0, 0.35]) {
+    ctx.beginPath(); ctx.moveTo(x + dx * r, y);
+    ctx.bezierCurveTo(x + (dx - 0.2) * r, y - r * 0.25, x + (dx + 0.2) * r, y - r * 0.45, x + dx * r, y - r * 0.7);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawBody(ctx, o, kind, x, y, s, r, squeeze) {
+  const broken = o.failed === 'crush';
+  const sq = o.fragile || kind === 'apple' || kind === 'sponge' ? squeeze * 0.18 : 0;
   // 5.16: the object of the illustrations (public/art/obj-*, natural colours), squeezed like the drawing; a crushed
   // one keeps its drawn broken look. The picture carries its own soft shadow.
-  if (!broken && drawSprite(ctx, `obj-${o.kind}`, x, y, s * 1.12, { sx: 1 - sq, sy: 1 + sq * 0.5 })) return;
+  if (!broken && drawSprite(ctx, `obj-${kind}`, x, y, s * 1.12, { sx: 1 - sq, sy: 1 + sq * 0.5 })) return;
   ctx.save(); ctx.fillStyle = COLORS.shade; ctx.beginPath(); ctx.ellipse(x, y + r * 1.02, r * 0.75, r * 0.16, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   ctx.save(); ctx.translate(x, y); ctx.scale(1 - sq, 1 + sq * 0.5);
-  switch (o.kind) {
+  switch (kind) {
     case 'egg':
       if (broken) { circle(ctx, 0, r * 0.5, r * 0.9, '#fff7e6'); circle(ctx, 0, r * 0.5, r * 0.4, '#ffb000'); break; }
       ctx.fillStyle = o.color; ctx.beginPath(); ctx.ellipse(0, 0, r * 0.72, r * 0.95, 0, 0, Math.PI * 2); ctx.fill();

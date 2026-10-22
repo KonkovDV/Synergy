@@ -117,7 +117,7 @@ test('art: no unused picture — every one has its place in the interface', () =
 test('art: the canvas pictures — every Workshop object and the lock of the tutorial', () => {
   const kinds = Object.keys(OBJECTS);
   assert.ok(kinds.length >= 10, kinds.join());
-  assert.deepEqual(kinds.filter(k => !CANVAS_PICTURES.includes(`obj-${k}`)), []);
+  assert.deepEqual(kinds.filter(k => !CANVAS_PICTURES.includes(`obj-${OBJECTS[k].art ?? k}`)), []); // 5.31: hot tea is drawn in the cup
   assert.ok(CANVAS_PICTURES.includes('ico-lock'));
 });
 

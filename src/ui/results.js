@@ -83,7 +83,13 @@ export function replaySummary(replay) {
   return `Пройдено ${passed} из ${count(rings.length, FORMS.ringsOf)}.${lean}${follow}`;
 }
 
-const OUTCOME_WORD = { crush: 'Раздавлено', drop: 'Выскользнуло', release: 'Не отпустили', timeout: 'Не успели' };
+/** The isolation line under the skills (pure: tests/v531.test.mjs). */
+export function crossingsText(n) {
+  return n ? `Второй канал включался, пока работал первый: ${count(n, FORMS.times)}. Начните с половины силы — так его легче не задеть.`
+    : 'Второй канал ни разу не включился, пока работал первый: изоляция чистая.';
+}
+
+const OUTCOME_WORD = { crush: 'Раздавлено', drop: 'Выскользнуло', spill: 'Расплескали', release: 'Не отпустили', timeout: 'Не успели' };
 const listed = names => Object.entries(names.reduce((m, n) => ({ ...m, [n]: (m[n] ?? 0) + 1 }), {})).map(([n, k]) => (k > 1 ? `${n} ×${k}` : n)).join(', ');
 
 /**
@@ -93,7 +99,7 @@ const listed = names => Object.entries(names.reduce((m, n) => ({ ...m, [n]: (m[n
 export function gripReplaySummary(replay) {
   const items = replay.items, ok = items.filter(i => i.outcome === 'ok');
   const parts = [`Доставлено ${ok.length} из ${items.length}.`];
-  for (const outcome of ['crush', 'drop', 'release', 'timeout']) {
+  for (const outcome of Object.keys(OUTCOME_WORD)) {
     const names = items.filter(i => i.outcome === outcome).map(i => i.name.toLowerCase());
     if (names.length) parts.push(`${OUTCOME_WORD[outcome]}: ${listed(names)}.`);
   }
@@ -243,6 +249,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     h('b', { class: 'with-art' }, badgeArt('warning', 28), 'Мешал сигнал, а не вы'),
     h('p', {}, `За упражнение: ${signalIssuesText(issues)}. ${QUALITY_TIPS[issues[0].id].tip}.`),
     h('p', { class: 'note' }, 'Это отметится в отчёте специалисту. Если повторяется — покажите отчёт протезисту.')) : null;
+  // 5.31 — isolation in the words of the meetup of 21.10: how often the passive channel came on while the other worked.
+  const crossNote = Number.isInteger(d.crossings) ? h('p', { class: 'note' }, crossingsText(d.crossings)) : null;
   const difficulty = !demo && !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
   const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', { class: 'with-art' }, sectionArt('effort', 32), 'Насколько тяжело было?'),
@@ -271,7 +279,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       effortCard,
       assessmentCard,
       replayCard(replay),
-      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills),
+      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote),
       h('section', { class: 'card coach' }, h('div', { class: 'coach-head' }, mioAvatar(coachMood({ stars: run.stars, stopAdvice }), 52), h('b', {}, 'Мио советует')), ...advice.map(t => h('p', {}, t))),
       h('div', { class: 'sticky-actions' },
         h('button', { class: 'btn primary big', onclick: primary.go }, primary.label),

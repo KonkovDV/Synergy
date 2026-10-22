@@ -107,8 +107,30 @@ const UBI4 = {
   sequence: ['thumbflex', 'wristflex', 'thumbflex', 'wristext', 'fist', 'wristflex', 'fist', 'wristext', 'open', 'wristflex', 'open', 'wristext', 'pinch', 'wristflex', 'pinch', 'wristext', 'indication', 'wristflex', 'indication', 'wristext'],
 };
 
+/**
+ * 5.31 — the third hypothesis for «7 жестов»: the states on the meetup slide «СППР» (22.10.2026, docs/MEETUP_PLAN.md F8).
+ * Not the published task and not the default. Grab closes; extension opens (slide «4 состояния» shows that pose open);
+ * the other five move the wrist and do not change the grip. `roll` 1 — pronation, −1 — supination (a sign, like `wrist`).
+ */
+const SPR8 = {
+  id: 'spr8', name: 'СППР', short: 'покой + 7 · слайд', size: 8,
+  text: 'Гипотеза по слайду митапа: покой и семь состояний конечности. Состав объявит задача 28.10. Хват выбирается жестом.',
+  source: 'слайд «СППР» митапа 21.10.2026 — гипотеза, не опубликованный набор',
+  classOrder: ['rest', 'sflex', 'sext', 'sadd', 'sabd', 'spro', 'ssup', 'sgrab'],
+  gestures: [
+    { id: 'rest',  motorica: 'Neutral',    name: 'Покой',      command: 'rest',  grip: null,  pose: [0.25, 0.2, 0.25, 0.3, 0.35], wrist: 0,  roll: 0,  introducedAt: null, cue: 'Полностью расслабьте кисть', use: 'Отдых между движениями' },
+    { id: 'sflex', motorica: 'Flexion',    name: 'Флексия',    command: 'wrist', grip: null,  pose: [0.25, 0.2, 0.25, 0.3, 0.35], wrist: 1,  roll: 0,  introducedAt: 1, cue: 'Согните кисть к ладони', use: 'Сгибание кисти' },
+    { id: 'sext',  motorica: 'Extension',  name: 'Экстензия',  command: 'open',  grip: null,  pose: [0, 0, 0, 0, 0],             wrist: -1, roll: 0,  introducedAt: 1, cue: 'Разогните кисть', use: 'Разгибание: кисть раскрывается' },
+    { id: 'sadd',  motorica: 'Adduction',  name: 'Аддукция',   command: 'wrist', grip: null,  pose: [0.2, 0.15, 0.15, 0.15, 0.15], wrist: 0, roll: 0, introducedAt: 2, cue: 'Приведите кисть к телу', use: 'Приведение кисти' },
+    { id: 'sabd',  motorica: 'Abduction',  name: 'Абдукция',   command: 'wrist', grip: null,  pose: [0.2, 0.15, 0.15, 0.15, 0.15], wrist: 0, roll: 0, introducedAt: 3, cue: 'Отведите кисть от тела', use: 'Отведение кисти' },
+    { id: 'spro',  motorica: 'Pronation',  name: 'Пронация',   command: 'wrist', grip: null,  pose: [0.35, 0.3, 0.3, 0.3, 0.3], wrist: 0, roll: 1,  introducedAt: 4, cue: 'Поверните ладонь вниз', use: 'Поворот ладонью вниз' },
+    { id: 'ssup',  motorica: 'Supination', name: 'Супинация',  command: 'wrist', grip: null,  pose: [0.15, 0.1, 0.1, 0.1, 0.1], wrist: 0, roll: -1, introducedAt: 5, cue: 'Поверните ладонь вверх', use: 'Поворот ладонью вверх' },
+    { id: 'sgrab', motorica: 'Grab',       name: 'Схват',      command: 'close', grip: 'fist', pose: [1, 1, 1, 1, 1],          wrist: 0,  roll: 0,  introducedAt: 6, cue: 'Сожмите кулак', use: 'Силовой хват' },
+  ],
+};
+
 /** Every set, by id (no prototype: ids come from settings and addresses). */
-export const GESTURE_SETS = Object.assign(Object.create(null), { synergy: SYNERGY, ubi4: UBI4 });
+export const GESTURE_SETS = Object.assign(Object.create(null), { synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
 /** The set of this page load: id, name, short, text, size, source. */
 export const GESTURE_SET = Object.freeze((({ gestures, ...meta }) => meta)(GESTURE_SETS[selectedGestureSet()]));
 export const GESTURES = GESTURE_SETS[GESTURE_SET.id].gestures;

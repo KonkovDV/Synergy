@@ -14,12 +14,19 @@ export const pct = x => Math.round(100 * clamp01(x));
 /** After 3 s without rest («Сейф», the skill check): what comes next, and that a tense muscle is no mistake. */
 export const REST_STUCK_HINT = 'Расслабить не получается — это не ошибка. Скоро пойдём дальше';
 
-/** Channel separation: how little the passive channel leaks while one channel works. */
+/**
+ * Channel separation: how little the passive channel leaks while one channel works. 5.31 — `crossings`: how many times
+ * the passive channel went over its switch-on line meanwhile — the count in which isolation is measured (Prahm et al.
+ * 2017: activations of the opposing electrode), and the moment a prosthesis gets two commands at once.
+ */
 export class SeparationMeter {
-  constructor() { this.active = 0; this.leak = 0; }
+  constructor() { this.active = 0; this.leak = 0; this.crossings = 0; this.otherOn = false; }
   add(intent, expectA, dt) {
     const own = expectA ? intent.a : intent.b, other = expectA ? intent.b : intent.a;
-    if (own < 0.15) return;
+    if (own < 0.15) { this.otherOn = false; return; }
+    const otherOn = !!(expectA ? intent.bOn : intent.aOn);
+    if (otherOn && !this.otherOn) this.crossings++;
+    this.otherOn = otherOn;
     this.active += own * dt; this.leak += Math.min(own, other) * dt;
   }
   get score() { return this.active > 0.05 ? pct(1 - this.leak / this.active) : null; }
