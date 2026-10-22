@@ -225,6 +225,9 @@ button { font: inherit; color: inherit }
 .meter-chip[data-cmd="open"] { background: var(--b); color: #00202c }
 .meter-chip[data-cmd="switch"] { background: var(--violet); color: #fff }
 .meter-chip[data-cmd="lost"] { background: var(--bad); color: #fff }
+/* 5.29: the wrist gestures of the UBI4 set — the muscles work, the hand stands; the recognizer's stream under the chip. */
+.meter-chip[data-cmd="wrist"] { box-shadow: inset 0 0 0 2px var(--violet) }
+.meter-probs { grid-column: 1 / -1; margin: 0; text-align: center; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums }
 
 /* Emulator pads. */
 .controls { padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); background: var(--bg2) }
@@ -251,6 +254,19 @@ button { font: inherit; color: inherit }
 
 .controls.compact .gkey { min-height: 48px }
 .bridge-status { color: var(--muted); font-size: 0.8125rem }
+/* 5.30 — «Тренер качества сигнала»: quiet when the signal is good, a bordered line with the tip when it is not. */
+.signal-quality { margin: 0; font-size: 0.8125rem; color: var(--muted); overflow-wrap: anywhere }
+.signal-quality.bad { color: var(--text); border: 2px solid var(--warn); border-radius: 10px; padding: 2px 8px }
+/* the address note gives its room to the problem; a short landscape screen keeps the title (the voice says the tip) */
+.bridge-panel:has(.signal-quality.bad) > small { display: none }
+@media (orientation: landscape) and (max-height: 400px) { .signal-quality .quality-tip { display: none } }
+/* 5.30 — the recognizer's top three is a teaching aid: on a short screen the pads need the room (the chip says the gesture) */
+@media (max-height: 600px) { .meter-probs { display: none } }
+/* 5.30 — seven gestures (UBI4) in a short landscape column: four rows of pads with pictures do not fit 320 px; the names stay */
+@media (orientation: landscape) and (max-height: 400px) {
+  .play-screen .pads.gestures[data-many] .gesture-icon { display: none }
+  .play-screen .pads.gestures[data-many] .gkey { min-height: 44px; padding-block: 4px; grid-template-columns: 1fr; justify-items: center; text-align: center }
+}
 
 /* Results & rest. */
 .big-stars { color: var(--warn); animation: pop .5s cubic-bezier(.2,.9,.3,1.4) }
@@ -1301,4 +1317,45 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
   .grip-plot .force, .safe-plot .lamp { stroke: CanvasText }
   .safe-plot .lamp.ok { fill: Highlight }
   .safe-plot .lamp.miss { fill: GrayText }
+}
+
+/* 5.30 — the controls under the hand that taps them (meetup 21.10.2026: «под правую, левую, здоровую руку»;
+   core/hands.js). Landscape: the signal and the pads move to the left column for the left hand, the field to the right. */
+@media (orientation: landscape) and (max-height: 540px) {
+  [data-hand="left"] .play-screen { grid-template-columns: minmax(280px, 42%) minmax(0, 1fr) }
+  [data-hand="left"] .play-screen .stage { grid-column: 2 }
+  [data-hand="left"] .play-screen .stage-hint, [data-hand="left"] .play-screen .play-side { grid-column: 1 }
+}
+@media (orientation: landscape) and (max-height: 400px) {
+  [data-hand="left"] .play-screen .stage-hint { grid-column: 2 } /* under the field */
+}
+
+/* 5.30 — «Две руки»: a pair of pads per arm, side by side; under each its name. */
+.pads.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px }
+.duo-arm { display: grid; gap: 4px; min-width: 0 }
+.duo-name { font-size: 0.8125rem; text-align: center }
+.pads.duo .pads.two { min-height: clamp(96px, 18dvh, 160px); gap: 6px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+.pads.duo .pad { padding: 6px 8px }
+.pads.duo .pad-value { white-space: nowrap }
+
+/* 5.30 — a computer (Windows, macOS): with a mouse and no touch the pads say which keys play. */
+.pads-keys { display: none; grid-column: 1 / -1; margin: 2px 0 0; text-align: center; font-size: 0.75rem; color: var(--muted) }
+@media (hover: hover) and (pointer: fine) { .pads-keys { display: block } }
+
+/* 5.30 — a computer (Windows, macOS; the meetup: «можно зайти на сайт»): in a wide window the play screen spreads like a
+   landscape phone — the field on the left, the hint, the signal and the pads on the right (on the left for the left
+   hand) — instead of a 560 px phone column in the middle of the screen. The other screens stay a readable column. */
+@media (min-width: 1024px) and (min-height: 600px) and (orientation: landscape) {
+  .app:has(> .play-screen) { max-width: 1280px }
+  .play-screen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 34%); grid-template-rows: auto 4px auto minmax(0, 1fr) }
+  .play-top, .play-progress { grid-column: 1 / -1 }
+  .play-screen .stage { grid-column: 1; grid-row: 3 / 5; min-height: 0 }
+  .play-screen .stage-hint { grid-column: 2; grid-row: 3; border-top: 0; border-bottom: 1px solid var(--line) }
+  .play-screen .play-side { grid-column: 2; grid-row: 4; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; justify-content: normal }
+  .play-screen .play-side .meter { align-self: stretch }
+  .play-screen .pads.two { min-height: clamp(140px, 30dvh, 240px) }
+  .play-screen .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  [data-hand="left"] .play-screen { grid-template-columns: minmax(340px, 34%) minmax(0, 1fr) }
+  [data-hand="left"] .play-screen .stage { grid-column: 2 }
+  [data-hand="left"] .play-screen .stage-hint, [data-hand="left"] .play-screen .play-side { grid-column: 1 }
 }

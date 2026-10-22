@@ -112,6 +112,7 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['an old layout run in the jury strategy', () => edit(dir, 'docs/JURY_STRATEGY.md', s => `${s}\nЛинтер: 37 состояний × 7 экранов.\n`), 'а линтер раскладки —'],
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
       ['stale citation metadata', () => edit(dir, 'CITATION.cff', s => s.replace(/^version: .*$/m, 'version: 5.11.0')), 'версия CITATION.cff'],
+      ['stale iPhone version', () => edit(dir, 'ios/project.yml', s => s.replace(/MARKETING_VERSION: "[^"]+"/, 'MARKETING_VERSION: "5.11.0"')), 'версия ios/project.yml'],
       // 5.29 — the supply-chain rules (tools/supply-chain.mjs, its own planted cases in tests/supplychain.test.mjs).
       ['an action pinned by tag', () => edit(dir, '.github/workflows/ci.yml', s => s.replace(/@[0-9a-f]{40} # v7/, '@v7')), 'цепочка поставки'],
       ['unverified claim (fact-check)', () => edit(dir, 'README.md', s => `${s}\n${UNVERIFIED}\n`), 'README.md:'],

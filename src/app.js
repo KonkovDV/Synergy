@@ -3,8 +3,11 @@ import { APP, ARM_POSES, ADAPT } from './config.js';
 import { Store, memoryStorage } from './core/storage.js';
 import { SignalPipeline, thresholdShares } from './core/signal.js';
 import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
+import { SignalQualityMonitor, runSignalIssues } from './core/signalquality.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
+import { GESTURE_SET } from './core/vocabulary.js';
+import { controlHand } from './core/hands.js';
 import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile, assessmentStatus, weekIndex, trainingDays, recordDayNote } from './core/progress.js';
 import { missionOffers } from './core/missions.js';
 import { guidanceFor } from './core/guidance.js';
@@ -16,9 +19,9 @@ import { EmgEmulator } from './input/emulator.js';
 import { BridgeSource, trustedMessageSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard, setPadMode } from './ui/controls.js';
-import { createGame, GAME_BY_ID, GAMES, PLAN_CATALOG } from './games/registry.js';
+import { createGame, GAME_BY_ID, GAMES, PLAN_CATALOG, sessionScheme } from './games/registry.js';
 import { assessmentTrials } from './games/assess.js';
-import { GameRunner } from './games/runner.js';
+import { GameRunner, DuoRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
 import { setSoundEnabled, unlockAudio } from './services/audio.js';
 import { setVoiceEnabled, say, stopVoice } from './services/voice.js';
@@ -87,6 +90,8 @@ export class App {
     this.root = root;
     this.store = new Store(safeStorage(), { catalog: CATALOG });
     this.emulator = new EmgEmulator({ realism: this.settings.realism, seed: Date.now() % 100000 });
+    // 5.30: the second arm of «Две руки» on the on-screen emulator (the left hand is `emulator`, the right one this).
+    this.emulator2 = new EmgEmulator({ realism: this.settings.realism, seed: (Date.now() + 7919) % 100000 });
     this.bridge = null;
     this.feedback = createFeedback(() => this.settings);
     this.screen = null;
@@ -96,7 +101,7 @@ export class App {
     this.petTaps = -1;         // touches of the Firebird this visit: its answers go in turn (core/pet.js petTap)
     this.tour = null;          // the hint tour on screen (ui/tour.js), or null
     this.applyPresentation();
-    bindKeyboard(this.emulator, () => this.settings.scheme);
+    bindKeyboard(this.emulator, () => this.settings.scheme, () => (this.screen?.duo ? { left: this.emulator, right: this.emulator2 } : null)); // 5.30
     window.addEventListener('pointerdown', unlockAudio, { once: true });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { this.hiddenAt = Date.now(); this.hiddenDay = dayKey(); this.screen?.onHidden?.(); return; }
@@ -179,7 +184,7 @@ export class App {
     const before = this.settings.source;
     if (patch.wsUrl !== undefined || patch.source === 'touch') this.hostFed = false; // the person chose the source
     Object.assign(this.settings, patch);
-    this.emulator.realism = this.settings.realism;
+    this.emulator.realism = this.settings.realism; this.emulator2.realism = this.settings.realism;
     this.applyPresentation();
     if (patch.source !== undefined || patch.wsUrl !== undefined || before !== this.settings.source) this.applySource();
     clearTimeout(this.saveTimer);
@@ -225,6 +230,7 @@ export class App {
     const systemDark = (typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches) || !!globalThis.SynergyNative?.nightMode?.();
     const theme = s.theme === 'light' || s.theme === 'dark' ? s.theme : systemDark ? 'dark' : 'light';
     root.dataset.theme = theme;
+    root.dataset.hand = controlHand(s); // 5.30: the on-screen controls under the tapping hand (core/hands.js)
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', contrast ? '#000000' : THEME_COLOR[theme]);
     // Canvas text follows the system font size as well (Android WebView scales the root font), up to the tuned +25 %.
     const rootPx = typeof getComputedStyle === 'function' ? parseFloat(getComputedStyle(root).fontSize) || 16 : 16;
@@ -280,7 +286,8 @@ export class App {
       this.ble?.disconnect(); this.ble = null;
       this.bridge?.stop();
       this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s), swap: () => this.settings.swapChannels, hostOrigin: this.launch?.hostOrigin ?? null,
-        thresholds: this.bridge?.rawThresholds ?? null, onThresholds: () => this.screen?.onThresholds?.() });
+        thresholds: this.bridge?.rawThresholds ?? null, onThresholds: () => this.screen?.onThresholds?.(),
+        lead: () => ({ side: this.settings.side, two: this.settings.prostheses === 'two' }) }); // 5.30: two prostheses
       this.bridge.start();
     } else if (this.bridge) {
       this.ble?.disconnect(); this.ble = null;
@@ -416,7 +423,17 @@ export class App {
     if (!this.bridge) this.applySource();
     return this.bridge;
   }
-  calibration(kind = this.sourceKind()) { return this.state.calibrations[kind]; }
+  /**
+   * What an exercise reads. The external source is read through `this.bridge` every frame (5.30): a host's first frame
+   * rebuilds the source (hostSource → applySource), and an exercise that kept the old one stayed «без сигнала» to its end.
+   */
+  liveFrames(demo = false) {
+    const source = this.signalSource(demo);
+    return source === this.emulator ? source : { sample: now => this.bridge?.sample(now) ?? null };
+  }
+  /** 5.30: with two prostheses each external side has its own calibration (`bridge-left`, `bridge-right`). */
+  calibrationKey(kind = this.sourceKind()) { return kind === 'bridge' && this.settings.prostheses === 'two' ? `bridge-${this.settings.side}` : kind; }
+  calibration(kind = this.sourceKind()) { return this.state.calibrations[this.calibrationKey(kind)]; }
 
   /**
    * The prosthesis's switch-on thresholds [A, B] in frame units (5.29): only when the host passed them, the live source
@@ -472,15 +489,44 @@ export class App {
   /** Builds a runnable session for the play screen. */
   createSession({ game, level, retention = false, demo = false, plan = false, pose = null, quick = false }) {
     const s = this.settings;
-    const instance = createGame(game, { levelNumber: level, scheme: s.scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
+    const scheme = sessionScheme(GAME_BY_ID[game], s.scheme); // 5.30: «Две руки» has two-channel schemes only
+    const instance = createGame(game, { levelNumber: level, scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
       mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: Math.max(...this.switchOn(demo)),
       successTarget: trainingDays(this.profile) < ADAPT.firstWeekDays ? ADAPT.firstWeekTarget : null });
     const hand = this.createHand();
     const live = this.liveSource();
     const adaptRest = restAdaptationAllowed({ source: live, enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
-    const runner = new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.signalSource(demo), emulator: this.emulator, autopilot: demo });
+    const runner = instance.constructor.bimanual ? this.createDuoRunner(instance, scheme, demo)
+      : new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.liveFrames(demo), emulator: this.emulator, autopilot: demo,
+        quality: live === 'bridge' && !demo ? this.qualityMonitor(this.calibration()) : null });
     const armPose = pose && !demo && live === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
-    return { id: game, level, retention, demo, plan, quick: !!quick && !demo, pose: armPose, game: instance, hand, runner, entry: GAME_BY_ID[game] };
+    return { id: game, level, retention, demo, plan, quick: !!quick && !demo, pose: armPose, game: instance, hand: runner.hand, runner, entry: GAME_BY_ID[game], scheme };
+  }
+
+  /**
+   * 5.30 — «Две руки»: a pipeline, a hand and a stream per prosthesis. The on-screen emulator (or the demo) gives two
+   * emulators; the external source gives each arm's own frames (input/bridge.js `sampleSide`); each external arm has its
+   * own calibration. The prosthesis's thresholds are one pair in Motorica Start, so they are not used here.
+   */
+  createDuoRunner(game, scheme, demo) {
+    const touch = demo || this.liveSource() === 'touch';
+    const emulators = { left: this.emulator, right: this.emulator2 };
+    const calibration = side => (touch ? this.state.calibrations.touch : this.state.calibrations[`bridge-${side}`]);
+    const params = { onThreshold: this.settings.sensitivity, coThreshold: this.settings.coThreshold, prosthesisThresholds: null };
+    const pipelines = { left: new SignalPipeline({ scheme, calibration: calibration('left'), params }), right: new SignalPipeline({ scheme, calibration: calibration('right'), params }) };
+    if (!touch) this.signalSource(false); // builds the external source if it is not there yet
+    // Read through `this.bridge` every frame: a host's first frame may rebuild the source (applySource).
+    const sources = touch ? emulators : { left: { sample: () => this.bridge?.sampleSide?.('left') ?? null }, right: { sample: () => this.bridge?.sampleSide?.('right') ?? null } };
+    const qualities = touch ? null : { left: this.qualityMonitor(calibration('left')), right: this.qualityMonitor(calibration('right')) };
+    return new DuoRunner({ game, pipelines, hands: { left: this.createHand(), right: this.createHand() }, sources, emulators, autopilot: demo, lead: this.settings.side, qualities });
+  }
+
+  /**
+   * 5.30 — «Тренер качества сигнала» (core/signalquality.js) on an external source: the play screen shows what is wrong
+   * with the signal and what to do, the run keeps what lasted for the specialist's report. The emulator is not watched.
+   */
+  qualityMonitor(calibration) {
+    return calibration?.rest && calibration?.max ? new SignalQualityMonitor({ calibration, onThreshold: Math.max(...this.switchOn()) }) : null;
   }
 
   /** Faded feedback: share of trials with live feedback from this game's recent skill (all trials when off). */
@@ -494,13 +540,20 @@ export class App {
   /** Persists a finished run and returns everything the results screen shows. */
   finishSession(session) {
     const r = session.game.result();
+    const signalIssues = session.demo ? [] : runSignalIssues(session.runner);
     const run = {
       id: crypto.randomUUID?.() ?? String(Date.now()), at: new Date().toISOString(),
       game: session.id, level: session.level, levelCount: session.entry.Game.levels.length,
-      scheme: this.settings.scheme, source: session.demo ? 'demo' : this.liveSource(),
+      scheme: session.scheme ?? this.settings.scheme, source: session.demo ? 'demo' : this.liveSource(),
       retention: session.retention, demo: session.demo, plan: !!session.plan, ...(session.quick ? { quick: true } : {}), ...(session.pose ? { pose: session.pose.id } : {}),
       // 5.29: the channels switched on at the prosthesis's thresholds — a weekly check is compared like with like.
-      ...(session.runner.pipeline.params.prosthesisThresholds ? { thresholds: 'prosthesis' } : {}), ...r,
+      ...(session.runner.pipeline.params.prosthesisThresholds ? { thresholds: 'prosthesis' } : {}),
+      // 5.29: a gesture run of the UBI4 set says so — its gestures and its skill check differ from the Синергия set.
+      ...(this.settings.scheme === 'gesture' && GESTURE_SET.id !== 'synergy' ? { gestureSet: GESTURE_SET.id } : {}),
+      // 5.30: with two prostheses the report says which arm did the exercise.
+      ...(this.settings.prostheses === 'two' && !session.game.constructor.bimanual ? { side: this.settings.side } : {}),
+      // 5.30: what was wrong with the signal for 3 s or more — the specialist sees contact problems next to the results.
+      ...(signalIssues.length ? { signalIssues } : {}), ...r,
     };
     const replay = session.game.replay?.() ?? null; // shown on the results screen, never saved
     if (session.demo) return { run, report: null, planBonus: 0, replay };
@@ -520,7 +573,8 @@ export class App {
   adoptRest(tracker) {
     if (!tracker) return null;
     const s = tracker.summary();
-    if (s.keep) this.state.calibrations.bridge = { ...this.state.calibrations.bridge, ...s.calibration, adaptedAt: new Date().toISOString() };
+    const key = this.calibrationKey('bridge');
+    if (s.keep) this.state.calibrations[key] = { ...this.state.calibrations[key], ...s.calibration, adaptedAt: new Date().toISOString() };
     return s.recalibrate || s.keep ? { recalibrate: s.recalibrate, shiftPct: Math.round(100 * s.shift), stuckChannel: s.stuckChannel } : null;
   }
 

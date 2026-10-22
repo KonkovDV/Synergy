@@ -315,3 +315,88 @@ test('5.29: settings say whether the prosthesis\'s thresholds came and are used'
   app.updateSettings({ prosthesisThresholds: false });
   assert.match(textOf(settingsScreen(app).node), /получены, но не используются/);
 });
+
+test('5.30: two prostheses — the leading arm drives the exercise with its own calibration, the run says which arm', async () => {
+  const app = fresh();
+  const { reportCsv } = await import('../src/services/report.js');
+  app.updateSettings({ source: 'bridge', wsUrl: '', prostheses: 'two', side: 'left' });
+  assert.equal(app.calibrationKey(), 'bridge-left');
+  const left = { rest: [0.1, 0.1], max: [0.5, 0.5], at: '2026-10-22T10:00:00Z' };
+  app.state.calibrations['bridge-left'] = left;
+  assert.equal(app.calibration(), left, 'the left arm\'s calibration');
+  app.updateSettings({ side: 'right' });
+  assert.notEqual(app.calibration(), left, 'the right arm has its own');
+  window.Synergy.feed({ left: { a: 0.1, b: 0 }, right: { a: 0.7, b: 0 } });
+  assert.equal(app.signalSource().sample().a, 0.7, 'the right leads');
+  app.updateSettings({ side: 'left' });
+  assert.equal(app.signalSource().sample().a, 0.1, 'switch in the settings — the left leads, same source');
+  const session = app.createSession({ game: 'grip', level: 1 });
+  session.game.done = true;
+  const { run } = app.finishSession(session);
+  assert.equal(run.side, 'left');
+  assert.match(reportCsv(app.state).split('\n')[1], /;left;/, 'the CSV column prosthesis_side');
+  app.updateSettings({ prostheses: 'one' });
+  assert.equal(app.calibrationKey(), 'bridge', 'one prosthesis: the calibration as before');
+  const one = app.createSession({ game: 'grip', level: 1 }); one.game.done = true;
+  assert.equal(app.finishSession(one).run.side, undefined, 'one prosthesis: no side in the run');
+});
+
+test('5.30: «Две руки» on two prostheses — each arm\'s frames drive its own hand; one arm silent freezes the exercise', () => {
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '', prostheses: 'two', side: 'right', scheme: 'gesture' });
+  const session = app.createSession({ game: 'duo', level: 1 });
+  assert.equal(session.scheme, 'proportional', 'two channels per arm, whatever the person\'s scheme');
+  assert.ok(session.runner.sides === undefined && session.runner.hands.left && session.runner.hands.right);
+  // The bridge stamps frames with performance.now(): a fake clock moves 1/60 s per step.
+  const real = performance.now.bind(performance);
+  let clock = real() + 1e6;
+  performance.now = () => clock;
+  try {
+    const step = sides => { window.Synergy.feed(sides); session.runner.step(clock, 1 / 60); clock += 1000 / 60; };
+    for (let i = 0; i < 20; i++) step({ left: { a: 0, b: 0 }, right: { a: 0, b: 0 } });
+    for (let i = 0; i < 20; i++) step({ left: { a: 0.8, b: 0 }, right: { a: 0, b: 0 } });
+    const sides = session.runner.intent.sides;
+    assert.equal(sides.left.command, 'close'); assert.equal(sides.right.command, 'rest');
+    assert.equal(session.runner.intent.valid, true);
+    assert.ok(session.runner.hands.left.closure > 0.3 && session.runner.hands.right.closure === 0, 'each arm moves its own hand');
+    // the right arm goes silent: its watchdog trips, the whole exercise waits
+    for (let i = 0; i < 30; i++) step({ left: { a: 0.8, b: 0 } });
+    assert.equal(session.runner.signalLost, true, 'one arm without signal — the exercise freezes');
+  } finally { performance.now = real; }
+  session.game.done = true;
+  const { run } = app.finishSession(session);
+  assert.equal(run.game, 'duo'); assert.equal(run.scheme, 'proportional'); assert.equal(run.side, undefined, 'both arms: no single side');
+});
+
+test('5.30: «Тренер качества сигнала» — interference on the external source is shown with a tip, kept in the run, the CSV and the report', async () => {
+  const app = fresh();
+  const { reportCsv, reportHtml } = await import('../src/services/report.js');
+  const { parseState } = await import('../src/core/storage.js');
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  app.state.calibrations.bridge = { rest: [0.2, 0.2], max: [1, 1], at: '2026-10-22T10:00:00Z' };
+  const session = app.createSession({ game: 'grip', level: 1 });
+  assert.ok(session.runner.quality, 'the external source is watched');
+  const real = performance.now.bind(performance);
+  let clock = real() + 1e6, seed = 3;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  performance.now = () => clock;
+  try {
+    // 8 s of a rest line that does not settle: ±0.15 of the span around the calibrated rest
+    for (let i = 0; i < 480; i++) { window.Synergy.feed({ a: 0.2 + 0.24 * (rnd() - 0.5), b: 0.2 + 0.01 * rnd() }) /* never negative: that would be raw EMG */; session.runner.step(clock, 1 / 60); clock += 1000 / 60; }
+  } finally { performance.now = real; }
+  assert.equal(session.runner.signalLost, false, 'the first fed frame rebuilt the source (hostSource): the exercise reads the new one');
+  const verdict = session.runner.quality.verdict;
+  assert.equal(verdict.ok, false); assert.equal(verdict.id, 'noise'); assert.match(verdict.tip, /гильз|электрод/);
+  session.game.done = true;
+  const { run } = app.finishSession(session);
+  assert.ok(run.signalIssues?.some(x => x.id === 'noise' && x.seconds >= 3), JSON.stringify(run.signalIssues));
+  assert.match(reportCsv(app.state).split('\n')[1], /;noise=\d+$/, 'the CSV column signal_issues');
+  const html = reportHtml(app.state);
+  assert.match(html, /Качество сигнала с датчиков/); assert.match(html, /Помехи в покое/);
+  // a backup keeps known issues only
+  const restored = parseState(JSON.stringify({ ...app.state, runs: [{ ...run, signalIssues: [...run.signalIssues, { id: '__proto__', seconds: 1 }, { id: 'spikes', seconds: -1 }, { id: 'stuck', seconds: 4, side: 'up' }] }] }));
+  assert.deepEqual(restored.runs[0].signalIssues, run.signalIssues);
+  // the emulator is not watched; nor is the demo
+  app.updateSettings({ source: 'touch' });
+  assert.equal(app.createSession({ game: 'grip', level: 1 }).runner.quality, null);
+});

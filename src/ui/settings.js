@@ -3,7 +3,8 @@
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, BRIDGE_STATUS, icon } from './widgets.js';
-import { SCHEME_INFO, twoChannelControls } from '../core/vocabulary.js';
+import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS } from '../core/vocabulary.js';
+import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
 import { CalibrationRecorder, CALIBRATION_STEPS } from '../core/calibration.js';
 import { defaultCalibration } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
@@ -125,6 +126,22 @@ export function settingsScreen(app, { back = null } = {}) {
       h('button', { class: 'btn ghost', onclick: savePin }, 'Сохранить PIN'),
       s.parentPin ? h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Снять PIN? Настройки снова откроются без кода.')) return; app.updateSettings({ parentPin: '' }); toast('PIN снят'); app.go('settings'); } }, 'Снять PIN') : null));
 
+  // 5.29: which gesture set the game speaks — ours or the UBI4 set of Motorica Start's gesture training. A change reloads
+  // the page: every game derives its lists from the set once (core/gesture-set.js).
+  function gestureSetRow() {
+    if (gestureSetSource() === 'address') {
+      return h('p', { class: 'note' }, `Набор жестов «${GESTURE_SET.name}» задало приложение, которое открыло игру.`);
+    }
+    return h('div', { class: 'gesture-set' },
+      segmented(GESTURE_SET_IDS.map(id => ({ value: id, label: GESTURE_SETS[id].name, sub: GESTURE_SETS[id].short })), GESTURE_SET.id, v => {
+        if (v === GESTURE_SET.id) return;
+        if (!saveGestureSet(v)) { toast('Не удалось сохранить выбор: хранилище браузера недоступно'); return; }
+        toast(`Набор жестов «${GESTURE_SETS[v].name}»: перезапускаем игру`);
+        setTimeout(() => globalThis.location?.reload?.(), 600);
+      }, 'Набор жестов'),
+      h('p', { class: 'note' }, `Сейчас: ${GESTURE_SET.source}. Прежние упражнения сохраняются; в отчёте видно, в каком наборе каждое.`));
+  }
+
   const node = h('div', { class: 'screen settings' },
     h('main', { class: 'scroll' },
       h('h1', {}, 'Настройки'),
@@ -132,8 +149,17 @@ export function settingsScreen(app, { back = null } = {}) {
       section('Управление',
         segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { app.updateSettings({ scheme: v }); refreshPreview(); app.go('settings'); }, 'Схема управления'),
         h('p', { class: 'note' }, SCHEME_INFO[s.scheme].text),
-        h('div', { class: 'row' }, h('span', {}, 'Протез'),
-          segmented([{ value: 'right', label: 'Правая рука' }, { value: 'left', label: 'Левая рука' }], s.side, v => app.updateSettings({ side: v }), 'Рука с протезом')),
+        s.scheme === 'gesture' ? gestureSetRow() : null,
+        // 5.30 — two prostheses (meetup 21.10: «не исключена»): each has its own stream and calibration; the one chosen
+        // here leads the exercise, the other one waits (core/hands.js, input/bridge.js `side`).
+        h('div', { class: 'row' }, h('span', {}, 'Протезы'),
+          segmented([{ value: 'one', label: 'Один' }, { value: 'two', label: 'Два', sub: 'левый и правый' }], s.prostheses, v => { app.updateSettings({ prostheses: v }); app.go('settings'); }, 'Сколько протезов')),
+        h('div', { class: 'row' }, h('span', {}, s.prostheses === 'two' ? 'Упражнение ведёт' : 'Протез'),
+          segmented([{ value: 'right', label: s.prostheses === 'two' ? 'Правый' : 'Правая рука' }, { value: 'left', label: s.prostheses === 'two' ? 'Левый' : 'Левая рука' }], s.side, v => { app.updateSettings({ side: v }); app.go('settings'); }, s.prostheses === 'two' ? 'Какой протез ведёт упражнение' : 'Рука с протезом')),
+        // 5.30 — the on-screen controls under the hand that taps them (the expert's advice at the meetup of 21.10.2026).
+        h('div', { class: 'row' }, h('span', {}, 'Кнопки на экране'),
+          segmented([{ value: 'auto', label: 'Авто', sub: s.prostheses === 'two' ? 'под правую' : `под ${s.side === 'right' ? 'левую' : 'правую'}, здоровую` }, { value: 'left', label: 'Под левую' }, { value: 'right', label: 'Под правую' }],
+            s.controlHand, v => { app.updateSettings({ controlHand: v }); app.go('settings'); }, 'Кнопки на экране под руку')),
         // 5.14 — people wait 3–6 months for a prosthesis (the customer's annual report): «жду протез» trains the control
         // on the emulator and shows the path to the prosthesis instead of tasks that need one.
         h('div', { class: 'row' }, h('span', {}, 'Протез уже есть?'),
@@ -271,11 +297,11 @@ export function calibrationScreen(app) {
     h('main', { class: 'frame-body center' },
       h('p', { class: 'note' }, kind === 'touch'
         ? 'Сейчас источник — эмулятор на экране: калибровка покажет процесс, а результат для эмулятора не нужен. Подключите внешний источник для настоящей калибровки.'
-        : 'Как «чувствительность датчиков» в приложении протеза: определяем покой и комфортное напряжение каждого канала.'),
+        : `Как «чувствительность датчиков» в приложении протеза: определяем покой и комфортное напряжение каждого канала${app.settings.prostheses === 'two' ? ` — ${app.settings.side === 'left' ? 'левого' : 'правого'} протеза. У второго своя калибровка: смените в настройках, какой протез ведёт` : ''}.`),
       ring, title, text, live, startButton, result,
       h('div', { class: 'row-actions' },
         again,
-        h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Сбросить калибровку этого источника к значениям по умолчанию? Сохранённую калибровку вернуть нельзя.')) return; app.state.calibrations[kind] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))),
+        h('button', { class: 'btn ghost', onclick: () => { if (!confirm('Сбросить калибровку этого источника к значениям по умолчанию? Сохранённую калибровку вернуть нельзя.')) return; app.state.calibrations[app.calibrationKey(kind)] = defaultCalibration(); app.save(); toast('Калибровка сброшена'); } }, 'Сбросить'))),
     h('div', { class: 'frame-dock' }, meter.node,
       kind === 'touch' ? h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' }, createTwoChannelPads(app.emulator)) : null));
   return {
@@ -305,7 +331,7 @@ export function calibrationScreen(app) {
         announce(`${title.textContent}. ${r.issues.join(' ')}`);
         // Without signal there is nothing to save: the previous calibration stays.
         const save = r.usable && kind !== 'touch';
-        const done = h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[kind] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings', { back: 'calibration' }); } }, save ? 'Сохранить' : 'Понятно');
+        const done = h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[app.calibrationKey(kind)] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings', { back: 'calibration' }); } }, save ? 'Сохранить' : 'Понятно');
         result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)), done);
         done.focus({ preventScroll: true });
       }

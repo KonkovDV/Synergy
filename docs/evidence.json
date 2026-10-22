@@ -1,10 +1,10 @@
 {
- "version": "5.29.0",
- "generated": "2026-10-22T05:54:41.221Z",
+ "version": "5.30.0",
+ "generated": "2026-10-22T15:45:57.896Z",
  "tests": {
-  "total": 352,
+  "total": 381,
   "failed": 0,
-  "at": "2026-10-22T05:54:41.220Z",
+  "at": "2026-10-22T15:45:57.895Z",
   "platform": "linux 6.18.44-fc-v140",
   "node": "v22.22.0"
  },
@@ -15,30 +15,30 @@
   "errors": 0,
   "browser": "141.0.7390.37",
   "axe": "4.14.0",
-  "source": "a91c874a035273fa",
-  "at": "2026-10-22T05:41:14.314Z",
+  "source": "480c4aaa9ee440b2",
+  "at": "2026-10-22T15:25:40.456Z",
   "platform": "linux 6.18.44-fc-v140",
   "node": "v22.22.0"
  },
  "layout": {
-  "states": 68,
-  "viewports": 7,
+  "states": 75,
+  "viewports": 8,
   "scales": 3,
-  "combinations": 1428,
+  "combinations": 1800,
   "findings": 0,
   "errors": 0,
-  "seconds": 678,
-  "source": "a91c874a035273fa",
-  "at": "2026-10-22T05:53:52.794Z",
+  "seconds": 1070,
+  "source": "480c4aaa9ee440b2",
+  "at": "2026-10-22T15:43:30.695Z",
   "platform": "linux 6.18.44-fc-v140",
   "node": "v22.22.0"
  },
  "apk": null,
  "html": {
   "file": "release/synergy-standalone.html",
-  "bytes": 2660067,
-  "kb": 2598,
-  "sha256": "775cc3c271218f8f5741042a57a66a25135a2d282394a72508865667d1b41b3d"
+  "bytes": 2696636,
+  "kb": 2633,
+  "sha256": "63262e251b122901da37d3da8bc494278afed32686d71903fb31700717c3f094"
  },
  "art": {
   "pictures": 137,

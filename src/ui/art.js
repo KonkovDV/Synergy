@@ -110,6 +110,14 @@ function mioDrawing(mood, size) {
 
 /** Game pictures (64 × 64): an object of the game in soft 3D. */
 const GAME_ART = {
+  // 5.30 «Две руки»: two palms, the left in the colour of A, the right in the colour of B, and an arc between them.
+  duo: () => [
+    line('M14 22 Q32 8 50 22', '#a78bfa', 2.4, { opacity: 0.8 }),
+    rect(7, 28, 20, 24, 7, '#ffb547'), rect(37, 28, 20, 24, 7, '#5ad1ff'),
+    ...[10, 15, 20, 25].map(x => line(`M${x} 29 V${x === 10 ? 22 : 18}`, '#ffb547', 3.6)),
+    ...[40, 45, 50, 55].map(x => line(`M${x} 29 V${x === 55 ? 22 : 18}`, '#5ad1ff', 3.6)),
+    circle(17, 40, 3, '#ffffff'), circle(47, 40, 3, '#ffffff'),
+  ],
   // «Мастерская»: a graphite bionic gripper holds an egg — force without crushing; the fingertips glow green.
   grip: id => [
     s('defs', {}, lin(`${id}f`, [[0, '#6f7f8c'], [0.5, '#2e3a45'], [1, '#05101a']]), rad(`${id}e`, [[0, '#ffffff'], [0.55, '#fff3df'], [1, '#e2c08f']], 0.36, 0.3, 0.8),

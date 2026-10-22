@@ -2,7 +2,7 @@
 import { fmtPct, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { bottomNav, topBar, mioAvatar } from './widgets.js';
-import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID } from '../games/registry.js';
+import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID, DUO_GAMES } from '../games/registry.js';
 import { trainingDays, playerLevel, weeklyStatus, weekOutlookText, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, planClosedDays, daysSinceTraining, recordDayNote, quickStart } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
@@ -139,6 +139,15 @@ export function homeScreen(app) {
     h('p', { class: 'note' }, check.last ? (check.due ? `Прошло ${check.days} дн. — пора сравнить себя с собой.` : `Последняя: ${check.days ? `${check.days} дн. назад` : 'сегодня'}. Следующая — через ${SESSION.assessmentEveryDays - check.days} дн.`) : ASSESSMENT.tagline),
     h('button', { class: `btn ${check.due && check.last ? 'primary' : 'ghost'}`, onclick: () => app.go('play', { game: ASSESSMENT.id, level: 1 }) }, check.due ? 'Пройти проверку · ≈ 2 мин' : 'Пройти ещё раз'));
 
+  // 5.30 — two prostheses: «Две руки» right on the home screen (it is not in the daily plan: the plan trains one arm).
+  const duoCards = s.prostheses !== 'two' ? [] : DUO_GAMES.map(g => {
+    const gp = gameProgress(p, g.id);
+    return h('section', { class: `card g-${g.id}` },
+      h('div', { class: 'card-head' }, h('b', { class: 'with-art' }, gameArt(g.id, 36), g.title), h('span', { class: 'pill' }, `ур. ${gp.unlocked}`)),
+      h('p', { class: 'note' }, g.tagline),
+      h('button', { class: 'btn ghost', onclick: () => app.go('levels', { game: g.id }) }, 'Играть двумя руками'));
+  });
+
   const games = h('section', { class: 'games' }, h('h2', {}, 'Игры'),
     h('div', { class: 'game-grid' }, ...TRAINING_GAMES.map(g => {
       const gp = gameProgress(p, g.id);
@@ -176,7 +185,7 @@ export function homeScreen(app) {
       // 5.14 — the bird's own section (the nest): its path, outfits and gifts.
       h('button', { class: 'btn ghost nest-link', onclick: () => app.go('nest') }, 'Гнездо и наряды')),
     goalRow);
-  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, petCard, everydayCard, checkCard, tipCard, games), bottomNav(app, 'home')) };
+  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, petCard, everydayCard, checkCard, ...duoCards, tipCard, games), bottomNav(app, 'home')) };
 }
 
 export function levelsScreen(app, { game }) {

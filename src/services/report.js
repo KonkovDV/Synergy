@@ -2,7 +2,8 @@
 // Every string that reaches the HTML report is escaped: names and stored data are untrusted input.
 import { fmtNum } from '../core/format.js';
 import { APP, ARM_POSES } from '../config.js';
-import { SKILL_NAME, gestureName as gname, SCHEME_INFO } from '../core/vocabulary.js';
+import { SKILL_NAME, gestureName as gname, SCHEME_INFO, GESTURE_SETS } from '../core/vocabulary.js';
+import { QUALITY_TIPS, signalIssueSummary, signalIssuesCode, signalIssuesText } from '../core/signalquality.js';
 import { skillProfile, playerLevel, shiftDay, dayKey } from '../core/progress.js';
 import { everydayDays } from '../core/everyday.js';
 import { confusionMatrix, assessmentHistory, completionChange } from '../core/analytics.js';
@@ -159,9 +160,9 @@ const csvCell = v => {
 };
 
 export function reportCsv(state) {
-  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'thresholds', 'arm_pose', 'unreleased', 'rest_missed'];
+  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'thresholds', 'gesture_set', 'prosthesis_side', 'arm_pose', 'unreleased', 'rest_missed', 'signal_issues'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
-    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '']);
+    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', r.gestureSet ?? (r.scheme === 'gesture' ? 'synergy' : ''), r.side ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '', signalIssuesCode(r.signalIssues)]);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
 
@@ -187,6 +188,7 @@ export function reportHtml(state, gameTitle = id => id, { periodDays = null, tod
   const conf = confusionMatrix(runs);
   const log = wellbeingLog(p, 14);
   const poses = poseSummary(runs);
+  const quality = signalIssueSummary(runs);
   const name = s.name ? escapeHtml(s.name) : 'пользователь';
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
@@ -223,8 +225,11 @@ ${table(['День', 'Боль', 'Усталость', 'Кожа под датч
 <h2>Последние упражнения</h2>
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки', 'Заметка'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '',
-    [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : ''].filter(Boolean).join('; ')]))}
+    [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', r.gestureSet ? `набор жестов ${GESTURE_SETS[r.gestureSet]?.name ?? r.gestureSet}` : '', r.side ? `${r.side === 'left' ? 'левый' : 'правый'} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
 <p class="muted">«Не отпустили» и «покой не получился» — игровая статистика, не оценка тонуса и не диагноз.</p>
+${quality.length ? `<h2>Качество сигнала с датчиков</h2>
+${table(['Что мешало', 'Упражнений', 'Секунд всего', 'Последний раз', 'Что подсказала игра'], quality.map(q => [QUALITY_TIPS[q.id].title, q.runs, q.seconds, ruDate(q.last), QUALITY_TIPS[q.id].tip]))}
+<p class="muted">Игра отмечает помехи в покое, скачки, застывший канал и упор в предел, если это длилось 3 с и дольше. Это признаки контакта электродов, посадки гильзы или калибровки, а не оценка мышц: повторяется неделями — стоит проверить посадку и электроды.</p>` : ''}
 <h2>Чем это проверяют в клинике</h2>
 <p class="muted">Игровые метрики — данные между визитами, а не замена теста: с клиническими тестами игра не сверена. Ближайшие по смыслу тесты, которые проводит специалист: «Мастерская» (взять — перенести — отпустить) — Box and Block Test, SHAP; «Проверка навыка» (выбор и выполнение движения) — Motion Test / TAC (виртуальный тест, по данным Hargrove et al. 2018 связан с SHAP, Box and Block и ACMC у 9 пользователей); управление протезом в повседневных задачах — ACMC, AM-ULA.</p>
 <p class="muted">Файл сформирован на устройстве пользователя и передан им самим. Содержит сведения о самочувствии.</p>

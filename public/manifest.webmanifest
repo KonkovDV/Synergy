@@ -39,5 +39,25 @@
       "type": "image/svg+xml",
       "purpose": "any"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Проверка навыка",
+      "short_name": "Проверка",
+      "description": "Еженедельный стандартный тест",
+      "url": "./index.html?game=check&level=1&self=1"
+    },
+    {
+      "name": "Мастерская",
+      "short_name": "Мастерская",
+      "description": "Взять, перенести, отпустить",
+      "url": "./index.html?game=grip&level=1&self=1"
+    },
+    {
+      "name": "Две руки",
+      "short_name": "Две руки",
+      "description": "Для двух протезов",
+      "url": "./index.html?game=duo&level=1&self=1"
+    }
   ]
 }

@@ -1,7 +1,7 @@
 // Signal pipeline: SignalFrame → (validate, watchdog, calibrate, smooth) → ChannelState → Intent.
 // Pure module: no DOM, deterministic, unit-tested in tests/core.test.mjs.
 import { SIGNAL, PROSTHESIS_THRESHOLDS } from '../config.js';
-import { COMMAND, SCHEME, GESTURE_BY_ID } from './vocabulary.js';
+import { COMMAND, SCHEME, GESTURE_BY_ID, GESTURE_CLASS_ORDER } from './vocabulary.js';
 
 export const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
 
@@ -22,6 +22,8 @@ export function readFrame(f) {
     frame.confidence = finite(f.confidence) ? clamp(f.confidence) : 1;
   }
   if (finite(f.effort)) frame.effort = clamp(f.effort);
+  // 5.29: the recognizer's probability per class of the set (СППР), only to show it — decisions use gesture/confidence.
+  if (Array.isArray(f.probs) && f.probs.length === GESTURE_CLASS_ORDER.length && f.probs.every(p => finite(p) && p >= 0 && p <= 1.5)) frame.probs = f.probs;
   return frame;
 }
 
@@ -159,6 +161,7 @@ export class SignalPipeline {
     if (candidate !== this.pendingGesture) { this.pendingGesture = candidate; this.pendingSince = t; }
     if (t - this.pendingSince >= this.params.gestureStableMs) this.stableGesture = candidate;
     this.confidence = frame.confidence;
+    this.probs = frame.probs ?? null;
   }
 
   isCoContraction() {
@@ -206,6 +209,7 @@ export class SignalPipeline {
     const command = gesture.command;
     const intensity = command === COMMAND.REST ? 0 : clamp(effort);
     const level = command === COMMAND.CLOSE ? intensity : command === COMMAND.OPEN ? -intensity : 0;
-    return { command, intensity, level, gesture: gesture.id, confidence: this.confidence ?? 1, uncertain: !!this.uncertain, relaxed: command === COMMAND.REST };
+    return { command, intensity, level, gesture: gesture.id, confidence: this.confidence ?? 1, uncertain: !!this.uncertain, relaxed: command === COMMAND.REST,
+      ...(this.probs ? { probs: this.probs } : {}) };
   }
 }

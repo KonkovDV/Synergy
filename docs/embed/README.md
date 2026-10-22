@@ -21,7 +21,7 @@
 
 | `type` | Когда | Поля |
 |---|---|---|
-| `synergy:ready` | первый экран открыт; повторно — в ответ на `synergy-ping` | `onboarded` — пройдено ли знакомство с безопасностью; `games` — `[{ id, title, levels }]`: что можно запустить |
+| `synergy:ready` | первый экран открыт; повторно — в ответ на `synergy-ping` | `onboarded` — пройдено ли знакомство с безопасностью; `games` — `[{ id, title, levels }]`: что можно запустить (с 5.30 — и «Две руки», `duo`); `gestures` — `{ set, classes }`: набор жестов и порядок классов, в котором игра ждёт массив вероятностей (5.30) |
 | `synergy:result` | каждое упражнение (кроме демо автопилота) | `at`, `game`, `level`, `scheme`, `retention`, `score`, `stars`, `durationS`, `skills` |
 | `synergy:close` | человек закончил: «Вернуться в приложение» на итогах (`reason: "done"`) или «Назад» на главной «Синергии» (`reason: "back"`) | `reason` |
 
@@ -31,8 +31,9 @@
 |---|---|
 | адрес `index.html?game=grip&level=2` | открыть упражнение. На самом первом запуске сначала идут страницы знакомства и безопасности, затем — это упражнение |
 | адрес `?embed=1` | встроена без упражнения (показывает «Вернуться в приложение») |
+| адрес `?gestures=ubi4` (или `synergy`) | набор жестов на этот запуск (5.30); без параметра — набор из настроек человека |
 | `window.Synergy.start(game, level)` | то же из нативного кода (`evaluateJavascript`, `evaluateJavaScript`, `runJavaScript`, `injectJavaScript`, `EvaluateJS`). Возвращает `false`, если сначала идёт знакомство: упражнение откроется после него |
-| `window.Synergy.feed({ a, b, gesture })` | кадр сигнала, значения 0…1 (`SignalFrame`) |
+| `window.Synergy.feed({ a, b, gesture })` | кадр сигнала, значения 0…1 (`SignalFrame`). С 5.30 — и `probs` (вероятности жестов), `side` (`left`/`right`) или пара `{ left: {…}, right: {…} }` для двух протезов (`../INTEGRATION.md`, «Митап 21.10.2026») |
 | `window.Synergy.back()` | системная кнопка «Назад»: пауза упражнения, шаг назад; `false` — уже на главной (и игра отправила `synergy:close`) |
 | `postMessage({ type: 'synergy-start', game, level })` | запуск из страницы другого origin (вызвать `window.Synergy` ей нельзя) |
 | `postMessage({ type: 'synergy-frame', a, b, gesture })` | кадр из страницы другого origin; первый кадр сам переключает источник на «Внешний», как `feed` |
@@ -61,7 +62,8 @@
 6. Запускайте упражнение адресом `?game=` или после `synergy:ready` — `Synergy.start(game, level)`. Знакомство с безопасностью при первом запуске не пропускается: это правило продукта.
 7. Передавайте сигнал протеза `Synergy.feed` на каждом кадре SDK (20–100 Гц). Первый кадр сам включает источник «Внешний»; WebSocket по сохранённому адресу при запуске хостом не набирается (пока человек сам не введёт адрес в настройках). Если кадры перестали приходить на 300 мс, упражнение замирает: это не ошибка человека.
 8. Кнопку «Назад» отдавайте `Synergy.back()`; на `synergy:close` закрывайте экран «Синергии».
-9. Голос и «Поделиться» отчётом в WebView без Web Speech и загрузок — по желанию: объект `window.SynergyNative` с методами `speak`, `stop`, `share`, `print`, как в нашем APK (`android/src/ru/synergy/trainer/MainActivity.java`).
+9. Голос и «Поделиться» отчётом в WebView без Web Speech и загрузок — по желанию: объект `window.SynergyNative` с методами `speak`, `stop`, `haptic`, `share`, `print`, `nightMode`, как в нашем APK (`android/src/ru/synergy/trainer/MainActivity.java`) и приложении для iPhone (`ios/Synergy/NativeBridge.swift`).
+10. Открыть наш APK, а не встраивать (5.30): явный интент `setClassName("ru.synergy.trainer", "ru.synergy.trainer.MainActivity")` с extras `game`, `level`, `gestures` или ссылка `synergy://play?game=…&level=…` (Android и iOS). Значения проверяются по шаблону, лишнее отбрасывается.
 
 ## Web (сайт, PWA)
 

@@ -51,7 +51,7 @@ export function assessmentTrials(scheme, onThreshold) {
         order.push(bag.splice(i, 1)[0]);
       }
     }
-    return order.map(g => ({ gesture: g, name: GESTURE_BY_ID[g].name, pose: GESTURE_BY_ID[g].pose }));
+    return order.map(g => ({ gesture: g, name: GESTURE_BY_ID[g].name, pose: GESTURE_BY_ID[g].pose, wrist: GESTURE_BY_ID[g].wrist ?? 0 }));
   }
   if (scheme === SCHEME.THRESHOLD) {
     return ['close', 'open', 'switch', 'close', 'open', 'switch'].map(c => ({ command: c, name: COMMAND_NAME[c], pose: COMMAND_POSE[c] }));
@@ -251,7 +251,7 @@ export class AssessmentGame extends Game {
       return;
     }
     const hx = x0 + cw * 0.3, hy = y0 + ch * 0.82, size = ch * 0.26;
-    drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, skin: 'icon', sleeve: false, mirror: this.mirror });
+    drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, wrist: t.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.mirror });
     ctx.strokeStyle = COLORS.good; ctx.lineWidth = 6; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.arc(hx, y0 + ch * 0.5, ch * 0.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(t.hold / holdOf(t))); ctx.stroke();
     // Text between the hold ring and the force gauge; «Сжатие · 30 % · широко» goes on two lines (5.8: it ran off the card).

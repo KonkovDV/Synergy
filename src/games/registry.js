@@ -4,6 +4,7 @@ import { GripGame } from './grip.js';
 import { RhythmGame } from './rhythm.js';
 import { SafeGame } from './safe.js';
 import { AssessmentGame } from './assess.js';
+import { DuoGame, DUO_SCHEMES } from './duo.js';
 import { SCHEME, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 
 const ALL = [SCHEME.THRESHOLD, SCHEME.PROPORTIONAL, SCHEME.GESTURE];
@@ -44,6 +45,14 @@ export const GAMES = [
     howGesture: () => ['Покажите жест с карточки и держите, пока заполняется круг', 'Между цифрами кода — полный покой', 'Неверный жест отнимает очки — лучше точнее, чем быстрее'],
   },
   {
+    // 5.30 — two prostheses (meetup 21.10). Not in the daily plan: it is offered on the home screen when the settings say
+    // «Протезы: два»; on the on-screen emulator it shows two pairs of pads (keys: left F/D, right J/K).
+    ...meta(DuoGame), schemes: DUO_SCHEMES, twoProstheses: true,
+    tagline: 'Два протеза: каждая рука — своё, потом обе вместе',
+    teaches: 'Разделение рук: одна работает — другая отдыхает; обе вместе; разные команды двумя руками, как держать банку одной рукой и открывать другой.',
+    how: ['Карточка говорит, что делает каждая рука: сжать (A), раскрыть (B) или отдыхать', 'Держите обе команды, пока заполняется круг', 'Между карточками — покой обеих рук', 'Без протезов — экранный эмулятор: две пары площадок, клавиши F/D для левой и J/K для правой'],
+  },
+  {
     ...meta(AssessmentGame), schemes: ALL, assessment: true,
     tagline: 'Раз в неделю: стандартный тест — сравнивайте себя с собой',
     teaches: 'Один и тот же набор попыток каждую неделю (по мотивам Motion Test и TAC-теста): время выбора команды, время выполнения, доля выполненных, точность. Сложность не подстраивается.',
@@ -55,7 +64,12 @@ export const GAMES = [
 export const howFor = (entry, scheme) => (scheme === SCHEME.GESTURE && entry.howGesture ? entry.howGesture() : entry.how);
 
 /** Training games (the weekly skill check is not part of the daily plan). */
-export const TRAINING_GAMES = GAMES.filter(g => !g.assessment);
+export const TRAINING_GAMES = GAMES.filter(g => !g.assessment && !g.twoProstheses);
+/** 5.30: the games for two prostheses («Две руки»). */
+export const DUO_GAMES = GAMES.filter(g => g.twoProstheses);
+
+/** The scheme an exercise runs in: the person's, or — for a game without it (the gesture scheme in «Две руки») — proportional. */
+export const sessionScheme = (entry, scheme) => (entry.schemes.includes(scheme) ? scheme : entry.schemes.includes(SCHEME.PROPORTIONAL) ? SCHEME.PROPORTIONAL : entry.schemes[0]);
 export const ASSESSMENT = GAMES.find(g => g.assessment);
 
 export const GAME_BY_ID = Object.assign(Object.create(null), Object.fromEntries(GAMES.map(g => [g.id, g]))); // no prototype: ids come from backups too

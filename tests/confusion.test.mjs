@@ -7,13 +7,17 @@ import { ACTIVE_GESTURE_IDS } from '../src/core/vocabulary.js';
 import { EmgEmulator } from '../src/input/emulator.js';
 import { createRng } from '../src/core/rng.js';
 
+// The strongest partner of «pinch» in the active set (Синергия: «Ключ»; UBI4: «Сгиб большого пальца» — 5.29).
+const [PARTNER, WEIGHT] = GESTURE_CONFUSION.pairs.filter(([x, y]) => [x, y].includes('pinch') && ACTIVE_GESTURE_IDS.includes(x) && ACTIVE_GESTURE_IDS.includes(y))
+  .sort((p, q) => q[2] - p[2]).map(([x, y, w]) => [x === 'pinch' ? y : x, w])[0];
+
 test('confusion: rows are symmetric, cover every other active gesture, ignore unknown ids', () => {
   for (const g of ACTIVE_GESTURE_IDS) {
     const row = confusionRow(g);
     assert.deepEqual(Object.keys(row).sort(), ACTIVE_GESTURE_IDS.filter(x => x !== g).sort());
     for (const [x, w] of Object.entries(row)) assert.equal(confusionRow(x)[g], w, `${g} ↔ ${x}`);
   }
-  assert.equal(confusionRow('pinch').key, 0.35);
+  assert.equal(confusionRow('pinch')[PARTNER], WEIGHT);
   const table = { pairs: [['pinch', 'nope', 0.9]], other: 0.02 };
   assert.equal(confusionRow('pinch', table).nope, undefined);
   assert.ok(confusionPairs(table).length === 0);
@@ -48,7 +52,7 @@ function glitches(wanted, effort, minutes = 30) {
 test('confusion: the emulator mixes up similar gestures and errs more at weak effort', () => {
   const strong = glitches('pinch', 0.9), weak = glitches('pinch', 0.2);
   const total = o => Object.values(o).reduce((s, v) => s + v, 0);
-  assert.ok(strong.key / total(strong) > 0.6, `pinch → key share ${JSON.stringify(strong)}`);
+  assert.ok(strong[PARTNER] / total(strong) > 0.6, `pinch → ${PARTNER} share ${JSON.stringify(strong)}`);
   assert.ok(total(weak) > 1.5 * total(strong), `weak ${total(weak)} vs strong ${total(strong)}`);
   assert.ok(!('rest' in strong), 'a glitch is an active gesture');
   assert.ok(GESTURE_CONFUSION.other < Math.min(...GESTURE_CONFUSION.pairs.map(p => p[2])));

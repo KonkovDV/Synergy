@@ -8,6 +8,9 @@ import { SIGNAL, SESSION } from '../config.js';
 import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 
+/** The first of these grips the gesture set has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by «Щипок»). */
+const gripOf = (...ids) => ids.find(id => GRIP_NAME[id]) ?? ids.at(-1);
+
 /** Object catalog: force window [min,max], breakAt, grip, contact closure. Conditional units, not newtons. */
 export const OBJECTS = {
   sponge: { name: 'Губка', grip: 'fist', min: 0.15, max: 0.85, breakAt: 9, contact: 0.45, color: '#ffd84d' },
@@ -18,8 +21,8 @@ export const OBJECTS = {
   dumbbell: { name: 'Гантель', grip: 'fist', min: 0.62, max: 0.95, breakAt: 9, contact: 0.55, color: '#8fa1c7', heavy: true },
   coin: { name: 'Монета', grip: 'pinch', min: 0.25, max: 0.6, breakAt: 9, contact: 0.8, color: '#ffc93c' },
   berry: { name: 'Малина', grip: 'pinch', min: 0.12, max: 0.32, breakAt: 0.42, contact: 0.84, color: '#e8365d', fragile: true },
-  card: { name: 'Карта', grip: 'key', min: 0.3, max: 0.7, breakAt: 9, contact: 0.74, color: '#5a8dff' },
-  key: { name: 'Ключ', grip: 'key', min: 0.35, max: 0.75, breakAt: 9, contact: 0.72, color: '#f2c14e' },
+  card: { name: 'Карта', grip: gripOf('key', 'pinch'), min: 0.3, max: 0.7, breakAt: 9, contact: 0.74, color: '#5a8dff' },
+  key: { name: 'Ключ', grip: gripOf('key', 'pinch'), min: 0.35, max: 0.75, breakAt: 9, contact: 0.72, color: '#f2c14e' },
 };
 
 const LEVELS = [
