@@ -113,6 +113,10 @@ button { font: inherit; color: inherit }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 }
 .eyebrow { font-size: 0.8125rem; font-weight: 700;                      text-transform: uppercase;                       margin: 0 }
 .note { font-size: 0.875rem; color: var(--muted) }
+/* 5.31 — the four states of two channels in the settings: a term over its meaning, never two columns (200 % text). */
+.four-states { margin: 8px 0 4px }
+.four-states dt { font-weight: 700; margin-top: 8px; overflow-wrap: anywhere }
+.four-states dd { margin: 2px 0 0; font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere }
 .note.warn { color: var(--warn) }
 .lead { font-size: 1.188rem; font-weight: 600 }
 
@@ -257,9 +261,10 @@ button { font: inherit; color: inherit }
 /* 5.30 — «Тренер качества сигнала»: quiet when the signal is good, a bordered line with the tip when it is not. */
 .signal-quality { margin: 0; font-size: 0.8125rem; color: var(--muted); overflow-wrap: anywhere }
 .signal-quality.bad { color: var(--text); border: 2px solid var(--warn); border-radius: 10px; padding: 2px 8px }
-/* the address note gives its room to the problem; a short landscape screen keeps the title (the voice says the tip) */
+/* the address note gives its room to the problem; a short landscape phone and a 320 px portrait keep the title
+   (the voice says the tip — 5.31, the skin sentence pushed the pad off a 320 × 568 screen) */
 .bridge-panel:has(.signal-quality.bad) > small { display: none }
-@media (orientation: landscape) and (max-height: 400px) { .signal-quality .quality-tip { display: none } }
+@media (max-width: 340px), (orientation: landscape) and (max-height: 400px) { .signal-quality .quality-tip { display: none } }
 /* 5.30 — the recognizer's top three is a teaching aid: on a short screen the pads need the room (the chip says the gesture) */
 @media (max-height: 600px) { .meter-probs { display: none } }
 /* 5.30 — seven gestures (UBI4) in a short landscape column: four rows of pads with pictures do not fit 320 px; the names stay */

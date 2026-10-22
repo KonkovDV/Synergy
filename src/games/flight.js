@@ -248,7 +248,10 @@ export class FlightGame extends Game {
     };
   }
 
-  details() { return { rings: this.ringsSeen, hits: this.hits, perfect: this.perfect, ...(this.traceResult ? { trace: this.traceResult } : {}) }; }
+  details() {
+    return { rings: this.ringsSeen, hits: this.hits, perfect: this.perfect, ...(this.traceResult ? { trace: this.traceResult } : {}),
+      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings }) };
+  }
 
   /**
    * 5.17 — the flight shown again after the run: delayed feedback (the altitude over the rings once the trial is over

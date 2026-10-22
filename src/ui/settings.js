@@ -17,6 +17,7 @@ import { hashPin, pinConfirmed, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { MAX_BACKUP_BYTES } from '../core/storage.js';
 import { ELECTRICAL_SAFETY } from '../core/wellbeing.js';
+import { fourStates } from '../core/fourstates.js';
 import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK, GRIP_SWITCH } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
@@ -59,7 +60,7 @@ export function settingsScreen(app, { back = null } = {}) {
       h('button', { class: 'btn ghost', 'data-return': 'calibration', onclick: () => app.go('calibration') }, 'Калибровка')),
     status,
     toggleRow('Поменять каналы A и B', s.swapChannels, v => { app.updateSettings({ swapChannels: v }); toast('Каналы поменялись — пройдите калибровку'); },
-      'если сжатие на экране раскрывает кисть: источник шлёт каналы наоборот. Как инверсия управления в играх Motorica Start'),
+      'если сжатие на экране раскрывает кисть: источник шлёт каналы наоборот. В приложении протеза — «поменять сенсоры»'),
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn ghost', disabled: !bleSupported() || app.sensorsPaused(), onclick: connectBle }, 'Bluetooth-датчик (BLE UART)')),
     bleStatus,
@@ -78,6 +79,10 @@ export function settingsScreen(app, { back = null } = {}) {
     return h('details', { class: 'card fold', open: OPEN.includes(title) },
       h('summary', {}, h('span', { class: 'sec-head' }, h('span', { class: `sec-ico t-${tint}`, 'aria-hidden': 'true' }, picture(`ico-${SECTION_PICTURE[title]}`, 34, 'sec-pic', () => icon(glyph))), h('h2', {}, title))), ...children);
   };
+  // 5.31 — the four states of two channels and what each does with the chosen grip switch (meetup 21.10, slide 10).
+  const statesList = h('dl', { class: 'four-states', 'aria-label': 'Четыре состояния двух каналов' });
+  const paintStates = () => statesList.replaceChildren(...fourStates(app.settings).flatMap(st => [h('dt', {}, st.signal), h('dd', {}, st.action)]));
+  paintStates();
   const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); paintLimits(); };
   // 5.29 — the prosthesis's own thresholds, when the host (Motorica Start) passed them: read, never written.
@@ -95,14 +100,14 @@ export function settingsScreen(app, { back = null } = {}) {
   // Two-channel laws only. Switching the grip method shows or hides the hold time without rebuilding the screen
   // (a rebuild would fold this section shut).
   const twoChannelSensitivity = () => {
-    const hold = sliderRow('Смена хвата: удержание B', { min: GRIP_SWITCH.minS, max: GRIP_SWITCH.maxS, step: GRIP_SWITCH.stepS, value: s.holdOpenS, format: v => fmtFixed(v, 2) + '\u00a0с', onInput: v => app.updateSettings({ holdOpenS: Math.round(v * 20) / 20 }) }); // 0,05 с, as in Motorica Start
+    const hold = sliderRow('Смена хвата: удержание B', { min: GRIP_SWITCH.minS, max: GRIP_SWITCH.maxS, step: GRIP_SWITCH.stepS, value: s.holdOpenS, format: v => fmtFixed(v, 2) + '\u00a0с', onInput: v => { app.updateSettings({ holdOpenS: Math.round(v * 20) / 20 }); paintStates(); } }); // 0,05 с, as in Motorica Start
     const openNote = h('p', { class: 'note', hidden: s.gripSwitch !== 'open' }, 'В протезах «Моторики» хват меняется так: кисть раскрыта до конца, раскрытие отпущено и подано снова дольше этого времени. В Motorica Start это «время пиков», по умолчанию 1,00 с — его настраивает протезист. A+B там — блокировка.');
     const coNote = h('p', { class: 'note', hidden: s.gripSwitch === 'open' }, 'Сейчас хват меняет коактивация A+B. В протезах «Моторики» хват меняет повторное раскрытие, а A+B — блокировка. Время удержания появится, если выбрать «Снова раскрыть».');
     if (s.gripSwitch !== 'open') hold.hidden = true;
-    const pick = v => { app.updateSettings({ gripSwitch: v }); hold.hidden = v !== 'open'; openNote.hidden = v !== 'open'; coNote.hidden = v === 'open'; };
+    const pick = v => { app.updateSettings({ gripSwitch: v }); hold.hidden = v !== 'open'; openNote.hidden = v !== 'open'; coNote.hidden = v === 'open'; paintStates(); };
     return [
       sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); meter.setThresholds(); } }),
-      sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }) }),
+      sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => { app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }); paintStates(); } }),
       h('p', { class: 'note' }, 'Как «время удержания для блокировки» в Motorica Start (там по умолчанию 1,6 с); его настраивает протезист.'),
       h('div', { class: 'row' }, h('span', {}, 'Смена хвата'),
         segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, pick, 'Смена хвата')),
@@ -149,7 +154,7 @@ export function settingsScreen(app, { back = null } = {}) {
       section('Управление',
         segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { app.updateSettings({ scheme: v }); refreshPreview(); app.go('settings'); }, 'Схема управления'),
         h('p', { class: 'note' }, SCHEME_INFO[s.scheme].text),
-        s.scheme === 'gesture' ? gestureSetRow() : null,
+        s.scheme === 'gesture' ? gestureSetRow() : statesList,
         // 5.30 — two prostheses (meetup 21.10: «не исключена»): each has its own stream and calibration; the one chosen
         // here leads the exercise, the other one waits (core/hands.js, input/bridge.js `side`).
         h('div', { class: 'row' }, h('span', {}, 'Протезы'),

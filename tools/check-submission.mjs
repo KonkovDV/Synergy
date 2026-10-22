@@ -97,13 +97,18 @@ for (const doc of NUMBER_DOCS) {
 }
 
 // -z: without it git quotes names outside ASCII («"docs/\320…md"»), and such a file escaped every check below.
-const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
+// -t: «S» marks a file the sparse checkout of the archive left out on purpose (tools/pack.sh) — it is not missing.
+const tracked = execFileSync('git', ['ls-files', '-z', '-t'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean)
+  .filter(e => !e.startsWith('S ')).map(e => e.slice(2));
 // Build outputs must not be tracked: the archive excludes them and the receiver rebuilds (dist/ hole of 5.1.0).
 // 5.17: the release APK and HTML too — built by tools/build-apk.sh, carried by the archive, ≈ 4 MB of history a release.
 const builds = tracked.filter(f => /^(dist|android\/build|node_modules|tools\/\.cache)\//.test(f) || /^release\/.*\.(apk|html)$/.test(f));
 if (builds.length) fail(`артефакты сборки в git (${builds.length}, напр. ${builds[0]}): git rm -r --cached`);
 const missing = tracked.filter(f => !existsSync(join(root, f)));
 if (missing.length) warn(`в git, но нет на диске: ${missing.length} (напр. ${missing[0]})`);
+// 5.31 — the organizer's materials (the meetup deck: logos, photos and video of people) are not part of the product.
+const foreign = tracked.filter(f => /\.(pptx|mp4|mov)$/i.test(f));
+if (foreign.length) warn(`материалы не для продукта в git: ${foreign.length} (напр. ${foreign[0]}) — tools/pack.sh не берёт их в архив; перед сдачей решите, оставить ли их в репозитории (п. 5.5)`);
 
 // 3. Wording: no overstated claims in texts the jury or users read (code identifiers like predict() are fine).
 // Cyrillic needs explicit classes: \w in JS regexes is ASCII-only.

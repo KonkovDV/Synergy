@@ -280,7 +280,7 @@ test('arm pose (5.11): rotates by posed probes (not by day — that tied each po
   const html = reportHtml(clean);
   assert.match(html, /локоть согнут под прямым углом/);
   assert.ok(!html.includes('<img src=x>'));
-  assert.match(reportCsv(clean).split('\n')[0], /arm_pose;unreleased;rest_missed;signal_issues$/);
+  assert.match(reportCsv(clean).split('\n')[0], /arm_pose;unreleased;rest_missed;cross_on;spilled;signal_issues$/);
 });
 
 test('announcer: a new task is said promptly after «Покой», only flipping feedback waits out the gap (5.11)', async () => {

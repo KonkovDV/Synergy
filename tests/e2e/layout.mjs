@@ -304,7 +304,12 @@ const STATES = [
   ['play-bridge-quality', async p => {
     await p.evaluate(() => window.Synergy.useBridge(''));
     await go(p, 'play', { game: 'grip', level: 1 });
-    await p.evaluate(async () => { for (let i = 0; i < 320; i++) { window.Synergy.feed({ a: 0.1 + 0.2 * (Math.random() - 0.5), b: 0.02 }); await new Promise(r => setTimeout(r, 16)); } });
+    await p.evaluate(async () => {
+      // Seeded rest noise (the same shape as tests/v530.test.mjs): Math.random sometimes never crossed the line.
+      let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      const gauss = () => Math.sqrt(-2 * Math.log(rnd() || 1e-9)) * Math.cos(2 * Math.PI * rnd());
+      for (let i = 0; i < 320; i++) { window.Synergy.feed({ a: Math.max(0, 0.07 + 0.1 * gauss()), b: 0.02 }); await new Promise(r => setTimeout(r, 16)); }
+    });
     await p.locator('.signal-quality.bad').waitFor({ timeout: 4000 });
     await p.evaluate(() => window.Synergy.useTouch());
   }],

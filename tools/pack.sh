@@ -12,7 +12,11 @@ TMP="$(mktemp -d)"; STAGE="$(mktemp -d)"; trap 'rm -rf "$TMP" "$STAGE"' EXIT
 # The archive is a fresh clone of HEAD (5.11, Red Team): the working .git carried reflogs and unreachable objects —
 # a key staged and then unstaged stayed recoverable — and zipping the working tree took gitignored files (5.10).
 git -C "$ROOT" diff --quiet HEAD -- || echo "⚠ есть незакоммиченные изменения — в архив попадает только HEAD"
-git clone -q --no-local "$ROOT" "$STAGE/$BASE"
+# 5.31: blobs over 10 MB stay out — the organizer's meetup deck (85 MB, logos and people, п. 5.5) is in the history.
+# A partial clone keeps every commit with its hash and date; the working tree leaves out the deck and videos.
+git clone -q --no-local --no-checkout --filter=blob:limit=10m --upload-pack="git -c uploadpack.allowFilter=true upload-pack" "$ROOT" "$STAGE/$BASE"
+git -C "$STAGE/$BASE" sparse-checkout set --no-cone '/*' '!*.pptx' '!*.mp4' '!*.mov'
+git -C "$STAGE/$BASE" checkout -q "$(git -C "$STAGE/$BASE" symbolic-ref --short HEAD)"
 git -C "$STAGE/$BASE" remote remove origin
 git -C "$STAGE/$BASE" reflog expire --expire=now --all
 git -C "$STAGE/$BASE" gc -q --prune=now
@@ -23,7 +27,10 @@ if command -v zip >/dev/null; then (cd "$STAGE" && zip -9 -qr "$OUTDIR/$NAME.zip
 else "$(command -v python || command -v python3)" "$ROOT/tools/zipdir.py" "$OUTDIR/$NAME.zip" "$STAGE" "$BASE"; fi # Git Bash on Windows (5.16)
 unzip -q "$OUTDIR/$NAME.zip" -d "$TMP"
 KEYS="$(find "$TMP" \( -name '*.keystore' -o -name '*.jks' -o -name '*.p12' -o -name '*.pem' -o -name '*.key' \) | head -5)"
-[ -z "$(git -C "$TMP/$BASE" fsck --unreachable --no-reflogs 2>/dev/null | head -1)" ] || { echo "✗ в архиве недостижимые объекты git"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }
+# «missing blob» lines are the blobs the partial clone left out on purpose; unreachable objects are what we look for.
+[ -z "$(git -C "$TMP/$BASE" fsck --unreachable --no-reflogs 2>/dev/null | grep '^unreachable' | head -1)" ] || { echo "✗ в архиве недостижимые объекты git"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }
+BIG="$(find "$TMP/$BASE" -path "$TMP/$BASE/.git" -prune -o -type f \( -name '*.pptx' -o -name '*.mp4' -o -name '*.mov' -o -size +10M \) -print | head -5)"
+[ -z "$BIG" ] || { echo "✗ в архиве материалы организатора или файлы больше 10 МБ: $BIG"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }
 [ -z "$KEYS" ] || { echo "✗ в архиве ключи: $KEYS"; rm -f "$OUTDIR/$NAME.zip"; exit 1; }
 # node_modules is not in the archive (the receiver runs npm ci): link ours so the bundle test can run.
 [ -d "$ROOT/node_modules" ] && ln -s "$ROOT/node_modules" "$TMP/$BASE/node_modules"
