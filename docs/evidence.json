@@ -1,6 +1,6 @@
 {
  "version": "5.30.0",
- "generated": "2026-10-22T15:45:57.896Z",
+ "generated": "2026-10-22T15:54:11.271Z",
  "tests": {
   "total": 381,
   "failed": 0,
@@ -33,7 +33,12 @@
   "platform": "linux 6.18.44-fc-v140",
   "node": "v22.22.0"
  },
- "apk": null,
+ "apk": {
+  "file": "release/Synergy-5.30.0.apk",
+  "bytes": 2174385,
+  "kb": 2123,
+  "sha256": "64076db38f838065c0d14a8934a415abb49087cb439a4683cdda62200f2aa900"
+ },
  "html": {
   "file": "release/synergy-standalone.html",
   "bytes": 2696636,
