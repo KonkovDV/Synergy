@@ -2,7 +2,7 @@
 // Hands-free flow: the intro can be confirmed by holding A for 1 s — the phone is in the sound hand,
 // the sensors are on the other arm, so the player should not need to touch the screen to continue.
 import { h, toast } from './dom.js';
-import { signalMeter, icon, handsFreeText, BRIDGE_STATUS, lostSignalHint } from './widgets.js';
+import { signalMeter, icon, handsFreeText, bridgeLine, lostSignalHint } from './widgets.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
 import { COLORS, circle, text } from '../render/draw.js';
@@ -65,7 +65,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     }
   };
   renderControls();
-  const updateBridge = status => { bridgeInfo.textContent = `Статус: ${BRIDGE_STATUS[status] ?? status} · кадров: ${app.bridge?.received ?? 0}${app.bridge?.raw ? ' · сырая ЭМГ → огибающая 150 мс' : ''}`; };
+  const updateBridge = status => { bridgeInfo.textContent = bridgeLine(app.bridge, status); };
 
   const badge = retention ? 'Без подсказки' : demo ? 'Демо' : plan ? 'План дня' : '';
   const header = h('header', { class: 'play-top' },

@@ -53,6 +53,13 @@ export function bottomNav(app, active) {
 /** Status words of the external source — one copy for the game and the settings (5.11: two had to be kept in sync). */
 export const BRIDGE_STATUS = { idle: 'не подключён', connecting: 'подключение…', waiting: 'подключено, ждём кадры', streaming: 'поток идёт', reconnecting: 'переподключение…', unreachable: 'нет ответа, повторяем…', error: 'ошибка адреса', offline: 'протез не на связи' };
 
+/**
+ * The line under the field in external mode. 5.29: a class outside the gesture set (Motorica's Wrist_Flex, say) is rest;
+ * the line names it, so the person and whoever set up the emulator see why the hand does nothing.
+ */
+export const bridgeLine = (bridge, status = bridge?.status ?? 'idle') => `Статус: ${BRIDGE_STATUS[status] ?? status} · кадров: ${bridge?.received ?? 0}`
+  + `${bridge?.raw ? ' · сырая ЭМГ → огибающая 150 мс' : ''}${bridge?.unknownLabel ? ` · жест не из набора игры: ${bridge.unknownLabel}` : ''}`;
+
 /** The hint while the signal is lost: the exercise waits and goes on by itself (GameRunner), as Motorica Kart says too. */
 export const lostSignalHint = status => (status === 'offline'
   ? 'Протез не на связи — пауза. Продолжим сами, когда связь вернётся'

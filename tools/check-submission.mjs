@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { NUMBER_DOCS, RUN_DOCS } from './number-docs.mjs';
 import { apkSigner } from './apk-signer.mjs';
+import { checkSupplyChain } from './supply-chain.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const draft = process.argv.includes('--draft');
@@ -178,6 +179,8 @@ if (/android:screenOrientation="(portrait|landscape|sensorPortrait|sensorLandsca
 if (/_заполнить_/.test(read('AUTHORS.md'))) (draft ? warn : fail)('AUTHORS.md не заполнен (ФИО и вклад — п. 6.6)');
 if (/\b(MIT License|Apache License|GNU General Public|Creative Commons)\b/i.test(read('LICENSE'))) fail('LICENSE открытый — конфликт с отчуждением права (п. 6.6)');
 if (tracked.some(f => /\.(keystore|jks)$/.test(f))) fail('ключ подписи в репозитории');
+// 5.29 — supply chain: actions by SHA, no install scripts, cooldown, exact versions, hashes (tools/supply-chain.mjs).
+for (const m of checkSupplyChain(root)) fail(`цепочка поставки: ${m}`);
 if (tracked.some(f => /customer\/rules\./.test(f))) fail('текст правил организатора в репозитории (п. 5.5) — только ссылка и цитаты в docs/TASK.md');
 const firstCommit = execFileSync('git', ['log', '--reverse', '--format=%cs', '--max-parents=0'], { cwd: root, encoding: 'utf8' }).trim().split('\n')[0];
 if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md; ответ организатора на вопрос PLAN 0.6 записать в MEMORY.md`);

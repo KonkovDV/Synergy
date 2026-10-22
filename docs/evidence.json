@@ -1,11 +1,11 @@
 {
  "version": "5.29.0",
- "generated": "2026-10-21T21:41:03.817Z",
+ "generated": "2026-10-22T05:54:41.221Z",
  "tests": {
-  "total": 347,
+  "total": 352,
   "failed": 0,
-  "at": "2026-10-21T21:41:03.815Z",
-  "platform": "linux 6.18.44-fc-v139",
+  "at": "2026-10-22T05:54:41.220Z",
+  "platform": "linux 6.18.44-fc-v140",
   "node": "v22.22.0"
  },
  "a11y": {
@@ -14,9 +14,10 @@
   "violations": 0,
   "errors": 0,
   "browser": "141.0.7390.37",
-  "source": "67a92087d18a1772",
-  "at": "2026-10-21T21:26:25.133Z",
-  "platform": "linux 6.18.44-fc-v139",
+  "axe": "4.14.0",
+  "source": "a91c874a035273fa",
+  "at": "2026-10-22T05:41:14.314Z",
+  "platform": "linux 6.18.44-fc-v140",
   "node": "v22.22.0"
  },
  "layout": {
@@ -26,18 +27,18 @@
   "combinations": 1428,
   "findings": 0,
   "errors": 0,
-  "seconds": 733,
-  "source": "67a92087d18a1772",
-  "at": "2026-10-21T21:40:00.494Z",
-  "platform": "linux 6.18.44-fc-v139",
+  "seconds": 678,
+  "source": "a91c874a035273fa",
+  "at": "2026-10-22T05:53:52.794Z",
+  "platform": "linux 6.18.44-fc-v140",
   "node": "v22.22.0"
  },
  "apk": null,
  "html": {
   "file": "release/synergy-standalone.html",
-  "bytes": 2659345,
-  "kb": 2597,
-  "sha256": "f34561ce1349bf98438f3e366926786a0f4edc5be1a36058e2959f210e3f7bc4"
+  "bytes": 2660067,
+  "kb": 2598,
+  "sha256": "775cc3c271218f8f5741042a57a66a25135a2d282394a72508865667d1b41b3d"
  },
  "art": {
   "pictures": 137,

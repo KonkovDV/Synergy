@@ -262,7 +262,7 @@ for (const [scheme, game] of [['proportional', 'grip'], ['gesture', 'safe']]) {
 }
 console.log(JSON.stringify({ errors, a11y }, null, 1));
 // 5.17 — the numbers of this run for docs/evidence.json (tools/evidence.mjs): states audited, light and dark.
-writeEvidence('e2e-a11y', { light: audited.filter(s => !s.startsWith('dark-')).length, dark: audited.filter(s => s.startsWith('dark-')).length, violations: a11y.length, errors: errors.length, browser: browser.version() });
+writeEvidence('e2e-a11y', { light: audited.filter(s => !s.startsWith('dark-')).length, dark: audited.filter(s => s.startsWith('dark-')).length, violations: a11y.length, errors: errors.length, browser: browser.version(), axe: require('axe-core/package.json').version });
 await browser.close();
 await server.close();
 process.exit(errors.length || a11y.length ? 1 : 0);

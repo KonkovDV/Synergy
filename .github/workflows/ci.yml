@@ -24,7 +24,7 @@ jobs:
       - run: node tools/check-submission.mjs --draft
       - name: e2e (mobile smoke + axe-core accessibility audit + layout audit, Playwright)
         run: |
-          npm i --no-save playwright@1.56.1
+          npm i --no-save --ignore-scripts playwright@1.56.1   # Playwright has no install scripts; browsers come next
           npx playwright install --with-deps chromium
           # The scripts serve dist/ (or the source) themselves: tools/static-server.mjs, no Python
           node tests/e2e/v5.mjs /tmp/shots
