@@ -60,7 +60,7 @@
 
 ## Хранение
 
-`localStorage['synergy.v4']`: `{version, profile, settings, calibrations:{touch, bridge}, runs[]}`. Повреждённые данные сохраняются в `synergy.v4.corrupt`, не перезаписываются. Демо-прогоны не сохраняются. Никакой сети, аккаунтов и аналитики.
+`localStorage['synergy.v4']`: `{version, profile, settings, calibrations:{touch, bridge, bridge-left, bridge-right}, runs[]}`; набор жестов — `localStorage['synergy.gestureSet']`. Повреждённые данные сохраняются в `synergy.v4.corrupt`, не перезаписываются. Демо-прогоны не сохраняются. Никакой сети, аккаунтов и аналитики.
 
 ## v5: новые модули (те же правила слоёв)
 
@@ -161,3 +161,30 @@
 | `tools/evidence.mjs`, `tools/check-submission.mjs` | отпечаток кода у прогонов e2e; версия `CITATION.cff` | доказательства относятся к тому коду, который сдаётся |
 | `input/bridge.js`, `ui/widgets.js` (`bridgeLine`) | имена обучения UBI4 — синонимы поз; класс не из набора — кадр покоя с меткой; таблица имён без прототипа | чужой класс не выглядит обрывом связи; разбор не отдаёт служебные объекты (RT-14) |
 | `tools/supply-chain.mjs`, `tools/pip-hashes.py` | правила цепочки поставки как проверка, вызываемая воротами; hash пакетов лаборатории | правило, которое держится на памяти, однажды нарушат |
+
+## v5.30: митап 21.10, наборы жестов, две руки, платформы (те же правила слоёв)
+
+```
+ BridgeSource ── parseExternal: {…, side} · {left, right} · {sides: …} · probs (СППР)
+   ├─ sample()          → кадр ведущей стороны (один протез — как раньше)
+   └─ sampleSide(side)  → кадр левой или правой руки
+ GameRunner(source, quality?) ── SignalQualityMonitor.push(frame) → verdict на экране, summary() в запись упражнения
+ DuoRunner(sources{left,right}, pipelines, hands, qualities) → intent.sides → DuoGame
+```
+
+| Где | Что | Точка расширения |
+|---|---|---|
+| `core/gesture-set.js` | выбор набора жестов до загрузки модулей: адрес → настройки → окружение → «Синергия» | новый набор — запись в `GESTURE_SETS` (`core/vocabulary.js`) и id в `GESTURE_SET_IDS` |
+| `core/vocabulary.js` | `GESTURE_SETS` (Синергия, UBI4), `GESTURE_CLASS_ORDER`, `GESTURE_SEQUENCE`, команда `wrist` | порядок классов набора = порядок вероятностей СППР |
+| `input/bridge.js` | `decodeProbabilities` (массив или «имя → p», argmax, выравнивание по классам); сторона кадра; `bySide`, `sideState`, `sampleSide`; метка + распределение | новый формат СППР — одна функция |
+| `core/hands.js` | `SIDES`, `controlHand()` (кнопки под здоровую руку), `sideOf()` | третий режим раскладки — одна функция |
+| `core/signalquality.js` | `SignalQualityMonitor`: помехи, скачки, застывший канал, упор; `QUALITY`, `QUALITY_TIPS`; `runSignalIssues`, `cleanSignalIssues`, `signalIssueSummary` | новый признак — детектор в `issues()` и строка в `QUALITY_TIPS` |
+| `games/runner.js` | `GameRunner.quality`; `DuoRunner` — по конвейеру, кисти и сторожу на руку | игра на две руки — `static bimanual = true` |
+| `games/duo.js` | «Две руки»: карточки команд для каждой руки, навык разделения | новые карточки — `DUO_PROMPTS` |
+| `app.js` | `liveFrames()` — упражнение читает текущий внешний источник каждый кадр; `qualityMonitor()`; `calibrationKey()` (`bridge-left`, `bridge-right`) | — |
+| `core/progress.js` | `sessionTopUp()` — ещё одно упражнение, если активной игры меньше `SESSION.activeMin[0]` | — |
+| `ui/controls.js`, `styles/app.css` | кнопки под руку (`data-hand`), пары кнопок «Двух рук», подсказка клавиш на компьютере, две колонки игры в широком окне | — |
+| `android/…/MainActivity.java` | `launchQuery()`: extras и `synergy://play` → проверенный запрос + `self=1` | новый параметр запуска — шаблон в двух оболочках и в `parseLaunch` |
+| `ios/` | SwiftUI + WKWebView: `SynergyNative` с теми же методами, что у Android (`speak`, `stop`, `haptic`, `share`, `print`, `nightMode`), `LaunchRequest` | новый нативный метод — в обеих оболочках, тест сверяет списки |
+
+**Почему так.** Набор жестов выбирается до загрузки модулей, потому что из него выводятся константы во многих модулях (позы, легенда, путаницы, хваты): переключение перезагружает страницу, и в памяти никогда нет двух наборов. Два протеза — это две стороны одного источника, а не два источника: хост «Моторики» держит одно соединение, а протез сам знает свою сторону. Тренер качества сигнала стоит в `GameRunner`, а не в экране: его видят и тесты, и запись упражнения.

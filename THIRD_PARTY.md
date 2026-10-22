@@ -28,8 +28,10 @@
 | модель IS-Net `isnet-general-use` (DIS) | — | лицензию модели сверить перед коммерческим запуском | скачивается rembg при первом импорте; в Продукт не входят ни модель, ни маски — только готовые WebP |
 | Pillow | — | MIT-CMU (HPND) | чтение PNG и запись WebP при импорте графики |
 | ESP32 Arduino core (BLEDevice) | — | Apache-2.0 / LGPL-2.1 (части ядра) | прошивка-пример `bridge/firmware/` (собирается пользователем) |
+| XcodeGen | 2.44.1 | MIT | проект iOS из `ios/project.yml` (5.30); в CI скачивается и сверяется по SHA-256 (`.github/workflows/ios.yml`) |
+| SwiftUI, WebKit, AVFoundation, UIKit | iOS SDK | Apple SDK | оболочка iPhone и iPad (`ios/`); входят в iOS, в репозитории их нет |
 
-Платформенные API (WebView, Web Bluetooth, Web Speech, TextToSpeech, PrintManager) используются через интерфейсы ОС и браузера.
+Платформенные API (WebView, WKWebView, Web Bluetooth, Web Speech, TextToSpeech, AVSpeechSynthesizer, PrintManager, UIPrintInteractionController) используются через интерфейсы ОС и браузера.
 
 ## Как закреплены версии (5.29)
 
@@ -47,3 +49,5 @@
 Формат снимка Motorica Start (5.21) взят из открытого кода Motorica Kart ([HakerFromRussia-XD/1_game_stk](https://github.com/HakerFromRussia-XD/1_game_stk), GPL-3.0). Это сведения для совместимости, не код: ни строки этого проекта в «Синергии» нет (`docs/LEGAL.md` §1).
 
 Открытый репозиторий Motorica Start ([HakerFromRussia-XD/2_Android_bluetooth_master_stradivary](https://github.com/HakerFromRussia-XD/2_Android_bluetooth_master_stradivary)) файла лицензии не содержит, значит, лицензия на его код не выдана. Из него взяты только сведения для совместимости (5.29): имя метода `getLatestThresholds()` и смысл его ответа, значения экрана настроек, имена классов обучения жестам и подписи его экрана — как синонимы в `GESTURE_ALIASES` (`src/input/bridge.js`). Код, изображения и анимации не копировались (`docs/RESEARCH.md` §18–19).
+
+Набор UBI4 (5.30) взят оттуда же как сведения: имена классов, их номера (`GESTURES_ID`), последовательность обучения (`GESTURE_SEQUENCE`) и какие жесты относятся к запястью. Позы пальцев для рисунка и все русские подписи сделаны командой.

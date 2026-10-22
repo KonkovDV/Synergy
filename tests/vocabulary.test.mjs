@@ -3,7 +3,7 @@
 // prompts — must point to an existing id. tools/gesture-drill.mjs swaps a gesture and reruns the suite.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SCHEME_INFO, GESTURES, GESTURE_BY_ID, ACTIVE_GESTURES, ACTIVE_GESTURE_IDS, CLOSING_GESTURES, OPENING_GESTURE, COMMAND, COMMAND_POSE, GRIP_NAME, gestureLegend } from '../src/core/vocabulary.js';
+import { SCHEME_INFO, GESTURES, GESTURE_BY_ID, ACTIVE_GESTURES, ACTIVE_GESTURE_IDS, CLOSING_GESTURES, OPENING_GESTURE, COMMAND, COMMAND_POSE, GRIP_NAME, gestureLegend, GESTURE_SET, GESTURE_SETS } from '../src/core/vocabulary.js';
 import { HAND } from '../src/config.js';
 import { OBJECTS } from '../src/games/grip.js';
 import { PROMPTS, SafeGame } from '../src/games/safe.js';
@@ -15,9 +15,10 @@ import { join, relative } from 'node:path';
 
 const GRIPS = new Set(CLOSING_GESTURES.map(g => g.grip));
 
-test('vocabulary: 7 gestures = rest + 6 active, well-formed', () => {
-  assert.equal(GESTURES.length, 7);
-  assert.equal(ACTIVE_GESTURES.length, 6);
+// 5.29: two sets — Синергия (rest + 6) and UBI4 of Motorica Start (rest + 7); the suite runs on each (npm run test:ubi4).
+test('vocabulary: the set = rest + its active gestures, well-formed', () => {
+  assert.equal(GESTURES.length, GESTURE_SET.size);
+  assert.equal(ACTIVE_GESTURES.length, GESTURE_SET.size - 1);
   assert.equal(GESTURE_BY_ID.rest?.command, COMMAND.REST, "the rest gesture keeps id 'rest'");
   assert.ok(OPENING_GESTURE, 'one gesture opens the hand');
   assert.ok(CLOSING_GESTURES.length >= 2, 'at least two grips (tutorial, co-contraction pose)');
@@ -26,6 +27,8 @@ test('vocabulary: 7 gestures = rest + 6 active, well-formed', () => {
   for (const g of GESTURES) {
     assert.ok(Object.values(COMMAND).includes(g.command), g.id);
     assert.equal(g.pose.length, 5, `${g.id}: pose of five fingers`);
+    assert.ok(g.wrist === undefined || [-1, 0, 1].includes(g.wrist), `${g.id}: wrist −1, 0 or 1`);
+    assert.equal(g.command === COMMAND.WRIST, !!g.wrist, `${g.id}: the wrist command bends the wrist, no other does`);
     assert.ok(g.pose.every(v => v >= 0 && v <= 1), `${g.id}: flexion in 0..1`);
     assert.ok(g.name && g.cue && g.use, `${g.id}: name, cue, use`);
     assert.equal(!!g.grip, g.command === COMMAND.CLOSE, `${g.id}: closing gestures select a grip, others do not`);
@@ -67,8 +70,10 @@ test('vocabulary: the bridge accepts every id, name and class index', () => {
 });
 
 // Fails on purpose after a gesture is replaced: update GESTURE_ALIASES in src/input/bridge.js (checklist step 2).
+// A synonym names candidates (5.29); one of them must be a gesture of some set.
 test('vocabulary: bridge synonyms point to existing gestures', () => {
-  for (const [alias, id] of Object.entries(GESTURE_ALIASES)) assert.ok(GESTURE_BY_ID[id], `synonym ${alias} → ${id}`);
+  const known = new Set(Object.values(GESTURE_SETS).flatMap(set => set.gestures.map(g => g.id)));
+  for (const [alias, ids] of Object.entries(GESTURE_ALIASES)) assert.ok(Array.isArray(ids) && ids.some(id => known.has(id)), `synonym ${alias} → ${ids}`);
 });
 
 // Static guard: a gesture id in quotes may appear only where the set is defined or deliberately mapped.

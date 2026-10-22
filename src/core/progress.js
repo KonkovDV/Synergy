@@ -340,6 +340,17 @@ export const trainingDays = profile => Object.values(profile.days ?? {}).filter(
  * 5.18 — the quick start of the home screen: the plan's first exercise as free play, before the day's first training.
  * Not before «Первые шаги», not on a declared rest day; the retention probe is not a warm-up.
  */
+/**
+ * 5.30 — one more exercise after the plan when today's active play is under SESSION.activeMin[0] minutes (the meetup:
+ * 5–10 min a session) and nothing says to stop: no fatigue or cap advice, not a light day. The plan's first exercise —
+ * the weakest skill — at its level. Null otherwise: the plan is enough, and resting is always allowed.
+ */
+export function sessionTopUp({ plan, secondsToday, stopAdvice = null, light = false, minMin = SESSION.activeMin[0] }) {
+  if (!plan || stopAdvice || light || !(secondsToday < minMin * 60)) return null;
+  const item = plan.items.find(i => !i.retention);
+  return item ? { game: item.game, level: item.level, minutes: Math.floor(secondsToday / 60) } : null;
+}
+
 export function quickStart({ tutorialDone, resting, plan, trainedToday }) {
   if (!tutorialDone || resting || trainedToday) return null;
   const item = plan.items.find(i => !i.done && !i.retention);

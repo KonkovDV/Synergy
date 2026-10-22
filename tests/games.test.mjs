@@ -203,7 +203,7 @@ test('gesture scheme speaks of gestures, not channels A/B — in the intro lists
   const { SignalPipeline } = await import('../src/core/signal.js');
   const { BionicHand } = await import('../src/core/hand.js');
   const channels = /\((A|B)\)|\bA\+B\b|канал A|канал B|^A —|, B /;
-  for (const g of GAMES) for (const line of howFor(g, 'gesture')) assert.ok(!channels.test(line), `${g.id}: «${line}»`);
+  for (const g of GAMES.filter(g => g.schemes.includes('gesture'))) for (const line of howFor(g, 'gesture')) assert.ok(!channels.test(line), `${g.id}: «${line}»`);
   for (const id of ['grip', 'flight', 'rhythm', 'safe']) {
     const game = make(id, { levelNumber: 3, scheme: 'gesture', seed: 3 });
     const emulator = new EmgEmulator({ realism: 0.3, seed: 3 });

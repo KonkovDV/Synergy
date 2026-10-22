@@ -3,7 +3,7 @@
 // the sensors are on the other arm, so the player should not need to touch the screen to continue.
 import { h, toast } from './dom.js';
 import { signalMeter, icon, handsFreeText, bridgeLine, lostSignalHint } from './widgets.js';
-import { createTwoChannelPads, createGesturePads } from './controls.js';
+import { createTwoChannelPads, createGesturePads, createDuoPads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
 import { COLORS, circle, text } from '../render/draw.js';
 import { gameArt, mio } from './art.js';
@@ -53,14 +53,44 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const bar = h('i');
   const meter = signalMeter(app);
   const bridgeInfo = h('p', { class: 'bridge-status' });
+  // 5.30 — «Тренер качества сигнала» (core/signalquality.js): what is wrong with the external signal and what to do.
+  // Shown while it lasts; said once per kind of issue during the run (not a stream of warnings).
+  const qualityInfo = h('p', { class: 'signal-quality', role: 'status', hidden: true });
+  const qualitySaid = new Set();
+  let qualityShown = null;
+  const qualityVerdict = () => {
+    const r = session.runner;
+    if (!r.qualities) return r.quality?.verdict ?? null;
+    for (const side of ['left', 'right']) {
+      const v = r.qualities[side]?.verdict;
+      if (v && !v.ok) return { ...v, text: `${v.text} · ${side === 'left' ? 'левый' : 'правый'}` };
+    }
+    return r.qualities.left || r.qualities.right ? { ok: true, text: 'Сигнал: хороший' } : null;
+  };
+  // Only a problem is shown (a good signal is the normal case and the pads need the room); on a short landscape screen
+  // the title only — the voice says the tip, the results repeat it (styles/app.css).
+  const updateQuality = () => {
+    const v = qualityVerdict();
+    const bad = !!v && !v.ok;
+    const text = bad ? `${v.text}. ${v.tip}` : '';
+    if (text !== qualityShown) {
+      qualityShown = text;
+      qualityInfo.replaceChildren(...(bad ? [h('b', {}, `${v.text}. `), h('span', { class: 'quality-tip' }, v.tip)] : []));
+      qualityInfo.hidden = !bad; qualityInfo.classList.toggle('bad', bad);
+    }
+    if (v && !v.ok && phase === 'running' && !qualitySaid.has(v.id)) { qualitySaid.add(v.id); app.say(`${v.text}. ${v.tip}`); }
+  };
 
   const controls = h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' });
   const renderControls = () => {
     if (demo) controls.replaceChildren(h('p', { class: 'pads-note' }, 'Демо: автопилот управляет эмулятором ЭМГ — тот же путь сигнала, что у вас. Результат не сохраняется.'));
     else {
-      const pads = s.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator) : createTwoChannelPads(app.emulator);
+      // 5.30 — «Две руки»: a pair of pads per arm (keys: left F/D, right J/K); the left arm is `emulator`, the right `emulator2`.
+      const duo = session.game.constructor.bimanual;
+      const pads = duo ? createDuoPads(app.emulator, app.emulator2)
+        : session.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator) : createTwoChannelPads(app.emulator);
       // In bridge mode the pads stay as a remote for the raw-EMG lab (bridge/ws_bridge.py --lab).
-      controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, h('small', {}, s.wsUrl ? `Адрес: ${s.wsUrl}. Площадки ниже — пульт лаборатории (--lab).` : 'Кадры приходят от протеза или эмулятора напрямую (без адреса).')), pads] : [pads]));
+      controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, qualityInfo, h('small', {}, s.wsUrl ? `Адрес: ${s.wsUrl}. Площадки ниже — пульт лаборатории (--lab).` : 'Кадры приходят от протеза или эмулятора напрямую (без адреса).')), pads] : [pads]));
       if (bridgeMode) controls.classList.add('compact');
     }
   };
@@ -194,7 +224,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   function tick(now, dt) {
     const intent = session.runner.step(now, dt);
     if (s.showMeters) meter.update(intent);
-    if (bridgeMode) updateBridge(app.bridge?.status ?? 'idle');
+    if (bridgeMode) { updateBridge(app.bridge?.status ?? 'idle'); updateQuality(); }
     if (phase === 'intro') {
       // Armed only after a relaxation: a hold that left the results screen must not start the game too.
       // The demo bot drives the emulator during the intro too: it must not start the game itself (5.11).
@@ -243,6 +273,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   showIntro();
   return {
     node, tick, fresh: true,
+    /** 5.30: «Две руки» — the keyboard drives both arms of the on-screen emulator (app.js, bindKeyboard). */
+    get duo() { return !demo && !!session.game.constructor.bimanual; },
     // First focus after the screen is mounted (5.11): focusing «Старт» while building it was undone by the heading.
     get focus() { return phase === 'intro' ? overlay.querySelector('.btn.primary') : null; },
     onHidden: pause,

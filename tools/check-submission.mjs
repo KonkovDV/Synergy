@@ -25,7 +25,12 @@ const apkVersion = read('android/AndroidManifest.xml').match(/versionName="([^"]
 const changelog = read('CHANGELOG.md').match(/^## (\S+)/m)?.[1];
 // 5.29: CITATION.cff still said 5.11.0 (18.10) at 5.28.0 — the citation metadata names the release too.
 const citation = read('CITATION.cff').match(/^version:\s*["']?([^\s"']+)/m)?.[1];
-for (const [name, v] of [['src/config.js', appVersion], ['AndroidManifest.xml', apkVersion], ['CHANGELOG.md', changelog], ['CITATION.cff', citation]]) if (v !== version) fail(`версия ${name} = ${v}, package.json = ${version}`);
+// 5.30: the iPhone app carries the version and the build number of the APK.
+const iosVersion = existsSync(join(root, 'ios/project.yml')) ? read('ios/project.yml').match(/MARKETING_VERSION: "([^"]+)"/)?.[1] : version;
+for (const [name, v] of [['src/config.js', appVersion], ['AndroidManifest.xml', apkVersion], ['CHANGELOG.md', changelog], ['CITATION.cff', citation], ['ios/project.yml', iosVersion]]) if (v !== version) fail(`версия ${name} = ${v}, package.json = ${version}`);
+const iosBuild = existsSync(join(root, 'ios/project.yml')) ? read('ios/project.yml').match(/CURRENT_PROJECT_VERSION: "(\d+)"/)?.[1] : null;
+const apkBuild = read('android/AndroidManifest.xml').match(/versionCode="(\d+)"/)?.[1];
+if (iosBuild && iosBuild !== apkBuild) fail(`номер сборки ios/project.yml = ${iosBuild}, versionCode APK = ${apkBuild}`);
 const apk = join(root, 'release', `Synergy-${version}.apk`);
 if (!existsSync(apk)) fail(`нет release/Synergy-${version}.apk`);
 if (!existsSync(join(root, 'release/synergy-standalone.html'))) fail('нет release/synergy-standalone.html');
@@ -139,7 +144,11 @@ if (existsSync(join(root, 'docs/USABILITY_RESULTS.md'))) {
   });
 }
 
-const { GESTURE_IDS } = await import(pathToFileURL(join(root, 'src/core/vocabulary.js')).href);
+// 5.29: two gesture sets; the submitted product starts in the default one, so the lists are checked against it — whatever
+// SYNERGY_GESTURE_SET the shell has (the suite runs once per set).
+const { GESTURE_SETS } = await import(pathToFileURL(join(root, 'src/core/vocabulary.js')).href);
+const { DEFAULT_GESTURE_SET } = await import(pathToFileURL(join(root, 'src/core/gesture-set.js')).href);
+const GESTURE_IDS = GESTURE_SETS[DEFAULT_GESTURE_SET].gestures.map(g => g.id);
 // Python cannot import vocabulary.js: its class lists (order = class index) must mirror it (PLAN C.3, step 6).
 for (const f of ['lab/lab7.py', 'bridge/ws_bridge.py'].filter(f => existsSync(join(root, f)))) {
   const list = read(f).match(/^GESTURES\s*=\s*[[(]([^\])]*)[\])]/m)?.[1];

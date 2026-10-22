@@ -11,6 +11,8 @@
 | Что изменили | Что прогнать |
 |---|---|
 | Любой код | `npm test` |
+| Набор жестов, мост, игры, словарь | `npm run test:ubi4` — тот же набор тестов на наборе UBI4 |
+| Оболочки Android и iOS (`android/`, `ios/`) | `node --test tests/v530.test.mjs` — методы `SynergyNative` и правила ссылок совпадают; Swift собирает `.github/workflows/ios.yml` на macOS |
 | Экран, стиль или `index.html` | ещё `npm run build`, `npm run e2e:a11y`, `npm run audit:layout`. Скрипты сами поднимают сервер. Ворота сверяют отпечаток кода у этих прогонов: прогон до правки не засчитывается |
 | Набор жестов | `npm run drill:gestures` |
 | Встраивание на Kotlin или React Native | `npm run verify:embed` |

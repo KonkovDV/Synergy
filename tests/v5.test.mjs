@@ -118,9 +118,10 @@ test('skill check: fixed protocol, Motion-Test metrics, passive = 0', () => {
 });
 
 test('analytics: confusion matrix and skill-check history', () => {
-  const runs = [{ scheme: 'gesture', details: { confusion: { pinch: { key: 1.5 } } } }, { scheme: 'gesture', details: { confusion: { pinch: { key: 0.5 }, key: { pinch: 0.2 } } } }];
+  // «fist» and «pinch» are in both sets (5.29)
+  const runs = [{ scheme: 'gesture', details: { confusion: { pinch: { fist: 1.5 } } } }, { scheme: 'gesture', details: { confusion: { pinch: { fist: 0.5 }, fist: { pinch: 0.2 } } } }];
   const m = confusionMatrix(runs);
-  assert.equal(m.cells.pinch.key, 2); assert.equal(m.top[0].wanted, 'pinch'); assert.equal(m.runs, 2);
+  assert.equal(m.cells.pinch.fist, 2); assert.equal(m.top[0].wanted, 'pinch'); assert.equal(m.runs, 2);
   const h = assessmentHistory([{ at: '2026-10-01', scheme: 'gesture', score: 80, details: { assessment: true, completionRate: 90 } }, { details: {} }]);
   assert.equal(h.length, 1); assert.equal(h[0].completionRate, 90);
   assert.equal(skillProfile([{ skills: { precision: 10 }, details: { assessment: true } }]).precision, null, 'skill checks are not training runs');
@@ -202,8 +203,9 @@ test('reminder .ics follows RFC 5545: UID and DTSTAMP in the event, lines ≤ 75
   for (let g = 2; g <= 7; g++) assert.equal(/BYDAY=([A-Z,]+)/.exec(reminderIcs('07:05', new Date(), g))[1].split(',').length, g, `goal ${g}`);
 });
 
-test('catalog: 4 training games + the skill check, every game runs in every scheme', () => {
-  assert.equal(GAMES.length, 5); assert.equal(PLAN_CATALOG.length, 4);
+test('catalog: 4 training games + «Две руки» (5.30, two prostheses, not in the plan) + the skill check', () => {
+  assert.equal(GAMES.length, 6); assert.equal(PLAN_CATALOG.length, 4);
+  for (const g of GAMES) assert.deepEqual(g.schemes, g.twoProstheses ? ['threshold', 'proportional'] : ['threshold', 'proportional', 'gesture'], g.id);
 });
 
 test('faded feedback: novice sees every trial, skilled players fewer; retention sees none', () => {
@@ -278,7 +280,7 @@ test('arm pose (5.11): rotates by posed probes (not by day — that tied each po
   const html = reportHtml(clean);
   assert.match(html, /локоть согнут под прямым углом/);
   assert.ok(!html.includes('<img src=x>'));
-  assert.match(reportCsv(clean).split('\n')[0], /arm_pose;unreleased;rest_missed$/);
+  assert.match(reportCsv(clean).split('\n')[0], /arm_pose;unreleased;rest_missed;signal_issues$/);
 });
 
 test('announcer: a new task is said promptly after «Покой», only flipping feedback waits out the gap (5.11)', async () => {

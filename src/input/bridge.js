@@ -4,28 +4,39 @@
 //   2) window.postMessage({ type: 'synergy-frame', ... }) when the game is embedded in an iframe/WebView;
 //   3) window.Synergy.feed(frame) for a native host (Android WebView, test scripts).
 // All parsing lives in parseExternal(): the only place to touch when the emulator format is published.
-import { GESTURES, GESTURE_BY_ID, GESTURE_IDS } from '../core/vocabulary.js';
+import { GESTURES, GESTURE_BY_ID, GESTURE_CLASS_ORDER, GESTURE_SETS } from '../core/vocabulary.js';
+import { SIDES, sideOf, otherSide } from '../core/hands.js';
 
-/** Class index → gesture id. Defaults to the order of GESTURES; set the emulator's order here if it differs. */
-export const CLASS_ORDER = GESTURE_IDS;
+/**
+ * Class index → gesture id. The active set's numbering (vocabulary.js: UBI4 — config.json of Motorica Start), else the
+ * order of GESTURES; set the emulator's order here if it differs.
+ */
+export const CLASS_ORDER = GESTURE_CLASS_ORDER;
 
-/** Synonyms only: every gesture id and Russian name from GESTURES is accepted as is. */
+/**
+ * Synonyms only: every gesture id and Russian name of the active set is accepted as is. A synonym names candidates in
+ * order; the first one the active set has is taken (5.29: one table for both sets — «Indication» is our «Указательный»
+ * in the Синергия set and «Указатель» in the UBI4 set). A synonym none of whose candidates is in the set is a class
+ * outside the set: rest (parseExternal).
+ */
 export const GESTURE_ALIASES = {
-  relax: 'rest', none: 'rest', neutral: 'rest', idle: 'rest',
-  close: 'fist', grip: 'fist', power: 'fist', grasp: 'fist',
-  palm: 'open', spread: 'open',
-  tripod: 'pinch', precision: 'pinch',
-  pointer: 'point', index: 'point',
-  lateral: 'key',
-  like: 'thumb', thumbs_up: 'thumb',
+  relax: ['rest'], none: ['rest'], neutral: ['rest'], idle: ['rest'],
+  close: ['fist'], grip: ['fist'], power: ['fist'], grasp: ['fist'],
+  palm: ['open'], spread: ['open'],
+  tripod: ['pinch'], precision: ['pinch'],
+  pointer: ['point', 'indication'], index: ['point', 'indication'],
+  lateral: ['key'],
+  like: ['thumb'], thumbs_up: ['thumb'],
   // 5.29 — gesture training of Motorica Start for UBI4 (assets/config.json, SprGestureItemsProvider.kt of the public branch
-  // of 20.10.2026): keys Neutral, Close, Open, Pinch, Indication and the Russian names of its screen. «Ok/Щипок» there is
-  // thumb and index with the other fingers straight — the pose of our pinch. ThumbFingers («Сгиб большого пальца»),
-  // Wrist_Flex and Wrist_Extend are not poses of this set: such a frame is rest (parseExternal). docs/RESEARCH.md §19.
-  indication: 'point', 'указатель': 'point',
-  ok: 'pinch', 'щипок': 'pinch', 'ok/щипок': 'pinch', 'оk/щипок': 'pinch', // the second «о» is Cyrillic, as in Motorica's string
-  'закрытие ладони': 'fist', 'раскрытие ладони': 'open',
+  // of 20.10.2026): the class keys (`motorica` in vocabulary.js are added below) and the captions of its screen. «Ok/Щипок»
+  // there is thumb and index with the other fingers straight — the pose of our pinch. docs/RESEARCH.md §19.
+  indication: ['indication', 'point'], 'указатель': ['indication', 'point'],
+  ok: ['pinch'], 'щипок': ['pinch'], 'ok/щипок': ['pinch'], 'оk/щипок': ['pinch'], // the second «о» is Cyrillic, as in Motorica's string
+  'закрытие ладони': ['fist'], 'раскрытие ладони': ['open'],
+  'сгиб большого пальца': ['thumbflex'], 'флексия': ['wristflex'], 'экстензия': ['wristext'],
 };
+// The class keys of every set (Neutral, ThumbFingers, Wrist_Flex…) are synonyms of its gestures.
+for (const set of Object.values(GESTURE_SETS)) for (const g of set.gestures) if (g.motorica) (GESTURE_ALIASES[g.motorica.toLowerCase()] ??= []).includes(g.id) || GESTURE_ALIASES[g.motorica.toLowerCase()].push(g.id);
 
 // Prototype-less like GESTURE_BY_ID (5.11): «constructor» or «__proto__» from a frame is not a gesture name (5.29: it was —
 // the parser returned Object itself as the gesture).
@@ -40,8 +51,39 @@ function gestureOf(value) {
   if (typeof value === 'number' && Number.isInteger(value)) return CLASS_ORDER[value];
   // «Жест Указатель», «Жест Оk/Щипок»: Motorica's screen names a gesture with the word in front.
   const key = String(value).trim().toLowerCase().replace(/^жест\s+/, '');
-  const alias = Object.hasOwn(GESTURE_ALIASES, key) ? GESTURE_ALIASES[key] : undefined;
-  return BY_NAME[key] ?? (GESTURE_BY_ID[alias] ? alias : undefined);
+  const candidates = Object.hasOwn(GESTURE_ALIASES, key) ? GESTURE_ALIASES[key] : [];
+  return BY_NAME[key] ?? candidates.find(id => GESTURE_BY_ID[id]);
+}
+
+/** Most classes a probability frame may list (a set has eight; a payload of thousands is not a classifier). */
+export const PROBS_MAX = 64;
+
+/**
+ * 5.29 — the stream of a gesture recognizer (СППР). At the meetup of 21.10.2026 the Motorica expert described it as «a
+ * stream of probabilities of each gesture the system is trained on»; the exact structure comes with the task. Accepted:
+ * an array in the class order of the set (CLASS_ORDER) or an object «class name or id → probability». The most probable
+ * class wins; its probability is the confidence (scores that sum to more than 1 are normalized). Returns
+ * { gesture, confidence } or { label } for a class outside the set; null if the list is not a probability list.
+ */
+export function decodeProbabilities(probs) {
+  const entries = Array.isArray(probs) ? probs.map((p, i) => [i, p])
+    : probs && typeof probs === 'object' ? Object.entries(probs) : null;
+  if (!entries || !entries.length || entries.length > PROBS_MAX) return null;
+  const values = entries.map(([, p]) => num(p));
+  if (values.some(p => !Number.isFinite(p) || p < 0)) return null;
+  const sum = values.reduce((s, p) => s + p, 0);
+  if (sum <= 0) return null;
+  let best = 0;
+  values.forEach((p, i) => { if (p > values[best]) best = i; });
+  const scale = sum > 1 + 1e-6 ? sum : 1; // a softmax that sums to 1 ± rounding is not rescaled
+  const confidence = values[best] / scale;
+  const key = entries[best][0];
+  const gesture = gestureOf(Array.isArray(probs) ? key : String(key));
+  // The vector in the class order of the set, for the meter (classes outside the set are left out).
+  const aligned = CLASS_ORDER.map(() => 0);
+  entries.forEach(([k, _], i) => { const id = gestureOf(Array.isArray(probs) ? k : String(k)); const at = id ? CLASS_ORDER.indexOf(id) : -1; if (at >= 0) aligned[at] += values[i] / scale; });
+  const shown = aligned.map(p => Math.round(1000 * p) / 1000);
+  return gesture ? { gesture, confidence, probs: shown } : { label: String(key).trim().slice(0, LABEL_MAX) };
 }
 
 /** A class label a frame carries: a non-empty string or a number. */
@@ -106,7 +148,35 @@ function thresholdsOf(d) {
   return { thresholds: [pair.close / MOTORICA_LEVEL_MAX, pair.open / MOTORICA_LEVEL_MAX] };
 }
 
+/**
+ * 5.30 — two prostheses (meetup 21.10.2026: «возможность игры с двумя протезами не исключена»). Motorica Start holds
+ * one device per session and its snapshot names no side (docs/RESEARCH.md §19), so the frame says which arm it is from:
+ * `side: 'left' | 'right'` (or `hand`), or both at once `{ left: {…}, right: {…} }`. A frame without a side is the one
+ * prosthesis of the settings, as before.
+ */
 export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
+  let data = msg;
+  if (typeof data === 'string') {
+    if (data.length > MAX_MESSAGE_CHARS) return null;
+    const text = data.trim();
+    if (text.startsWith('{')) { try { data = JSON.parse(text); } catch { return null; } }
+  }
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const both = data.sides && typeof data.sides === 'object' ? data.sides : data;
+    if (isObj(both.left) || isObj(both.right)) {
+      const pair = {};
+      for (const side of SIDES) if (isObj(both[side])) { const f = parseFrame(both[side], map); if (f && !f.thresholds && !f.pair) pair[side] = { ...f, side }; }
+      return Object.keys(pair).length ? { pair } : null;
+    }
+  }
+  const frame = parseFrame(data, map);
+  const side = data && typeof data === 'object' ? sideOf(data.side ?? data.hand ?? data.snapshot?.side) : null;
+  return frame && side && !frame.thresholds ? { ...frame, side } : frame;
+}
+
+const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+
+function parseFrame(msg, map) {
   let data = msg;
   if (typeof data === 'string') {
     if (data.length > MAX_MESSAGE_CHARS) return null;
@@ -128,9 +198,21 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   const list = data.ch ?? data.channels ?? data.emg ?? data.values;
   let a = num(data.a), b = num(data.b);
   if (Array.isArray(list)) { a = num(list[map.channelA]); b = num(list[map.channelB] ?? 0); }
-  const label = data.gesture ?? data.class ?? data.label ?? data.pose;
-  const gesture = gestureOf(label);
-  const confidence = num(data.confidence ?? data.prob ?? data.p);
+  let label = data.gesture ?? data.class ?? data.label ?? data.pose, shownProbs;
+  let gesture = gestureOf(label);
+  let confidence = num(data.confidence ?? data.prob ?? data.p);
+  // A recognizer that sends probabilities, not a label (СППР): decoded here, so every source and test sees one frame.
+  const probs = data.probs ?? data.probabilities ?? data.proba;
+  if (label === undefined && probs !== undefined) {
+    const decoded = decodeProbabilities(probs);
+    if (!decoded) return null;
+    if (decoded.gesture) ({ gesture, confidence, probs: shownProbs } = decoded);
+    else label = decoded.label;
+  } else if (gesture && probs !== undefined) {
+    // 5.30: a recognizer that sends its decision and the distribution (bridge/ws_bridge.py --lab): the label decides,
+    // the distribution is shown («вероятности» under the meter); a broken one is simply not shown.
+    shownProbs = decodeProbabilities(probs)?.probs;
+  }
   const effort = num(data.effort ?? data.intensity);
   // 5.29 — a classifier frame whose class is not in our set (Motorica's ThumbFingers, Wrist_Flex, Wrist_Extend; an index
   // past the last class) was dropped, so a person holding that gesture for 300 ms saw «сигнал потерян». It is a live
@@ -139,7 +221,7 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   if (gesture && !Number.isFinite(a)) { a = 0; b = 0; }
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
   const frame = { a, b }; // the sign is kept: a negative value means raw EMG (BridgeSource builds the envelope)
-  if (gesture) { frame.gesture = gesture; frame.confidence = Number.isFinite(confidence) ? confidence : 1; }
+  if (gesture) { frame.gesture = gesture; frame.confidence = Number.isFinite(confidence) ? confidence : 1; if (shownProbs) frame.probs = shownProbs; }
   if (Number.isFinite(effort)) frame.effort = effort;
   return frame;
 }
@@ -198,7 +280,16 @@ export class BridgeSource {
    * `swap()` — the source sends A and B the other way round (the «inverted control» of Motorica's own games).
    * `hostOrigin` — the origin from `?host=`: frames posted by the embedding page are taken only from it (RT-13).
    */
-  constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {}, swap = () => false, hostOrigin = null, thresholds = null, onThresholds = () => {} } = {}) {
+  /**
+   * `lead()` (5.30) — { side, two }: with two prostheses only the frames of the leading side drive the exercise, the
+   * other side's are kept apart (`sampleSide`); with one, a frame of either side is the prosthesis.
+   */
+  constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {}, swap = () => false, hostOrigin = null, thresholds = null, onThresholds = () => {},
+    lead = () => ({ side: 'right', two: false }) } = {}) {
+    this.lead = lead;
+    this.bySide = { left: null, right: null };       // 5.30: the latest frame of each prosthesis
+    this.receivedBySide = { left: 0, right: 0 };
+    this.sideState = { left: { lastSeq: undefined, raw: false, envelope: null }, right: { lastSeq: undefined, raw: false, envelope: null } };
     this.url = url;
     this.map = map;
     this.swap = swap;
@@ -223,25 +314,37 @@ export class BridgeSource {
   feed(msg) {
     const parsed = parseExternal(msg, this.map);
     if (!parsed) return false;
+    // 5.30: both prostheses in one message — each goes to its own stream.
+    if (parsed.pair) return SIDES.map(side => (parsed.pair[side] ? this.take(parsed.pair[side]) : false)).some(Boolean);
+    return this.take(parsed);
+  }
+
+  /** One parsed frame (of one side, or of the one prosthesis). */
+  take(parsed) {
     if (parsed.thresholds) {
       // Told only when they change: the 2023–2024 broadcast repeats them with every frame.
       if (parsed.thresholds.join() !== this.rawThresholds?.join()) { this.rawThresholds = parsed.thresholds; this.onThresholds(this.rawThresholds); }
       // A threshold message alone is not a frame: the watchdog and the frame count stay as they are.
       if (!('a' in parsed)) return false;
     }
-    const { seq, offline, label, ...frame } = parsed;
+    const { seq, offline, label, side, ...frame } = parsed;
     delete frame.thresholds;
     if (label !== undefined) this.unknownLabel = label; // the last class outside our set (5.29), for the status line
+    const st = side ? this.sideState[side] : this;
     // The device itself says it is not there: no frame, the watchdog turns it into «нет сигнала».
-    if (offline) { this.latest = null; this.lastSeq = seq; if (this.status !== 'offline') this.setStatus('offline'); return false; }
+    if (offline) {
+      st.lastSeq = seq;
+      if (side) { this.bySide[side] = null; return false; }
+      this.latest = null; if (this.status !== 'offline') this.setStatus('offline'); return false;
+    }
     // A host that relays Motorica Start's latest snapshot resends it unchanged: the same seq is no new frame, so a
     // stalled device still trips the watchdog (Motorica Kart does the same).
-    if (seq !== undefined) { if (seq === this.lastSeq) return false; this.lastSeq = seq; }
+    if (seq !== undefined) { if (seq === st.lastSeq) return false; st.lastSeq = seq; }
     if (this.swap()) [frame.a, frame.b] = [frame.b, frame.a];
     const t = this.clock();
-    if (!this.raw && (frame.a < 0 || frame.b < 0)) { this.raw = true; this.envelope = new EnvelopeFilter(); }
-    if (this.raw) [frame.a, frame.b] = this.envelope.push(t, frame.a, frame.b);
-    this.latest = { ...frame, t };
+    if (!st.raw && (frame.a < 0 || frame.b < 0)) { st.raw = true; st.envelope = new EnvelopeFilter(); }
+    if (st.raw) [frame.a, frame.b] = st.envelope.push(t, frame.a, frame.b);
+    if (side) { this.bySide[side] = { ...frame, t }; this.receivedBySide[side]++; } else this.latest = { ...frame, t };
     this.received++;
     if (this.status !== 'streaming') this.setStatus('streaming');
     return true;
@@ -298,5 +401,18 @@ export class BridgeSource {
     return t ? (this.swap() ? [t[1], t[0]] : [...t]) : null;
   }
 
-  sample() { return this.latest; }
+  /**
+   * The frame that drives the exercise. Two prostheses: the leading side's (an untagged stream counts only while no side
+   * has spoken). One: the newest of the untagged stream and the sides, the prosthesis's own side first when both arms talk.
+   */
+  sample() {
+    const { side = 'right', two = false } = this.lead() ?? {};
+    const sided = this.receivedBySide.left + this.receivedBySide.right > 0;
+    if (two) return this.bySide[side] ?? (sided ? null : this.latest);
+    const newest = (...frames) => frames.filter(Boolean).sort((x, y) => y.t - x.t)[0] ?? null;
+    return newest(this.latest, this.bySide[side]) ?? this.bySide[otherSide(side)];
+  }
+
+  /** The latest frame of one prosthesis (5.30: the game «Две руки» reads both). */
+  sampleSide(side) { return this.bySide[side] ?? null; }
 }

@@ -1,5 +1,5 @@
-// Layout audit «from start to finish» (5.8): every screen and state of a player's journey on 7 viewports
-// (320 px reflow … tablet, portrait and landscape) × 3 text sizes (100 %, 130 % — the app's largest, 200 % —
+// Layout audit «from start to finish» (5.8): every screen and state of a player's journey on 8 viewports
+// (320 px reflow … tablet, portrait and landscape, and a 1366 × 768 laptop without touch — 5.30) × 3 text sizes (100 %, 130 % — the app's largest, 200 % —
 // Android 14+ system font scale in the APK WebView). Finds what screenshots hide:
 //   overflow    — horizontal page scroll, text or a control past the screen edge;
 //   clipped     — text cut by an ancestor with overflow hidden;
@@ -29,7 +29,8 @@ const quick = process.argv.includes('--quick');
 
 // Re-check after a fix (5.11): `-- --view=568x320 --state=play-bridge,hc-play` runs one size and a few states.
 const arg = name => process.argv.find(a => a.startsWith(`--${name}=`))?.split('=')[1];
-const ALL_VIEWPORTS = [[320, 568], [360, 740], [390, 844], [430, 932], [768, 1024], [844, 390], [568, 320]];
+// 5.30: and a laptop (1366 × 768, mouse and keyboard, no touch) — the site opened on Windows or macOS.
+const ALL_VIEWPORTS = [[320, 568], [360, 740], [390, 844], [430, 932], [768, 1024], [844, 390], [568, 320], [1366, 768]];
 const VIEWPORTS = arg('view') ? ALL_VIEWPORTS.filter(([w, h]) => `${w}x${h}` === arg('view')) : quick ? [[320, 568], [390, 844], [844, 390]] : ALL_VIEWPORTS;
 const SCALES = quick ? [1, 2] : [1, 1.3, 2];
 const onlyStates = arg('state')?.split(',');
@@ -299,6 +300,15 @@ const STATES = [
   // settings state runs on the on-screen emulator, where this box is hidden.
   ['settings-bridge', async p => { await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
   ['play-bridge', async p => { await go(p, 'play', { game: 'grip', level: 1 }); await p.evaluate(() => window.Synergy.useTouch()); }],
+  // 5.30 — «Тренер качества сигнала»: 5 s of a rest line that does not settle, the verdict and its tip in the bridge panel.
+  ['play-bridge-quality', async p => {
+    await p.evaluate(() => window.Synergy.useBridge(''));
+    await go(p, 'play', { game: 'grip', level: 1 });
+    await p.evaluate(async () => { for (let i = 0; i < 320; i++) { window.Synergy.feed({ a: 0.1 + 0.2 * (Math.random() - 0.5), b: 0.02 }); await new Promise(r => setTimeout(r, 16)); } });
+    await p.locator('.signal-quality.bad').waitFor({ timeout: 4000 });
+    await p.evaluate(() => window.Synergy.useTouch());
+  }],
+  ['results-signal', async p => go(p, 'results', { run: { ...run, source: 'bridge', signalIssues: [{ id: 'noise', seconds: 14 }, { id: 'spikes', seconds: 4, side: 'left' }] }, report: { xp: 98, levelUp: false, achievements: [], skins: [], unlockedLevel: null } })],
   ...['grip', 'flight', 'rhythm', 'safe', 'check'].map(g => [`levels-${g}`, async p => go(p, 'levels', { game: g })]),
   ...['grip', 'flight', 'rhythm', 'safe', 'check'].map(g => [`play-intro-${g}`, async p => go(p, 'play', { game: g, level: 1 })]),
   ['play-running', async p => { await go(p, 'play', { game: 'grip', level: 3, demo: true }); await p.getByRole('button', { name: 'Старт' }).click(); await p.waitForTimeout(3600); }],
@@ -363,6 +373,29 @@ const STATES = [
   ['hc-home', async p => { await p.emulateMedia({ contrast: 'more' }); await go(p, 'home'); }],
   ['hc-play', async p => go(p, 'play', { game: 'flight', level: 1 })],
   ['forced-colors-settings', async p => { await p.emulateMedia({ contrast: 'no-preference', forcedColors: 'active' }); await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click(); }],
+  // 5.30 — the meetup of 21.10.2026: two prostheses, «Две руки», the controls under the left hand, the UBI4 set.
+  ['settings-two', async p => {
+    await p.emulateMedia({ contrast: 'no-preference', forcedColors: 'none' });
+    await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click();
+    await p.getByRole('radiogroup', { name: 'Сколько протезов' }).getByRole('radio', { name: /Два/ }).click();
+    const again = p.locator('details.fold:not([open]) > summary'); while (await again.count()) await again.first().click();
+  }],
+  ['duo-intro', async p => go(p, 'play', { game: 'duo', level: 1 })],
+  ['duo-running', async p => { await go(p, 'play', { game: 'duo', level: 3, demo: true }); await p.getByRole('button', { name: 'Старт' }).click(); await p.waitForTimeout(3600); }],
+  ['hand-left-play', async p => {
+    await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click();
+    await p.getByRole('radiogroup', { name: 'Сколько протезов' }).getByRole('radio', { name: /Один/ }).click();
+    await p.getByRole('radiogroup', { name: 'Кнопки на экране под руку' }).getByRole('radio', { name: /Под левую/ }).click();
+    await p.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Пропорц/ }).click();
+    await go(p, 'play', { game: 'grip', level: 1 });
+  }],
+  ['ubi4-play', async p => {
+    await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click();
+    await p.getByRole('radiogroup', { name: 'Кнопки на экране под руку' }).getByRole('radio', { name: /Авто/ }).click();
+    await p.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click();
+    await p.goto(`${base}${base.includes('?') ? '&' : '?'}gestures=ubi4`); await p.waitForTimeout(400);
+    await go(p, 'play', { game: 'safe', level: 6 });
+  }],
   // 5.15 — embedded in the customer's app (?embed=1, docs/embed/README.md): «Вернуться в приложение» among the actions.
   ['results-embedded', async p => { await p.emulateMedia({ forcedColors: 'none' }); await p.goto(`${base}${base.includes('?') ? '&' : '?'}embed=1`); await p.waitForTimeout(400); await go(p, 'results', { run: { ...run, stars: 3, score: 92 }, report: { xp: 137, levelUp: false, achievements: [], skins: [], unlockedLevel: null } }); }],
 ];
@@ -381,7 +414,7 @@ const issues = [];
 const errors = [];
 for (const [w, h] of VIEWPORTS) {
   for (const scale of SCALES) {
-    const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1, hasTouch: true, isMobile: w < 700 });
+    const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1, hasTouch: w < 1200, isMobile: w < 700 });
     page.on('pageerror', e => errors.push(`${w}×${h}@${scale}: ${e.message}`));
     await page.goto(base); await page.waitForTimeout(250);
     for (const [state, setup] of STATES) {

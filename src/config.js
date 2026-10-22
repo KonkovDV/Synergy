@@ -1,9 +1,10 @@
 // Single source of tunable parameters (DRY). Values are training-game defaults,
 // not clinical prescriptions and not Motorica firmware settings.
+import { GESTURE_BY_ID } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '5.29.0',
+  version: '5.30.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -33,7 +34,10 @@ export const SIGNAL = {
  * not in the current set are ignored, every other pair weighs `other`.
  */
 export const GESTURE_CONFUSION = {
-  pairs: [['pinch', 'key', 0.35], ['point', 'thumb', 0.30], ['fist', 'key', 0.15], ['fist', 'thumb', 0.10]],
+  pairs: [['pinch', 'key', 0.35], ['point', 'thumb', 0.30], ['fist', 'key', 0.15], ['fist', 'thumb', 0.10],
+    // 5.29, the UBI4 set: classes that share muscles or a thumb position. Our model for the emulator, not Motorica's data:
+    // wrist and finger flexors lie in one forearm compartment, the extensors in the other.
+    ['pinch', 'thumbflex', 0.30], ['fist', 'wristflex', 0.25], ['open', 'wristext', 0.25], ['indication', 'open', 0.15]],
   other: 0.02,
 };
 
@@ -43,7 +47,9 @@ export const HAND = {
   forceRiseRate: 1.4,       // max force growth / s (motor limit)
   forceDropRate: 1.8,       // force release / s at intensity 1 when opening
   thresholdForceRate: 0.35, // force growth / s in the threshold scheme: a 250 ms human reaction overshoots ≤ 0.09
-  twoChannelGrips: ['fist', 'pinch', 'key'], // cycled by co-contraction
+  // Cycled by co-contraction or by opening again: the first three grips of this list the gesture set has
+  // (Синергия: Кулак, Щепоть, Ключ; UBI4: Закрытие ладони, Щипок, Указатель — 5.29).
+  twoChannelGrips: ['fist', 'pinch', 'key', 'indication'].filter(id => GESTURE_BY_ID[id]?.grip).slice(0, 3),
 };
 
 export const SESSION = {
@@ -54,6 +60,9 @@ export const SESSION = {
   assessmentEveryDays: 7,   // the standardized skill check is suggested once a week
   releaseS: 4,              // seconds to open the hand after a carry («Мастерская»); opening is its own action
   restGiveUpS: 8,           // a contraction that never becomes rest skips the next digit or trial
+  // 5.30 — the meetup of 21.10.2026: «5–10 минут активной игры за раз». The plan is 3–6 min for a beginner (measured by
+  // the novice bot: 20–100 s an exercise); under the lower bound the results offer one more exercise, never press it.
+  activeMin: [5, 10],
 };
 
 /** Child mode (with a parent): shorter plan, shorter rest, lower daily cap. */

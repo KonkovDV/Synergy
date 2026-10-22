@@ -6,9 +6,10 @@ import { BionicHand } from '../src/core/hand.js';
 import { CalibrationRecorder } from '../src/core/calibration.js';
 import { createProfile, recordRun, updateStreak, buildDailyPlan, completePlanItem, playerLevel, recommendedLevel, starsFor, weeklyStatus, weekOutlook, weekOutlookText } from '../src/core/progress.js';
 import { Store, memoryStorage, parseState } from '../src/core/storage.js';
-import { parseExternal } from '../src/input/bridge.js';
+import { parseExternal, CLASS_ORDER } from '../src/input/bridge.js';
+import { HAND } from '../src/config.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
-import { COMMAND } from '../src/core/vocabulary.js';
+import { COMMAND, GESTURE_BY_ID } from '../src/core/vocabulary.js';
 
 /** Feeds a constant frame for `ms` milliseconds at 60 Hz, returns the last intent. */
 function hold(pipe, frame, ms, t0 = 0) {
@@ -69,7 +70,7 @@ test('gesture scheme: low confidence is rest, short glitches are debounced', () 
   assert.equal(hold(p, { a: 0.6, b: 0, gesture: 'pinch', confidence: 0.4, effort: 0.6 }, 300).command, COMMAND.REST);
   const i = hold(p, { a: 0.6, b: 0, gesture: 'pinch', confidence: 0.9, effort: 0.6 }, 300, 400);
   assert.equal(i.gesture, 'pinch'); assert.equal(i.command, COMMAND.CLOSE);
-  const g = hold(p, { a: 0.6, b: 0, gesture: 'key', confidence: 0.9, effort: 0.6 }, 48, 800);
+  const g = hold(p, { a: 0.6, b: 0, gesture: 'fist', confidence: 0.9, effort: 0.6 }, 48, 800);
   assert.equal(g.gesture, 'pinch', '48 ms glitch must not change the command');
 });
 
@@ -93,7 +94,7 @@ test('hand: latches force on rest, B releases, switch needs re-arm', () => {
   co.update(sw, 1 / 60); co.update(sw, 1 / 60);
   assert.equal(co.grip, 'pinch'); assert.equal(co.switches, 1, 'held co-contraction switches once');
   co.update(rest, 1 / 60); co.update(sw, 1 / 60);
-  assert.equal(co.grip, 'key');
+  assert.equal(co.grip, HAND.twoChannelGrips[2], 'the third grip of the set (5.29: Ключ or Указатель)');
 });
 
 test('hand (5.23): the Motorica switch — at full opening, let go, then open again for holdOpenS', () => {
@@ -116,7 +117,7 @@ test('hand (5.23): the Motorica switch — at full opening, let go, then open ag
   hold(open, 2);
   assert.equal(hand.grip, 'pinch', 'once per signal');
   hold(rest, 0.2); hold(open, 0.9);
-  assert.equal(hand.grip, 'key');
+  assert.equal(hand.grip, HAND.twoChannelGrips[2]);
   hold(rest, 0.2); hold(open, 0.9);
   assert.equal(hand.grip, 'fist', 'the group wraps around');
   assert.equal(hand.switches, 3);
@@ -211,8 +212,8 @@ test('bridge: tolerant parsing of emulator formats', () => {
   assert.deepEqual(parseExternal('{"a":0.4,"b":0.1}'), { a: 0.4, b: 0.1 });
   assert.deepEqual(parseExternal('0.3 0.2'), { a: 0.3, b: 0.2 });
   assert.deepEqual(parseExternal({ channels: [0.1, 0.9, 0.5] }, { channelA: 2, channelB: 0 }), { a: 0.5, b: 0.1 });
-  assert.deepEqual(parseExternal({ class: 'Щепоть', prob: 0.8 }), { a: 0, b: 0, gesture: 'pinch', confidence: 0.8 });
-  assert.deepEqual(parseExternal({ gesture: 3, a: 0.5, b: 0 }), { a: 0.5, b: 0, gesture: 'pinch', confidence: 1 });
+  assert.deepEqual(parseExternal({ class: GESTURE_BY_ID.pinch.name, prob: 0.8 }), { a: 0, b: 0, gesture: 'pinch', confidence: 0.8 });
+  assert.deepEqual(parseExternal({ gesture: CLASS_ORDER.indexOf('pinch'), a: 0.5, b: 0 }), { a: 0.5, b: 0, gesture: 'pinch', confidence: 1 });
   assert.equal(parseExternal('garbage'), null);
 });
 
