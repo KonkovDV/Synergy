@@ -111,7 +111,7 @@ export function createTwoChannelPads(emulator) {
   const apply = () => emulator.setTarget({ gesture: null, a: Math.max(state.a, state.co), b: Math.max(state.b, state.co) });
   const A = padView('A', 'сжатие', 'pad-a', 'F ArrowLeft', 'a');
   const B = padView('B', 'раскрытие', 'pad-b', 'J ArrowRight', 'b');
-  const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'Коактивация: оба канала сразу' }, h('span', {}, 'A+B'));
+  const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'A+B — коактивация: оба канала сразу' }, h('span', {}, 'A+B')); // 5.29: the name starts with the visible label (WCAG 2.5.3, axe 4.14)
   const onA = v => { state.a = v; A.show(v); apply(); }, onB = v => { state.b = v; B.show(v); apply(); }, onCo = v => { state.co = v ? 0.75 : 0; apply(); };
   bindPad(A.el, onA); bindPadKeys(A.el, onA, 'a');
   bindPad(B.el, onB); bindPadKeys(B.el, onB, 'b');

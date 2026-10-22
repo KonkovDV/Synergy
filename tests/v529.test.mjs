@@ -109,3 +109,47 @@ test('5.29 thresholds: the 2023–2024 broadcast carries them with every frame �
   assert.equal(told, 2);
   assert.deepEqual(src.thresholds, [40 / L, 35 / L]);
 });
+
+// 5.29, second pass — gesture training of Motorica Start for UBI4 (public branch kmm_ubi4_integrationV3, assets/config.json
+// and SprGestureItemsProvider.kt): Neutral + 7 classes ThumbFingers, Wrist_Flex, Wrist_Extend, Close, Open, Pinch, Indication.
+// Four of the seven are poses of our set; three are not in it (docs/RESEARCH.md §19).
+test('5.29 UBI4 names: the classes of Motorica gesture training that are poses of our set reach them, by key and by Russian name', () => {
+  const want = {
+    Neutral: 'rest', Close: 'fist', Open: 'open', Pinch: 'pinch', Indication: 'point',
+    'Закрытие ладони': 'fist', 'Раскрытие ладони': 'open', 'Жест Указатель': 'point', 'Указатель': 'point',
+    Ok: 'pinch', 'Щипок': 'pinch', 'Жест Оk/Щипок': 'pinch', // Motorica's string: Cyrillic «О», Latin «k»
+  };
+  for (const [label, id] of Object.entries(want)) assert.equal(parseExternal({ gesture: label, confidence: 0.9 })?.gesture, id, label);
+});
+
+test('5.29 UBI4 names: a class outside our set is rest with no confidence, not a lost signal; the source names it', () => {
+  for (const label of ['ThumbFingers', 'Wrist_Flex', 'wrist_extend', 'Сгиб большого пальца', 7]) {
+    assert.deepEqual(parseExternal({ gesture: label, confidence: 0.95 }), { a: 0, b: 0, gesture: 'rest', confidence: 0, label: String(label) }, String(label));
+  }
+  for (const label of ['constructor', '__proto__', 'toString']) {
+    assert.deepEqual(parseExternal({ gesture: label }), { a: 0, b: 0, gesture: 'rest', confidence: 0, label }, `${label}: not a name (it returned Object itself before)`);
+  }
+  assert.equal(parseExternal({ gesture: '   ' }), null, 'a blank label is no frame');
+  assert.equal(parseExternal({ gesture: 'Wrist_Flex', a: 0.4, b: 0 }).gesture, undefined, 'with levels the frame stays a level frame');
+  assert.equal(parseExternal({ gesture: 'x'.repeat(500) }).label.length, 32, 'a long label is cut');
+  let now = 1000;
+  const src = new BridgeSource({ clock: () => now });
+  for (let i = 0; i < 20; i++) { now += 33; assert.equal(src.feed({ gesture: 'Wrist_Flex', confidence: 0.9 }), true); }
+  assert.equal(src.received, 20, 'every frame counts: the watchdog sees a live link');
+  assert.equal(src.unknownLabel, 'Wrist_Flex');
+  assert.deepEqual(Object.keys(src.sample()).sort(), ['a', 'b', 'confidence', 'gesture', 't'], 'the label is not part of the frame');
+  src.feed({ gesture: 'Pinch', confidence: 0.9 });
+  assert.equal(src.unknownLabel, 'Wrist_Flex', 'the last unknown label stays for the status line');
+  const p = new SignalPipeline({ scheme: 'gesture' });
+  const intent = p.process({ t: 1, ...parseExternal({ gesture: 'Wrist_Flex', confidence: 0.99 }) }, 1);
+  assert.equal(intent.valid, true, 'a live signal');
+  assert.equal(intent.command, 'rest', 'the hand does nothing');
+});
+
+test('5.29 UBI4 names: the line under the field names a class outside the set', async () => {
+  const { bridgeLine } = await import('../src/ui/widgets.js');
+  const src = new BridgeSource({ clock: () => 1000 });
+  assert.equal(bridgeLine(src), 'Статус: не подключён · кадров: 0');
+  src.feed({ gesture: 'Wrist_Extend', confidence: 0.9 });
+  assert.equal(bridgeLine(src), 'Статус: поток идёт · кадров: 1 · жест не из набора игры: Wrist_Extend');
+});

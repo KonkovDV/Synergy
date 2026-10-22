@@ -34,8 +34,10 @@ try {
   const after = before.replace(/^\s*\{ id: 'thumb'.*$/m, m => m.match(/^\s*/)[0] + TRIPOD);
   if (after === before) throw new Error("vocabulary.js: строка жеста 'thumb' не найдена — обновите скрипт под текущий набор");
   writeFileSync(file, after);
-  // submission.test.mjs checks the repository (git, release/, documents), not the code: not in the copy.
-  const tests = readdirSync(join(tmp, 'tests')).filter(f => f.endsWith('.test.mjs') && f !== 'submission.test.mjs').map(f => join(tmp, 'tests', f));
+  // submission.test.mjs and supplychain.test.mjs (5.29) check the repository (git, release/, documents, .github, lockfiles),
+  // not the code: not in the copy.
+  const REPO_TESTS = ['submission.test.mjs', 'supplychain.test.mjs'];
+  const tests = readdirSync(join(tmp, 'tests')).filter(f => f.endsWith('.test.mjs') && !REPO_TESTS.includes(f)).map(f => join(tmp, 'tests', f));
   const run = spawnSync(process.execPath, ['--test', '--test-reporter=tap', ...tests], { cwd: tmp, encoding: 'utf8' });
   const failed = [...run.stdout.matchAll(/^not ok \d+ - (.+)$/gm)].map(m => m[1].trim());
   const total = Number(run.stdout.match(/^# tests (\d+)/m)?.[1] ?? 0);

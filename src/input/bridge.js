@@ -18,19 +18,34 @@ export const GESTURE_ALIASES = {
   pointer: 'point', index: 'point',
   lateral: 'key',
   like: 'thumb', thumbs_up: 'thumb',
+  // 5.29 — gesture training of Motorica Start for UBI4 (assets/config.json, SprGestureItemsProvider.kt of the public branch
+  // of 20.10.2026): keys Neutral, Close, Open, Pinch, Indication and the Russian names of its screen. «Ok/Щипок» there is
+  // thumb and index with the other fingers straight — the pose of our pinch. ThumbFingers («Сгиб большого пальца»),
+  // Wrist_Flex and Wrist_Extend are not poses of this set: such a frame is rest (parseExternal). docs/RESEARCH.md §19.
+  indication: 'point', 'указатель': 'point',
+  ok: 'pinch', 'щипок': 'pinch', 'ok/щипок': 'pinch', 'оk/щипок': 'pinch', // the second «о» is Cyrillic, as in Motorica's string
+  'закрытие ладони': 'fist', 'раскрытие ладони': 'open',
 };
 
-const BY_NAME = Object.fromEntries(GESTURES.flatMap(g => [[g.id, g.id], [g.name.toLowerCase(), g.id]]));
+// Prototype-less like GESTURE_BY_ID (5.11): «constructor» or «__proto__» from a frame is not a gesture name (5.29: it was —
+// the parser returned Object itself as the gesture).
+const BY_NAME = Object.assign(Object.create(null), Object.fromEntries(GESTURES.flatMap(g => [[g.id, g.id], [g.name.toLowerCase(), g.id]])));
+/** Longest label kept for the status line: a class name, not a payload. */
+export const LABEL_MAX = 32;
 
 const num = x => (typeof x === 'number' ? x : typeof x === 'string' && x.trim() !== '' ? Number(x) : NaN);
 
 function gestureOf(value) {
   if (value === undefined || value === null) return undefined;
   if (typeof value === 'number' && Number.isInteger(value)) return CLASS_ORDER[value];
-  const key = String(value).trim().toLowerCase();
-  const alias = GESTURE_ALIASES[key];
+  // «Жест Указатель», «Жест Оk/Щипок»: Motorica's screen names a gesture with the word in front.
+  const key = String(value).trim().toLowerCase().replace(/^жест\s+/, '');
+  const alias = Object.hasOwn(GESTURE_ALIASES, key) ? GESTURE_ALIASES[key] : undefined;
   return BY_NAME[key] ?? (GESTURE_BY_ID[alias] ? alias : undefined);
 }
+
+/** A class label a frame carries: a non-empty string or a number. */
+const isLabel = v => (typeof v === 'string' && v.trim() !== '') || (typeof v === 'number' && !Number.isNaN(v));
 
 /**
  * Accepts the shapes emulators usually send:
@@ -113,9 +128,14 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   const list = data.ch ?? data.channels ?? data.emg ?? data.values;
   let a = num(data.a), b = num(data.b);
   if (Array.isArray(list)) { a = num(list[map.channelA]); b = num(list[map.channelB] ?? 0); }
-  const gesture = gestureOf(data.gesture ?? data.class ?? data.label ?? data.pose);
+  const label = data.gesture ?? data.class ?? data.label ?? data.pose;
+  const gesture = gestureOf(label);
   const confidence = num(data.confidence ?? data.prob ?? data.p);
   const effort = num(data.effort ?? data.intensity);
+  // 5.29 — a classifier frame whose class is not in our set (Motorica's ThumbFingers, Wrist_Flex, Wrist_Extend; an index
+  // past the last class) was dropped, so a person holding that gesture for 300 ms saw «сигнал потерян». It is a live
+  // signal of «not ours»: rest with no confidence (the hand does nothing), the label kept for the status line.
+  if (!gesture && isLabel(label) && !Number.isFinite(a) && !Number.isFinite(b)) return { a: 0, b: 0, gesture: 'rest', confidence: 0, label: String(label).trim().slice(0, LABEL_MAX) };
   if (gesture && !Number.isFinite(a)) { a = 0; b = 0; }
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
   const frame = { a, b }; // the sign is kept: a negative value means raw EMG (BridgeSource builds the envelope)
@@ -191,6 +211,7 @@ export class BridgeSource {
     this.rawThresholds = Array.isArray(thresholds) ? thresholds : null;
     this.onThresholds = onThresholds;
     this.received = 0;
+    this.unknownLabel = null;
     this.raw = false;      // raw bipolar EMG detected → envelope (EnvelopeFilter)
     this.envelope = null;
     this.status = 'idle';
@@ -208,8 +229,9 @@ export class BridgeSource {
       // A threshold message alone is not a frame: the watchdog and the frame count stay as they are.
       if (!('a' in parsed)) return false;
     }
-    const { seq, offline, ...frame } = parsed;
+    const { seq, offline, label, ...frame } = parsed;
     delete frame.thresholds;
+    if (label !== undefined) this.unknownLabel = label; // the last class outside our set (5.29), for the status line
     // The device itself says it is not there: no frame, the watchdog turns it into «нет сигнала».
     if (offline) { this.latest = null; this.lastSeq = seq; if (this.status !== 'offline') this.setStatus('offline'); return false; }
     // A host that relays Motorica Start's latest snapshot resends it unchanged: the same seq is no new frame, so a

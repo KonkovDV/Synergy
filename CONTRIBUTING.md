@@ -14,6 +14,7 @@
 | Экран, стиль или `index.html` | ещё `npm run build`, `npm run e2e:a11y`, `npm run audit:layout`. Скрипты сами поднимают сервер. Ворота сверяют отпечаток кода у этих прогонов: прогон до правки не засчитывается |
 | Набор жестов | `npm run drill:gestures` |
 | Встраивание на Kotlin или React Native | `npm run verify:embed` |
+| Зависимость, workflow или скрипт загрузки | `npm run check:supply-chain`; Python лаборатории — версия в `lab/requirements.txt`, затем `python3 tools/pip-hashes.py` |
 | Числа в документах | `node tools/set-test-count.mjs`, затем `node tools/evidence.mjs` |
 | Выпуск | раздел B.F `PLAN.md`: версия во всех местах, включая `CITATION.cff`; APK; `npm run pack` |
 
