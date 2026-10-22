@@ -96,7 +96,8 @@ for (const doc of NUMBER_DOCS) {
   }
 }
 
-const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
+// -z: without it git quotes names outside ASCII («"docs/\320…md"»), and such a file escaped every check below.
+const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
 // Build outputs must not be tracked: the archive excludes them and the receiver rebuilds (dist/ hole of 5.1.0).
 // 5.17: the release APK and HTML too — built by tools/build-apk.sh, carried by the archive, ≈ 4 MB of history a release.
 const builds = tracked.filter(f => /^(dist|android\/build|node_modules|tools\/\.cache)\//.test(f) || /^release\/.*\.(apk|html)$/.test(f));
