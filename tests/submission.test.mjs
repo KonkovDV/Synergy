@@ -51,8 +51,8 @@ const git = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=gate', '-c',
 
 function copyRepo() {
   const dir = mkdtempSync(join(tmpdir(), 'synergy-gate-'));
-  const files = git(root, 'ls-files', '--cached', '--others', '--exclude-standard').split('\n')
-    .filter(f => f && !f.endsWith('.png') && existsSync(join(root, f)) && lstatSync(join(root, f)).isFile()); // no symlinks (node_modules)
+  const files = git(root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard').split('\0')
+    .filter(f => f && !/\.(png|pptx|mp4)$/.test(f) && existsSync(join(root, f)) && lstatSync(join(root, f)).isFile()); // no symlinks (node_modules)
   for (const f of files) { mkdirSync(dirname(join(dir, f)), { recursive: true }); copyFileSync(join(root, f), join(dir, f)); }
   copyRelease(dir);
   git(dir, 'init', '-q'); git(dir, 'add', '-A'); git(dir, 'commit', '-q', '-m', 'copy');
@@ -127,6 +127,7 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['stale APK name in README', () => edit(dir, 'README.md', s => `${s}\nrelease/Synergy-0.0.1.apk\n`), 'Synergy-0.0.1.apk'],
       ['stale version in the LIMITS title', () => edit(dir, 'LIMITS.md', s => s.replace(/^# Границы «Синергии» \S+/m, '# Границы «Синергии» 0.0.1')), '«Синергии» 0.0.1'],
       ['overstated claim', () => edit(dir, 'README.md', s => `${s}\n${OVERSTATED}\n`), 'README.md:'], // the wording lint names the file and line
+      ['a claim in a file with a Cyrillic name', () => { writeFileSync(join(dir, 'docs', 'заметка.md'), `${OVERSTATED}\n`); git(dir, 'add', 'docs/заметка.md'); }, 'docs/заметка.md:'],
       ['manifest declares a medical app', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"games",', '"games", "medical",')), 'категория «medical»'],
       ['PWA locked to portrait', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"display"', '"orientation": "portrait",\n  "display"')), 'WCAG 1.3.4'],
       ['APK locked to portrait', () => edit(dir, 'android/AndroidManifest.xml', s => s.replace('android:exported="true"', 'android:exported="true"\n            android:screenOrientation="portrait"')), 'AndroidManifest.xml: ориентация'],
