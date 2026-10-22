@@ -30,7 +30,7 @@ export const QUALITY = Object.freeze({
 
 /** What to tell the person — in the words of daily care, no diagnosis (docs/GAME_RULES.md, «Качество сигнала»). */
 export const QUALITY_TIPS = Object.freeze({
-  noise: { title: 'Помехи в покое', tip: 'Протрите кожу под электродами насухо, проверьте посадку гильзы; зарядку — подальше' },
+  noise: { title: 'Помехи в покое', tip: 'Протрите кожу спиртовой салфеткой, дайте высохнуть, проверьте посадку гильзы; зарядку — подальше' },
   spikes: { title: 'Скачки сигнала', tip: 'Электрод сдвигается: проверьте посадку гильзы и провод' },
   stuck: { title: 'Сигнал застыл', tip: 'Переподключите протез или датчики' },
   saturation: { title: 'Сигнал упирается в предел', tip: 'Напрягайте мягче или пройдите калибровку заново' },

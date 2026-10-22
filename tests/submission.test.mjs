@@ -158,6 +158,23 @@ test('submission gate: a published set must equal vocabulary.js', () => {
   }
 });
 
+test('submission gate (5.31): the organizer\'s deck in git is named; tools/pack.sh leaves it out of the archive and its history', () => {
+  const dir = copyRepo();
+  try {
+    writeFileSync(join(dir, 'docs', 'Презентация.pptx'), Buffer.from('PK'));
+    git(dir, 'add', '-f', 'docs/Презентация.pptx');
+    const r = gate(dir);
+    assert.equal(r.status, 0, r.stdout);
+    assert.match(r.stdout, /материалы не для продукта в git: 1 \(напр\. docs\/Презентация\.pptx\)/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const pack = readFileSync(join(root, 'tools/pack.sh'), 'utf8');
+  assert.match(pack, /--filter=blob:limit=10m/, 'no big blob in the history of the archive');
+  assert.match(pack, /'!\*\.pptx' '!\*\.mp4'/, 'no deck or video in its working tree');
+  assert.match(pack, /-name '\*\.pptx'.*-size \+10M/, 'and the unpacked archive is checked for them');
+});
+
 test('APK signer: a debug key, the team key and no signature are told apart (Red Team C-1)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'synergy-apk-'));
   try {
