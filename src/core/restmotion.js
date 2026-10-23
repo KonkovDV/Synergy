@@ -11,6 +11,15 @@ export const REST_MOTION = Object.freeze({
   ]),
 });
 
+/** Gesture practice (IEEE TNSRE 2025): recognition training that includes arm motion is more reliable.
+ *  The app does not measure the pose and does not claim a benefit. */
+export const POSE_HINTS = Object.freeze([
+  'Если удобно, чуть поднимите руку. Позу игра не проверяет.',
+  'Если удобно, поверните предплечье. Позу игра не проверяет.',
+  'Если удобно, опустите руку. Позу игра не проверяет.',
+]);
+export const poseHint = index => POSE_HINTS[Math.abs(index | 0) % POSE_HINTS.length];
+
 /** Seconds of all prompts. The rest pause must be at least this long, or the last prompt is cut off. */
 export const restMotionSeconds = (prompts = REST_MOTION.prompts) => prompts.reduce((sum, p) => sum + p.s, 0);
 

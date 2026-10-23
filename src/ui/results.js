@@ -6,7 +6,7 @@ import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, 
 import { missionText } from '../core/missions.js';
 import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
-import { SKILL_NAME, GESTURE_BY_ID } from '../core/vocabulary.js';
+import { SKILL_NAME, skillKeys, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest, sessionTopUp } from '../core/progress.js';
 import { RestMotion, restMotionAllowed } from '../core/restmotion.js';
 import { difficultyLabel } from '../core/adaptive.js';
@@ -79,7 +79,10 @@ export function replaySummary(replay) {
   const above = rings.filter(i => i.dir === 'above').length, below = rings.filter(i => i.dir === 'below').length;
   const lean = above > below ? ' Промахи — чаще выше колец.' : below > above ? ' Промахи — чаще ниже колец.' : above ? ' Промахи — и выше, и ниже колец.' : '';
   const trace = replay.items.find(i => i.kind === 'trace' && Number.isFinite(i.inCorridor));
-  const follow = trace ? ` Слежение: в коридоре ${trace.inCorridor} % времени, ошибка ${fmtNum(trace.nrmse) ?? trace.nrmse} высоты, перерегулирование ${trace.overshoot} %.` : '';
+  const wave = replay.items.find(i => i.kind === 'sine' && Number.isFinite(i.inCorridor));
+  const follow = wave
+    ? ` Слежение за волной: в коридоре ${wave.inCorridor} % времени, ошибка ${fmtNum(wave.nrmse) ?? wave.nrmse} высоты волны.`
+    : trace ? ` Слежение: в коридоре ${trace.inCorridor} % времени, ошибка ${fmtNum(trace.nrmse) ?? trace.nrmse} высоты, перерегулирование ${trace.overshoot} %.` : '';
   return `Пройдено ${passed} из ${count(rings.length, FORMS.ringsOf)}.${lean}${follow}`;
 }
 
@@ -87,6 +90,12 @@ export function replaySummary(replay) {
 export function crossingsText(n) {
   return n ? `Второй канал включался, пока работал первый: ${count(n, FORMS.times)}. Начните с половины силы — так его легче не задеть.`
     : 'Второй канал ни разу не включился, пока работал первый: изоляция чистая.';
+}
+
+/** Cubes and rings (5.32). A game rate, not a Box and Blocks score. */
+export function practiceText(details) {
+  if (!Number.isFinite(details?.perMin)) return '';
+  return `Предметов за минуту: ${fmtNum(details.perMin)}. По мотивам упражнений у протезиста — это не тест Box and Blocks.`;
 }
 
 const OUTCOME_WORD = { crush: 'Раздавлено', drop: 'Выскользнуло', spill: 'Расплескали', release: 'Не отпустили', timeout: 'Не успели' };
@@ -224,7 +233,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
   // The hands-free «дальше» needs sensors: with the on-screen emulator there are no pads on this screen (5.10).
   const handsFree = app.liveSource() !== 'touch';
 
-  const skills = Object.entries(run.skills).map(([k, v]) => skillBar(SKILL_NAME[k], v));
+  const order = skillKeys(run.scheme).filter(k => Object.hasOwn(run.skills, k));
+  const skills = order.map(k => skillBar(SKILL_NAME[k], run.skills[k]));
   const d = run.details ?? {};
   const metric = (label, value) => h('div', {}, h('b', {}, value ?? '—'), h('small', {}, label));
   const assessmentCard = d.assessment ? h('section', { class: 'card' }, h('h2', {}, 'Метрики проверки'),
@@ -251,6 +261,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     h('p', { class: 'note' }, 'Это отметится в отчёте специалисту. Если повторяется — покажите отчёт протезисту.')) : null;
   // 5.31 — isolation in the words of the meetup of 21.10: how often the passive channel came on while the other worked.
   const crossNote = Number.isInteger(d.crossings) ? h('p', { class: 'note' }, crossingsText(d.crossings)) : null;
+  const practiceNote = practiceText(d) ? h('p', { class: 'note' }, practiceText(d)) : null;
   const difficulty = !demo && !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
   const effortCard = planDone && !demo ? h('section', { class: 'card' }, h('h2', { class: 'with-art' }, sectionArt('effort', 32), 'Насколько тяжело было?'),
@@ -279,7 +290,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       effortCard,
       assessmentCard,
       replayCard(replay),
-      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote),
+      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote, practiceNote),
       h('section', { class: 'card coach' }, h('div', { class: 'coach-head' }, mioAvatar(coachMood({ stars: run.stars, stopAdvice }), 52), h('b', {}, 'Мио советует')), ...advice.map(t => h('p', {}, t))),
       h('div', { class: 'sticky-actions' },
         h('button', { class: 'btn primary big', onclick: primary.go }, primary.label),

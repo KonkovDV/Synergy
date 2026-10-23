@@ -46,7 +46,7 @@ export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey()
     if (back % 7 === 0) runs.push(assessmentRun(rng, date, settings.scheme, k, profile, checkTrials));
     recordDayNote(profile, day, { effort: k > 0.6 ? 0 : 1 });
   }
-  return { version: 4, profile, settings: { ...settings }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration() }, runs };
+  return { version: 4, profile, settings: { ...settings, scheduleOffer: 'opened' }, calibrations: { touch: defaultCalibration(), bridge: defaultCalibration() }, runs };
 }
 
 /** Safe in the gesture scheme: the classifier's likely confusions (GESTURE_CONFUSION), fading over time. */

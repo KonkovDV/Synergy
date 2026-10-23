@@ -36,7 +36,7 @@ export function rhythmLayout(w, h) {
 export class RhythmGame extends Game {
   static id = 'rhythm';
   static title = 'Ритм';
-  static skills = ['timing', 'precision', 'separation'];
+  static skills = ['separation', 'timing', 'precision'];
   static levels = LEVELS;
 
   constructor(opts) {

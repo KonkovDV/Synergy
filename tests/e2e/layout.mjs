@@ -403,6 +403,17 @@ const STATES = [
   }],
   // 5.15 — embedded in the customer's app (?embed=1, docs/embed/README.md): «Вернуться в приложение» among the actions.
   ['results-embedded', async p => { await p.emulateMedia({ forcedColors: 'none' }); await p.goto(`${base}${base.includes('?') ? '&' : '?'}embed=1`); await p.waitForTimeout(400); await go(p, 'results', { run: { ...run, stars: 3, score: 92 }, report: { xp: 137, levelUp: false, achievements: [], skins: [], unlockedLevel: null } }); }],
+  // The first week was short and uneven: one offer to pick days and a time.
+  ['home-rhythm', async p => {
+    await p.evaluate(() => {
+      const start = Date.UTC(2026, 0, 5);
+      const days = [];
+      for (let i = 0; i < 7; i++) days.push({ day: new Date(start + i * 4 * 86400000).toISOString().slice(0, 10), seconds: 120, runs: 1 });
+      window.Synergy.rememberDays(days);
+    });
+    await p.keyboard.press('Escape');
+    await p.getByRole('button', { name: 'Выбрать дни и время' }).waitFor({ timeout: 4000 });
+  }],
 ];
 const go = (p, name, params = {}) => p.evaluate(([n, q]) => window.Synergy.go(n, q), [name, params]);
 /** «Азбука протеза» (5.15): every card of «Сила и хват» turned, then its check. */

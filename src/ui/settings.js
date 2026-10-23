@@ -161,6 +161,7 @@ export function settingsScreen(app, { back = null } = {}) {
           segmented([{ value: 'one', label: 'Один' }, { value: 'two', label: 'Два', sub: 'левый и правый' }], s.prostheses, v => { app.updateSettings({ prostheses: v }); app.go('settings'); }, 'Сколько протезов')),
         h('div', { class: 'row' }, h('span', {}, s.prostheses === 'two' ? 'Упражнение ведёт' : 'Протез'),
           segmented([{ value: 'right', label: s.prostheses === 'two' ? 'Правый' : 'Правая рука' }, { value: 'left', label: s.prostheses === 'two' ? 'Левый' : 'Левая рука' }], s.side, v => { app.updateSettings({ side: v }); app.go('settings'); }, s.prostheses === 'two' ? 'Какой протез ведёт упражнение' : 'Рука с протезом')),
+        toggleRow('Зеркальная подсказка', s.mirrorHint, v => app.updateSettings({ mirrorHint: v }), 'картинка жеста зеркальная: можно повторять движение здоровой рукой одновременно'),
         // 5.30 — the on-screen controls under the hand that taps them (the expert's advice at the meetup of 21.10.2026).
         h('div', { class: 'row' }, h('span', {}, 'Кнопки на экране'),
           segmented([{ value: 'auto', label: 'Авто', sub: s.prostheses === 'two' ? 'под правую' : `под ${s.side === 'right' ? 'левую' : 'правую'}, здоровую` }, { value: 'left', label: 'Под левую' }, { value: 'right', label: 'Под правую' }],
@@ -215,7 +216,7 @@ export function settingsScreen(app, { back = null } = {}) {
         sliderRow('Цель: дней в неделю', { ...R.weeklyGoal, value: s.weeklyGoal, format: v => String(v), onInput: v => app.updateSettings({ weeklyGoal: v }) }),
         h('label', { class: 'row' }, h('span', {}, 'Напоминание'),
           h('input', { type: 'time', value: s.reminder, ...(s.audience === 'child' ? { min: CHILD_REMINDER.from, max: CHILD_REMINDER.to } : {}), onchange: e => app.updateSettings({ reminder: reminderTime(e.target.value, s.audience === 'child') }) })),
-        h('button', { class: 'btn ghost', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder, new Date(), s.weeklyGoal, { child: s.audience === 'child' }), 'text/calendar') }, 'Добавить в календарь (.ics)'),
+        h('button', { class: 'btn ghost', 'data-return': 'habit', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder, new Date(), s.weeklyGoal, { child: s.audience === 'child' }), 'text/calendar') }, 'Добавить в календарь (.ics)'),
         h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) })),
         h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы'), h('input', { type: 'text', value: s.petName, maxlength: 16, placeholder: PET.defaultName, onchange: e => app.updateSettings({ petName: e.target.value.trim() }) })),
         // 5.13: the hint tours once more — for a new person on this device, or before a demo.

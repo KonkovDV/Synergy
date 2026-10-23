@@ -31,6 +31,16 @@ const CUE_AHEAD_S = 1.6; // the spoken cue names the next target this long befor
 export const TRACE = Object.freeze({ fromLevel: 2, rampS: 2, holdS: 3, releaseS: 1.5, rest: 0.5, goal: 0.78 });
 export const TRACE_SPAN_S = TRACE.rampS + TRACE.holdS + TRACE.releaseS;
 
+/**
+ * One slow wave of proportional control, from level 5 (Gailey et al., IEEE TNSRE 2017: 23 able-bodied
+ * participants with no myoelectric experience tracked a sine by opening and closing a harness-mounted hand.
+ * Error and co-contraction rose as the sine got faster, 0.125–0.8 Hz, across 10–90 % of the stroke).
+ * We keep their slowest period, 8 s, for one cycle, and a narrow band above rest: the second channel is
+ * asked to stay quiet, not to swing the hand through its whole range. Not a claim about prosthesis users.
+ */
+export const SINE = Object.freeze({ fromLevel: 5, periodS: 8, cycles: 1, center: 0.72, amp: 0.08 });
+export const SINE_SPAN_S = SINE.periodS * SINE.cycles;
+
 /** The altitude the profile asks for at game time `t` (rest outside the segment). */
 export function traceTarget(t, t0, goal = TRACE.goal) {
   const x = t - t0;
@@ -63,12 +73,39 @@ export function traceMetrics({ n, sse, inside, holdPeak }, { goal = TRACE.goal, 
     overshoot: Math.round(Math.max(0, (holdPeak - goal) / height) * 100),
   };
 }
+
+/** Altitude of the slow wave at game time `t` (the centre outside the segment, so the bird is not asked to jump). */
+export function sineTarget(t, t0, { center = SINE.center, amp = SINE.amp, periodS = SINE.periodS } = {}) {
+  const x = t - t0;
+  if (x <= 0 || x >= SINE_SPAN_S) return center;
+  return center + amp * Math.sin((2 * Math.PI * x) / periodS);
+}
+
+/**
+ * nRMSE of a finished wave, divided by its amplitude, and the share of time inside the level's own tolerance.
+ * No hold, so there is no overshoot of a plateau.
+ */
+export function sineMetrics({ n, sse, inside }) {
+  if (!n) return null;
+  const height = SINE.amp || 1;
+  return {
+    nrmse: Math.round(Math.sqrt(sse / n) / height * 1000) / 1000,
+    inCorridor: Math.round(inside / n * 100),
+  };
+}
+
+function accumulateFollow(item, want, alt, dt, tol) {
+  const err = alt - want;
+  item.n += dt;
+  item.sse += err * err * dt;
+  if (Math.abs(err) <= tol) item.inside += dt;
+}
 const REPLAY_STEP_S = 0.1; // the altitude is kept 10 times a second for the replay after the run (not saved)
 
 export class FlightGame extends Game {
   static id = 'flight';
   static title = 'Полёт';
-  static skills = ['precision', 'separation', 'stability'];
+  static skills = ['separation', 'precision', 'stability'];
   static levels = LEVELS;
 
   constructor(opts) {
@@ -95,8 +132,8 @@ export class FlightGame extends Game {
    */
   cue(target) {
     if (!target || target.at - this.time > CUE_AHEAD_S) return this.baseHint;
-    if (target.kind === 'trace') {
-      const want = traceTarget(this.time, target.at, target.goal);
+    if (target.kind === 'trace' || target.kind === 'sine') {
+      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at);
       if (Math.abs(want - this.alt) <= this.tol) return 'Держите линию';
       return want > this.alt ? 'Линия выше' : 'Линия ниже';
     }
@@ -119,8 +156,13 @@ export class FlightGame extends Game {
       items.push({ kind: 'ring', at: t, end: t, alt, side, done: false });
       t += L.gap;
       if (this.scheme !== SCHEME.THRESHOLD && this.levelNumber >= TRACE.fromLevel && i === Math.floor(L.rings / 2) - 1) {
-        items.push({ kind: 'trace', at: t, end: t + TRACE_SPAN_S, goal: TRACE.goal, side: 1, done: false, n: 0, sse: 0, inside: 0, holdPeak: TRACE.goal });
-        t += TRACE_SPAN_S + 0.8;
+        if (this.levelNumber >= SINE.fromLevel) {
+          items.push({ kind: 'sine', at: t, end: t + SINE_SPAN_S, side: 1, done: false, n: 0, sse: 0, inside: 0 });
+          t += SINE_SPAN_S + 0.8;
+        } else {
+          items.push({ kind: 'trace', at: t, end: t + TRACE_SPAN_S, goal: TRACE.goal, side: 1, done: false, n: 0, sse: 0, inside: 0, holdPeak: TRACE.goal });
+          t += TRACE_SPAN_S + 0.8;
+        }
       }
       if (streamsLeft > 0 && (i + 1) % streamEvery === 0) {
         const sAlt = 0.5 + (streamsLeft % 2 ? 1 : -1) * L.spread * 0.6;
@@ -151,14 +193,12 @@ export class FlightGame extends Game {
     }
     const target = this.nextTarget();
     // Open interval: at the exact end the profile is already «rest», and that one frame used to count as a miss.
-    if (target?.kind === 'trace' && this.time > target.at && this.time < target.end) {
-      const want = traceTarget(this.time, target.at, target.goal);
-      const err = this.alt - want;
-      target.n += dt; target.sse += err * err * dt;
-      if (Math.abs(err) <= this.level.tol) target.inside += dt;
-      if (tracePhase(this.time, target.at) === 'hold') target.holdPeak = Math.max(target.holdPeak, this.alt);
+    if (target && (target.kind === 'trace' || target.kind === 'sine') && this.time > target.at && this.time < target.end) {
+      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at);
+      accumulateFollow(target, want, this.alt, dt, this.level.tol);
+      if (target.kind === 'trace' && tracePhase(this.time, target.at) === 'hold') target.holdPeak = Math.max(target.holdPeak, this.alt);
     }
-    if (target && target.side !== 0 && target.kind !== 'trace') this.separation.add(intent, target.side > 0, dt);
+    if (target && target.side !== 0 && target.kind !== 'trace' && target.kind !== 'sine') this.separation.add(intent, target.side > 0, dt);
     this.hint = this.cue(target);
     for (const item of this.track) {
       if (item.done) continue;
@@ -179,9 +219,9 @@ export class FlightGame extends Game {
           this.emit(share > 0.7 ? 'success' : 'soft');
         }
       }
-      if (item.kind === 'trace' && this.time > item.end) {
+      if ((item.kind === 'trace' || item.kind === 'sine') && this.time > item.end) {
         item.done = true;
-        item.metrics = traceMetrics(item, { goal: item.goal, tol: this.level.tol });
+        item.metrics = item.kind === 'trace' ? traceMetrics(item, { goal: item.goal, tol: this.level.tol }) : sineMetrics(item);
         const share = (item.metrics?.inCorridor ?? 0) / 100;
         this.points += 4 * share; this.maxPoints += 4;
         this.adapt.record(share >= 0.6);
@@ -223,7 +263,8 @@ export class FlightGame extends Game {
 
   autopilot(intent) {
     const target = this.nextTarget();
-    const alt = target?.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : target ? target.alt : 0.5;
+    const alt = target?.kind === 'trace' ? traceTarget(this.time, target.at, target.goal)
+      : target?.kind === 'sine' ? sineTarget(this.time, target.at) : target ? target.alt : 0.5;
     if (this.scheme === SCHEME.THRESHOLD) {
       const lead = target && target.kind === 'ring' ? 0.02 : 0.015;
       if (this.alt < alt - lead) return { a: 0.6, b: 0 };
@@ -261,8 +302,8 @@ export class FlightGame extends Game {
   replay() {
     return {
       kind: 'flight', total: this.total, tol: this.level.tol, path: this.path,
-      items: this.track.filter(x => x.done).map(x => (x.kind === 'trace'
-        ? { kind: 'trace', at: x.at, end: x.end, ...(x.metrics ?? {}) }
+      items: this.track.filter(x => x.done).map(x => (x.kind === 'trace' || x.kind === 'sine'
+        ? { kind: x.kind, at: x.at, end: x.end, ...(x.metrics ?? {}) }
         : {
           kind: x.kind, at: x.at, end: x.end, alt: x.alt,
           ok: x.kind === 'ring' ? x.result !== 'miss' : (x.share ?? 0) > 0.6,
@@ -321,12 +362,14 @@ export class FlightGame extends Game {
       ctx.setLineDash([10, 6]); ctx.beginPath(); ctx.moveTo(x1, y(s.alt)); ctx.lineTo(x2, y(s.alt)); ctx.stroke();       ctx.setLineDash([]);
     }
     // 5.20 — the ramp, the 3 s hold and the release: the line to follow (the corridor is the level's tolerance).
-    for (const s of this.track.filter(x => x.kind === 'trace')) {
+    for (const s of this.track.filter(x => x.kind === 'trace' || x.kind === 'sine')) {
       const x1 = gx + (s.at - this.time) * pps, x2 = gx + (s.end - this.time) * pps;
       if (x2 < -20 || x1 > w + 20) continue;
+      const samples = s.kind === 'sine' ? 48 : 24;
       ctx.beginPath();
-      for (let i = 0; i <= 24; i++) {
-        const tt = s.at + (s.end - s.at) * i / 24, xx = gx + (tt - this.time) * pps, yy = y(traceTarget(tt, s.at, s.goal));
+      for (let i = 0; i <= samples; i++) {
+        const tt = s.at + (s.end - s.at) * i / samples, xx = gx + (tt - this.time) * pps;
+        const yy = y(s.kind === 'trace' ? traceTarget(tt, s.at, s.goal) : sineTarget(tt, s.at));
         i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
       }
       ctx.strokeStyle = COLORS.good; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke();

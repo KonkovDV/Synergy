@@ -80,7 +80,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       bg.addColorStop(0, COLORS.sceneTop); bg.addColorStop(1, COLORS.sceneBottom);
       ctx.fillStyle = bg; ctx.fillRect(0, 0, 320, 240);
       circle(ctx, 150, 150, 96, COLORS.accentSoft); // a soft spotlight behind the hand
-      drawHand(ctx, { x: 150, y: 228, size: 92, pose: hand.pose(), skin: app.profile.skin, glow: locked ? 0 : intent.intensity, mirror: s.side === 'left' });
+      drawHand(ctx, { x: 150, y: 228, size: 92, pose: hand.pose(), skin: app.profile.skin, glow: locked ? 0 : intent.intensity, mirror: (s.side === 'left') !== !!s.mirrorHint });
       if (locked && !drawSprite(ctx, 'ico-lock', 214, 76, 56)) padlock(ctx, 214, 70, COLORS.goodInk); // 5.16: the lock of the illustrations
       const band = run.step?.band;
       // The channel of the step: B on «Раскрытие» (5.11 — the gauge always showed A, empty while B was working).

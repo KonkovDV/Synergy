@@ -5,7 +5,7 @@
 import { starsFor } from '../core/progress.js';
 import { createRng } from '../core/rng.js';
 import { AdaptiveDifficulty } from '../core/adaptive.js';
-import { showsFeedback } from '../core/guidance.js';
+import { showsFeedback, blindBlock } from '../core/guidance.js';
 import { SIGNAL } from '../config.js';
 
 export const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -70,7 +70,7 @@ export class Game {
   /** Fixed-difficulty games (the skill check) opt out of in-exercise adaptation. */
   static adaptive = true;
 
-  constructor({ level, levelNumber = 1, scheme, seed = 1, retention = false, skin = 'graphite', mirror = false,
+  constructor({ level, levelNumber = 1, scheme, seed = 1, retention = false, skin = 'graphite', mirror = false, cueMirror = false,
     adaptive = true, speed = 1, reduceMotion = false, guidance = 1, onThreshold = SIGNAL.onThreshold, successTarget = null }) {
     this.level = level;
     this.onThreshold = onThreshold; // the user's switch-on threshold: force bands are placed above it (reachableBand)
@@ -81,6 +81,7 @@ export class Game {
     this.adapt = new AdaptiveDifficulty({ enabled: adaptive && !retention && this.constructor.adaptive, params: successTarget ? { target: successTarget } : {} });
     this.skin = skin;
     this.mirror = mirror;            // левый протез — кисть рисуется зеркально
+    this.cueMirror = cueMirror;      // 5.32: картинка жеста ещё раз зеркально, для здоровой руки
     this.levelNumber = levelNumber;
     this.scheme = scheme;
     this.seed = seed;
@@ -94,8 +95,14 @@ export class Game {
     this.hint = '';
   }
 
-  /** Live feedback for trial #i: hidden in the retention probe and on faded-feedback trials. */
-  liveFeedback(trial) { return !this.retention && showsFeedback(this.guidance, trial); }
+  /** Gesture picture: prosthesis side, and one more flip when «Зеркальная подсказка» is on. */
+  cueFlip() { return this.mirror !== !!this.cueMirror; }
+  liveFeedback(trial) {
+    if (this.retention) return false;
+    // «Мастерская» and «Сейф»: at the sparsest fade, hidden trials come as a pair, not every other one.
+    if (this.constructor.summaryBlocks && this.guidance <= 0.5) return !blindBlock(this.guidance, trial);
+    return showsFeedback(this.guidance, trial);
+  }
 
   emit(name, extra = {}) { this.events.push({ name, ...extra }); }
   drainEvents() { const e = this.events; this.events = []; return e; }

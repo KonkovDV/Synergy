@@ -2,8 +2,12 @@
 // throughput = mean(ID / MT) with the dwell excluded from MT. Bot ≥ novice > idle.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assessmentTrials, fittsId, FITTS } from '../src/games/assess.js';
+import { assessmentTrials, fittsId, FITTS, formSeed, ASSESS } from '../src/games/assess.js';
 import { play, playNovice } from './helpers.mjs';
+import { weekIndex } from '../src/core/progress.js';
+import { parseState } from '../src/core/storage.js';
+import { createGame } from '../src/games/registry.js';
+import { ACTIVE_GESTURE_IDS } from '../src/core/vocabulary.js';
 
 test('fitts: Shannon index of difficulty on known values', () => {
   assert.ok(Math.abs(fittsId(0.3, 0.12) - 1.807) < 1e-3);
@@ -18,7 +22,7 @@ test('fitts: the proportional skill check holds every distance × width once, in
   assert.equal(combos.size, block.length, 'each D × W once');
   for (const t of block) assert.ok(Math.abs(t.band[1] - t.band[0] - t.fitts.w) < 1e-12 && Math.abs((t.band[0] + t.band[1]) / 2 - t.fitts.d) < 1e-12);
   assert.ok(block.some(t => t.command === 'close') && block.some(t => t.command === 'open'), 'both channels');
-  assert.deepEqual(assessmentTrials('proportional').map(t => t.name), assessmentTrials('proportional').map(t => t.name), 'same order every week');
+  assert.deepEqual(assessmentTrials('proportional').map(t => t.name), assessmentTrials('proportional').map(t => t.name), 'the same seed keeps the order');
   assert.ok(!assessmentTrials('threshold').some(t => t.fitts) && !assessmentTrials('gesture').some(t => t.fitts), 'only where force is graded');
 });
 
@@ -94,4 +98,35 @@ test('skill check runs in real time: the «Темп игр» setting and a slow 
   const near = (a, b, why) => assert.ok(Math.abs(a - b) <= 0.06 * b + 20, `${why}: ${a} vs ${b}`);
   near(slow.selectionMs, base.selectionMs, 'game speed 60 %'); near(slow.throughputBps * 100, base.throughputBps * 100, 'throughput at 60 %');
   near(lowFps.completionMs, base.completionMs, '15 fps with the 50 ms dt cap');
+});
+
+const keys = (scheme, seed) => assessmentTrials(scheme, undefined, seed).map(t => t.gesture ?? t.name);
+
+test('skill check: one order per week, the same trials, the canonical seed stays put', () => {
+  const monday = '2026-10-19', friday = '2026-10-23', next = '2026-10-26';
+  assert.equal(weekIndex(monday), weekIndex(friday));
+  assert.notEqual(weekIndex(monday), weekIndex(next));
+  assert.equal(formSeed(weekIndex(monday)), formSeed(weekIndex(friday)));
+  assert.notEqual(formSeed(weekIndex(monday)), formSeed(weekIndex(next)));
+  assert.equal(formSeed(-1), ASSESS.seed);
+  assert.equal(formSeed(1.5), ASSESS.seed);
+  const thisWeek = formSeed(weekIndex(friday)), nextWeek = formSeed(weekIndex(next));
+  for (const scheme of ['threshold', 'gesture']) {
+    const here = keys(scheme, thisWeek), there = keys(scheme, nextWeek);
+    assert.equal([...here].sort().join(','), [...there].sort().join(','), `${scheme}: the same trials`);
+    assert.notEqual(here.join('|'), there.join('|'), `${scheme}: a new order next week`);
+  }
+  const combos = seed => assessmentTrials('proportional', undefined, seed).filter(t => t.fitts).map(t => `${t.fitts.d}/${t.fitts.w}`).sort().join(',');
+  assert.equal(combos(thisWeek), combos(nextWeek));
+  assert.equal(combos(thisWeek).split(',').length, FITTS.distances.length * FITTS.widths.length);
+  assert.notEqual(keys('proportional', thisWeek).join('|'), keys('proportional', nextWeek).join('|'));
+  assert.equal(keys('gesture', ASSESS.seed).join('|'), assessmentTrials('gesture').map(t => t.gesture).join('|'));
+  for (const id of ACTIVE_GESTURE_IDS) assert.equal(keys('gesture', thisWeek).filter(g => g === id).length, 2);
+  const canonical = createGame('check', { levelNumber: 1, scheme: 'proportional', seed: 9 });
+  assert.equal(canonical.formSeed, ASSESS.seed);
+  const weekGame = createGame('check', { levelNumber: 1, scheme: 'gesture', seed: 9, formSeed: thisWeek });
+  assert.equal(weekGame.trials.map(t => t.gesture).join('|'), keys('gesture', thisWeek).join('|'));
+  const run = { game: 'check', level: 1, score: 80, stars: 2, at: '2026-10-23T08:00:00.000Z', formWeek: weekIndex(friday) };
+  assert.equal(parseState(JSON.stringify({ version: 4, runs: [run] })).runs[0].formWeek, weekIndex(friday));
+  assert.equal(parseState(JSON.stringify({ version: 4, runs: [{ ...run, formWeek: 'next' }] })).runs[0].formWeek, undefined);
 });

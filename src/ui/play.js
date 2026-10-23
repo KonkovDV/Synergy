@@ -88,7 +88,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       // 5.30 — «Две руки»: a pair of pads per arm (keys: left F/D, right J/K); the left arm is `emulator`, the right `emulator2`.
       const duo = session.game.constructor.bimanual;
       const pads = duo ? createDuoPads(app.emulator, app.emulator2)
-        : session.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator) : createTwoChannelPads(app.emulator);
+        : session.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator, { mirror: !!s.mirrorHint }) : createTwoChannelPads(app.emulator);
       // In bridge mode the pads stay as a remote for the raw-EMG lab (bridge/ws_bridge.py --lab).
       controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, qualityInfo, h('small', {}, s.wsUrl ? `Адрес: ${s.wsUrl}. Площадки ниже — пульт лаборатории (--lab).` : 'Кадры приходят от протеза или эмулятора напрямую (без адреса).')), pads] : [pads]));
       if (bridgeMode) controls.classList.add('compact');
@@ -147,7 +147,9 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       h('p', {}, entry.teaches),
       h('ul', { class: 'how' }, ...howFor(entry, s.scheme).map(x => h('li', {}, x))),
       h('p', { class: 'legend' }, legend),
-      !retention && session.game.guidance < 1 ? h('p', { class: 'note' }, `Навык растёт: шкала будет скрыта в ${session.game.guidance > 0.6 ? 'каждой третьей' : 'каждой второй'} попытке — результат вы увидите сразу после неё.`) : null,
+      !retention && session.game.guidance < 1 ? h('p', { class: 'note' }, session.game.constructor.summaryBlocks && session.game.guidance <= 0.5
+        ? 'Две попытки подряд без шкалы: что вышло — сразу после них.'
+        : `Навык растёт: шкала будет скрыта в ${session.game.guidance > 0.6 ? 'каждой третьей' : 'каждой второй'} попытке — результат вы увидите сразу после неё.`) : null,
       retention ? h('p', { class: 'note' }, 'Живые подсказки скрыты: так проверяется, держится ли навык без экрана. Это игровая метрика удержания навыка, а не прогноз управления протезом.') : null,
       session.pose ? h('p', { class: 'note pose' }, h('b', {}, `Поза руки: ${session.pose.name}.`), ' Распознавание зависит от положения руки, поэтому проверка каждый день — в другой позе. Если так неудобно или тяжело держать руку — выполняйте как обычно.') : null,
       caution ? h('p', { class: 'note warn', role: 'status' }, caution) : null,

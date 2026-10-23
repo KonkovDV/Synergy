@@ -20,7 +20,7 @@ import { BridgeSource, trustedMessageSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard, setPadMode } from './ui/controls.js';
 import { createGame, GAME_BY_ID, GAMES, PLAN_CATALOG, sessionScheme } from './games/registry.js';
-import { assessmentTrials } from './games/assess.js';
+import { assessmentTrials, formSeed } from './games/assess.js';
 import { GameRunner, DuoRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
 import { setSoundEnabled, unlockAudio } from './services/audio.js';
@@ -255,6 +255,19 @@ export class App {
       useBridge: (url = '') => this.updateSettings({ source: 'bridge', wsUrl: url }),
       useTouch: () => this.updateSettings({ source: 'touch' }),
       state: () => JSON.parse(JSON.stringify({ settings: this.settings, profile: this.profile, runs: this.state.runs.length, screen: this.screen?.name, bridge: this.bridge?.status ?? null })),
+      /** Tests: plant up to 30 training days, then show home. A host does not need this. */
+      rememberDays: (list) => {
+        if (!Array.isArray(list)) return false;
+        for (const item of list.slice(0, 30)) {
+          if (!item || typeof item.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.day)) continue;
+          const seconds = Number.isFinite(item.seconds) ? Math.min(3600, Math.max(0, item.seconds)) : 0;
+          const runs = Number.isInteger(item.runs) ? Math.min(20, Math.max(0, item.runs)) : 1;
+          this.profile.days[item.day] = { ...(this.profile.days[item.day] ?? {}), seconds, runs };
+        }
+        clearTimeout(this.saveTimer); this.saveTimer = null; this.save();
+        this.go('home');
+        return true;
+      },
       go: (name, params) => this.go(name, params),
       /** 5.14 — a host opens a given exercise (unknown ids and levels are ignored; the safety onboarding comes first). */
       start: (game, level = 1) => {
@@ -490,9 +503,11 @@ export class App {
   createSession({ game, level, retention = false, demo = false, plan = false, pose = null, quick = false }) {
     const s = this.settings;
     const scheme = sessionScheme(GAME_BY_ID[game], s.scheme); // 5.30: «Две руки» has two-channel schemes only
+    const week = weekIndex(dayKey());
     const instance = createGame(game, { levelNumber: level, scheme, seed: (Date.now() % 9973) + level, retention, skin: this.profile.skin,
-      mirror: s.side === 'left', adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: Math.max(...this.switchOn(demo)),
-      successTarget: trainingDays(this.profile) < ADAPT.firstWeekDays ? ADAPT.firstWeekTarget : null });
+      mirror: s.side === 'left', cueMirror: !!s.mirrorHint, adaptive: s.adaptive, speed: s.gameSpeed, reduceMotion: this.reduceMotion, guidance: demo ? 1 : this.guidance(game), onThreshold: Math.max(...this.switchOn(demo)),
+      successTarget: trainingDays(this.profile) < ADAPT.firstWeekDays ? ADAPT.firstWeekTarget : null,
+      formSeed: game === 'check' && !demo ? formSeed(week) : undefined });
     const hand = this.createHand();
     const live = this.liveSource();
     const adaptRest = restAdaptationAllowed({ source: live, enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
@@ -500,7 +515,8 @@ export class App {
       : new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.liveFrames(demo), emulator: this.emulator, autopilot: demo,
         quality: live === 'bridge' && !demo ? this.qualityMonitor(this.calibration()) : null });
     const armPose = pose && !demo && live === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
-    return { id: game, level, retention, demo, plan, quick: !!quick && !demo, pose: armPose, game: instance, hand: runner.hand, runner, entry: GAME_BY_ID[game], scheme };
+    return { id: game, level, retention, demo, plan, quick: !!quick && !demo, pose: armPose, game: instance, hand: runner.hand, runner, entry: GAME_BY_ID[game], scheme,
+      ...(game === 'check' && !demo ? { formWeek: week } : {}) };
   }
 
   /**
@@ -552,6 +568,7 @@ export class App {
       ...(this.settings.scheme === 'gesture' && GESTURE_SET.id !== 'synergy' ? { gestureSet: GESTURE_SET.id } : {}),
       // 5.30: with two prostheses the report says which arm did the exercise.
       ...(this.settings.prostheses === 'two' && !session.game.constructor.bimanual ? { side: this.settings.side } : {}),
+      ...(Number.isInteger(session.formWeek) ? { formWeek: session.formWeek } : {}),
       // 5.30: what was wrong with the signal for 3 s or more — the specialist sees contact problems next to the results.
       ...(signalIssues.length ? { signalIssues } : {}), ...r,
     };

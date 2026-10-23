@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { TRACE, TRACE_SPAN_S, traceTarget, tracePhase, traceMetrics } from '../src/games/flight.js';
+import { TRACE, TRACE_SPAN_S, traceTarget, tracePhase, traceMetrics, SINE, SINE_SPAN_S, sineTarget, sineMetrics } from '../src/games/flight.js';
 import { createGame } from '../src/games/registry.js';
 import { GameRunner } from '../src/games/runner.js';
 import { EmgEmulator } from '../src/input/emulator.js';
@@ -59,6 +59,42 @@ test('«Полёт»: one profile from level 2, none at level 1 and none in the 
   assert.equal(item.inCorridor, trace.inCorridor);
   assert.match(replaySummary(game.replay()), /Слежение: в коридоре \d+ % времени/);
   assert.doesNotThrow(() => game.render(new Proxy({}, { get: (o, k) => (k in o ? o[k] : k === 'measureText' ? () => ({ width: 10 }) : k.startsWith?.('create') ? () => ({ addColorStop() {} }) : () => {}), set: (o, k, v) => { o[k] = v; return true; } }), { w: 360, h: 600 }));
+});
+
+test('«Полёт»: from level 5 the ramp becomes one slow wave above rest', () => {
+  assert.equal(SINE.periodS, 8);
+  assert.equal(SINE_SPAN_S, 8);
+  assert.equal(sineTarget(10, 10), SINE.center);
+  assert.equal(sineTarget(10 + SINE_SPAN_S, 10), SINE.center);
+  assert.ok(Math.abs(sineTarget(10 + SINE.periodS / 4, 10) - (SINE.center + SINE.amp)) < 1e-9);
+  assert.ok(Math.abs(sineTarget(10 + 3 * SINE.periodS / 4, 10) - (SINE.center - SINE.amp)) < 1e-9);
+  assert.ok(SINE.center - SINE.amp > 0.5 + 0.11, 'the trough stays above rest by more than the widest sine-level tolerance');
+  const perfect = sineMetrics({ n: 8, sse: 0, inside: 8 });
+  assert.deepEqual(perfect, { nrmse: 0, inCorridor: 100 });
+  const off = sineMetrics({ n: 4, sse: 4 * SINE.amp * SINE.amp, inside: 0 });
+  assert.equal(off.nrmse, 1);
+  assert.equal(sineMetrics({ n: 0, sse: 0, inside: 0 }), null);
+  const kinds = (level, scheme) => createGame('flight', { levelNumber: level, scheme, seed: 1 }).track.map(i => i.kind);
+  assert.ok(!kinds(4, 'proportional').includes('sine'));
+  assert.ok(kinds(4, 'proportional').includes('trace'));
+  assert.ok(kinds(5, 'proportional').includes('sine'));
+  assert.ok(!kinds(5, 'proportional').includes('trace'));
+  assert.ok(kinds(5, 'gesture').includes('sine'));
+  assert.ok(!kinds(8, 'threshold').includes('sine'));
+  for (const scheme of ['proportional', 'gesture']) {
+    const game = createGame('flight', { levelNumber: 5, scheme, seed: 4 });
+    const emulator = new EmgEmulator({ realism: 0, seed: 4 });
+    const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme }), hand: new BionicHand(), source: emulator, emulator, autopilot: true });
+    for (let t = 0; !game.done && t < 180000; t += 1000 / 60) runner.step(t, 1 / 60);
+    const wave = game.details().trace;
+    assert.equal(wave.overshoot, undefined, scheme);
+    assert.ok(wave.inCorridor >= 60, `${scheme} corridor ${wave.inCorridor}`);
+    assert.ok(wave.nrmse < 0.5, `${scheme} nRMSE ${wave.nrmse}`);
+    assert.ok(Math.abs(game.track.find(i => i.kind === 'sine').n - SINE_SPAN_S) < 0.2, scheme);
+    const summary = replaySummary(game.replay());
+    assert.match(summary, /Слежение за волной: в коридоре \d+ % времени/);
+    assert.doesNotMatch(summary, /перерегулирование/);
+  }
 });
 
 test('«покой в движении»: quiet time and slips, and a long step does not skip a prompt', () => {

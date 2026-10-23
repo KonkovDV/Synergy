@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { quickStart } from '../src/core/progress.js';
+import { quickStart, scheduleOffer, shiftDay } from '../src/core/progress.js';
 import { completionChange, assessmentHistory } from '../src/core/analytics.js';
 import { errorText } from '../src/ui/progress.js';
 import { safeReplaySummary } from '../src/ui/results.js';
@@ -15,6 +15,7 @@ import { GESTURE_BY_ID } from '../src/core/vocabulary.js';
 import { assessmentTrials } from '../src/games/assess.js';
 import { buildShowcaseState } from '../src/core/showcase.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
+import { parseState } from '../src/core/storage.js';
 
 test('quick start: the plan’s first exercise before the day’s first training — not before the tutorial, not on a rest day', () => {
   const plan = { items: [{ game: 'flight', level: 2, done: false, retention: false }, { game: 'rhythm', level: 1, done: false }, { game: 'flight', level: 2, retention: true, done: false }] };
@@ -95,4 +96,19 @@ test('skill check history carries the trial count; a stored count that is not a 
   ]);
   assert.deepEqual(partial.map(c => c.trials), [8, 6]);
   assert.deepEqual(completionChange(partial[0], partial[1]), completionChange({ completionRate: 50, trials: 8 }, { completionRate: 83, trials: 6 }));
+});
+
+test('days and time: offered once after a short uneven first week, not after a steady one', () => {
+  const profile = offsets => ({ days: Object.fromEntries(offsets.map(([n, seconds]) => [shiftDay('2026-01-05', n), { runs: 1, seconds }])) });
+  const spread = [[0, 120], [4, 120], [8, 90], [12, 100], [16, 80], [20, 110], [24, 90]];
+  const offer = scheduleOffer(profile(spread));
+  assert.match(offer.text, /не обязательство/);
+  assert.match(offer.text, /отдых/);
+  assert.equal(scheduleOffer(profile([[0, 100], [1, 100], [2, 100], [3, 100], [4, 100], [5, 100], [6, 100]])), null);
+  assert.equal(scheduleOffer(profile(spread.map(([n]) => [n, 600]))), null);
+  assert.equal(scheduleOffer(profile(spread.slice(0, 6))), null);
+  assert.equal(scheduleOffer(profile(spread), { dismissed: true }), null);
+  assert.equal(parseState(JSON.stringify({ version: 4, settings: { scheduleOffer: 'nope' } })).settings.scheduleOffer, '');
+  assert.equal(parseState(JSON.stringify({ version: 4, settings: { scheduleOffer: 'later' } })).settings.scheduleOffer, 'later');
+  assert.equal(buildShowcaseState({}, '2026-10-23', PLAN_CATALOG).settings.scheduleOffer, 'opened');
 });
