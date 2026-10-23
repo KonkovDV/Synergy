@@ -2,7 +2,7 @@
 // Altitude = A − B (position control): A lifts, B lowers, relaxing returns to the middle line.
 // Threshold scheme: A/B climb/descend at a constant rate, rest holds altitude (velocity control).
 // Rings test hitting a level; «потоки» test holding it steadily; centre rings test relaxation.
-import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
+import { Game, SeparationMeter, StabilityMeter, clamp01, pct, cleanPair } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, backdrop, scene } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
@@ -291,7 +291,7 @@ export class FlightGame extends Game {
 
   details() {
     return { rings: this.ringsSeen, hits: this.hits, perfect: this.perfect, ...(this.traceResult ? { trace: this.traceResult } : {}),
-      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings }) };
+      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings, ...cleanPair(this.separation) }) };
   }
 
   /**

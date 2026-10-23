@@ -1,7 +1,7 @@
 // «Мастерская» — the functional task: grasp → transport → release (task-specific transfer).
 // Force is dosed by how strongly you squeeze; the hand then holds on its own (relax!),
 // B lowers excess force, a wrong grip is switched the way that hand is set (open again, or co-contraction) or by a gesture.
-import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
+import { Game, SeparationMeter, StabilityMeter, clamp01, pct, cleanPair } from './base.js';
 import { blindBlock } from '../core/guidance.js';
 import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
@@ -126,6 +126,8 @@ export class GripGame extends Game {
       // 5.31: with two channels the passive one is watched whatever the command — when it switches on with A, the
       // command stops being «сжать», and that frame is exactly the leak.
       if (o.phase !== 'release' && (this.scheme !== SCHEME.GESTURE || intent.command === COMMAND.CLOSE)) this.separation.add(intent, true, dt);
+      // Letting go is the other muscle. Scored apart from the squeeze; the pooled «Разделение» stays the squeeze.
+      if (o.phase === 'release' && this.scheme !== SCHEME.GESTURE) this.separation.watchOpen(intent, dt);
       o.peak = Math.max(o.peak ?? 0, hand.force);
       if (hand.force > o.breakAt) return this.fail('crush', hand);
     }
@@ -300,7 +302,7 @@ export class GripGame extends Game {
       unreleased: this.results.filter(r => r.reason === 'release').length,
       fragileSaved: this.fragileSaved, switches: this.switchTimes.length,
       ...(this.level.items.some(id => OBJECTS[id]?.hot) ? { spilled: this.results.filter(r => r.reason === 'spill').length, teaDry: this.teaDry } : {}),
-      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings }),
+      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings, ...cleanPair(this.separation) }),
       ...(this.level.practice ? {
         perMin: Math.round((this.results.filter(r => r.ok).length / Math.max(this.time, 1)) * 600) / 10,
         practice: this.level.practice,

@@ -8,7 +8,7 @@ import { HOT } from '../src/games/grip.js';
 import { fourStates } from '../src/core/fourstates.js';
 import { FAQ } from '../src/core/faq.js';
 import { QUALITY_TIPS } from '../src/core/signalquality.js';
-import { crossingsText, gripReplaySummary } from '../src/ui/results.js';
+import { crossingsText, cleanPairText, gripReplaySummary } from '../src/ui/results.js';
 import { runnerFor, drive, play } from './helpers.mjs';
 
 test('5.31 isolation: each time the passive channel switches on while the other works is one crossing', () => {
@@ -22,11 +22,27 @@ test('5.31 isolation: each time the passive channel switches on while the other 
   assert.equal(m.crossings, 3, 'a new effort with the passive channel already on counts');
   assert.match(crossingsText(0), /ни разу/);
   assert.match(crossingsText(3), /3 раза/);
+  const split = new SeparationMeter();
+  split.add({ a: 0.6, b: 0, aOn: true, bOn: false }, true, 0.2);
+  const pooled = split.score;
+  split.watchOpen({ a: 0.5, b: 0.6, aOn: true, bOn: true }, 0.2);
+  assert.equal(split.close, 100);
+  assert.ok(split.open < 80, `open leaked, scored ${split.open}`);
+  assert.equal(split.score, pooled, 'letting go does not rewrite the pooled separation score');
+  assert.equal(split.crossings, 0);
 });
 
 test('5.31 isolation: the two-channel games report crossings, the gesture scheme does not', () => {
   for (const game of ['grip', 'flight', 'rhythm']) {
-    for (const scheme of ['threshold', 'proportional']) assert.ok(Number.isInteger(play(game, { scheme, levelNumber: 1 }).details.crossings), `${game} ${scheme}`);
+    for (const scheme of ['threshold', 'proportional']) {
+      const details = play(game, { scheme, levelNumber: 1 }).details;
+      assert.ok(Number.isInteger(details.crossings), `${game} ${scheme}`);
+      assert.ok(Number.isFinite(details.cleanClose), `${game} ${scheme} close`);
+      if (game === 'grip') assert.ok(Number.isFinite(details.cleanOpen), `${game} ${scheme} open`);
+      assert.match(cleanPairText(details), /Чистота закрытия/);
+      assert.match(cleanPairText(details), /не оценка протеза/);
+      assert.doesNotMatch(cleanPairText({ cleanClose: 0, cleanOpen: 40 }), /без помехи/);
+    }
     assert.equal(play(game, { scheme: 'gesture', levelNumber: 1 }).details.crossings, undefined, `${game} gesture`);
   }
 });

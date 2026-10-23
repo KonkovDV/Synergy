@@ -86,6 +86,17 @@ export function replaySummary(replay) {
   return `Пройдено ${passed} из ${count(rings.length, FORMS.ringsOf)}.${lean}${follow}`;
 }
 
+/**
+ * Cleanliness of closing and of opening, apart (the meetup: judge each signal, the other muscle stays quiet).
+ * A game metric. Muscles differ by the level of injury, so one number would hide which one leaked.
+ */
+export function cleanPairText(details) {
+  const line = (n, name) => Number.isFinite(n) ? `${name}: ${fmtPct(n)}` : null;
+  const parts = [line(details?.cleanClose, 'Чистота закрытия'), line(details?.cleanOpen, 'Чистота открытия')].filter(Boolean);
+  // 100 % is «the other channel did not rise with the working one», not «no interference» glued to a low number.
+  return parts.length ? `${parts.join('. ')}. 100 % — второй канал не поднимался вместе с рабочим. Игровая цифра, не оценка протеза.` : '';
+}
+
 /** The isolation line under the skills (pure: tests/v531.test.mjs). */
 export function crossingsText(n) {
   return n ? `Второй канал включался, пока работал первый: ${count(n, FORMS.times)}. Начните с половины силы — так его легче не задеть.`
@@ -261,6 +272,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     h('p', { class: 'note' }, 'Это отметится в отчёте специалисту. Если повторяется — покажите отчёт протезисту.')) : null;
   // 5.31 — isolation in the words of the meetup of 21.10: how often the passive channel came on while the other worked.
   const crossNote = Number.isInteger(d.crossings) ? h('p', { class: 'note' }, crossingsText(d.crossings)) : null;
+  const cleanLine = cleanPairText(d);
+  const cleanNote = cleanLine ? h('p', { class: 'note' }, cleanLine) : null;
   const practiceNote = practiceText(d) ? h('p', { class: 'note' }, practiceText(d)) : null;
   const difficulty = !demo && !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
@@ -290,7 +303,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       effortCard,
       assessmentCard,
       replayCard(replay),
-      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote, practiceNote),
+      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote, cleanNote, practiceNote),
       h('section', { class: 'card coach' }, h('div', { class: 'coach-head' }, mioAvatar(coachMood({ stars: run.stars, stopAdvice }), 52), h('b', {}, 'Мио советует')), ...advice.map(t => h('p', {}, t))),
       h('div', { class: 'sticky-actions' },
         h('button', { class: 'btn primary big', onclick: primary.go }, primary.label),

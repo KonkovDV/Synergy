@@ -1,7 +1,7 @@
 // «Ритм» — timing of onset/release, graded intensity, isolation, co-contraction (MyoBeatz-style;
 // rhythm games gave the best EMG challenge in PlayBionic, Prahm et al. 2018).
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
-import { Game, SeparationMeter, clamp01, pct } from './base.js';
+import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, backdrop, scene } from '../render/draw.js';
 import { musicPattern } from '../core/music.js';
@@ -202,7 +202,7 @@ export class RhythmGame extends Game {
   details() {
     return { notes: this.notes.length, hits: this.onsetErrors.length, bestCombo: this.bestCombo, falseStarts: this.falseStarts,
       meanOnsetMs: this.onsetErrors.length ? Math.round(1000 * this.onsetErrors.reduce((s, v) => s + v, 0) / this.onsetErrors.length) : null,
-      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings }) };
+      ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings, ...cleanPair(this.separation) }) };
   }
 
   render(ctx, view, hand, intent) {
