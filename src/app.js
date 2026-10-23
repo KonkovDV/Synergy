@@ -450,7 +450,7 @@ export class App {
 
   /**
    * The prosthesis's switch-on thresholds [A, B] in frame units (5.29): only when the host passed them, the live source
-   * is the external one and «Пороги как у протеза» is on. Else null — the game's own «Порог включения канала».
+   * is the external one and «Пороги как у протеза» is on. Else null — the game's own close and open thresholds.
    */
   prosthesisThresholds(demo = false) {
     if (demo || !this.settings.prosthesisThresholds || this.liveSource() !== 'bridge') return null;
@@ -459,18 +459,19 @@ export class App {
 
   /**
    * Where the channels switch on, as shares of the calibrated span: the prosthesis's two thresholds when they are used,
-   * else the game's threshold twice. Games place their force bands above the higher one, so every band stays reachable.
+   * else the game's own pair (close, open). Games place their force bands above the higher one, so every band stays reachable.
    */
   switchOn(demo = false) {
-    const raw = this.prosthesisThresholds(demo);
-    return raw ? thresholdShares(raw, this.calibration(), this.settings.sensitivity) : [this.settings.sensitivity, this.settings.sensitivity];
+    const s = this.settings;
+    const game = [s.sensitivity, s.sensitivityB ?? s.sensitivity];
+    return thresholdShares(this.prosthesisThresholds(demo), this.calibration(), game);
   }
 
   createPipeline(demo = false, { adaptRest = false } = {}) {
     const s = this.settings;
     const calibration = demo || this.sensorsPaused() ? this.state.calibrations.touch : this.calibration();
     const restTracker = adaptRest ? new RestTracker(calibration, { onThreshold: Math.max(...this.switchOn(demo)) }) : null;
-    return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, coThreshold: s.coThreshold, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
+    return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, onThresholdB: s.sensitivityB, coThreshold: s.coThreshold, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
   }
 
   /** The grip switches the way the person's prosthesis does it (Настройки → «Смена хвата»). */
@@ -528,7 +529,7 @@ export class App {
     const touch = demo || this.liveSource() === 'touch';
     const emulators = { left: this.emulator, right: this.emulator2 };
     const calibration = side => (touch ? this.state.calibrations.touch : this.state.calibrations[`bridge-${side}`]);
-    const params = { onThreshold: this.settings.sensitivity, coThreshold: this.settings.coThreshold, prosthesisThresholds: null };
+    const params = { onThreshold: this.settings.sensitivity, onThresholdB: this.settings.sensitivityB, coThreshold: this.settings.coThreshold, prosthesisThresholds: null };
     const pipelines = { left: new SignalPipeline({ scheme, calibration: calibration('left'), params }), right: new SignalPipeline({ scheme, calibration: calibration('right'), params }) };
     if (!touch) this.signalSource(false); // builds the external source if it is not there yet
     // Read through `this.bridge` every frame: a host's first frame may rebuild the source (applySource).

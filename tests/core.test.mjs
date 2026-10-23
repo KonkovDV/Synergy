@@ -37,6 +37,11 @@ test('two-channel commands with hysteresis', () => {
   assert.equal(hold(p, { a: 0.5, b: 0 }, 300).command, COMMAND.CLOSE);
   assert.equal(hold(p, { a: 0, b: 0.5 }, 300, 400).command, COMMAND.OPEN);
   assert.equal(hold(p, { a: 0, b: 0 }, 300, 800).command, COMMAND.REST);
+  const split = new SignalPipeline({ scheme: 'proportional', params: { onThreshold: 0.2, onThresholdB: 0.4 } });
+  const mid = hold(split, { a: 0.3, b: 0.3 }, 200);
+  assert.equal(mid.aOn, true, 'channel A switches on at its own threshold');
+  assert.equal(mid.bOn, false, 'channel B stays off below its own threshold');
+  assert.deepEqual(split.channelThresholds(), [0.2, 0.4]);
   // Between off- and on-threshold the state is kept (no chattering).
   hold(p, { a: 0.3, b: 0 }, 300, 1200);
   assert.equal(hold(p, { a: 0.18, b: 0 }, 300, 1600).command, COMMAND.CLOSE);
@@ -206,6 +211,11 @@ test('storage: corrupt data is backed up, not lost; migration keeps defaults', (
   const parsed = parseState(JSON.stringify({ version: 4, settings: { scheme: 'gesture' }, runs: [{ game: 'grip', level: 1, score: 500, stars: 9 }] }));
   assert.equal(parsed.settings.scheme, 'gesture'); assert.equal(parsed.settings.sound, true);
   assert.equal(parsed.runs.length, 0, 'invalid runs are dropped');
+  const migrated = parseState(JSON.stringify({ version: 4, settings: { sensitivity: 0.33 } }));
+  assert.equal(migrated.settings.sensitivityB, 0.33, 'a save with one threshold keeps it on both channels');
+  const pair = parseState(JSON.stringify({ version: 4, settings: { sensitivity: 0.2, sensitivityB: 0.4 } }));
+  assert.equal(pair.settings.sensitivity, 0.2);
+  assert.equal(pair.settings.sensitivityB, 0.4);
 });
 
 test('bridge: tolerant parsing of emulator formats', () => {

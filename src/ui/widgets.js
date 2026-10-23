@@ -82,13 +82,13 @@ export function probabilityLine(probs) {
 
 export function signalMeter(app) {
   const s = app.settings;
-  const bar = cls => {
+  const bar = (cls, threshold) => {
     const fill = h('i', { class: 'fill' });
-    const on = h('b', { class: 'mark on', style: { left: `${s.sensitivity * 100}%` }, title: 'порог' });
+    const on = h('b', { class: 'mark on', style: { left: `${threshold * 100}%` }, title: 'порог' });
     const co = h('b', { class: 'mark co', hidden: !twoChannelControls(s.scheme), style: { left: `${s.coThreshold * 100}%` }, title: 'коактивация' });
     return { node: h('div', { class: `meter-bar ${cls}` }, fill, on, co), fill, on, co };
   };
-  const A = bar('a'), B = bar('b');
+  const A = bar('a', s.sensitivity), B = bar('b', s.sensitivityB ?? s.sensitivity);
   const chip = h('div', { class: 'meter-chip' }, 'Покой');
   // 5.29: what a recognizer (СППР) saw — the three most probable classes of its stream, in the gesture scheme only.
   const probs = h('p', { class: 'meter-probs', hidden: true });
@@ -100,8 +100,10 @@ export function signalMeter(app) {
   return {
     node,
     /** The marks follow the sliders (5.11: they stayed where the meter was built). */
-    setThresholds({ sensitivity = s.sensitivity, coThreshold = s.coThreshold } = {}) {
-      for (const bar of [A, B]) { bar.on.style.left = `${sensitivity * 100}%`; bar.co.style.left = `${coThreshold * 100}%`; }
+    setThresholds({ sensitivity = s.sensitivity, sensitivityB = s.sensitivityB ?? sensitivity, coThreshold = s.coThreshold } = {}) {
+      A.on.style.left = `${sensitivity * 100}%`;
+      B.on.style.left = `${sensitivityB * 100}%`;
+      for (const bar of [A, B]) bar.co.style.left = `${coThreshold * 100}%`;
     },
     update(intent) {
       A.fill.style.width = `${Math.round(intent.a * 100)}%`;

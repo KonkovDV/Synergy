@@ -91,10 +91,10 @@ export function settingsScreen(app, { back = null } = {}) {
     const raw = app.bridge?.thresholds, used = app.prosthesisThresholds();
     const [a, b] = app.switchOn();
     limitsNote.textContent = !raw
-      ? 'Пороги протеза приходят от приложения протеза, когда игра встроена в него. Сейчас их нет — работает порог игры выше.'
+      ? 'Пороги протеза приходят от приложения протеза, когда игра встроена в него. Сейчас их нет — работают пороги игры выше, у каждого канала свой.'
       : used
-        ? `Пороги протеза получены: канал A включается на ${pct(a)}, B — на ${pct(b)} комфортного уровня. Ползунок порога выше на эти каналы не действует. Игра их только читает.`
-        : `Пороги протеза получены, но не используются: работает порог игры ${pct(s.sensitivity)}.`;
+        ? `Пороги протеза получены: канал A включается на ${pct(a)}, B — на ${pct(b)} комфортного уровня. Ползунки порогов выше на эти каналы не действуют. Игра их только читает.`
+        : `Пороги протеза получены, но не используются: работает порог игры, A ${pct(s.sensitivity)}, B ${pct(s.sensitivityB)}.`;
   }
   paintLimits();
   // Two-channel laws only. Switching the grip method shows or hides the hold time without rebuilding the screen
@@ -159,6 +159,7 @@ export function settingsScreen(app, { back = null } = {}) {
         // here leads the exercise, the other one waits (core/hands.js, input/bridge.js `side`).
         h('div', { class: 'row' }, h('span', {}, 'Протезы'),
           segmented([{ value: 'one', label: 'Один' }, { value: 'two', label: 'Два', sub: 'левый и правый' }], s.prostheses, v => { app.updateSettings({ prostheses: v }); app.go('settings'); }, 'Сколько протезов')),
+        h('p', { class: 'note' }, 'Основной сценарий — один протез. «Два» — если протезы на обеих руках.'),
         h('div', { class: 'row' }, h('span', {}, s.prostheses === 'two' ? 'Упражнение ведёт' : 'Протез'),
           segmented([{ value: 'right', label: s.prostheses === 'two' ? 'Правый' : 'Правая рука' }, { value: 'left', label: s.prostheses === 'two' ? 'Левый' : 'Левая рука' }], s.side, v => { app.updateSettings({ side: v }); app.go('settings'); }, s.prostheses === 'two' ? 'Какой протез ведёт упражнение' : 'Рука с протезом')),
         toggleRow('Зеркальная подсказка', s.mirrorHint, v => app.updateSettings({ mirrorHint: v }), 'картинка жеста зеркальная: можно повторять движение здоровой рукой одновременно'),
@@ -177,8 +178,9 @@ export function settingsScreen(app, { back = null } = {}) {
         bridgeBox,
         sliderRow('Реалистичность эмулятора', { ...R.realism, value: s.realism, format: v => v < 0.2 ? 'чистый сигнал' : v < 0.7 ? 'как у датчика' : 'шумно', onInput: v => app.updateSettings({ realism: v }) })),
       section('Чувствительность',
-        h('p', { class: 'note' }, 'Это пороги игры. В протез они не записываются: их меняет протезист в приложении протеза или на экране кисти.'),
-        sliderRow('Порог включения канала', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); meter.setThresholds(); } }),
+        h('p', { class: 'note' }, 'У канала закрытия и канала открытия свои пороги. Это пороги игры: в протез они не записываются.'),
+        sliderRow('Порог закрытия (A)', { ...R.sensitivity, value: s.sensitivity, format: pct, onInput: v => { app.updateSettings({ sensitivity: v }); refreshPreview(); meter.setThresholds(); } }),
+        sliderRow('Порог открытия (B)', { ...R.sensitivity, value: s.sensitivityB, format: pct, onInput: v => { app.updateSettings({ sensitivityB: v }); refreshPreview(); meter.setThresholds(); } }),
         toggleRow('Пороги как у протеза', s.prosthesisThresholds, v => { app.updateSettings({ prosthesisThresholds: v }); refreshPreview(); }, 'каждый канал включается на том же уровне сигнала, что и кисть; работает, когда приложение протеза передаёт пороги'),
         limitsNote,
         // 5.24 — co-contraction, the lock and the grip switch do nothing in the gesture scheme (the grip is the gesture).
