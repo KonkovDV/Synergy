@@ -19,17 +19,45 @@ export const REST_STUCK_HINT = 'Расслабить не получается �
  * the passive channel went over its switch-on line meanwhile — the count in which isolation is measured (Prahm et al.
  * 2017: activations of the opposing electrode), and the moment a prosthesis gets two commands at once.
  */
+const blankSide = () => ({ active: 0, leak: 0, crossings: 0, otherOn: false });
+
 export class SeparationMeter {
-  constructor() { this.active = 0; this.leak = 0; this.crossings = 0; this.otherOn = false; }
-  add(intent, expectA, dt) {
-    const own = expectA ? intent.a : intent.b, other = expectA ? intent.b : intent.a;
-    if (own < 0.15) { this.otherOn = false; return; }
-    const otherOn = !!(expectA ? intent.bOn : intent.aOn);
-    if (otherOn && !this.otherOn) this.crossings++;
-    this.otherOn = otherOn;
-    this.active += own * dt; this.leak += Math.min(own, other) * dt;
+  constructor() {
+    this.active = 0; this.leak = 0; this.crossings = 0; this.otherOn = false;
+    // Close and open stay apart (meetup: cleanliness of each, and the muscles are not the same muscle).
+    this._close = blankSide();
+    this._open = blankSide();
   }
-  get score() { return this.active > 0.05 ? pct(1 - this.leak / this.active) : null; }
+  /** `expectA` — the working channel is close (A). The pooled score is what older runs compared. */
+  add(intent, expectA, dt) {
+    this._tick(this, intent, expectA, dt);
+    this._tick(expectA ? this._close : this._open, intent, expectA, dt);
+  }
+  /**
+   * Opening while the hand lets go. Not folded into the pooled score: a workshop used to measure only the squeeze,
+   * and that number is what the skill «Разделение» still is.
+   */
+  watchOpen(intent, dt) { this._tick(this._open, intent, false, dt); }
+  _tick(box, intent, expectA, dt) {
+    const own = expectA ? intent.a : intent.b, other = expectA ? intent.b : intent.a;
+    if (own < 0.15) { box.otherOn = false; return; }
+    const otherOn = !!(expectA ? intent.bOn : intent.aOn);
+    if (otherOn && !box.otherOn) box.crossings++;
+    box.otherOn = otherOn;
+    box.active += own * dt; box.leak += Math.min(own, other) * dt;
+  }
+  _score(box) { return box.active > 0.05 ? pct(1 - box.leak / box.active) : null; }
+  get score() { return this._score(this); }
+  get close() { return this._score(this._close); }
+  get open() { return this._score(this._open); }
+}
+
+/** The two cleanliness numbers a run may store. Missing side stays absent (nothing was asked of that muscle). */
+export function cleanPair(meter) {
+  const out = {};
+  if (meter.close !== null) out.cleanClose = meter.close;
+  if (meter.open !== null) out.cleanOpen = meter.open;
+  return out;
 }
 
 /**

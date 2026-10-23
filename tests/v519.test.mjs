@@ -56,7 +56,7 @@ test('the specialist report and the CSV carry the protocol: its table, a quick_s
   assert.match(html, /H2\. Открыто быстрым стартом<\/td><td>1 из 2 упражнений; дней — 1/);
   const [head, ...rows] = reportCsv(st).split('\n');
   const col = head.split(';').indexOf('quick_start');
-  assert.ok(col > 0 && head.endsWith('rest_missed;cross_on;spilled;signal_issues')); // 5.30: signal quality is the last column; 5.31: isolation before it
+  assert.ok(col > 0 && head.endsWith('rest_missed;cross_on;spilled;clean_close;clean_open;signal_issues')); // signal quality stays last; cleanliness of each channel sits before it
   assert.deepEqual(rows.map(r => r.split(';')[col]), ['1', '0']);
 });
 

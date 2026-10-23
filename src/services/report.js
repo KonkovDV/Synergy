@@ -160,9 +160,9 @@ const csvCell = v => {
 };
 
 export function reportCsv(state) {
-  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'thresholds', 'gesture_set', 'prosthesis_side', 'arm_pose', 'unreleased', 'rest_missed', 'cross_on', 'spilled', 'signal_issues'];
+  const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'thresholds', 'gesture_set', 'prosthesis_side', 'arm_pose', 'unreleased', 'rest_missed', 'cross_on', 'spilled', 'clean_close', 'clean_open', 'signal_issues'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
-    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', r.gestureSet ?? (r.scheme === 'gesture' ? 'synergy' : ''), r.side ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '', r.details?.crossings ?? '', r.details?.spilled ?? '', signalIssuesCode(r.signalIssues)]);
+    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', r.gestureSet ?? (r.scheme === 'gesture' ? 'synergy' : ''), r.side ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '', r.details?.crossings ?? '', r.details?.spilled ?? '', r.details?.cleanClose ?? '', r.details?.cleanOpen ?? '', signalIssuesCode(r.signalIssues)]);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
 
@@ -226,7 +226,7 @@ ${table(['День', 'Боль', 'Усталость', 'Кожа под датч
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки', 'Заметка'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '',
     [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : '',
-      r.details?.crossings ? `второй канал включался ${r.details.crossings}` : '', r.details?.spilled ? `расплескали чай ${r.details.spilled}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', r.gestureSet ? `набор жестов ${GESTURE_SETS[r.gestureSet]?.name ?? r.gestureSet}` : '', r.side ? `${r.side === 'left' ? 'левый' : 'правый'} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
+      r.details?.crossings ? `второй канал включался ${r.details.crossings}` : '', Number.isFinite(r.details?.cleanClose) ? `чистота закрытия ${r.details.cleanClose} %` : '', Number.isFinite(r.details?.cleanOpen) ? `чистота открытия ${r.details.cleanOpen} %` : '', r.details?.spilled ? `расплескали чай ${r.details.spilled}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', r.gestureSet ? `набор жестов ${GESTURE_SETS[r.gestureSet]?.name ?? r.gestureSet}` : '', r.side ? `${r.side === 'left' ? 'левый' : 'правый'} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
 <p class="muted">«Не отпустили» и «покой не получился» — игровая статистика, не оценка тонуса и не диагноз.</p>
 ${quality.length ? `<h2>Качество сигнала с датчиков</h2>
 ${table(['Что мешало', 'Упражнений', 'Секунд всего', 'Последний раз', 'Что подсказала игра'], quality.map(q => [QUALITY_TIPS[q.id].title, q.runs, q.seconds, ruDate(q.last), QUALITY_TIPS[q.id].tip]))}
