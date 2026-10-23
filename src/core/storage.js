@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   scheme: 'proportional',
   source: 'touch',          // touch | bridge | demo
   side: 'right',            // сторона протеза: зеркалит каналы и раскладку; при двух протезах — тот, что ведёт упражнение
+  mirrorHint: false,        // 5.32: картинка жеста зеркальная — повторять здоровой рукой; по умолчанию выключено
   controlHand: 'auto',      // 5.30: кнопки на экране под руку — auto (здоровая: напротив протеза) | left | right (митап 21.10)
   prostheses: 'one',        // 5.30: один протез или два (left и right — у каждого свой поток и калибровка)
   sensitivity: SIGNAL.onThreshold,
@@ -56,6 +57,7 @@ export const DEFAULT_SETTINGS = {
   dwellS: HANDS_FREE.confirmS, // время удержания A для «без касания»
   hapticBeat: false,        // вибро-метроном в «Ритме» (для слабослышащих)
   stickyPads: false,        // площадки без удержания: касание включает, второе выключает (тремор, слабость)
+  scheduleOffer: '',        // '' | later | opened — мягкое «выберите дни и время» после короткой нерегулярной первой недели
   tours: {},                // подсказки-туры (5.13): ключ → { v, status, step }; «Показать подсказки снова» очищает
 };
 
@@ -88,6 +90,7 @@ export const SETTINGS_RULES = {
   dwellS: range(HANDS_FREE.minS, HANDS_FREE.maxS),
   wsUrl: v => v.length <= 200 && (v === '' || /^(wss?|https?):\/\//i.test(v)),
   reminder: v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v),
+  scheduleOffer: oneOf('', 'later', 'opened'),
   name: v => v.length <= 24,
   petName: v => v.length <= 16,
   parentPin: v => v === '' || /^[0-9a-f]{8}$/.test(v),
@@ -248,6 +251,7 @@ export function parseState(raw, catalog = null) {
     if (r.thresholds !== undefined && r.thresholds !== 'prosthesis') { const { thresholds, ...rest } = r; r = rest; } // 5.29: one known value
     if (r.side !== undefined && r.side !== 'left' && r.side !== 'right') { const { side, ...rest } = r; r = rest; } // 5.30: which arm, of two
     if (r.gestureSet !== undefined && !(GESTURE_SET_IDS.includes(r.gestureSet) && r.gestureSet !== 'synergy')) { const { gestureSet, ...rest } = r; r = rest; } // 5.29: only another known set
+    if (r.formWeek !== undefined && !(Number.isInteger(r.formWeek) && r.formWeek >= 0 && r.formWeek < 100000)) { const { formWeek, ...rest } = r; r = rest; } // parallel form of the skill check: a week index
     if (r.signalIssues !== undefined) { const { signalIssues, ...rest } = r; r = rest; const kept = cleanSignalIssues(signalIssues); if (kept.length) r.signalIssues = kept; } // 5.30
     if (!isObject(r.details) || r.details.confusion === undefined) return r;
     return { ...r, details: { ...r.details, confusion: cleanConfusion(r.details.confusion) } };

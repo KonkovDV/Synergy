@@ -7,7 +7,7 @@ import { picture } from './pictures.js';
 import { petStageIndex } from '../core/pet.js';
 import { PET } from '../config.js';
 import { bottomNav, skillBar, segmented } from './widgets.js';
-import { SKILL_NAME } from '../core/vocabulary.js';
+import { SKILL_NAME, skillKeys } from '../core/vocabulary.js';
 import { skillProfile, trainingDays, dayKey, weekCompare } from '../core/progress.js';
 import { COLORS } from '../render/draw.js';
 import { gestureName as name } from '../core/vocabulary.js';
@@ -48,8 +48,8 @@ export function radarLayout(width, labelWidths, fontPx = 12) {
 }
 
 /** Single-series radar: values are also listed as text next to it (no colour-only reading). */
-function radar(profile) {
-  const keys = Object.keys(SKILL_NAME);
+function radar(profile, scheme) {
+  const keys = skillKeys(scheme);
   // Canvas text follows the app's text size (12 px at 100 %). The canvas spans the card including its padding
   // (`.radar` margin −16 px): screen ≤ 560 px − page padding 32 − card borders 2.
   const fontPx = Math.round(0.75 * (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16));
@@ -181,7 +181,8 @@ export function progressScreen(app) {
   const profile = skillProfile(runs);
   const p = app.profile;
   const days = trainingDays(p);
-  const trends = Object.keys(SKILL_NAME).map(k => {
+  const keys = skillKeys(app.settings.scheme);
+  const trends = keys.map(k => {
     const values = runs.filter(r => !r.details?.assessment).map(r => r.skills?.[k]).filter(Number.isFinite).slice(-12);
     return h('div', { class: 'trend' }, skillBar(SKILL_NAME[k], profile[k]), sparkline(values));
   });
@@ -220,7 +221,7 @@ export function progressScreen(app) {
           h('div', {}, h('b', {}, p.streak.best), h('small', {}, 'лучшая серия'))),
         runs.length ? weekCard(p, runs) : null,
         h('section', { class: 'card', 'data-tour': 'progress.skills' }, h('h2', {}, 'Профиль навыков'),
-          runs.length ? radar(profile) : h('p', { class: 'note' }, 'Сыграйте первое упражнение — здесь появится профиль.'),
+          runs.length ? radar(profile, app.settings.scheme) : h('p', { class: 'note' }, 'Сыграйте первое упражнение — здесь появится профиль.'),
           h('p', { class: 'note' }, 'Среднее за последние 12 упражнений. «Без подсказки» — игровая метрика удержания: насколько навык держится, когда шкалы нет.')),
         h('section', { class: 'card' }, h('h2', {}, 'Динамика'), ...trends),
         checkSection, confSection, wellSection,

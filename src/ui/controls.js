@@ -135,23 +135,23 @@ export function createDuoPads(left, right) {
   return h('div', { class: 'pads duo' }, arm(left, 'Левый', ['F', 'D']), arm(right, 'Правый', ['J', 'K']), h('p', { class: 'pads-note' }, 'Клавиши: левая — F (A) и D (B), правая — J (A) и K (B)'));
 }
 
-export function gestureIcon(gesture, skin = 'icon', size = 44) {
+export function gestureIcon(gesture, skin = 'icon', size = 44, mirror = false) {
   // 5.16: the bionic hand of the illustrations showing this gesture; a gesture without a picture (a new set on
-  // 28.10) is drawn on a canvas as before.
+  // 28.10) is drawn on a canvas as before. 5.32: «Зеркальная подсказка» flips the picture.
   const pic = skin === 'icon' ? gestureArt(gesture.id, size) : null;
-  if (pic) { pic.classList.add('gesture-icon'); return pic; }
+  if (pic) { pic.classList.add('gesture-icon'); if (mirror) pic.style.transform = 'scaleX(-1)'; return pic; }
   const canvas = h('canvas', { width: size * 2, height: size * 2, class: 'gesture-icon', 'aria-hidden': 'true' });
   const ctx = canvas.getContext('2d');
   ctx.scale(2, 2);
-  drawHand(ctx, { x: size / 2, y: size * 0.95, size: size * 0.42, pose: gesture.pose, wrist: gesture.wrist ?? 0, skin, sleeve: false });
+  drawHand(ctx, { x: size / 2, y: size * 0.95, size: size * 0.42, pose: gesture.pose, wrist: gesture.wrist ?? 0, skin, sleeve: false, mirror });
   return canvas;
 }
 
-export function createGesturePads(emulator) {
+export function createGesturePads(emulator, { mirror = false } = {}) {
   const group = { current: null }; // one latched gesture at a time
   const keys = ACTIVE_GESTURES.map(g => {
     const digit = String(GESTURES.indexOf(g) + 1);
-    const el = h('div', { class: 'gkey', role: 'button', tabindex: '0', 'aria-keyshortcuts': digit, 'aria-label': `Жест ${g.name}` }, gestureIcon(g), h('span', {}, g.name));
+    const el = h('div', { class: 'gkey', role: 'button', tabindex: '0', 'aria-keyshortcuts': digit, 'aria-label': `Жест ${g.name}` }, gestureIcon(g, 'icon', 44, mirror), h('span', {}, g.name));
     el.describe = latched => { el.classList.toggle('latched', latched); if (sticky) el.setAttribute('aria-pressed', String(latched)); else el.removeAttribute('aria-pressed'); };
     el.describe(false);
     const onLevel = v => { emulator.setTarget(v ? { gesture: g.id, effort: v } : { gesture: 'rest', effort: 0 }); };

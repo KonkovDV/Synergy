@@ -3,7 +3,7 @@ import { fmtPct, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { bottomNav, topBar, mioAvatar } from './widgets.js';
 import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID, DUO_GAMES } from '../games/registry.js';
-import { trainingDays, playerLevel, weeklyStatus, weekOutlookText, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, planClosedDays, daysSinceTraining, recordDayNote, quickStart } from '../core/progress.js';
+import { trainingDays, playerLevel, weeklyStatus, weekOutlookText, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, planClosedDays, daysSinceTraining, recordDayNote, quickStart, scheduleOffer } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
 import { overDailyCap, capAdvice, safetyOutdated } from '../core/wellbeing.js';
@@ -185,7 +185,14 @@ export function homeScreen(app) {
       // 5.14 — the bird's own section (the nest): its path, outfits and gifts.
       h('button', { class: 'btn ghost nest-link', onclick: () => app.go('nest') }, 'Гнездо и наряды')),
     goalRow);
-  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, petCard, everydayCard, checkCard, ...duoCards, tipCard, games), bottomNav(app, 'home')) };
+  const rhythm = app.showcase ? null : scheduleOffer(p, { dismissed: s.scheduleOffer === 'later' || s.scheduleOffer === 'opened' });
+  const rhythmCard = rhythm ? h('section', { class: 'card rhythm-offer' },
+    h('h2', {}, 'Дни и время'),
+    h('p', {}, rhythm.text),
+    h('div', { class: 'row-actions' },
+      h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ scheduleOffer: 'opened' }); app.go('settings', { back: 'habit' }); } }, 'Выбрать дни и время'),
+      h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ scheduleOffer: 'later' }); app.go('home'); } }, 'Не сейчас'))) : null;
+  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, petCard, everydayCard, checkCard, rhythmCard, ...duoCards, tipCard, games), bottomNav(app, 'home')) };
 }
 
 export function levelsScreen(app, { game }) {

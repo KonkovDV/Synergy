@@ -1,7 +1,8 @@
 // «Проверка навыка» — a standardized weekly skill check modelled on the Motion Test (Kuiken et al., 2009)
 // and the Target Achievement Control test (Simon et al., 2011): show the asked command (and force band),
-// reach it and hold it for 1 s. Fixed trial set, fixed seed, no adaptation — results are comparable
-// week to week. Metrics: completion rate, selection time (first correct frame), completion time,
+// reach it and hold it for 1 s. The trial set is fixed and there is no adaptation, so completion rates compare
+// week to week. The order is the week's (formSeed): the same inside a week, a new permutation the next, so a
+// rising score is not the sequence memorised. Metrics: completion rate, selection time (first correct frame), completion time,
 // accuracy (correct share of active time after selection), overshoots above the band.
 // Proportional scheme: the graded trials form a Fitts' law block (Fitts' law test of myoelectric control —
 // Kamavuako, Scheme & Englehart 2014; Gusman et al. 2017; Shannon ID as in ISO 9241-411):
@@ -18,8 +19,20 @@ import { reachableBand } from '../core/signal.js';
 import { SESSION } from '../config.js';
 
 export const ASSESS = { holdS: 1.0, timeoutS: 7, restS: 0.6, restGiveUpS: SESSION.restGiveUpS, seed: 2026 };
-/** Fitts block of the proportional scheme: every distance × width once, in a fixed shuffled order. */
+/** Fitts block of the proportional scheme: every distance × width once, in a shuffled order. */
 export const FITTS = { distances: [0.3, 0.55, 0.8], widths: [0.12, 0.24], dwellS: 0.5, minMtS: 0.05 };
+
+/**
+ * Seed of one calendar week (`weekIndex` in core/progress.js, Monday start). The same week rebuilds the same
+ * order; the next week does not. A missing week stays on `ASSESS.seed`, so demos and old calls do not move.
+ * Parallel forms: Maas et al. 2024 warned that a repeated test can measure memory of the test, not transfer.
+ */
+export function formSeed(week) {
+  if (!Number.isInteger(week) || week < 0) return ASSESS.seed;
+  let h = Math.imul((ASSESS.seed ^ week) >>> 0, 0x01000193) >>> 0;
+  h = Math.imul(h ^ (week >>> 8), 0x85EBCA6B) >>> 0;
+  return h || 1;
+}
 
 /** Index of difficulty, Shannon formulation (ISO 9241-411), bits. */
 export const fittsId = (d, w) => Math.log2(d / w + 1);
@@ -27,8 +40,21 @@ export const fittsId = (d, w) => Math.log2(d / w + 1);
 const holdOf = t => (t.fitts ? FITTS.dwellS : ASSESS.holdS);
 const mean = xs => (xs.length ? xs.reduce((s, v) => s + v, 0) / xs.length : null);
 
-function fittsBlock() {
-  const rng = createRng(ASSESS.seed);
+/** A permutation that does not repeat the previous item while another remains. */
+function deal(items, seed) {
+  const rng = createRng(seed);
+  const bag = [...items];
+  const order = [];
+  while (bag.length) {
+    let i = Math.floor(rng() * bag.length);
+    if (bag.length > 1 && bag[i] === order[order.length - 1]) i = (i + 1) % bag.length;
+    order.push(bag.splice(i, 1)[0]);
+  }
+  return order;
+}
+
+function fittsBlock(seed = ASSESS.seed) {
+  const rng = createRng(seed);
   const combos = FITTS.distances.flatMap(d => FITTS.widths.map(w => ({ d, w })));
   for (let i = combos.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [combos[i], combos[j]] = [combos[j], combos[i]]; }
   return combos.map(({ d, w }, i) => ({ command: i % 2 ? COMMAND.OPEN : COMMAND.CLOSE, level: d, band: [d - w / 2, d + w / 2], fitts: { d, w, id: fittsId(d, w) } }));
@@ -36,13 +62,14 @@ function fittsBlock() {
 
 
 /**
- * The fixed trial set of each control scheme (gestures: every active gesture twice, shuffled by the fixed seed).
- * Fitts targets are placed above the user's switch-on threshold (reachableBand — the identity at the default one);
- * D, W and ID are those of the placed band, so throughput stays honest when the threshold differs (5.10).
+ * The trial set of each control scheme. Gestures: every active gesture twice, one full round then another,
+ * shuffled by `seed` (the canonical seed when a week is not given). Fitts targets are placed above the user's
+ * switch-on threshold (reachableBand — the identity at the default one); D, W and ID are those of the placed band,
+ * so throughput stays honest when the threshold differs (5.10).
  */
-export function assessmentTrials(scheme, onThreshold) {
+export function assessmentTrials(scheme, onThreshold, seed = ASSESS.seed) {
   if (scheme === SCHEME.GESTURE) {
-    const rng = createRng(ASSESS.seed), order = [];
+    const rng = createRng(seed), order = [];
     for (let round = 0; round < 2; round++) {
       const bag = [...ACTIVE_GESTURE_IDS];
       while (bag.length) {
@@ -54,9 +81,11 @@ export function assessmentTrials(scheme, onThreshold) {
     return order.map(g => ({ gesture: g, name: GESTURE_BY_ID[g].name, pose: GESTURE_BY_ID[g].pose, wrist: GESTURE_BY_ID[g].wrist ?? 0 }));
   }
   if (scheme === SCHEME.THRESHOLD) {
-    return ['close', 'open', 'switch', 'close', 'open', 'switch'].map(c => ({ command: c, name: COMMAND_NAME[c], pose: COMMAND_POSE[c] }));
+    const commands = ['close', 'open', 'switch', 'close', 'open', 'switch'];
+    const order = seed === ASSESS.seed ? commands : deal(commands, seed);
+    return order.map(c => ({ command: c, name: COMMAND_NAME[c], pose: COMMAND_POSE[c] }));
   }
-  const placed = fittsBlock().map(t => {
+  const placed = fittsBlock(seed).map(t => {
     const band = reachableBand(t.band, onThreshold), d = (band[0] + band[1]) / 2, w = band[1] - band[0];
     return { ...t, level: d, band, fitts: { d, w, id: fittsId(d, w) } };
   });
@@ -79,7 +108,8 @@ export class AssessmentGame extends Game {
     // loop's 50 ms cap on dt made a 15 fps phone look faster too. The trial clock below reads the frame timestamps.
     this.speed = 1;
     this.lastT = null;
-    this.trials = assessmentTrials(this.scheme, this.onThreshold).map(t => ({ ...t, state: 'wait' }));
+    this.formSeed = Number.isInteger(opts.formSeed) && opts.formSeed >= 0 ? opts.formSeed >>> 0 : ASSESS.seed;
+    this.trials = assessmentTrials(this.scheme, this.onThreshold, this.formSeed).map(t => ({ ...t, state: 'wait' }));
     this.index = 0; this.phase = 'rest'; this.restFor = 0; this.restWait = 0;
     this.confusion = new ConfusionMeter();
     this.hint = 'Стандартная проверка: покажите команду и держите 1 секунду';
@@ -251,7 +281,7 @@ export class AssessmentGame extends Game {
       return;
     }
     const hx = x0 + cw * 0.3, hy = y0 + ch * 0.82, size = ch * 0.26;
-    drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, wrist: t.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.mirror });
+    drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, wrist: t.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
     ctx.strokeStyle = COLORS.good; ctx.lineWidth = 6; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.arc(hx, y0 + ch * 0.5, ch * 0.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(t.hold / holdOf(t))); ctx.stroke();
     // Text between the hold ring and the force gauge; «Сжатие · 30 % · широко» goes on two lines (5.8: it ran off the card).
