@@ -52,8 +52,12 @@ export function defaultCalibration() {
  * within PROSTHESIS_THRESHOLDS; a missing one is `fallback` (the game's own threshold). 5.29.
  */
 export function thresholdShares(raw, calibration, fallback = SIGNAL.onThreshold) {
+  const fb = ch => {
+    const v = Array.isArray(fallback) ? fallback[ch] : fallback;
+    return Number.isFinite(v) ? v : SIGNAL.onThreshold;
+  };
   return [0, 1].map(ch => {
-    if (!Array.isArray(raw) || !Number.isFinite(raw[ch])) return fallback;
+    if (!Array.isArray(raw) || !Number.isFinite(raw[ch])) return fb(ch);
     const rest = calibration.rest[ch], span = Math.max(1e-6, calibration.max[ch] - rest);
     return clamp((raw[ch] - rest) / span, PROSTHESIS_THRESHOLDS.min, PROSTHESIS_THRESHOLDS.max);
   });
@@ -137,7 +141,11 @@ export class SignalPipeline {
    * prosthesis's threshold in source units passed by the host (`params.prosthesisThresholds`, [A, B]) — mapped through
    * the current calibration, so a rest baseline that follows drift keeps the prosthesis's line where it is.
    */
-  channelThresholds() { return thresholdShares(this.params.prosthesisThresholds, this.calibration, this.params.onThreshold); }
+  /** Game thresholds [A, B], or the prosthesis's pair when the host passed one. Each channel keeps its own slider. */
+  channelThresholds() {
+    const game = [this.params.onThreshold, Number.isFinite(this.params.onThresholdB) ? this.params.onThresholdB : this.params.onThreshold];
+    return thresholdShares(this.params.prosthesisThresholds, this.calibration, game);
+  }
 
   updateChannels(t) {
     const { hysteresis, hysteresisMinRatio, coThreshold, coHysteresis } = this.params;

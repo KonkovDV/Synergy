@@ -4,7 +4,7 @@ import { CLOSING_GESTURES } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '5.31.0',
+  version: '5.32.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -100,7 +100,7 @@ export const CALIBRATION_QUALITY = { flatNoise: 3, restPeakNoise: 3 };
  * The prosthesis's own switch-on thresholds (5.29). Motorica Start 3.3.1876 (public branch of 20.10.2026) gives a game
  * `getLatestThresholds()` → [open, close] next to the snapshot, on the same 0…255 scale as the levels: the line above
  * which the hand moves. A host that passes them makes each channel of the game switch on at that level instead of at
- * the game's own «Порог включения канала». They are read, never written. The bounds keep a threshold set below the
+ * the game's own thresholds («Порог закрытия» and «Порог открытия»). They are read, never written. The bounds keep a threshold set below the
  * calibrated rest or above the comfortable level playable: shares of the calibrated span.
  */
 export const PROSTHESIS_THRESHOLDS = { min: 0.05, max: 0.9 };

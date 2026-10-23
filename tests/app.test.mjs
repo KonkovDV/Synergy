@@ -309,7 +309,12 @@ test('5.29: settings say whether the prosthesis\'s thresholds came and are used'
   globalThis.location ??= { protocol: 'https:', search: '' }; // the «Данные» section names where the page was opened from
   const app = fresh();
   app.updateSettings({ source: 'bridge', wsUrl: '' });
-  assert.match(textOf(settingsScreen(app).node), /Сейчас их нет — работает порог игры/);
+  assert.match(textOf(settingsScreen(app).node), /Сейчас их нет — работают пороги игры/);
+  assert.match(textOf(settingsScreen(app).node), /Порог закрытия \(A\)/);
+  assert.match(textOf(settingsScreen(app).node), /Порог открытия \(B\)/);
+  app.updateSettings({ sensitivity: 0.2, sensitivityB: 0.4 });
+  assert.deepEqual(app.switchOn(), [0.2, 0.4]);
+  assert.equal(app.createSession({ game: 'grip', level: 1 }).game.onThreshold, 0.4, 'force bands sit above the higher game threshold');
   window.Synergy.feed({ thresholds: [140, 90] });
   assert.match(textOf(settingsScreen(app).node), /Пороги протеза получены: канал A включается на \d+\s?%, B — на \d+\s?%/);
   app.updateSettings({ prosthesisThresholds: false });

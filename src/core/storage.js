@@ -20,8 +20,9 @@ export const DEFAULT_SETTINGS = {
   side: 'right',            // сторона протеза: зеркалит каналы и раскладку; при двух протезах — тот, что ведёт упражнение
   mirrorHint: false,        // 5.32: картинка жеста зеркальная — повторять здоровой рукой; по умолчанию выключено
   controlHand: 'auto',      // 5.30: кнопки на экране под руку — auto (здоровая: напротив протеза) | left | right (митап 21.10)
-  prostheses: 'one',        // 5.30: один протез или два (left и right — у каждого свой поток и калибровка)
-  sensitivity: SIGNAL.onThreshold,
+  prostheses: 'one',        // основной сценарий — один протез (письменные ответы митапа); «два» — если протезы на обеих руках
+  sensitivity: SIGNAL.onThreshold, // порог закрытия, канал A
+  sensitivityB: SIGNAL.onThreshold, // порог открытия, канал B: свой, как в приложении протеза (письменные ответы митапа)
   coThreshold: SIGNAL.coThreshold,
   realism: 0.5,             // шум и перекрёстные помехи эмулятора
   sound: true,
@@ -81,6 +82,7 @@ export const SETTINGS_RULES = {
   holdOpenS: range(GRIP_SWITCH.minS, GRIP_SWITCH.maxS),
   theme: oneOf('auto', 'light', 'dark'),
   sensitivity: range(SETTINGS_RANGES.sensitivity.min, SETTINGS_RANGES.sensitivity.max),
+  sensitivityB: range(SETTINGS_RANGES.sensitivity.min, SETTINGS_RANGES.sensitivity.max),
   coThreshold: range(SETTINGS_RANGES.coThreshold.min, SETTINGS_RANGES.coThreshold.max),
   realism: range(SETTINGS_RANGES.realism.min, SETTINGS_RANGES.realism.max),
   weeklyGoal: v => Number.isInteger(v) && v >= SETTINGS_RANGES.weeklyGoal.min && v <= SETTINGS_RANGES.weeklyGoal.max,
@@ -235,6 +237,8 @@ export function parseState(raw, catalog = null) {
   // Only known settings with the expected type and an allowed value survive (a backup file is untrusted input).
   const stored = isObject(data.settings) ? data.settings : {};
   const settings = Object.fromEntries(Object.entries(base.settings).map(([k, v]) => [k, validSetting(k, stored[k], v) ? stored[k] : v]));
+  // A save from before the two sliders had one threshold: both channels keep it.
+  if (!Object.hasOwn(stored, 'sensitivityB')) settings.sensitivityB = settings.sensitivity;
   settings.tours = Object.fromEntries(Object.entries(settings.tours)); // own copy, never the shared default
   const pair = v => Array.isArray(v) && v.length === 2 && v.every(Number.isFinite);
   // A calibration that maps nothing to a command is not kept (5.11: `touch: {rest:[5,5], max:[6,6]}` made the
