@@ -10,6 +10,7 @@
     "test:spr8": "node tools/test-spr8.mjs",
     "build": "node tools/build.mjs",
     "e2e": "node tests/e2e/smoke.mjs",
+    "soak": "node tests/e2e/soak.mjs",
     "start": "node tools/static-server.mjs",
     "check:submission": "node tools/check-submission.mjs",
     "pack": "sh tools/pack.sh",

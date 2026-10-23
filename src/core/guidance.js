@@ -15,3 +15,17 @@ export function showsFeedback(guidance, trial) {
   const period = Math.max(2, Math.round(1 / (1 - guidance)));
   return trial % period !== period - 1;
 }
+
+/**
+ * A pair of trials with the gauge hidden and the outcome said once, after the pair (summary knowledge of results).
+ * Only at the sparsest fade (half the trials): the same share of feedback as every other trial, grouped.
+ * Null when this trial is not in such a pair. Winstein & Schmidt 1990 studied this schedule; later meta-analyses
+ * found the difference small or absent (McKay et al. 2022–2024) — the game does not promise a benefit.
+ */
+export function blindBlock(guidance, trial) {
+  if (!(guidance > 0 && guidance <= 0.5) || trial < 0) return null;
+  const pair = Math.floor(trial / 2);
+  if (pair % 2 === 0) return null;
+  const start = pair * 2;
+  return { start, end: start + 2 };
+}

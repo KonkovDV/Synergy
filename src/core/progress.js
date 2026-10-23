@@ -357,6 +357,28 @@ export function quickStart({ tutorialDone, resting, plan, trainedToday }) {
   return item ? { game: item.game, level: item.level } : null;
 }
 
+/**
+ * A soft offer to pick days and a time, once the first week of training was both short and uneven
+ * (Ramos Muñoz et al. 2022, n = 2581: people left because they started less often, not because a session was short).
+ * Seven training days, mean under 5 minutes, and either more than a fortnight from the first to the seventh
+ * or a gap of 4 days. A steady week of short days is already a rhythm — no offer. Dismissed once, it stays quiet.
+ * No benefit is promised; rest remains a valid answer.
+ */
+export const SCHEDULE_OFFER = { days: 7, shortS: 5 * 60, spanDays: 14, gapDays: 4 };
+export function scheduleOffer(profile, { dismissed = false } = {}) {
+  if (dismissed) return null;
+  const keys = Object.keys(profile?.days ?? {}).filter(k => (profile.days[k]?.runs ?? 0) > 0).sort();
+  if (keys.length < SCHEDULE_OFFER.days) return null;
+  const first = keys.slice(0, SCHEDULE_OFFER.days);
+  const mean = first.reduce((s, k) => s + (profile.days[k].seconds ?? 0), 0) / first.length;
+  if (!(mean < SCHEDULE_OFFER.shortS)) return null;
+  let gap = 0;
+  for (let i = 1; i < first.length; i++) gap = Math.max(gap, dayIndex(first[i]) - dayIndex(first[i - 1]));
+  const span = dayIndex(first[first.length - 1]) - dayIndex(first[0]);
+  if (span <= SCHEDULE_OFFER.spanDays && gap < SCHEDULE_OFFER.gapDays) return null;
+  return { text: 'Первые семь дней вышли короткими и в разные дни. Можно выбрать, сколько дней в неделю и в какое время напомнить. Это не обязательство: устали или болит — сегодня отдых.' };
+}
+
 /** Training days among the `n` calendar days that end with `today` (5.17: the «Три дня» and «Неделя» achievements). */
 export function trainingDaysWithin(profile, today, n) {
   const from = shiftDay(today, 1 - n);

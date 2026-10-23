@@ -31,5 +31,9 @@ class Lab7(unittest.TestCase):
         self.assertEqual(sorted(f['probs']), sorted(GESTURES))
         self.assertAlmostEqual(sum(f['probs'].values()), 1, delta=0.01)
         self.assertEqual(max(f['probs'], key=f['probs'].get), f['gesture'])
+    def test_mirror_mark(self):
+        from lab7 import recording_mark
+        self.assertEqual(recording_mark(True), 'зеркально')
+        self.assertEqual(recording_mark(False), '')
 
 if __name__ == '__main__': unittest.main()

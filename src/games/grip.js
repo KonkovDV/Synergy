@@ -2,6 +2,7 @@
 // Force is dosed by how strongly you squeeze; the hand then holds on its own (relax!),
 // B lowers excess force, a wrong grip is switched the way that hand is set (open again, or co-contraction) or by a gesture.
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct } from './base.js';
+import { blindBlock } from '../core/guidance.js';
 import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
@@ -28,6 +29,9 @@ export const OBJECTS = {
   card: { name: 'Карта', grip: gripOf('key', 'pinch'), min: 0.3, max: 0.7, breakAt: 9, contact: 0.74, color: '#5a8dff' },
   key: { name: 'Ключ', grip: gripOf('key', 'pinch'), min: 0.35, max: 0.75, breakAt: 9, contact: 0.72, color: '#f2c14e' },
   tea: { name: 'Горячий чай', art: 'cup', grip: 'fist', min: 0.2, max: 0.42, breakAt: 0.52, contact: 0.45, color: '#e8f1ff', fragile: true, hot: true },
+  // 5.32 — the exercises a prosthetist actually uses (cubes over a barrier, rings on a peg). Not a Box and Blocks test.
+  cube: { name: 'Кубик', grip: 'fist', min: 0.3, max: 0.7, breakAt: 0.9, contact: 0.42, color: '#5a8dff', block: true },
+  ring: { name: 'Кольцо', grip: gripOf('pinch'), min: 0.22, max: 0.55, breakAt: 9, contact: 0.78, color: '#f2c14e', peg: true },
 };
 
 /**
@@ -47,7 +51,12 @@ const LEVELS = [
   { items: ['card', 'apple', 'key', 'coin', 'card', 'egg', 'key'], carry: 2.2, limit: 12 },
   { items: ['dumbbell', 'egg', 'key', 'berry', 'dumbbell', 'tea', 'coin', 'can'], carry: 2.6, limit: 11 },
   { items: ['berry', 'dumbbell', 'card', 'egg', 'coin', 'key', 'cup', 'dumbbell', 'berry'], carry: 2.8, limit: 10 },
+  { items: ['cube', 'cube', 'cube', 'cube'], carry: 1.8, limit: 14, practice: 'blocks' },
+  { items: ['ring', 'cube', 'ring', 'ring', 'cube'], carry: 2.0, limit: 13, practice: 'rings' },
 ];
+
+/** Shown with the cubes and rings. Not a clinical score and not Box and Blocks. */
+export const PRACTICE_NOTE = 'По мотивам упражнений у протезиста — это не тест Box and Blocks';
 
 const LIFT_REST_S = 0.35;   // relax this long with force in the window → the object is lifted
 const HEAVY_SLIP = 0.05;    // force lost per second while carrying heavy objects
@@ -58,8 +67,9 @@ export const RELEASE_S = SESSION.releaseS;
 export class GripGame extends Game {
   static id = 'grip';
   static title = 'Мастерская';
-  static skills = ['precision', 'switching', 'stability', 'separation']; // what skillScores() measures
+  static skills = ['separation', 'precision', 'switching', 'stability']; // isolation first (5.32): the meetup's first ask
   static levels = LEVELS;
+  static summaryBlocks = true;
 
   constructor(opts) {
     super(opts);
@@ -184,7 +194,9 @@ export class GripGame extends Game {
       if (o.hot && !o.spilled) this.teaDry++;
       o.phase = 'done'; o.t = 0; o.delivered = true;
       this.emit('success');
-      this.flash = { text: o.hot && !o.spilled ? 'Ни капли!' : precision > 0.75 ? 'Идеальная сила!' : 'Доставлено', color: COLORS.good, t: 0.8 };
+      const outcome = o.hot && !o.spilled ? 'Ни капли!' : 'Доставлено';
+      const fancy = o.hot && !o.spilled ? 'Ни капли!' : precision > 0.75 ? 'Идеальная сила!' : 'Доставлено';
+      this.sayOutcome(blindBlock(this.guidance, this.results.length - 1) ? outcome : fancy, COLORS.good);
       return;
     }
     if (o.t > RELEASE_S) this.fail('release', hand);
@@ -201,7 +213,30 @@ export class GripGame extends Game {
     this.peakMark = reason === 'timeout' || reason === 'spill' ? null : { force: clamp01(hand.force), reason, t: PEAK_MARK_S };
     hand.clearObject();
     this.emit(reason === 'crush' ? 'crush' : 'miss');
-    this.flash = { text: { crush: 'Раздавлено', drop: 'Выскользнуло', release: 'Не отпустили', spill: 'Расплескали' }[reason] ?? 'Не успели', color: COLORS.bad, t: 0.8 };
+    const word = { crush: 'Раздавлено', drop: 'Выскользнуло', release: 'Не отпустили', spill: 'Расплескали' }[reason] ?? 'Не успели';
+    const block = blindBlock(this.guidance, this.results.length - 1);
+    if (block) this.peakMark = null;
+    this.sayOutcome(word, block ? COLORS.muted : COLORS.bad);
+  }
+
+  /** Immediate outcome, or one line after a blind pair. The line names what happened, not how to tense. */
+  sayOutcome(text, color) {
+    const trial = this.results.length - 1;
+    const block = blindBlock(this.guidance, trial);
+    if (!block) { this.flash = { text, color, t: 0.8 }; return; }
+    this.blockLines = [...(this.blockLines ?? []), text];
+    if (trial + 1 >= block.end) {
+      this.flash = { text: this.blockLines.join(' · '), color: COLORS.muted, t: 1.4 };
+      this.blockLines = [];
+    }
+  }
+
+  finish() {
+    if (this.blockLines?.length) {
+      this.flash = { text: this.blockLines.join(' · '), color: COLORS.muted, t: 1.4 };
+      this.blockLines = [];
+    }
+    super.finish();
   }
 
   autopilot(intent, hand) {
@@ -266,6 +301,10 @@ export class GripGame extends Game {
       fragileSaved: this.fragileSaved, switches: this.switchTimes.length,
       ...(this.level.items.some(id => OBJECTS[id]?.hot) ? { spilled: this.results.filter(r => r.reason === 'spill').length, teaDry: this.teaDry } : {}),
       ...(this.scheme === SCHEME.GESTURE ? {} : { crossings: this.separation.crossings }),
+      ...(this.level.practice ? {
+        perMin: Math.round((this.results.filter(r => r.ok).length / Math.max(this.time, 1)) * 600) / 10,
+        practice: this.level.practice,
+      } : {}),
     };
   }
 
@@ -285,6 +324,9 @@ export class GripGame extends Game {
     const off = this.reduceMotion ? 0 : (this.time * 60) % 28; // a still belt with «Меньше движения» (5.11)
     for (let x = -28 + off; x < w; x += 28) ctx.fillRect(x, beltY + 4, 12, beltH - 8);
     for (let x = 18; x < w; x += 64) { circle(ctx, x, beltY + beltH * 0.86, beltH * 0.2, scene('#0b151d', '#030a10')); circle(ctx, x, beltY + beltH * 0.86, beltH * 0.08, '#16e182'); }
+    const blocks = this.level.items.some(id => OBJECTS[id]?.block);
+    const pegs = this.level.items.some(id => OBJECTS[id]?.peg);
+    if (blocks) fillRound(ctx, w * 0.58, beltY - s * 0.85, 14, s * 0.85, 4, scene('#8fa1c7', '#24384a'));
     // Basket: orange wicker with a rim.
     const bx = w * 0.82, by = beltY - s * 0.2;
     fillRound(ctx, bx - s * 0.7, by - s * 0.55 + 4, s * 1.4, s * 0.75, 12, COLORS.shade);
@@ -293,6 +335,7 @@ export class GripGame extends Game {
     for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(bx - s * 0.7 + i * s * 0.35, by - s * 0.55); ctx.lineTo(bx - s * 0.7 + i * s * 0.35, by + s * 0.2); ctx.stroke(); }
     ctx.beginPath(); ctx.moveTo(bx - s * 0.7, by - s * 0.2); ctx.lineTo(bx + s * 0.7, by - s * 0.2); ctx.stroke();
     fillRound(ctx, bx - s * 0.78, by - s * 0.62, s * 1.56, s * 0.16, s * 0.08, '#b45309');
+    if (pegs) { ctx.fillStyle = scene('#f2c14e', '#c9962e'); ctx.fillRect(bx, by - s * 1.15, 6, s * 0.7); circle(ctx, bx + 3, by - s * 1.15, 7, scene('#f2c14e', '#c9962e')); }
     text(ctx, 'корзина', bx, by + s * 0.42, { size: 12, weight: 700, color: COLORS.muted, outline: true });
     const o = this.current;
     const startX = w * 0.42;
@@ -335,6 +378,7 @@ export class GripGame extends Game {
     text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 81, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 128 });
     text(ctx, o ? `Нужен: ${need}` : '', w - 81, 46, { size: 12, color: COLORS.muted, maxWidth: 128 });
     text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 14, weight: 700, color: COLORS.muted });
+    if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, 40, { size: 11, color: COLORS.muted, maxWidth: w - 180 });
     if (o) text(ctx, o.name, ox, oy + s * 0.75, { size: 13, weight: 700, color: COLORS.text, outline: true });
     this.renderParticles(ctx);
     if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, Math.max(52, h * 0.16), { size: 20, weight: 800, color: this.flash.color, outline: true, maxWidth: w - 24 }); // under the «1 / 6» counter
@@ -406,6 +450,12 @@ function drawBody(ctx, o, kind, x, y, s, r, squeeze) {
     case 'key':
       circle(ctx, -r * 0.5, 0, r * 0.35, o.color); circle(ctx, -r * 0.5, 0, r * 0.14, '#1b2350');
       ctx.fillStyle = o.color; ctx.fillRect(-r * 0.2, -r * 0.1, r * 1.1, r * 0.2); ctx.fillRect(r * 0.6, 0, r * 0.12, r * 0.3); break;
+    case 'cube':
+      fillRound(ctx, -r * 0.7, -r * 0.7, r * 1.4, r * 1.4, 6, o.color);
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ctx.strokeRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4); break;
+    case 'ring':
+      ctx.strokeStyle = o.color; ctx.lineWidth = Math.max(4, r * 0.22);
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2); ctx.stroke(); break;
     default: // sponge
       fillRound(ctx, -r * 0.9, -r * 0.6, r * 1.8, r * 1.2, 10, o.color);
       for (let i = 0; i < 5; i++) circle(ctx, -r * 0.5 + i * r * 0.25, (i % 2 ? -1 : 1) * r * 0.2, r * 0.08, '#e0b52a');

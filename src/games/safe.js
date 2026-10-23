@@ -5,10 +5,12 @@
 // the 2021 study with limb-absent users found no consistent gain, so this is a design idea, not a promise).
 import { SESSION } from '../config.js';
 import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT } from './base.js';
+import { blindBlock } from '../core/guidance.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES, GESTURES } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, drawHand, panel, backdrop, scene } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 import { reachableBand } from '../core/signal.js';
+import { poseHint } from '../core/restmotion.js';
 import { fmtFixed } from '../core/format.js';
 
 /** Prompt pools per scheme; `from` = level where the prompt is introduced (gestures: GESTURES[].introducedAt). */
@@ -55,6 +57,7 @@ export class SafeGame extends Game {
   static title = 'Сейф';
   static skills = ['switching', 'timing', 'precision'];
   static levels = LEVELS;
+  static summaryBlocks = true;
 
   constructor(opts) {
     super(opts);
@@ -105,7 +108,8 @@ export class SafeGame extends Game {
       // A clean transition: every code digit starts from rest. A muscle that never switches off must not trap the game.
       this.restWait += dt;
       this.restFor = resting ? this.restFor + dt : 0;
-      this.hint = this.restWait > 3 ? REST_STUCK_HINT : 'Покой — расслабьте мышцы';
+      this.hint = this.restWait > 3 ? REST_STUCK_HINT
+        : this.scheme === SCHEME.GESTURE ? `Покой. ${poseHint(this.index)}` : 'Покой — расслабьте мышцы';
       if (this.restFor >= REST_BEFORE_S) { this.phase = 'show'; this.cardTime = 0; this.holdFor = 0; this.firstMatch = null; this.restWait = 0; }
       else if (this.restWait >= REST_GIVE_UP_S && card) {
         card.state = 'fail'; card.rest = true;
@@ -118,23 +122,40 @@ export class SafeGame extends Game {
     if (ok) { this.firstMatch ??= this.cardTime; this.holdFor += dt; }
     else { this.holdFor = Math.max(0, this.holdFor - dt * 2); if (!resting) this.wrongTime += dt; }
     if (card.gesture) this.confusion.add(card.gesture, intent.gesture, dt);
-    this.hint = ok ? 'Держите…' : `Нужно: ${card.name}`;
+    this.hint = blindBlock(this.guidance, this.index) ? `Нужно: ${card.name}` : ok ? 'Держите…' : `Нужно: ${card.name}`;
     const stat = this.stats[card.id] ??= { tries: 0, ok: 0, totalMs: 0 };
+    const block = blindBlock(this.guidance, this.index);
     if (this.holdFor >= this.level.hold) {
-      card.state = 'ok'; card.time = this.cardTime;
+      card.time = this.cardTime;
       this.reactions.push(this.firstMatch);
       stat.tries++; stat.ok++; stat.totalMs += Math.round(1000 * this.cardTime);
       this.adapt.record(true);
-      this.emit('ring'); this.next();
+      this.emit('ring');
+      if (block) card.pending = 'ok'; else card.state = 'ok';
+      this.next();
     } else if (this.cardTime >= this.limit) {
-      card.state = 'fail'; stat.tries++;
+      stat.tries++;
       this.adapt.record(false);
-      this.emit('miss'); this.next();
+      this.emit('miss');
+      if (block) card.pending = 'fail'; else card.state = 'fail';
+      this.next();
+    }
+  }
+
+  /** Lamps of a blind pair light together, after the pair — not digit by digit. */
+  reveal(done) {
+    const block = blindBlock(this.guidance, done);
+    if (!block || (done + 1 < block.end && this.index < this.code.length)) return;
+    for (let i = block.start; i < Math.min(block.end, this.code.length); i++) {
+      const card = this.code[i];
+      if (card?.pending) { card.state = card.pending; card.pending = undefined; }
     }
   }
 
   next() {
+    const done = this.index;
     this.index++; this.phase = 'rest'; this.restFor = 0; this.restWait = 0;
+    this.reveal(done);
     if (this.index >= this.code.length) { this.openedAt = this.time; this.finish(); } // 5.17: finish() alone closes the run — one sound, not three
   }
 
@@ -231,16 +252,16 @@ export class SafeGame extends Game {
       else panel(ctx, x0, y0, cw, ch, 18);
       if (this.phase === 'rest') {
         // 5.16: the relaxed hand of the illustrations beside the word (the first gesture of the vocabulary is rest).
-        drawSprite(ctx, `gesture-${GESTURES[0].id}`, x0 + cw * 0.13, y0 + ch * 0.4, Math.min(ch * 0.5, cw * 0.18), { sx: this.mirror ? -1 : 1, alpha: 0.75 });
+        drawSprite(ctx, `gesture-${GESTURES[0].id}`, x0 + cw * 0.13, y0 + ch * 0.4, Math.min(ch * 0.5, cw * 0.18), { sx: this.cueFlip() ? -1 : 1, alpha: 0.75 });
         text(ctx, 'Покой', w / 2, y0 + ch * 0.42, { size: 26, weight: 800, color: COLORS.muted });
-        text(ctx, 'расслабьтесь перед следующей цифрой', w / 2, y0 + ch * 0.7, { size: 12, color: COLORS.muted, maxWidth: cw - 16 });
+        text(ctx, this.scheme === SCHEME.GESTURE ? poseHint(this.index) : 'расслабьтесь перед следующей цифрой', w / 2, y0 + ch * 0.7, { size: 12, color: COLORS.muted, maxWidth: cw - 16 });
       } else {
         const size = ch * 0.27;
         // 5.16: the bionic hand of the illustrations showing the gesture; a two-channel command shows the first
         // gesture of the vocabulary with that command (closing — the fist, opening — the palm).
         const pic = card.gesture ?? ACTIVE_GESTURES.find(g => g.command === card.command)?.id;
-        if (!pic || !drawSprite(ctx, `gesture-${pic}`, w / 2 - cw * 0.22, y0 + ch * 0.5, Math.min(ch * 0.78, cw * 0.4), { sx: this.mirror ? -1 : 1 })) {
-          drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, wrist: card.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.mirror });
+        if (!pic || !drawSprite(ctx, `gesture-${pic}`, w / 2 - cw * 0.22, y0 + ch * 0.5, Math.min(ch * 0.78, cw * 0.4), { sx: this.cueFlip() ? -1 : 1 })) {
+          drawHand(ctx, { x: w / 2 - cw * 0.22, y: y0 + ch * 0.82, size, pose: card.pose, wrist: card.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
         }
         text(ctx, card.name, w / 2 + cw * 0.14, y0 + ch * 0.4, { size: 18, weight: 800, maxWidth: cw * 0.6 });
         if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {

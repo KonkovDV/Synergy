@@ -80,12 +80,14 @@ export function collect({ runTests = true } = {}) {
     tests = JSON.parse(readFileSync(join(root, 'docs', 'evidence.json'), 'utf8')).tests ?? null;
   }
   const read = name => (existsSync(join(cache, `${name}.json`)) ? JSON.parse(readFileSync(join(cache, `${name}.json`), 'utf8')) : null);
+  const soak = read('soak');
   const apk = join(root, 'release', `Synergy-${version}.apk`), html = join(root, 'release', 'synergy-standalone.html');
   const art = JSON.parse(readFileSync(join(root, 'public', 'art', 'manifest.json'), 'utf8'));
   return {
     version, generated: new Date().toISOString(), tests, a11y: read('e2e-a11y'), layout: read('layout'),
     apk: existsSync(apk) ? file(apk) : null, html: existsSync(html) ? file(html) : null,
     art: { pictures: Object.keys(art.items).length, bytes: art.total_bytes },
+    ...(soak ? { soak } : {}),
   };
 }
 

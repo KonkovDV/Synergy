@@ -10,6 +10,15 @@ export const SIDE_HAND = Object.freeze({ left: 'левая рука', right: 'п
 export const otherSide = side => (side === 'left' ? 'right' : 'left');
 
 /**
+ * Gesture picture (5.32). The prosthesis hand itself mirrors only on the left.
+ * «Зеркальная подсказка» flips the picture once more, so the intact hand can copy it.
+ * Off by default. Not a claim that the copy transfers to the prosthesis.
+ */
+export function gestureCueMirror({ side = 'right', mirrorHint = false } = {}) {
+  return (side === 'left') !== !!mirrorHint;
+}
+
+/**
  * The hand under which the on-screen controls sit: chosen, or the healthy hand — the one without the prosthesis.
  * With two prostheses there is no healthy hand: the right one, unless chosen.
  */

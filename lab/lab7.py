@@ -43,6 +43,11 @@ class Emulator7:
         return carrier * amp + z[:, 4:] * self.noise + .006 * np.sin(2 * np.pi * 50 * t[:, None])
 
 
+def recording_mark(mirror=False):
+    """Label of a take where the person copies with the intact hand. Not a gesture class and not a score."""
+    return 'зеркально' if mirror else ''
+
+
 def recording(gesture, seed, effort=.6, windows=30):
     emu, pre, rows = Emulator7(seed), Preprocessor(), []
     for i in range(windows * 5 + 20):

@@ -27,8 +27,8 @@ export const GAMES = [
     ...meta(FlightGame), schemes: ALL,
     tagline: 'Высота = сила сигнала. Пролетите сквозь кольца',
     teaches: 'Плавное управление высотой, работа каждого канала отдельно, ровное удержание уровня.',
-    how: ['A поднимает птицу, B опускает, покой — середина', 'Оранжевые кольца — канал A, голубые — канал B, белые — расслабление', 'В «потоке» держите высоту ровно до конца'],
-    howGesture: () => [`Жест хвата поднимает птицу, ${OPEN()} опускает, покой — середина`, `Оранжевые кольца — жест хвата, голубые — ${OPEN()}, белые — покой`, 'В «потоке» держите высоту ровно до конца'],
+    how: ['A поднимает птицу, B опускает, покой — середина', 'Оранжевые кольца — канал A, голубые — канал B, белые — расслабление', 'В «потоке» держите высоту ровно до конца', 'Зелёная линия — ведите птицу по ней. Со 2-го уровня это подъём и удержание, с 5-го — медленная волна'],
+    howGesture: () => [`Жест хвата поднимает птицу, ${OPEN()} опускает, покой — середина`, `Оранжевые кольца — жест хвата, голубые — ${OPEN()}, белые — покой`, 'В «потоке» держите высоту ровно до конца', 'Зелёная линия — ведите птицу по ней. Со 2-го уровня это подъём и удержание, с 5-го — медленная волна'],
   },
   {
     ...meta(RhythmGame), schemes: ALL,
@@ -42,7 +42,7 @@ export const GAMES = [
     tagline: 'Код движения: откройте сейф серией жестов',
     teaches: 'Выбор нужного жеста или команды, чистые переходы через покой, повторяемость паттернов.',
     how: ['Покажите команду с карточки и держите, пока заполняется круг', 'Между цифрами кода — полный покой', 'Неверная команда отнимает очки — лучше точнее, чем быстрее'],
-    howGesture: () => ['Покажите жест с карточки и держите, пока заполняется круг', 'Между цифрами кода — полный покой', 'Неверный жест отнимает очки — лучше точнее, чем быстрее'],
+    howGesture: () => ['Покажите жест с карточки и держите, пока заполняется круг', 'Между цифрами кода — полный покой', 'Если удобно, чуть меняйте положение руки. Позу игра не проверяет и пользу для распознавания не обещает.', 'Неверный жест отнимает очки — лучше точнее, чем быстрее'],
   },
   {
     // 5.30 — two prostheses (meetup 21.10). Not in the daily plan: it is offered on the home screen when the settings say
@@ -55,7 +55,7 @@ export const GAMES = [
   {
     ...meta(AssessmentGame), schemes: ALL, assessment: true,
     tagline: 'Раз в неделю: стандартный тест — сравнивайте себя с собой',
-    teaches: 'Один и тот же набор попыток каждую неделю (по мотивам Motion Test и TAC-теста): время выбора команды, время выполнения, доля выполненных, точность. Сложность не подстраивается.',
+    teaches: 'Набор попыток один и тот же, порядок свой на неделю — сравнивают долю выполненных, а не последовательность. Время выбора, время выполнения, доля выполненных, точность. Сложность не подстраивается.',
     how: ['Покажите команду с карточки и удерживайте 1 секунду', 'В пропорциональном режиме держите силу в зелёной зоне', 'Между попытками — покой', 'Метрики игровые, не клинический тест'],
   },
 ];
@@ -77,8 +77,8 @@ export const GAME_BY_ID = Object.assign(Object.create(null), Object.fromEntries(
 /** Catalog view used by the pure planning code (core/progress.js). */
 export const PLAN_CATALOG = TRAINING_GAMES.map(g => ({ id: g.id, title: g.title, schemes: g.schemes, skills: g.skills, levelCount: g.Game.levels.length }));
 
-export function createGame(id, { levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion, guidance, onThreshold, successTarget }) {
+export function createGame(id, { levelNumber, scheme, seed, retention, skin, mirror, cueMirror, adaptive, speed, reduceMotion, guidance, onThreshold, successTarget, formSeed }) {
   const entry = GAME_BY_ID[id];
   const level = entry.Game.levels[levelNumber - 1];
-  return new entry.Game({ level, levelNumber, scheme, seed, retention, skin, mirror, adaptive, speed, reduceMotion, guidance, onThreshold, successTarget });
+  return new entry.Game({ level, levelNumber, scheme, seed, retention, skin, mirror, cueMirror, adaptive, speed, reduceMotion, guidance, onThreshold, successTarget, formSeed });
 }

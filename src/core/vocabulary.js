@@ -192,3 +192,11 @@ export const SKILL_NAME = {
   precision: 'Точность', stability: 'Плавность', timing: 'Тайминг',
   separation: 'Разделение', switching: 'Переключение', retention: 'Без подсказки',
 };
+
+/** Channel schemes lead with isolation (Prahm 2017; the meetup asked for it first). The gesture scheme keeps the old order.
+ *  CSV columns stay in `SKILL_NAME` order so old spreadsheets still line up. */
+export function skillKeys(scheme) {
+  const keys = Object.keys(SKILL_NAME);
+  if (scheme === 'gesture') return keys;
+  return ['separation', ...keys.filter(k => k !== 'separation')];
+}
