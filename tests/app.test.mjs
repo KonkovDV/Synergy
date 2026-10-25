@@ -358,6 +358,43 @@ test('5.32: a calibration whose rest ripples up to the switch-off level offers a
   assert.equal(app.settings.sensitivityB, 0.22, 'B kept');
 });
 
+test('5.32: a ripple the slider cannot clear is not applied and is not called safe', () => {
+  globalThis.location ??= { protocol: 'https:', search: '' };
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '', sensitivity: 0.22, sensitivityB: 0.22 });
+  const screen = calibrationScreen(app);
+  const button = text => nodes(screen.node).find(n => n.tag === 'button' && n.kids?.some(k => k.textContent === text));
+  button('Начать калибровку').on.click();
+  for (let i = 0, t = 0; t <= 12500; i++, t += 16) {
+    const step = t < 3000 ? 'rest' : t < 6000 ? 'a' : t < 8000 ? 'relax' : 'b';
+    const restA = [0, 0.16, 0.32][i % 3];
+    window.Synergy.feed({ a: step === 'a' ? 1.3 : restA, b: step === 'b' ? 0.9 : 0.05 });
+    screen.tick(t, 1 / 60);
+  }
+  const text = textOf(screen.node);
+  assert.match(text, /порог уже 45\s*%/);
+  assert.match(text, /покой всё ещё может включить/);
+  assert.doesNotMatch(text, /Поднять порог по дрожи покоя/);
+  assert.doesNotMatch(text, /не включит этот канал сам/);
+  app.go = noop;
+  button('Сохранить').on.click();
+  assert.equal(app.settings.sensitivity, 0.22, 'a threshold that cannot clear rest is not saved');
+  assert.equal(app.settings.sensitivityB, 0.22);
+});
+
+test('5.32: «Первая команда» is written into the four states, not only into its own note', async () => {
+  const { settingsScreen } = await import('../src/ui/settings.js');
+  globalThis.location ??= { protocol: 'https:', search: '' };
+  const app = fresh();
+  const screen = settingsScreen(app);
+  const times = re => (textOf(screen.node).match(re) || []).length;
+  assert.equal(times(/первую команду/g), 0);
+  const pick = nodes(screen.node).find(n => n.tag === 'button' && textOf(n).includes('Первая команда'));
+  pick.on.click();
+  assert.equal(app.settings.bothOn, 'first');
+  assert.ok(times(/первую команду/g) >= 2, 'the law note and the four-state line both say it');
+});
+
 test('5.30: two prostheses — the leading arm drives the exercise with its own calibration, the run says which arm', async () => {
   const app = fresh();
   const { reportCsv } = await import('../src/services/report.js');

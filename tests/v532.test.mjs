@@ -81,6 +81,9 @@ test('5.32 four states: the threshold scheme moves at one speed, the proportiona
   const prop = fourStates({ scheme: 'proportional', gripSwitch: 'co' });
   assert.match(prop[1].action, /чем сильнее, тем быстрее/);
   assert.equal(prop[2].action, 'кисть раскрывается');
+  assert.doesNotMatch(fourStates({ gripSwitch: 'open' })[3].action, /первую команду/);
+  assert.match(fourStates({ gripSwitch: 'open', bothOn: 'first' })[3].action, /кисть стоит/);
+  assert.match(fourStates({ gripSwitch: 'open', bothOn: 'first' })[3].action, /продолжает первую команду/);
 });
 
 function hold(pipe, f, ms, t0 = 0) {
@@ -141,7 +144,7 @@ test('5.32 calibration: rest that ripples up to the switch-off level gets an off
   const r = calibrate((step, i) => ({ a: (step === 'a' ? 0.1 + span : 0.1) + wobble(i, ripple * 1.6), b: (step === 'b' ? 0.8 : 0.05) + wobble(i + 5, 0.002) }));
   assert.ok(r.issues.some(x => /Канал A: в покое сигнал дрожит/.test(x)), 'the same calibration warns');
   const a = thresholdForRest(r.restLevel[0], SIGNAL.onThreshold), b = thresholdForRest(r.restLevel[1], SIGNAL.onThreshold);
-  assert.ok(a && a.value > SIGNAL.onThreshold && !a.capped, JSON.stringify(a));
+  assert.ok(a && a.value > SIGNAL.onThreshold && a.clears && !a.capped, JSON.stringify(a));
   assert.ok(offThreshold(a.value) > r.restLevel[0], 'the switch-off level of the offer is above the ripple');
   assert.ok(offThreshold(a.value - SETTINGS_RANGES.sensitivity.step) <= r.restLevel[0] + 1e-9, 'and it is the lowest such step');
   assert.equal(b, null, 'a quiet channel keeps its threshold');
@@ -151,7 +154,9 @@ test('5.32 calibration: the offer never lowers a threshold and stops at the slid
   assert.equal(thresholdForRest(0.1, 0.4), null, 'a high threshold already keeps a small ripple off');
   assert.equal(thresholdForRest(null, 0.22), null);
   const top = thresholdForRest(0.6, 0.22);
-  assert.deepEqual(top, { value: SETTINGS_RANGES.sensitivity.max, capped: true });
+  assert.equal(top.capped, true);
+  assert.equal(top.clears, false, 'the slider top still leaves this ripple able to switch the channel on');
+  assert.equal(top.value, SETTINGS_RANGES.sensitivity.max);
   const r = calibrate((step, i) => ({ a: (step === 'a' ? 0.9 : 0.1) + wobble(i, 0.002), b: (step === 'b' ? 0.9 : 0.05) + wobble(i + 5, 0.002) }));
   assert.deepEqual(r.restLevel.map(x => thresholdForRest(x, SIGNAL.onThreshold)), [null, null], 'a clean calibration offers nothing');
 });

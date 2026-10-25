@@ -110,7 +110,7 @@ export function settingsScreen(app, { back = null } = {}) {
     const pick = v => { app.updateSettings({ gripSwitch: v }); hold.hidden = v !== 'open'; openNote.hidden = v !== 'open'; coNote.hidden = v === 'open'; paintStates(); };
     // 5.32 — the second channel later than the first: the hand stands or goes on with the first command (BOTH_ON).
     const bothNote = h('p', { class: 'note' }, bothOnText(s.bothOn));
-    const pickBoth = v => { app.updateSettings({ bothOn: v }); bothNote.textContent = bothOnText(v); refreshPreview(); };
+    const pickBoth = v => { app.updateSettings({ bothOn: v }); bothNote.textContent = bothOnText(v); paintStates(); refreshPreview(); };
     return [
       sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); meter.setThresholds(); } }),
       sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => { app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }); paintStates(); } }),
@@ -348,19 +348,30 @@ export function calibrationScreen(app) {
       } else if (!finished) {
         finished = true;
         const r = recorder.result();
-        title.textContent = r.issues.length ? 'Есть замечания' : 'Готово';
-        text.textContent = `Разделение каналов: A ${fmtPct(Math.round(r.separation[0] * 100))}, B ${fmtPct(Math.round(r.separation[1] * 100))}.`;
-        announce(`${title.textContent}. ${r.issues.join(' ')}`);
-        // Without signal there is nothing to save: the previous calibration stays.
         const save = r.usable && kind !== 'touch';
         // 5.32 — rest that ripples up to the switch-off level: offer the threshold that keeps it off (game thresholds
-        // only; the prosthesis's own ones, when the host sent them, are not the game's to change).
+        // only; the prosthesis's own ones, when the host sent them, are not the game's to change). A capped offer does
+        // not clear rest (the slider is already at its top), so it is said and not applied.
         const s = app.settings, current = [s.sensitivity, s.sensitivityB ?? s.sensitivity];
-        const raise = save && !app.prosthesisThresholds() ? current.map((v, ch) => thresholdForRest(r.restLevel?.[ch], v)) : [null, null];
+        const judged = save && !app.prosthesisThresholds() ? current.map((v, ch) => thresholdForRest(r.restLevel?.[ch], v)) : [null, null];
+        const raise = judged.map(x => (x?.clears ? x : null));
+        const stuck = judged.map((x, ch) => (x && !x.clears ? ch : null)).filter(ch => ch !== null);
+        const issues = r.issues.filter(text => {
+          const m = text.match(/^Канал ([AB]): в покое сигнал дрожит/);
+          if (!m || app.prosthesisThresholds()) return true;
+          // The warning is about the default line. The person's own threshold may already sit above the ripple.
+          return !!judged[m[1] === 'B' ? 1 : 0];
+        });
+        title.textContent = issues.length ? 'Есть замечания' : 'Готово';
+        text.textContent = `Разделение каналов: A ${fmtPct(Math.round(r.separation[0] * 100))}, B ${fmtPct(Math.round(r.separation[1] * 100))}.`;
+        announce(`${title.textContent}. ${issues.join(' ')}`);
+        // Without signal there is nothing to save: the previous calibration stays.
         let applyRaise = raise.some(Boolean);
+        const names = chs => chs.map(ch => (ch ? 'B' : 'A')).join(' и ');
         const raiseRow = applyRaise ? toggleRow(
           `Поднять ${raise.filter(Boolean).length > 1 ? 'пороги' : 'порог'} по дрожи покоя`, true, v => { applyRaise = v; },
-          `${raise.map((x, ch) => (x ? `${ch ? 'B' : 'A'} — ${pct(x.value)}${x.capped ? ' (выше нельзя: проверьте датчик)' : ''}` : null)).filter(Boolean).join(', ')}. Так покой не включит канал сам. Ползунки — в «Чувствительности».`) : null;
+          `${raise.map((x, ch) => (x ? `${ch ? 'B' : 'A'} — ${pct(x.value)}` : null)).filter(Boolean).join(', ')}. Так покой не включит ${raise.filter(Boolean).length > 1 ? 'эти каналы' : 'этот канал'} сам. Ползунки — в «Чувствительности».`) : null;
+        const stuckNote = stuck.length ? h('p', { class: 'note warn' }, `Канал${stuck.length > 1 ? 'ы' : ''} ${names(stuck)}: порог уже ${pct(R.sensitivity.max)}, выше нельзя, а покой всё ещё может включить ${stuck.length > 1 ? 'их' : 'его'}. Проверьте, как прилегает датчик.`) : null;
         const done = h('button', { class: 'btn primary big', onclick: () => {
           if (save) {
             app.state.calibrations[app.calibrationKey(kind)] = r.calibration; app.save();
@@ -369,7 +380,7 @@ export function calibrationScreen(app) {
           }
           app.go('settings', { back: 'calibration' });
         } }, save ? 'Сохранить' : 'Понятно');
-        result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)), ...(raiseRow ? [raiseRow] : []), done); // replaceChildren(null) would print «null»
+        result.replaceChildren(...issues.map(i => h('p', { class: 'note warn' }, i)), ...(stuckNote ? [stuckNote] : []), ...(raiseRow ? [raiseRow] : []), done);
         done.focus({ preventScroll: true });
       }
     },
