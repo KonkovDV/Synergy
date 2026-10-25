@@ -106,6 +106,13 @@ await go('play', { game: 'rhythm', level: 1 }); await wait(300); await audit('pl
 await go('play', { game: 'check', level: 1, demo: true }); await wait(300); await page.getByRole('button', { name: 'Старт' }).click();
 await page.waitForSelector('.results', { timeout: 60000 }); await wait(600); await shot('v5-09-check-results', true); await audit('results');
 await go('settings'); await wait(300); await shot('v5-10-settings', true); await audit('settings');
+// 5.32 — the live trace of A and B under «Чувствительность» (folded by default): drawn, sized to the card, named for a screen reader.
+await page.evaluate(() => { const d = [...document.querySelectorAll('details.fold')].find(x => x.querySelector('.trace')); if (d) d.open = true; });
+await page.keyboard.down('f'); await wait(700); await page.keyboard.down('j'); await wait(300); await page.keyboard.up('j'); await page.keyboard.up('f'); await wait(1100);
+const trace = await page.evaluate(() => { const c = document.querySelector('.trace'); return c && { drawn: c.width > 0, fits: c.getBoundingClientRect().right <= document.documentElement.clientWidth, label: c.getAttribute('aria-label'), sum: document.querySelector('.trace-sum')?.textContent ?? '' }; });
+if (!trace?.drawn || !trace.fits || !trace.label) errors.push(`settings: the signal trace is not drawn or does not fit (${JSON.stringify(trace)})`);
+if (!/Чистота за 5/.test(trace?.sum ?? '')) errors.push(`settings: the line under the trace did not count the squeeze (${trace?.sum})`);
+await audit('settings-trace');
 await go('calibration'); await wait(300); await audit('calibration');
 await go('audiosync'); await wait(500); await audit('audiosync'); // no screenshot: the archive is at its size limit (PLAN C.1.61)
 await go('levels', { game: 'grip' }); await wait(300); await audit('levels');

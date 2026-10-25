@@ -38,7 +38,7 @@ struct LaunchRequest: Equatable {
         let value = { (name: String) in items.first { $0.name == name }?.value }
         game = LaunchRequest.matching(value("game"), "^[a-z]{2,16}$")
         level = LaunchRequest.matching(value("level"), "^[1-9][0-9]?$")
-        gestures = LaunchRequest.matching(value("gestures"), "^(synergy|ubi4)$")
+        gestures = LaunchRequest.matching(value("gestures"), "^(synergy|ubi4|spr8)$")
     }
 
     /** self=1: the app opened its own exercise — not a host waiting for «synergy:close» (services/host.js). */
