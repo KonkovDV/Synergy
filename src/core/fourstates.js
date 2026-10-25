@@ -15,7 +15,7 @@ export function bothOnText(mode = 'hold') {
 }
 
 /** @returns {{id: string, signal: string, action: string}[]} the four states in the order of the slide. */
-export function fourStates({ scheme = SCHEME.PROPORTIONAL, gripSwitch = 'open', holdOpenS = 1, lockHoldS = 1.6 } = {}) {
+export function fourStates({ scheme = SCHEME.PROPORTIONAL, gripSwitch = 'open', holdOpenS = 1, lockHoldS = 1.6, bothOn = 'hold' } = {}) {
   const hold = `${fmtFixed(holdOpenS, 2)}\u00a0с`, lock = `${fmtFixed(lockHoldS)}\u00a0с`;
   // 5.32: the threshold scheme moves the hand at one speed (core/hand.js) — «чем сильнее, тем быстрее» was not true there.
   const fixed = scheme === SCHEME.THRESHOLD;
@@ -28,8 +28,8 @@ export function fourStates({ scheme = SCHEME.PROPORTIONAL, gripSwitch = 'open', 
     { id: 'b', signal: 'Только B — датчик открытия', action: gripSwitch === 'open'
       ? `${opens}; раскрытую — отпустить и снова B дольше ${hold}: следующий хват`
       : opens },
-    { id: 'ab', signal: 'A и B разом', action: gripSwitch === 'open'
+    { id: 'ab', signal: 'A и B разом', action: `${gripSwitch === 'open'
       ? `кисть стоит; в протезах «Моторики» удержание дольше ${lock} — блокировка`
-      : `смена хвата; удержание дольше ${lock} — блокировка протеза` },
+      : `смена хвата; удержание дольше ${lock} — блокировка протеза`}${bothOn === 'first' ? '. Второй канал позже первого — кисть продолжает первую команду' : ''}` },
   ];
 }
