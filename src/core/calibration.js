@@ -65,7 +65,7 @@ export class CalibrationRecorder {
     // Rest that ripples up to the switch-off level of the default sensitivity will switch the channel on by itself.
     const off = offThreshold(SIGNAL.onThreshold);
     const noisy = signal ? [0, 1].filter(ch => !flat.includes(ch) && CALIBRATION_QUALITY.restPeakNoise * noise[ch] >= off * span[ch]) : [];
-    noisy.forEach(ch => issues.push(`Канал ${ch ? 'B' : 'A'}: в покое сигнал дрожит почти до порога — возможны ложные срабатывания. Проверьте, как прилегает датчик, и повторите калибровку.`));
+    noisy.forEach(ch => issues.push(rippleText(ch)));
     // 5.32 — how high the rest ripple reaches on the new scale (3 SD of rest over the span): thresholdForRest() keeps
     // each channel's switch-off level above it. Null where the channel gave nothing to scale.
     const restLevel = [0, 1].map(ch => (signal && !flat.includes(ch) ? Math.min(1, CALIBRATION_QUALITY.restPeakNoise * noise[ch] / Math.max(1e-6, span[ch])) : null));
@@ -85,6 +85,9 @@ export class CalibrationRecorder {
     return { calibration: { rest, max: safeMax, ref: [...rest], at: new Date().toISOString() }, issues, separation, usable, restLevel };
   }
 }
+
+/** The rest-ripple warning of a channel (0 — A, 1 — B): one text for the recorder and for the line in force. */
+export const rippleText = ch => `Канал ${ch ? 'B' : 'A'}: в покое сигнал дрожит почти до порога — возможны ложные срабатывания. Проверьте, как прилегает датчик, и повторите калибровку.`;
 
 /**
  * Which «в покое сигнал дрожит» lines to show. The recorder compares rest with the default 22 % line. That line is not
@@ -107,10 +110,12 @@ export function shownRippleIssues(issues, { restLevel, judging = false, judged =
     return kept;
   }
   if (!judging) return issues;
-  return issues.filter(text => {
-    const m = text.match(ripple);
-    return !m || !!judged[m[1] === 'B' ? 1 : 0];
-  });
+  // judged[ch] is not null exactly when the switch-off level of the person's threshold is not above the ripple
+  // (thresholdForRest). That line decides both ways: a quiet channel loses the default-line warning, and a threshold
+  // below the default gains one the 22 % line hid (5.32: «Готово» was said next to an offer to raise it).
+  const kept = issues.filter(text => !ripple.test(text));
+  for (const ch of [0, 1]) if (judged[ch]) kept.push(rippleText(ch));
+  return kept;
 }
 
 /**
