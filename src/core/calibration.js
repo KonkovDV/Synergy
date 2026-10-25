@@ -89,17 +89,20 @@ export class CalibrationRecorder {
 /**
  * 5.32 — the warning «в покое сигнал дрожит» turned into an offer. The lowest switch-on threshold whose switch-off level
  * (offThreshold) stays above the rest ripple of the calibration, rounded up to the slider step. Null when `current`
- * already keeps rest off. Never above the slider's top: then `capped` — the sensor, not the threshold, needs a look.
+ * already keeps rest off. Never above the slider's top: then `capped` and `clears` is false — that top still lets rest
+ * switch the channel on, so the screen must not apply it and must not say that rest stays off.
  * Prosthetists set the threshold above the rest noise the same way; the game only offers, the person decides.
- * @returns {{value: number, capped: boolean} | null}
+ * @returns {{value: number, capped: boolean, clears: boolean} | null}
  */
 export function thresholdForRest(level, current, range = SETTINGS_RANGES.sensitivity, params = SIGNAL) {
   if (!Number.isFinite(level) || !Number.isFinite(current) || offThreshold(current, params) > level) return null;
   // offThreshold(on) = max(on − hysteresis, on × hysteresisMinRatio) is above `level` once on > the smaller of the two.
   const need = Math.min(level + params.hysteresis, level / params.hysteresisMinRatio);
   const steps = Math.floor(need / range.step + 1e-9) + 1; // strictly above
-  const value = Math.round(Math.max(current, steps * range.step) * 100) / 100;
-  return value > range.max ? { value: range.max, capped: true } : { value, capped: false };
+  const raw = Math.round(Math.max(current, steps * range.step) * 100) / 100;
+  const capped = raw > range.max;
+  const value = capped ? range.max : raw;
+  return { value, capped, clears: offThreshold(value, params) > level };
 }
 
 /**
