@@ -41,9 +41,11 @@ export class SignalTrace {
   }
 
   /**
-   * Cleanliness of closing and opening over the window, in percent, or null for a side that did not work. The formula
-   * of SeparationMeter: the working channel is the stronger one, and what the other one adds meanwhile is the leak —
-   * 100 % is a command with no counter-signal. `cross` — how many times the other channel went over its line.
+ * Cleanliness of closing and opening over the window, in percent, or null for a side that did not work.
+ * The leak ratio is SeparationMeter's: min(own, other) / own while the working channel is at least `ownMin`.
+ * On this screen the working channel is the louder one — settings have no exercise, so nothing says which muscle was asked.
+ * The results use the channel the game asked for. The percents match only when that channel is also the louder one.
+ * `cross` — how many times the other channel went over its line.
    */
   cleanliness(now, windowS = SIGNAL_TRACE.windowS) {
     const side = () => ({ active: 0, leak: 0, cross: 0, otherOn: false });
