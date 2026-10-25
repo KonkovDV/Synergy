@@ -199,6 +199,13 @@ export const GRIP_SWITCH = { defaultMode: 'open', holdDefaultS: 1, minS: 0.1, ma
 
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 
+/**
+ * 5.32 — the live trace of both channels in «Чувствительность», like the sensor graph of the prosthesis app. The last
+ * `windowS` seconds; `ownMin` and `minActiveS` are the ones of SeparationMeter (games/base.js), so the trace's
+ * cleanliness is the number the results show. `capacity` covers 5 s at 90 frames a second.
+ */
+export const SIGNAL_TRACE = { windowS: 5, capacity: 480, ownMin: 0.15, minActiveS: 0.05, textEveryS: 1, reducedMotionFps: 5 };
+
 /** Wellbeing check-in thresholds (numeric rating scale categories 0 / 1–3 / 4–6 / 7–10). */
 export const WELLBEING = {
   painLight: 2,             // moderate pain → light session

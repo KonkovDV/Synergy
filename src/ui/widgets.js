@@ -3,6 +3,8 @@ import { h, longestWord } from './dom.js';
 import { fmtSec } from '../core/format.js';
 import { COMMAND_NAME, GESTURE_BY_ID, twoChannelControls, GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
 import { mio } from './art.js';
+import { SignalTrace, traceSummary } from '../core/signaltrace.js';
+import { SIGNAL_TRACE } from '../config.js';
 import { picture } from './pictures.js';
 
 /**
@@ -118,6 +120,75 @@ export function signalMeter(app) {
       if (probs.textContent !== top) { probs.textContent = top; probs.hidden = !top; }
       const cmd = intent.valid ? intent.command : 'lost';
       if (chip.dataset.cmd !== cmd) chip.dataset.cmd = cmd; // no attribute write per frame (5.11: ~1.6 mutations a frame)
+    },
+  };
+}
+
+/**
+ * 5.32 — the last 5 s of A and B with each channel's switch-on line, like the sensor graph of the prosthesis app. Where
+ * both channels are on, the strip is tinted: that is the counter-signal the meetup asked to train away. The line under
+ * it says the same in words once a second (no live region: a screen reader reads it when asked, not 60 times a second).
+ */
+export function signalTraceView(app) {
+  const trace = new SignalTrace();
+  const canvas = h('canvas', { class: 'trace', role: 'img', 'aria-label': `График сигнала A и B за последние ${SIGNAL_TRACE.windowS} секунд с линиями порогов` });
+  const summary = h('p', { class: 'note trace-sum' }, traceSummary({ close: null, open: null }));
+  const node = h('div', { class: 'trace-box' }, canvas, summary);
+  let colors = null, lastText = -Infinity, lastDraw = -Infinity;
+  const palette = () => {
+    const css = typeof getComputedStyle === 'function' ? getComputedStyle(canvas) : null;
+    const v = (name, fallback) => css?.getPropertyValue(name).trim() || fallback;
+    return { a: v('--a', '#ff7a45'), b: v('--b', '#3b82f6'), co: v('--violet', '#6d4ef0') };
+  };
+  function draw(now, on) {
+    const ctx = canvas.getContext?.('2d');
+    const w = canvas.clientWidth, hgt = canvas.clientHeight;
+    if (!ctx || !w || !hgt) return;
+    const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+    if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(hgt * dpr); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, hgt);
+    const span = SIGNAL_TRACE.windowS * 1000, x = t => w - ((now - t) / span) * w, y = v => hgt - 2 - Math.min(1, v) * (hgt - 4);
+    // Both on: the counter-signal, a tinted strip behind the lines.
+    ctx.globalAlpha = 0.22; ctx.fillStyle = colors.co;
+    let runFrom = null, prevX = null; // one rectangle per run: thin per-frame strips left seams in the dark theme
+    trace.forEach(now, (t, a, b, aOn, bOn) => {
+      const px = x(t);
+      if (aOn && bOn) runFrom ??= prevX ?? px;
+      else if (runFrom !== null) { ctx.fillRect(runFrom, 0, Math.max(1, px - runFrom), hgt); runFrom = null; }
+      prevX = px;
+    });
+    if (runFrom !== null) ctx.fillRect(runFrom, 0, Math.max(1, w - runFrom), hgt);
+    ctx.globalAlpha = 1;
+    // Each channel's switch-on line, dashed, in its own colour.
+    ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+    [[on[0], colors.a], [on[1], colors.b]].forEach(([level, color]) => { ctx.strokeStyle = color; ctx.beginPath(); ctx.moveTo(0, y(level)); ctx.lineTo(w, y(level)); ctx.stroke(); });
+    ctx.setLineDash([]); ctx.lineWidth = 2;
+    for (const [key, color] of [['a', colors.a], ['b', colors.b]]) {
+      ctx.strokeStyle = color; ctx.beginPath();
+      let first = true, prevT = null;
+      trace.forEach(now, (t, a, b) => {
+        const px = x(t), py = y(key === 'a' ? a : b);
+        if (first || t - prevT > 400) ctx.moveTo(px, py); else ctx.lineTo(px, py); // a lost signal is a break, not a line
+        first = false; prevT = t;
+      });
+      ctx.stroke();
+    }
+  }
+  return {
+    node,
+    update(intent, now) {
+      trace.push(intent, now);
+      if (now - lastText >= SIGNAL_TRACE.textEveryS * 1000 || now < lastText) {
+        lastText = now; colors = palette(); // the theme may change while the screen is open
+        const text = traceSummary(trace.cleanliness(now));
+        if (summary.textContent !== text) summary.textContent = text;
+      }
+      if (app.reduceMotion && now - lastDraw < 1000 / SIGNAL_TRACE.reducedMotionFps && now >= lastDraw) return;
+      lastDraw = now;
+      const s = app.settings;
+      const on = Array.isArray(intent?.on) ? intent.on : [s.sensitivity, s.sensitivityB ?? s.sensitivity];
+      draw(now, on);
     },
   };
 }

@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { controlHand, sideOf, otherSide } from '../src/core/hands.js';
 import { parseState } from '../src/core/storage.js';
+import { GESTURE_SET_IDS } from '../src/core/gesture-set.js';
 
 test('5.30 hands: the on-screen controls sit under the healthy hand unless chosen; two prostheses — the right hand', () => {
   assert.equal(controlHand({ side: 'right', controlHand: 'auto' }), 'left', 'prosthesis on the right → taps with the left');
@@ -167,12 +168,12 @@ test('5.30 Android: launch extras and synergy:// links become a checked query of
     const harness = join(dir, 'Harness.java');
     writeFileSync(harness, `package ru.synergy.trainer;
 public class Harness { public static void main(String[] a) {
-  String[][] cases = { {"grip", "2", "ubi4"}, {"duo", null, null}, {"../x", "2", "ubi4"}, {"grip", "100", "evil"}, {null, null, null}, {"check", "0", "synergy"} };
+  String[][] cases = { {"grip", "2", "ubi4"}, {"duo", null, null}, {"../x", "2", "ubi4"}, {"grip", "100", "evil"}, {null, null, null}, {"check", "0", "synergy"}, {"grip", "3", "spr8"} };
   for (String[] c : cases) System.out.println("[" + MainActivity.launchQuery(c[0], c[1], c[2]) + "]"); } }`);
     const built = javac(join(dir, 'classes'), join(dir, 'stubs'), [...walk('android/src'), harness]);
     assert.equal(built.status, 0, built.stderr);
     const run = spawnSync('java', ['-cp', [join(dir, 'stubs'), join(dir, 'classes')].join(process.platform === 'win32' ? ';' : ':'), 'ru.synergy.trainer.Harness'], { encoding: 'utf8' });
-    assert.deepEqual(run.stdout.trim().split(/\r?\n/), ['[?game=grip&level=2&gestures=ubi4&self=1]', '[?game=duo&self=1]', '[?level=2&gestures=ubi4&self=1]', '[?game=grip&self=1]', '[]', '[?game=check&gestures=synergy&self=1]']);
+    assert.deepEqual(run.stdout.trim().split(/\r?\n/), ['[?game=grip&level=2&gestures=ubi4&self=1]', '[?game=duo&self=1]', '[?level=2&gestures=ubi4&self=1]', '[?game=grip&self=1]', '[]', '[?game=check&gestures=synergy&self=1]', '[?game=grip&level=3&gestures=spr8&self=1]']);
     const manifest = readFileSync('android/AndroidManifest.xml', 'utf8');
     assert.match(manifest, /android:scheme="synergy" android:host="play"/);
     assert.match(manifest, /android:launchMode="singleTask"/, 'a second link reaches onNewIntent, not a second copy of the game');
@@ -193,7 +194,8 @@ test('5.30 iOS: SynergyNative has the methods of the Android bridge; links pass 
   assert.match(swift, /nightMode: \(\) => !!window\.__synergyNight/, 'nightMode() answers at once, as on Android');
   assert.match(swift, /func themeChanged\(\)/, 'and follows the system theme');
   const app = readFileSync('ios/Synergy/SynergyApp.swift', 'utf8');
-  for (const [field, pattern] of [['game', '[a-z]{2,16}'], ['level', '[1-9][0-9]?'], ['gestures', 'synergy|ubi4']]) {
+  // 5.32: the gesture sets come from the web's own list — the shells kept «synergy|ubi4» after spr8 joined it (5.31).
+  for (const [field, pattern] of [['game', '[a-z]{2,16}'], ['level', '[1-9][0-9]?'], ['gestures', GESTURE_SET_IDS.join('|')]]) {
     assert.ok(app.includes(`value("${field}")`) && app.includes(pattern), `iOS link: ${field} ~ ${pattern}`);
     assert.ok(java.includes(pattern), `Android: ${pattern}`);
   }

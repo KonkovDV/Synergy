@@ -321,6 +321,19 @@ test('5.29: settings say whether the prosthesis\'s thresholds came and are used'
   assert.match(textOf(settingsScreen(app).node), /получены, но не используются/);
 });
 
+test('5.32: settings draw the live trace of A and B in the two-channel schemes and say its cleanliness', async () => {
+  const { settingsScreen } = await import('../src/ui/settings.js');
+  globalThis.location ??= { protocol: 'https:', search: '' };
+  const app = fresh();
+  app.updateSettings({ source: 'touch', scheme: 'threshold' });
+  const screen = settingsScreen(app);
+  assert.ok(nodes(screen.node).some(n => n.tag === 'canvas' && n.attrs?.class === 'trace'), 'the trace is on the screen');
+  assert.match(textOf(screen.node), /Сожмите\sили\sраскройте\s—\sграфик/);
+  for (let t = 0; t <= 3000; t += 16) screen.tick(t); // the canvas stub has no size: nothing is drawn, nothing throws
+  app.updateSettings({ scheme: 'gesture' });
+  assert.ok(!nodes(settingsScreen(app).node).some(n => n.tag === 'canvas' && n.attrs?.class === 'trace'), 'gestures: no two lines to compare');
+});
+
 test('5.30: two prostheses — the leading arm drives the exercise with its own calibration, the run says which arm', async () => {
   const app = fresh();
   const { reportCsv } = await import('../src/services/report.js');
