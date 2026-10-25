@@ -1,6 +1,6 @@
 // Specialist report (JSON, CSV, printable HTML) and a calendar reminder (.ics) — no server, no account.
 // Every string that reaches the HTML report is escaped: names and stored data are untrusted input.
-import { fmtNum } from '../core/format.js';
+import { fmtNum, isGamePercent } from '../core/format.js';
 import { APP, ARM_POSES } from '../config.js';
 import { SKILL_NAME, skillKeys, gestureName as gname, SCHEME_INFO, GESTURE_SETS } from '../core/vocabulary.js';
 import { QUALITY_TIPS, signalIssueSummary, signalIssuesCode, signalIssuesText } from '../core/signalquality.js';
@@ -226,7 +226,7 @@ ${table(['День', 'Боль', 'Усталость', 'Кожа под датч
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки', 'Заметка'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '',
     [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : '',
-      r.details?.crossings ? `второй канал включался ${r.details.crossings}` : '', Number.isFinite(r.details?.cleanClose) ? `чистота закрытия ${r.details.cleanClose} %` : '', Number.isFinite(r.details?.cleanOpen) ? `чистота открытия ${r.details.cleanOpen} %` : '', r.details?.spilled ? `расплескали чай ${r.details.spilled}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', r.gestureSet ? `набор жестов ${GESTURE_SETS[r.gestureSet]?.name ?? r.gestureSet}` : '', r.side ? `${r.side === 'left' ? 'левый' : 'правый'} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
+      r.details?.crossings ? `второй канал включался ${r.details.crossings}` : '', isGamePercent(r.details?.cleanClose) ? `чистота закрытия ${r.details.cleanClose} %` : '', isGamePercent(r.details?.cleanOpen) ? `чистота открытия ${r.details.cleanOpen} %` : '', r.details?.spilled ? `расплескали чай ${r.details.spilled}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', r.gestureSet ? `набор жестов ${GESTURE_SETS[r.gestureSet]?.name ?? r.gestureSet}` : '', r.side ? `${r.side === 'left' ? 'левый' : 'правый'} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
 <p class="muted">«Не отпустили» и «покой не получился» — игровая статистика, не оценка тонуса и не диагноз.</p>
 ${quality.length ? `<h2>Качество сигнала с датчиков</h2>
 ${table(['Что мешало', 'Упражнений', 'Секунд всего', 'Последний раз', 'Что подсказала игра'], quality.map(q => [QUALITY_TIPS[q.id].title, q.runs, q.seconds, ruDate(q.last), QUALITY_TIPS[q.id].tip]))}

@@ -171,7 +171,7 @@ export class Game {
     if (this.done) return;
     this.done = true;
     this.events = this.events.filter(e => e.name === 'beat');
-    this.emit(starsFor(Math.round(Math.max(0, Math.min(100, this.scoreValue())))) >= 2 ? 'win' : 'done');
+    this.emit(starsFor(this.shownScore()) >= 2 ? 'win' : 'done');
   }
 
   // Subclasses implement:
@@ -184,10 +184,13 @@ export class Game {
   details() { return {}; }
   /** Procedural music of the game (core/music.js events) or null — only «Ритм» has a song. */
   music() { return null; }
-  hud() { return { progress: this.progress(), score: Math.round(this.scoreValue()) }; }
+  hud() { return { progress: this.progress(), score: this.shownScore() }; }
+
+  /** The number on the screen and in the saved run: the raw formula may go outside 0…100. */
+  shownScore() { return Math.round(Math.max(0, Math.min(100, this.scoreValue()))); }
 
   result() {
-    const score = Math.round(Math.max(0, Math.min(100, this.scoreValue())));
+    const score = this.shownScore();
     const skills = Object.fromEntries(Object.entries(this.skillScores()).filter(([, v]) => Number.isFinite(v)));
     if (this.retention) skills.retention = score;
     const details = { ...this.details(), difficulty: Math.round(this.adapt.meanEase * 100) / 100 };

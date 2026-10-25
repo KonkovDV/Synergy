@@ -13,6 +13,7 @@ import { validTourState } from './tours.js';
 import { validEverydayId } from './everyday.js';
 import { cleanPrimer } from './primer.js';
 import { SAFETY_VERSION } from './wellbeing.js';
+import { isGamePercent } from './format.js';
 
 export const DEFAULT_SETTINGS = {
   scheme: 'proportional',
@@ -257,6 +258,14 @@ export function parseState(raw, catalog = null) {
     if (r.gestureSet !== undefined && !(GESTURE_SET_IDS.includes(r.gestureSet) && r.gestureSet !== 'synergy')) { const { gestureSet, ...rest } = r; r = rest; } // 5.29: only another known set
     if (r.formWeek !== undefined && !(Number.isInteger(r.formWeek) && r.formWeek >= 0 && r.formWeek < 100000)) { const { formWeek, ...rest } = r; r = rest; } // parallel form of the skill check: a week index
     if (r.signalIssues !== undefined) { const { signalIssues, ...rest } = r; r = rest; const kept = cleanSignalIssues(signalIssues); if (kept.length) r.signalIssues = kept; } // 5.30
+    if (isObject(r.details)) {
+      const details = { ...r.details };
+      let dropped = false;
+      for (const key of ['cleanClose', 'cleanOpen']) {
+        if (details[key] !== undefined && !isGamePercent(details[key])) { delete details[key]; dropped = true; }
+      }
+      if (dropped) r = { ...r, details };
+    }
     if (!isObject(r.details) || r.details.confusion === undefined) return r;
     return { ...r, details: { ...r.details, confusion: cleanConfusion(r.details.confusion) } };
   }) : [];
