@@ -368,7 +368,9 @@ export function calibrationScreen(app) {
         let applyRaise = raise.some(Boolean);
         const names = chs => chs.map(ch => (ch ? 'B' : 'A')).join(' и ');
         const stuckText = stuck.length ? `Канал${stuck.length > 1 ? 'ы' : ''} ${names(stuck)}: даже потолок порога ${pct(R.sensitivity.max)} не удержит покой — покой может включить ${stuck.length > 1 ? 'их' : 'его'} сам. Порог не меняем. Проверьте, как прилегает датчик.` : '';
-        announce(`${title.textContent}. ${[...issues, stuckText].filter(Boolean).join(' ')}`);
+        // The offer is said too: a screen-reader or a voice user does not see the switch above «Сохранить».
+        const offerText = raise.some(Boolean) ? `Можно поднять ${raise.map((x, ch) => (x ? `порог ${ch ? 'B' : 'A'} до ${pct(x.value)}` : null)).filter(Boolean).join(' и ')}: переключатель над кнопкой «Сохранить».` : '';
+        announce(`${title.textContent}. ${[...issues, stuckText, offerText].filter(Boolean).join(' ')}`);
         const raiseRow = applyRaise ? toggleRow(
           `Поднять ${raise.filter(Boolean).length > 1 ? 'пороги' : 'порог'} по дрожи покоя`, true, v => { applyRaise = v; },
           `${raise.map((x, ch) => (x ? `${ch ? 'B' : 'A'} — ${pct(x.value)}` : null)).filter(Boolean).join(', ')}. Так покой не включит ${raise.filter(Boolean).length > 1 ? 'эти каналы' : 'этот канал'} сам. Ползунки — в «Чувствительности».`) : null;
