@@ -374,6 +374,7 @@ test('5.32: a ripple the slider cannot clear is not applied and is not called sa
   const text = textOf(screen.node);
   assert.match(text, /даже потолок порога 45\s*%/);
   assert.match(text, /покой может включить/);
+  assert.match(nodes(screen.node).find(n => n.attrs?.class === 'sr-only').textContent, /Порог не меняем/, 'the spoken line says the threshold stays');
   assert.doesNotMatch(text, /Поднять порог по дрожи покоя/);
   assert.doesNotMatch(text, /не включит этот канал сам/);
   app.go = noop;
@@ -405,6 +406,37 @@ test('5.32: a calibration that cannot be saved keeps its rest-ripple warning; th
   assert.doesNotMatch(capped, /порог уже 45/, 'the threshold is 22 %, not 45 %');
   assert.match(capped, /даже потолок порога 45\s*%/);
   assert.match(capped, /покой может включить/);
+});
+
+test('5.32: the prosthesis line, not the default 22 %, decides whether rest ripple is warned', () => {
+  globalThis.location ??= { protocol: 'https:', search: '' };
+  const run = thresholds => {
+    const app = fresh();
+    app.updateSettings({ source: 'bridge', wsUrl: '', sensitivity: 0.22, sensitivityB: 0.22 });
+    const screen = calibrationScreen(app);
+    const button = text => nodes(screen.node).find(n => n.tag === 'button' && n.kids?.some(k => k.textContent === text));
+    button('Начать калибровку').on.click();
+    window.Synergy.feed({ thresholds });
+    const wobble = (i, k) => k * Math.sin(i * 1.7) * Math.cos(i * 0.31);
+    for (let i = 0, t = 0; t <= 12500; i++, t += 16) {
+      const step = t < 3000 ? 'rest' : t < 6000 ? 'a' : t < 8000 ? 'relax' : 'b';
+      window.Synergy.feed({ a: (step === 'a' ? 0.6 : 0.1) + wobble(i, 0.052), b: (step === 'b' ? 0.8 : 0.05) + wobble(i + 5, 0.002) });
+      screen.tick(t, 1 / 60);
+    }
+    return { app, screen, button, text: textOf(screen.node) };
+  };
+  const high = run([255, 255]);
+  assert.doesNotMatch(high.text, /Нет сигнала/);
+  assert.match(high.text, /Разделение каналов/);
+  assert.doesNotMatch(high.text, /в покое сигнал/, 'the prosthesis line sits above this ripple');
+  assert.doesNotMatch(high.text, /Поднять порог по дрожи покоя/);
+  const low = run([0, 0]);
+  assert.match(low.text, /Канал A: в покое сигнал доходит до порога протеза/);
+  assert.doesNotMatch(low.text, /Поднять порог по дрожи покоя/, 'the game does not offer to move a prosthesis threshold');
+  low.app.go = noop;
+  low.button('Сохранить').on.click();
+  assert.equal(low.app.settings.sensitivity, 0.22);
+  assert.equal(low.app.settings.sensitivityB, 0.22);
 });
 
 test('5.32: «Первая команда» is written into the four states, not only into its own note', async () => {

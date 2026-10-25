@@ -87,6 +87,33 @@ export class CalibrationRecorder {
 }
 
 /**
+ * Which «в покое сигнал дрожит» lines to show. The recorder compares rest with the default 22 % line. That line is not
+ * the one in force when the person's own threshold was judged, or when the prosthesis sent its own: a quiet channel
+ * must not be warned, and a prosthesis line below the default must still be warned. The game never rewrites the
+ * prosthesis line.
+ * @param {string[]} issues
+ * @param {{ restLevel?: (number|null)[], judging?: boolean, judged?: ({clears: boolean}|null)[], hostOn?: number[]|null }} opts
+ */
+export function shownRippleIssues(issues, { restLevel, judging = false, judged = [null, null], hostOn = null } = {}) {
+  const ripple = /^Канал ([AB]): в покое сигнал дрожит/;
+  if (hostOn) {
+    const kept = issues.filter(text => !ripple.test(text));
+    for (const ch of [0, 1]) {
+      const level = restLevel?.[ch];
+      if (Number.isFinite(level) && !(offThreshold(hostOn[ch]) > level)) {
+        kept.push(`Канал ${ch ? 'B' : 'A'}: в покое сигнал доходит до порога протеза — возможны ложные срабатывания. Этот порог игра не меняет. Проверьте, как прилегает датчик.`);
+      }
+    }
+    return kept;
+  }
+  if (!judging) return issues;
+  return issues.filter(text => {
+    const m = text.match(ripple);
+    return !m || !!judged[m[1] === 'B' ? 1 : 0];
+  });
+}
+
+/**
  * 5.32 — the warning «в покое сигнал дрожит» turned into an offer. The lowest switch-on threshold whose switch-off level
  * (offThreshold) stays above the rest ripple of the calibration, rounded up to the slider step. Null when `current`
  * already keeps rest off. Never above the slider's top: then `capped` and `clears` is false — that top still lets rest
