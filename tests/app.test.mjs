@@ -439,6 +439,27 @@ test('5.32: the prosthesis line, not the default 22 %, decides whether rest ripp
   assert.equal(low.app.settings.sensitivityB, 0.22);
 });
 
+test('5.32: a game threshold below 22 % is judged by its own line: the ripple is warned, said aloud with the offer', () => {
+  globalThis.location ??= { protocol: 'https:', search: '' };
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '', sensitivity: 0.12, sensitivityB: 0.22 });
+  const screen = calibrationScreen(app);
+  nodes(screen.node).find(n => n.tag === 'button' && n.kids?.some(k => k.textContent === 'Начать калибровку')).on.click();
+  // Rest of A ripples to ≈ 0.11 of the span: above the switch-off level of 12 % (0.078), below that of 22 % (0.15).
+  for (let i = 0, t = 0; t <= 12500; i++, t += 16) {
+    const step = t < 3000 ? 'rest' : t < 6000 ? 'a' : t < 8000 ? 'relax' : 'b';
+    window.Synergy.feed({ a: step === 'a' ? 1.3 : [0, 0.0314, 0.0628][i % 3], b: step === 'b' ? 0.9 : 0.05 });
+    screen.tick(t, 1 / 60);
+  }
+  const text = textOf(screen.node);
+  assert.match(text, /Поднять порог по дрожи покоя/, 'the offer was there before too');
+  assert.match(text, /Канал A: в покое сигнал дрожит/, 'until now: no warning, the default 22 % line hid it');
+  assert.doesNotMatch(text, /Канал B: в покое/);
+  const live = nodes(screen.node).find(n => n.attrs?.role === 'status');
+  assert.match(live.textContent, /^Есть замечания/, 'not «Готово» while rest can switch the channel on');
+  assert.match(live.textContent, /поднять порог A до \d+\s?%/i, 'the offer is said aloud, not only drawn');
+});
+
 test('5.32: «Первая команда» is written into the four states, not only into its own note', async () => {
   const { settingsScreen } = await import('../src/ui/settings.js');
   globalThis.location ??= { protocol: 'https:', search: '' };
