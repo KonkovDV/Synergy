@@ -1,7 +1,7 @@
 // Calibration — maps raw channel amplitude to 0..1 per user (like per-sensor sensitivity in Motorica Start).
 // Comfortable contraction (≈ 70 % effort, not maximum) becomes 1.0 to avoid fatigue.
 // RestTracker keeps the rest baseline right during a session with real sensors (co-adaptive calibration).
-import { CALIBRATION_ADAPT, CALIBRATION_QUALITY, SIGNAL } from '../config.js';
+import { CALIBRATION_ADAPT, CALIBRATION_QUALITY, SIGNAL, SETTINGS_RANGES } from '../config.js';
 import { offThreshold } from './signal.js';
 
 export const CALIBRATION_STEPS = [
@@ -66,6 +66,9 @@ export class CalibrationRecorder {
     const off = offThreshold(SIGNAL.onThreshold);
     const noisy = signal ? [0, 1].filter(ch => !flat.includes(ch) && CALIBRATION_QUALITY.restPeakNoise * noise[ch] >= off * span[ch]) : [];
     noisy.forEach(ch => issues.push(`Канал ${ch ? 'B' : 'A'}: в покое сигнал дрожит почти до порога — возможны ложные срабатывания. Проверьте, как прилегает датчик, и повторите калибровку.`));
+    // 5.32 — how high the rest ripple reaches on the new scale (3 SD of rest over the span): thresholdForRest() keeps
+    // each channel's switch-off level above it. Null where the channel gave nothing to scale.
+    const restLevel = [0, 1].map(ch => (signal && !flat.includes(ch) ? Math.min(1, CALIBRATION_QUALITY.restPeakNoise * noise[ch] / Math.max(1e-6, span[ch])) : null));
     const usable = signal && !flat.length;
     // Crosstalk: while contracting A, B should stay well below its own comfortable level.
     const crossA = percentile(this.samples.a.map(s => s[1]), 0.8);
@@ -79,8 +82,24 @@ export class CalibrationRecorder {
     // «max = rest + 1 mV» (5.11). A usable calibration already has max well above rest; this only guards a zero span.
     const safeMax = max.map((m, ch) => Math.max(m, rest[ch] + 1e-6));
     // `ref` — the wizard's rest level: rest adaptation is bounded around it across sessions, not around yesterday's.
-    return { calibration: { rest, max: safeMax, ref: [...rest], at: new Date().toISOString() }, issues, separation, usable };
+    return { calibration: { rest, max: safeMax, ref: [...rest], at: new Date().toISOString() }, issues, separation, usable, restLevel };
   }
+}
+
+/**
+ * 5.32 — the warning «в покое сигнал дрожит» turned into an offer. The lowest switch-on threshold whose switch-off level
+ * (offThreshold) stays above the rest ripple of the calibration, rounded up to the slider step. Null when `current`
+ * already keeps rest off. Never above the slider's top: then `capped` — the sensor, not the threshold, needs a look.
+ * Prosthetists set the threshold above the rest noise the same way; the game only offers, the person decides.
+ * @returns {{value: number, capped: boolean} | null}
+ */
+export function thresholdForRest(level, current, range = SETTINGS_RANGES.sensitivity, params = SIGNAL) {
+  if (!Number.isFinite(level) || !Number.isFinite(current) || offThreshold(current, params) > level) return null;
+  // offThreshold(on) = max(on − hysteresis, on × hysteresisMinRatio) is above `level` once on > the smaller of the two.
+  const need = Math.min(level + params.hysteresis, level / params.hysteresisMinRatio);
+  const steps = Math.floor(need / range.step + 1e-9) + 1; // strictly above
+  const value = Math.round(Math.max(current, steps * range.step) * 100) / 100;
+  return value > range.max ? { value: range.max, capped: true } : { value, capped: false };
 }
 
 /**

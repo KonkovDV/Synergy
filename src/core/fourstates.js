@@ -4,6 +4,16 @@
 import { fmtFixed } from './format.js';
 import { SCHEME } from './vocabulary.js';
 
+/**
+ * 5.32 — the second channel switched on later than the first (not «A и B разом»): what the hand does under the law the
+ * settings name (BOTH_ON in config.js).
+ */
+export function bothOnText(mode = 'hold') {
+  return mode === 'first'
+    ? 'Второй канал включился позже первого: кисть продолжает первую команду, пока её канал включён. Так протез описала эксперт «Моторики» на митапе. Какой закон у вашей кисти, скажет протезист.'
+    : 'Второй канал включился позже первого: кисть останавливается — две команды разом она не выполняет. Так игра работала до сих пор.';
+}
+
 /** @returns {{id: string, signal: string, action: string}[]} the four states in the order of the slide. */
 export function fourStates({ scheme = SCHEME.PROPORTIONAL, gripSwitch = 'open', holdOpenS = 1, lockHoldS = 1.6 } = {}) {
   const hold = `${fmtFixed(holdOpenS, 2)}\u00a0с`, lock = `${fmtFixed(lockHoldS)}\u00a0с`;

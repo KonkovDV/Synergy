@@ -12,8 +12,8 @@ globalThis.localStorage = { getItem: k => store.get(k) ?? null, setItem: (k, v) 
 globalThis.Node = class Node {};
 const canvas2d = new Proxy({}, { get: (_, k) => (k === 'createLinearGradient' ? () => ({ addColorStop: noop }) : noop) });
 // A small tree: screens built here can be searched by class and text (no layout, no events).
-const el = tag => Object.assign(new Node(), { tag, attrs: {}, style: { setProperty: noop }, classList: { toggle: noop, add: noop, remove: noop }, addEventListener: noop,
-  setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; }, append(...c) { this.kids.push(...c); }, replaceChildren(...c) { this.kids = [...c]; },
+const el = tag => Object.assign(new Node(), { tag, attrs: {}, style: { setProperty: noop }, classList: { toggle: noop, add: noop, remove: noop }, addEventListener(type, fn) { (this.on ??= {})[type] = fn; }, focus: noop,
+  setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; }, append(...c) { this.kids.push(...c); }, appendChild(c) { this.kids.push(c); return c; }, remove: noop, replaceChildren(...c) { this.kids = [...c]; },
   getContext: () => canvas2d, dataset: {}, kids: [] });
 globalThis.document = { ...target(), documentElement: el('html'), createElement: el, createElementNS: (_, tag) => el(tag), createTextNode: t => Object.assign(new Node(), { textContent: String(t) }), querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, hidden: false, body: el('body') };
 globalThis.requestAnimationFrame = noop;
@@ -332,6 +332,30 @@ test('5.32: settings draw the live trace of A and B in the two-channel schemes a
   for (let t = 0; t <= 3000; t += 16) screen.tick(t); // the canvas stub has no size: nothing is drawn, nothing throws
   app.updateSettings({ scheme: 'gesture' });
   assert.ok(!nodes(settingsScreen(app).node).some(n => n.tag === 'canvas' && n.attrs?.class === 'trace'), 'gestures: no two lines to compare');
+});
+
+test('5.32: a calibration whose rest ripples up to the switch-off level offers a higher threshold, and «Сохранить» applies it', () => {
+  globalThis.location ??= { protocol: 'https:', search: '' };
+  const app = fresh();
+  app.updateSettings({ source: 'bridge', wsUrl: '', sensitivity: 0.22, sensitivityB: 0.22 });
+  // The screen opens before the host's first frame, which rebuilds the bridge: until 5.32 the calibration kept the
+  // stopped one and said «Нет сигнала» on every step.
+  const screen = calibrationScreen(app);
+  const button = text => nodes(screen.node).find(n => n.tag === 'button' && n.kids?.some(k => k.textContent === text));
+  button('Начать калибровку').on.click();
+  const wobble = (i, k) => k * Math.sin(i * 1.7) * Math.cos(i * 0.31);
+  for (let i = 0, t = 0; t <= 12500; i++, t += 16) {
+    const step = t < 3000 ? 'rest' : t < 6000 ? 'a' : t < 8000 ? 'relax' : 'b';
+    window.Synergy.feed({ a: (step === 'a' ? 0.6 : 0.1) + wobble(i, 0.052), b: (step === 'b' ? 0.8 : 0.05) + wobble(i + 5, 0.002) });
+    screen.tick(t, 1 / 60);
+  }
+  assert.match(textOf(screen.node), /Поднять порог по дрожи покоя/);
+  assert.match(textOf(screen.node), /A\s—\s\d+\s?%/);
+  assert.doesNotMatch(textOf(screen.node), /B\s—\s\d+\s?%\./, 'the quiet channel is not offered');
+  app.go = noop; // the screen change itself is the browser's (e2e)
+  button('Сохранить').on.click();
+  assert.ok(app.settings.sensitivity > 0.22, `A raised to ${app.settings.sensitivity}`);
+  assert.equal(app.settings.sensitivityB, 0.22, 'B kept');
 });
 
 test('5.30: two prostheses — the leading arm drives the exercise with its own calibration, the run says which arm', async () => {

@@ -471,7 +471,7 @@ export class App {
     const s = this.settings;
     const calibration = demo || this.sensorsPaused() ? this.state.calibrations.touch : this.calibration();
     const restTracker = adaptRest ? new RestTracker(calibration, { onThreshold: Math.max(...this.switchOn(demo)) }) : null;
-    return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, onThresholdB: s.sensitivityB, coThreshold: s.coThreshold, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
+    return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, onThresholdB: s.sensitivityB, coThreshold: s.coThreshold, bothOn: s.bothOn, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
   }
 
   /** The grip switches the way the person's prosthesis does it (Настройки → «Смена хвата»). */

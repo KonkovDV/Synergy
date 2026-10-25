@@ -117,7 +117,7 @@ export function buildReport(state, { periodDays = null, today = dayKey() } = {})
   return {
     app: APP.name, version: APP.version, exported_at: new Date().toISOString(),
     disclaimer: DISCLAIMER,
-    settings: { scheme: state.settings.scheme, source: state.settings.source, side: state.settings.side, sensitivity: state.settings.sensitivity, sensitivityB: state.settings.sensitivityB, prosthesisThresholds: state.settings.prosthesisThresholds, coThreshold: state.settings.coThreshold, lockHoldS: state.settings.lockHoldS, gripSwitch: state.settings.gripSwitch, holdOpenS: state.settings.holdOpenS, adaptive: state.settings.adaptive, audience: state.settings.audience, prosthesis: state.settings.prosthesis },
+    settings: { scheme: state.settings.scheme, source: state.settings.source, side: state.settings.side, sensitivity: state.settings.sensitivity, sensitivityB: state.settings.sensitivityB, prosthesisThresholds: state.settings.prosthesisThresholds, coThreshold: state.settings.coThreshold, lockHoldS: state.settings.lockHoldS, gripSwitch: state.settings.gripSwitch, bothOn: state.settings.bothOn, holdOpenS: state.settings.holdOpenS, adaptive: state.settings.adaptive, audience: state.settings.audience, prosthesis: state.settings.prosthesis },
     period: { days: periodDays, ...periodSummary(state.profile, keys) },
     calibration: state.calibrations,
     summary: { runs: runs.length, minutes: Math.round(state.profile.totals.seconds / 60), streak: state.profile.streak, skills: skillProfile(runs, 30) },
