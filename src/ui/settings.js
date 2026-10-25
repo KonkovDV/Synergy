@@ -5,8 +5,8 @@ import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, signalTraceView, BRIDGE_STATUS, icon } from './widgets.js';
 import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS } from '../core/vocabulary.js';
 import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
-import { CalibrationRecorder, CALIBRATION_STEPS, thresholdForRest } from '../core/calibration.js';
-import { defaultCalibration } from '../core/signal.js';
+import { CalibrationRecorder, CALIBRATION_STEPS, thresholdForRest, shownRippleIssues } from '../core/calibration.js';
+import { defaultCalibration, thresholdShares } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
 import { bleSupported } from '../input/ble.js';
@@ -353,27 +353,26 @@ export function calibrationScreen(app) {
         // only; the prosthesis's own ones, when the host sent them, are not the game's to change). A capped offer does
         // not clear rest (the slider is already at its top), so it is said and not applied.
         const s = app.settings, current = [s.sensitivity, s.sensitivityB ?? s.sensitivity];
-        const judging = save && !app.prosthesisThresholds();
+        const hostRaw = app.prosthesisThresholds();
+        const judging = save && !hostRaw;
         const judged = judging ? current.map((v, ch) => thresholdForRest(r.restLevel?.[ch], v)) : [null, null];
         const raise = judged.map(x => (x?.clears ? x : null));
         const stuck = judged.map((x, ch) => (x && !x.clears ? ch : null)).filter(ch => ch !== null);
-        const issues = r.issues.filter(text => {
-          const m = text.match(/^Канал ([AB]): в покое сигнал дрожит/);
-          // The warning is about the default line. The person's own threshold may already sit above the ripple — that is
-          // known only when the offer was judged: a calibration that cannot be saved (a flat channel) keeps the warning.
-          if (!m || !judging) return true;
-          return !!judged[m[1] === 'B' ? 1 : 0];
-        });
+        // The recorder's ripple line is the default 22 %. Compare it with the line that will actually switch the
+        // channel on: the prosthesis thresholds read through this calibration, or the game sliders.
+        const hostOn = hostRaw ? thresholdShares(hostRaw, r.calibration, current) : null;
+        const issues = shownRippleIssues(r.issues, { restLevel: r.restLevel, judging, judged, hostOn });
         title.textContent = issues.length ? 'Есть замечания' : 'Готово';
         text.textContent = `Разделение каналов: A ${fmtPct(Math.round(r.separation[0] * 100))}, B ${fmtPct(Math.round(r.separation[1] * 100))}.`;
-        announce(`${title.textContent}. ${issues.join(' ')}`);
         // Without signal there is nothing to save: the previous calibration stays.
         let applyRaise = raise.some(Boolean);
         const names = chs => chs.map(ch => (ch ? 'B' : 'A')).join(' и ');
+        const stuckText = stuck.length ? `Канал${stuck.length > 1 ? 'ы' : ''} ${names(stuck)}: даже потолок порога ${pct(R.sensitivity.max)} не удержит покой — покой может включить ${stuck.length > 1 ? 'их' : 'его'} сам. Порог не меняем. Проверьте, как прилегает датчик.` : '';
+        announce(`${title.textContent}. ${[...issues, stuckText].filter(Boolean).join(' ')}`);
         const raiseRow = applyRaise ? toggleRow(
           `Поднять ${raise.filter(Boolean).length > 1 ? 'пороги' : 'порог'} по дрожи покоя`, true, v => { applyRaise = v; },
           `${raise.map((x, ch) => (x ? `${ch ? 'B' : 'A'} — ${pct(x.value)}` : null)).filter(Boolean).join(', ')}. Так покой не включит ${raise.filter(Boolean).length > 1 ? 'эти каналы' : 'этот канал'} сам. Ползунки — в «Чувствительности».`) : null;
-        const stuckNote = stuck.length ? h('p', { class: 'note warn' }, `Канал${stuck.length > 1 ? 'ы' : ''} ${names(stuck)}: даже потолок порога ${pct(R.sensitivity.max)} не удержит покой — покой может включить ${stuck.length > 1 ? 'их' : 'его'} сам. Порог не меняем. Проверьте, как прилегает датчик.`) : null;
+        const stuckNote = stuckText ? h('p', { class: 'note warn' }, stuckText) : null;
         const done = h('button', { class: 'btn primary big', onclick: () => {
           if (save) {
             app.state.calibrations[app.calibrationKey(kind)] = r.calibration; app.save();
