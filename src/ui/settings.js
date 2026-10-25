@@ -2,7 +2,7 @@
 // Child mode: the screen sits behind the parent PIN gate (ui/pin.js).
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
-import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, BRIDGE_STATUS, icon } from './widgets.js';
+import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, signalTraceView, BRIDGE_STATUS, icon } from './widgets.js';
 import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS } from '../core/vocabulary.js';
 import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
 import { CalibrationRecorder, CALIBRATION_STEPS } from '../core/calibration.js';
@@ -45,6 +45,7 @@ export function settingsScreen(app, { back = null } = {}) {
   const s = app.settings;
   if (s.audience === 'child' && s.parentPin && !app.pinOk) return pinGateScreen(app);
   const meter = signalMeter(app);
+  const trace = twoChannelControls(s.scheme) ? signalTraceView(app) : null; // 5.32: gestures have no two lines to compare
   const status = h('small', { class: 'bridge-status' }, app.bridge ? `Статус: ${BRIDGE_STATUS[app.bridge.status] ?? app.bridge.status}` : '');
   const bleStatus = h('small', { class: 'bridge-status' }, app.ble ? `Bluetooth: ${app.ble.name}` : '');
   const urlInput = h('input', { type: 'url', value: s.wsUrl, placeholder: 'ws://192.168.0.10:8765', 'aria-label': 'Адрес WebSocket' });
@@ -190,6 +191,7 @@ export function settingsScreen(app, { back = null } = {}) {
         ]),
         h('p', { class: 'note' }, 'Проверка вживую — напрягите мышцы или используйте площадки ниже:'),
         meter.node,
+        trace?.node,
         s.source === 'touch' && s.scheme !== 'gesture' ? createTwoChannelPads(app.emulator) : null,
         h('div', { class: 'row-actions' },
           h('button', { class: 'btn ghost', 'data-return': 'calibration', onclick: () => app.go('calibration') }, 'Калибровка датчиков'),
@@ -260,7 +262,11 @@ export function settingsScreen(app, { back = null } = {}) {
   return {
     node,
     focus: returnTo,
-    tick(now) { meter.update(preview.pipeline.process(preview.source?.sample(now) ?? null, now)); },
+    tick(now) {
+      const intent = preview.pipeline.process(preview.source?.sample(now) ?? null, now);
+      meter.update(intent);
+      trace?.update(intent, now);
+    },
     onBridgeStatus(st) { status.textContent = `Статус: ${BRIDGE_STATUS[st] ?? st}`; },
     onThresholds() { refreshPreview(); },
     onBleStatus(st) { bleStatus.textContent = st === 'disconnected' ? 'Bluetooth: связь потеряна — переподключаемся…' : st === 'failed' ? 'Bluetooth: не удалось переподключиться' : `Bluetooth: ${st}`; },

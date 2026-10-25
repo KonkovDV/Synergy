@@ -30,6 +30,8 @@ try {
   // 5.15) and the documents they link to — the text documents only, not the screenshots.
   for (const f of readdirSync(join(root, 'docs')).filter(f => f.endsWith('.md'))) cpSync(join(root, 'docs', f), join(tmp, 'docs', f));
   cpSync(join(root, 'docs', 'embed'), join(tmp, 'docs', 'embed'), { recursive: true });
+  // 5.31 (M-17): a test reads the jury page of the submission pack; without it the drill failed on every tree since then.
+  for (const f of readdirSync(join(root, 'submission')).filter(f => f.endsWith('.md'))) cpSync(join(root, 'submission', f), join(tmp, 'submission', f));
   // esbuild for the bundle test; a junction on Windows (5.16: a directory symlink needs admin rights there).
   if (existsSync(join(root, 'node_modules'))) symlinkSync(join(root, 'node_modules'), join(tmp, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
   const file = join(tmp, 'src/core/vocabulary.js');
