@@ -372,14 +372,39 @@ test('5.32: a ripple the slider cannot clear is not applied and is not called sa
     screen.tick(t, 1 / 60);
   }
   const text = textOf(screen.node);
-  assert.match(text, /порог уже 45\s*%/);
-  assert.match(text, /покой всё ещё может включить/);
+  assert.match(text, /даже потолок порога 45\s*%/);
+  assert.match(text, /покой может включить/);
   assert.doesNotMatch(text, /Поднять порог по дрожи покоя/);
   assert.doesNotMatch(text, /не включит этот канал сам/);
   app.go = noop;
   button('Сохранить').on.click();
   assert.equal(app.settings.sensitivity, 0.22, 'a threshold that cannot clear rest is not saved');
   assert.equal(app.settings.sensitivityB, 0.22);
+});
+
+test('5.32: a calibration that cannot be saved keeps its rest-ripple warning; the cap is not called the current threshold', () => {
+  globalThis.location ??= { protocol: 'https:', search: '' };
+  const run = (feed, settings) => {
+    const app = fresh();
+    app.updateSettings({ source: 'bridge', wsUrl: '', sensitivity: 0.22, sensitivityB: 0.22, ...settings });
+    const screen = calibrationScreen(app);
+    nodes(screen.node).find(n => n.tag === 'button' && n.kids?.some(k => k.textContent === 'Начать калибровку')).on.click();
+    for (let i = 0, t = 0; t <= 12500; i++, t += 16) {
+      window.Synergy.feed(feed(t < 3000 ? 'rest' : t < 6000 ? 'a' : t < 8000 ? 'relax' : 'b', i));
+      screen.tick(t, 1 / 60);
+    }
+    return textOf(screen.node);
+  };
+  const wobble = (i, k) => k * Math.sin(i * 1.7) * Math.cos(i * 0.31);
+  // B never rises (a flat channel): nothing is saved, so nothing is offered — and the ripple of A must still be told.
+  const flatB = run((step, i) => ({ a: (step === 'a' ? 0.6 : 0.1) + wobble(i, 0.052), b: 0.05 + wobble(i + 5, 0.002) }));
+  assert.match(flatB, /Канал B: напряжение почти не отличается/);
+  assert.match(flatB, /Канал A: в покое сигнал дрожит/, 'until now the filter dropped it: no offer was judged at all');
+  // A ripple even the slider top cannot clear, with the threshold still at 22 %: the note must not say «already 45 %».
+  const capped = run((step, i) => ({ a: step === 'a' ? 1.3 : [0, 0.16, 0.32][i % 3], b: step === 'b' ? 0.9 : 0.05 }));
+  assert.doesNotMatch(capped, /порог уже 45/, 'the threshold is 22 %, not 45 %');
+  assert.match(capped, /даже потолок порога 45\s*%/);
+  assert.match(capped, /покой может включить/);
 });
 
 test('5.32: «Первая команда» is written into the four states, not only into its own note', async () => {
