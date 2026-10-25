@@ -23,6 +23,9 @@ export const fmtFixed = (v, digits = 1) => (Number.isFinite(v) ? v.toFixed(digit
 /** Percent with a non-breaking space (Russian typography): 22 → «22 %». */
 export const fmtPct = (v, digits = 0) => (Number.isFinite(v) ? `${fmtNum(v, digits)} %` : '—');
 
+/** A cleanliness percent the game itself writes: an integer 0…100. Anything else is not shown. */
+export const isGamePercent = v => Number.isInteger(v) && v >= 0 && v <= 100;
+
 /** Seconds: 1.2 → «1,2 с». */
 export const fmtSec = (v, digits = 1) => (Number.isFinite(v) ? `${fmtNum(v, digits)} с` : '—');
 

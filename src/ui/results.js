@@ -1,5 +1,5 @@
 // Results (knowledge of results + coach advice + rewards) and the rest break between plan items.
-import { count, fmtNum, fmtPct, fmtFixed, FORMS } from '../core/format.js';
+import { count, fmtNum, fmtPct, fmtFixed, FORMS, isGamePercent } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { gameArt, badgeArt, starRow, firebird, evolution, achievementArt, giftArt, skinArt, sectionArt } from './art.js';
 import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, PET_SLOTS } from '../core/pet.js';
@@ -91,7 +91,7 @@ export function replaySummary(replay) {
  * A game metric. Muscles differ by the level of injury, so one number would hide which one leaked.
  */
 export function cleanPairText(details) {
-  const line = (n, name) => Number.isFinite(n) ? `${name}: ${fmtPct(n)}` : null;
+  const line = (n, name) => isGamePercent(n) ? `${name}: ${fmtPct(n)}` : null;
   const parts = [line(details?.cleanClose, 'Чистота закрытия'), line(details?.cleanOpen, 'Чистота открытия')].filter(Boolean);
   // 100 % is «the other channel did not rise with the working one», not «no interference» glued to a low number.
   return parts.length ? `${parts.join('. ')}. 100 % — второй канал не поднимался вместе с рабочим. Игровая цифра, не оценка протеза.` : '';
@@ -99,8 +99,9 @@ export function cleanPairText(details) {
 
 /** The isolation line under the skills (pure: tests/v531.test.mjs). */
 export function crossingsText(n) {
+  // Zero crossings is not «clean»: the other channel can rise under its switch-on line and still lower the percent.
   return n ? `Второй канал включался, пока работал первый: ${count(n, FORMS.times)}. Начните с половины силы — так его легче не задеть.`
-    : 'Второй канал ни разу не включился, пока работал первый: изоляция чистая.';
+    : 'Второй канал ни разу не пересёк линию включения, пока работал первый.';
 }
 
 /** Cubes and rings (5.32). A game rate, not a Box and Blocks score. */

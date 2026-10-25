@@ -9,6 +9,7 @@ import { fourStates } from '../src/core/fourstates.js';
 import { FAQ } from '../src/core/faq.js';
 import { QUALITY_TIPS } from '../src/core/signalquality.js';
 import { crossingsText, cleanPairText, gripReplaySummary } from '../src/ui/results.js';
+import { parseState } from '../src/core/storage.js';
 import { runnerFor, drive, play } from './helpers.mjs';
 
 test('5.31 isolation: each time the passive channel switches on while the other works is one crossing', () => {
@@ -21,6 +22,7 @@ test('5.31 isolation: each time the passive channel switches on while the other 
   at(0.5, 0.3, true);
   assert.equal(m.crossings, 3, 'a new effort with the passive channel already on counts');
   assert.match(crossingsText(0), /ни разу/);
+  assert.doesNotMatch(crossingsText(0), /чистая/);
   assert.match(crossingsText(3), /3 раза/);
   const split = new SeparationMeter();
   split.add({ a: 0.6, b: 0, aOn: true, bOn: false }, true, 0.2);
@@ -30,6 +32,22 @@ test('5.31 isolation: each time the passive channel switches on while the other 
   assert.ok(split.open < 80, `open leaked, scored ${split.open}`);
   assert.equal(split.score, pooled, 'letting go does not rewrite the pooled separation score');
   assert.equal(split.crossings, 0);
+  const under = new SeparationMeter();
+  under.add({ a: 0.5, b: 0.2, aOn: true, bOn: false }, true, 0.2);
+  assert.equal(under.crossings, 0, 'under the switch-on line is not a crossing');
+  assert.equal(under.close, 60, 'the rise still lowers cleanliness');
+  const forged = parseState(JSON.stringify({ version: 4, runs: [{ game: 'grip', level: 1, score: 80, stars: 2, details: { cleanClose: 500, cleanOpen: 40 } }] }));
+  assert.equal(forged.runs[0].details.cleanClose, undefined, 'a percent outside 0…100 is dropped');
+  assert.equal(forged.runs[0].details.cleanOpen, 40);
+  const shown = cleanPairText({ cleanClose: 500, cleanOpen: 40 });
+  assert.match(shown, /Чистота открытия/);
+  assert.doesNotMatch(shown, /500/);
+  const rhythm = createGame('rhythm', { levelNumber: 1, scheme: 'threshold', seed: 1 });
+  rhythm.notes = [{ score: 0 }];
+  rhythm.falseStarts = 80;
+  assert.equal(rhythm.scoreValue() < 0, true);
+  assert.equal(rhythm.hud().score, 0, 'the live score stays on 0…100');
+  assert.equal(rhythm.result().score, 0);
 });
 
 test('5.31 isolation: the two-channel games report crossings, the gesture scheme does not', () => {

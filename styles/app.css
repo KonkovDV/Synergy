@@ -919,11 +919,15 @@ table.data th { font-size: 0.75rem }
   .hero-top { grid-template-columns: 3.5rem minmax(0, 1fr) }
   .hero-top .streak { grid-column: 2; justify-self: start }
 }
-/* Short portrait phones (568 px, iPhone SE 1st gen): the day's first action stays above the bar in high contrast too. */
+/* Short portrait phones (568 px, iPhone SE 1st gen): the day's first action stays above the bar in high contrast too.
+   High contrast adds a 2 px border on the hero and the bar; the looser padding pushed «Начать» under it at 320 × 568. */
 @media (orientation: portrait) and (max-height: 600px) {
   .hero { padding: 14px 14px 12px }
   .hero-top { gap: 8px }
   .week { margin-top: 8px }
+  :root.hc .hero { padding: 8px 10px 6px }
+  :root.hc .week { margin-top: 4px; gap: 4px }
+  :root.hc .plan .plan-start { margin: 0 0 6px }
 }
 /* 5.11 — landscape phone (a wheelchair holder): a navigation rail on the left (Material 3) instead of a bar over a
    third of a 390 px high screen, and every screen's main action stays on screen in one compact sticky row (it was
