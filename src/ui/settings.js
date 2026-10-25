@@ -353,13 +353,15 @@ export function calibrationScreen(app) {
         // only; the prosthesis's own ones, when the host sent them, are not the game's to change). A capped offer does
         // not clear rest (the slider is already at its top), so it is said and not applied.
         const s = app.settings, current = [s.sensitivity, s.sensitivityB ?? s.sensitivity];
-        const judged = save && !app.prosthesisThresholds() ? current.map((v, ch) => thresholdForRest(r.restLevel?.[ch], v)) : [null, null];
+        const judging = save && !app.prosthesisThresholds();
+        const judged = judging ? current.map((v, ch) => thresholdForRest(r.restLevel?.[ch], v)) : [null, null];
         const raise = judged.map(x => (x?.clears ? x : null));
         const stuck = judged.map((x, ch) => (x && !x.clears ? ch : null)).filter(ch => ch !== null);
         const issues = r.issues.filter(text => {
           const m = text.match(/^Канал ([AB]): в покое сигнал дрожит/);
-          if (!m || app.prosthesisThresholds()) return true;
-          // The warning is about the default line. The person's own threshold may already sit above the ripple.
+          // The warning is about the default line. The person's own threshold may already sit above the ripple — that is
+          // known only when the offer was judged: a calibration that cannot be saved (a flat channel) keeps the warning.
+          if (!m || !judging) return true;
           return !!judged[m[1] === 'B' ? 1 : 0];
         });
         title.textContent = issues.length ? 'Есть замечания' : 'Готово';
@@ -371,7 +373,7 @@ export function calibrationScreen(app) {
         const raiseRow = applyRaise ? toggleRow(
           `Поднять ${raise.filter(Boolean).length > 1 ? 'пороги' : 'порог'} по дрожи покоя`, true, v => { applyRaise = v; },
           `${raise.map((x, ch) => (x ? `${ch ? 'B' : 'A'} — ${pct(x.value)}` : null)).filter(Boolean).join(', ')}. Так покой не включит ${raise.filter(Boolean).length > 1 ? 'эти каналы' : 'этот канал'} сам. Ползунки — в «Чувствительности».`) : null;
-        const stuckNote = stuck.length ? h('p', { class: 'note warn' }, `Канал${stuck.length > 1 ? 'ы' : ''} ${names(stuck)}: порог уже ${pct(R.sensitivity.max)}, выше нельзя, а покой всё ещё может включить ${stuck.length > 1 ? 'их' : 'его'}. Проверьте, как прилегает датчик.`) : null;
+        const stuckNote = stuck.length ? h('p', { class: 'note warn' }, `Канал${stuck.length > 1 ? 'ы' : ''} ${names(stuck)}: даже потолок порога ${pct(R.sensitivity.max)} не удержит покой — покой может включить ${stuck.length > 1 ? 'их' : 'его'} сам. Порог не меняем. Проверьте, как прилегает датчик.`) : null;
         const done = h('button', { class: 'btn primary big', onclick: () => {
           if (save) {
             app.state.calibrations[app.calibrationKey(kind)] = r.calibration; app.save();
