@@ -1,5 +1,5 @@
 // Versioned local persistence. Never throws to the UI; corrupt data is backed up, not overwritten.
-import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES, ARM_POSES, LOCK, GRIP_SWITCH } from '../config.js';
+import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES, ARM_POSES, LOCK, GRIP_SWITCH, BOTH_ON } from '../config.js';
 
 const POSE_IDS = ARM_POSES.map(p => p.id);
 import { createProfile, SKINS } from './progress.js';
@@ -41,6 +41,7 @@ export const DEFAULT_SETTINGS = {
   prosthesis: 'yes',        // yes | waiting — протез уже есть или человек ждёт его и учится заранее (5.14)
   lockHoldS: LOCK.holdDefaultS, // удержание A+B для блокировки, как в приложении протеза (5.14)
   gripSwitch: GRIP_SWITCH.defaultMode, // open — как в протезах «Моторики»: раскрыть до конца и снова B; co — коактивация (5.23)
+  bothOn: BOTH_ON.defaultMode, // 5.32: второй канал позже первого — кисть стоит (hold) или идёт первая команда (first)
   holdOpenS: GRIP_SWITCH.holdDefaultS, // удержание повторного раскрытия для смены хвата («peak length» в Motorica Start)
   // Training
   adaptive: true,           // адаптивная сложность внутри упражнения
@@ -76,6 +77,7 @@ export const SETTINGS_RULES = {
   side: oneOf('right', 'left'),
   controlHand: oneOf('auto', 'left', 'right'),
   prostheses: oneOf('one', 'two'),
+  bothOn: oneOf(...BOTH_ON.modes),
   audience: oneOf('adult', 'child'),
   prosthesis: oneOf('yes', 'waiting'),
   lockHoldS: range(LOCK.minS, LOCK.maxS),

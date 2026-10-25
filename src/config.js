@@ -197,6 +197,15 @@ export const GRIP_SWITCH = { defaultMode: 'open', holdDefaultS: 1, minS: 0.1, ma
 // screen's default text «1,00c»; on FEST-H hands progress × 0.04 s, up to 1.0 s. Until 5.28 the game's 0.8 s was a
 // guess («the manual gives no default»). A default of the app's screen, not a measurement on a prosthesis.
 
+/**
+ * 5.32 — what the hand does when the second channel switches on later than the first, outside the co-contraction window
+ * (`coOnsetWindowMs`). 'hold' — the game's model until now: two commands at once, the hand stands. 'first' — the first
+ * command goes on while its channel stays on; the later one is not executed. That is how Motorica's expert described
+ * the prosthesis at the meetup («выполнит первую пришедшую команду») and Momo's FIRST_OVER policy (hcilab, MIT). Which
+ * law a given hand follows is the prosthetist's word, so the default stays 'hold'.
+ */
+export const BOTH_ON = { modes: ['hold', 'first'], defaultMode: 'hold' };
+
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 
 /**

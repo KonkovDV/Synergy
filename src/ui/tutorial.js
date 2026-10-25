@@ -23,7 +23,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
   const s = app.settings;
   const run = new TutorialRun(s.scheme, { lockHoldS: s.lockHoldS, gripSwitch: s.gripSwitch, holdOpenS: s.holdOpenS });
   let locked = false; // 5.14: between «Замок» and «Открыть замок» the drawn prosthesis holds still, a padlock shows it
-  const pipeline = app.createPipeline(), source = app.signalSource(), hand = app.createHand();
+  const pipeline = app.createPipeline(), source = app.liveFrames(), hand = app.createHand(); // 5.32: the live bridge, not the one at opening
   const title = h('h2', {}), text = h('p', { class: 'lead' }), tip = h('p', { class: 'note warn' });
   const counter = h('p', { class: 'eyebrow' });
   const ring = h('div', { class: 'cal-ring tut-ring' });

@@ -20,7 +20,7 @@ import { signalMeter, segmented, mioAvatar } from './widgets.js';
 /** Hands-free confirm of the primary action (results and rest): the same rule as the game start, a bit longer. */
 function muscleConfirm(app, ring, action) {
   const pipeline = app.createPipeline();
-  const source = app.signalSource();
+  const source = app.liveFrames(); // 5.32: follows a bridge the host's first frame rebuilds
   const confirm = new HoldConfirm(app.settings.dwellS + HANDS_FREE.leaveExtraS);
   return (now, dt) => {
     const intent = pipeline.process(source.sample(now), now);
@@ -352,7 +352,7 @@ export function restScreen(app, { next }) {
       h('section', { class: `card tinted g-${g.id}` }, h('b', { class: 'with-art' }, gameArt(g.id, 36), `Дальше: ${g.title}${next.retention ? ' — без подсказки' : ''}`), h('p', {}, g.tagline)),
       // The pause is the safety rule, not an obstacle (5.11): skipping it is a quiet option, the timer moves on itself.
       h('div', { class: 'sticky-actions' }, more, h('button', { class: 'btn ghost', onclick: go }, 'Дальше без отдыха'))));
-  const pipeline = app.createPipeline(), source = app.signalSource();
+  const pipeline = app.createPipeline(), source = app.liveFrames();
   app.say(`Отдых ${count(left, FORMS.seconds)}. Полностью расслабьте руку. Дальше: ${g.title}.`, { interrupt: true });
   return {
     node,
