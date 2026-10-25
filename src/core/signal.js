@@ -1,6 +1,6 @@
 // Signal pipeline: SignalFrame → (validate, watchdog, calibrate, smooth) → ChannelState → Intent.
 // Pure module: no DOM, deterministic, unit-tested in tests/core.test.mjs.
-import { SIGNAL, PROSTHESIS_THRESHOLDS } from '../config.js';
+import { SIGNAL, PROSTHESIS_THRESHOLDS, BOTH_ON } from '../config.js';
 import { COMMAND, SCHEME, GESTURE_BY_ID, GESTURE_CLASS_ORDER } from './vocabulary.js';
 
 export const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
@@ -90,13 +90,13 @@ export class SignalPipeline {
     this.scheme = scheme;
     this.restTracker = restTracker;
     this.calibration = restTracker?.calibration ?? calibration;
-    this.params = { ...SIGNAL, ...params };
+    this.params = { ...SIGNAL, bothOn: BOTH_ON.defaultMode, ...params };
     this.reset();
   }
 
   reset() {
     this.a = 0; this.b = 0;
-    this.aOn = false; this.bOn = false;
+    this.aOn = false; this.bOn = false; this.lead = null;
     this.aHighSince = null; this.bHighSince = null;
     this.lastRaw = null; this.lastFrame = null; this.lastValidAt = -Infinity; this.lastT = null;
     this.stableGesture = 'rest'; this.pendingGesture = 'rest'; this.pendingSince = 0;
@@ -112,7 +112,7 @@ export class SignalPipeline {
       if (fresh) this.ingest(frame, now);
     }
     if (now - this.lastValidAt > this.params.frameTimeoutMs) {
-      this.a = 0; this.b = 0; this.aOn = false; this.bOn = false;
+      this.a = 0; this.b = 0; this.aOn = false; this.bOn = false; this.lead = null;
       this.aHighSince = null; this.bHighSince = null;
       // 5.27 — after a dropout the gesture starts from rest. The last gesture before the loss stayed «stable» and was
       // executed for gestureStableMs once the signal came back: «Ладонь» shown, «Кулак» closing the hand.
@@ -154,6 +154,10 @@ export class SignalPipeline {
     const off = on.map(x => offThreshold(x, { hysteresis, hysteresisMinRatio }));
     this.aOn = this.aOn ? this.a >= off[0] : this.a >= on[0];
     this.bOn = this.bOn ? this.b >= off[1] : this.b >= on[1];
+    // 5.32 — which channel came first. Alone it leads; when both are on, the first keeps the lead (both in one frame —
+    // no lead); when the leader goes off, the one still on takes over (Momo's FIRST_OVER does the same).
+    if (this.aOn !== this.bOn) this.lead = this.aOn ? 'a' : 'b';
+    else if (!this.aOn) this.lead = null;
     // Onset of the «high» zone used to recognise a deliberate co-contraction; kept through small dips.
     // Never below the switch-on threshold (5.11): at sensitivity 0.45 with co-contraction 0.25 two muscles that did
     // not even switch on changed the grip, while «покой» checks read them as relaxed. Per channel since 5.29.
@@ -196,6 +200,8 @@ export class SignalPipeline {
     if (co) command = COMMAND.SWITCH;
     else if (this.aOn && !this.bOn) command = COMMAND.CLOSE;
     else if (this.bOn && !this.aOn) command = COMMAND.OPEN;
+    // Both on, not a co-contraction: the hand stands ('hold') or goes on with the first command ('first', BOTH_ON).
+    else if (this.aOn && this.bOn && this.params.bothOn === 'first' && this.lead) command = this.lead === 'a' ? COMMAND.CLOSE : COMMAND.OPEN;
     const fixed = this.params.thresholdIntensity;
     const intensity = command === COMMAND.REST ? 0
       : !proportional ? fixed

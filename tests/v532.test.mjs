@@ -4,9 +4,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SignalTrace, traceSummary } from '../src/core/signaltrace.js';
 import { SeparationMeter } from '../src/games/base.js';
-import { fourStates } from '../src/core/fourstates.js';
+import { fourStates, bothOnText } from '../src/core/fourstates.js';
+import { SignalPipeline } from '../src/core/signal.js';
+import { COMMAND } from '../src/core/vocabulary.js';
+import { parseState } from '../src/core/storage.js';
+import { FAQ } from '../src/core/faq.js';
+import { CalibrationRecorder, thresholdForRest } from '../src/core/calibration.js';
+import { offThreshold } from '../src/core/signal.js';
 import { createRng } from '../src/core/rng.js';
-import { SIGNAL_TRACE } from '../src/config.js';
+import { SIGNAL_TRACE, BOTH_ON, SETTINGS_RANGES, CALIBRATION_QUALITY, SIGNAL } from '../src/config.js';
 
 const frame = (a, b, on = 0.22) => ({ valid: true, a, b, aOn: a >= on, bOn: b >= on });
 
@@ -75,4 +81,87 @@ test('5.32 four states: the threshold scheme moves at one speed, the proportiona
   const prop = fourStates({ scheme: 'proportional', gripSwitch: 'co' });
   assert.match(prop[1].action, /чем сильнее, тем быстрее/);
   assert.equal(prop[2].action, 'кисть раскрывается');
+});
+
+function hold(pipe, f, ms, t0 = 0) {
+  let intent;
+  for (let t = t0; t <= t0 + ms; t += 16) intent = pipe.process({ ...f, t }, t);
+  return intent;
+}
+
+test('5.32 both on: the second channel later than the first — the hand stands («hold») or goes on with the first («first»)', () => {
+  assert.equal(BOTH_ON.defaultMode, 'hold', 'the default law of the game does not change');
+  const run = bothOn => {
+    const p = new SignalPipeline({ scheme: 'proportional', params: bothOn ? { bothOn } : {} });
+    const steps = [];
+    steps.push(hold(p, { a: 0.6, b: 0 }, 600).command);          // A alone
+    steps.push(hold(p, { a: 0.6, b: 0.5 }, 600, 616).command);   // B later — not a co-contraction
+    steps.push(hold(p, { a: 0, b: 0.5 }, 600, 1232).command);    // A lets go, B is still on
+    steps.push(hold(p, { a: 0, b: 0 }, 600, 1848).command);      // both off
+    return steps;
+  };
+  assert.deepEqual(run(), [COMMAND.CLOSE, COMMAND.REST, COMMAND.OPEN, COMMAND.REST], 'no setting — «hold»');
+  assert.deepEqual(run('hold'), [COMMAND.CLOSE, COMMAND.REST, COMMAND.OPEN, COMMAND.REST]);
+  assert.deepEqual(run('first'), [COMMAND.CLOSE, COMMAND.CLOSE, COMMAND.OPEN, COMMAND.REST], 'the first command goes on; when it ends, the one still on leads');
+  const first = new SignalPipeline({ scheme: 'proportional', params: { bothOn: 'first' } });
+  hold(first, { a: 0, b: 0.6 }, 600);
+  const late = hold(first, { a: 0.8, b: 0.6 }, 300, 616);
+  assert.equal(late.command, COMMAND.OPEN, 'B came first: a stronger A later does not take over');
+  assert.equal(late.intensity, late.b, 'speed follows the leading channel');
+});
+
+test('5.32 both on: a co-contraction is still a co-contraction; one frame for both — no leader', () => {
+  const p = new SignalPipeline({ scheme: 'threshold', params: { bothOn: 'first' } });
+  assert.equal(hold(p, { a: 0.7, b: 0.7 }, 200).command, COMMAND.SWITCH, 'onsets within 350 ms');
+  const q = new SignalPipeline({ scheme: 'proportional', params: { bothOn: 'first', coThreshold: 0.9 } });
+  assert.equal(hold(q, { a: 0.5, b: 0.5 }, 300).command, COMMAND.REST, 'both on in the same frame, under the co-contraction zone: nobody came first');
+  const lost = new SignalPipeline({ scheme: 'proportional', params: { bothOn: 'first' } });
+  hold(lost, { a: 0.6, b: 0 }, 300);
+  lost.process(null, 1000); // the watchdog: no frame for 300 ms
+  assert.equal(lost.lead, null, 'a lost signal forgets the leader');
+});
+
+test('5.32 both on: the setting is saved, checked on import and said in words', () => {
+  assert.equal(parseState(JSON.stringify({ version: 4, settings: { bothOn: 'first' } })).settings.bothOn, 'first');
+  assert.equal(parseState(JSON.stringify({ version: 4, settings: { bothOn: 'race' } })).settings.bothOn, 'hold', 'an unknown law from a backup is dropped');
+  assert.match(bothOnText('first'), /продолжает первую команду/);
+  assert.match(bothOnText('first'), /скажет протезист/);
+  assert.match(bothOnText('hold'), /останавливается/);
+});
+
+function calibrate(source) {
+  const rec = new CalibrationRecorder();
+  for (let i = 0; i < 700; i++) rec.push({ t: i * 16, ...source(rec.step?.id, i) }, 1 / 60);
+  return rec.result();
+}
+const wobble = (i, k) => k * Math.sin(i * 1.7) * Math.cos(i * 0.31);
+
+test('5.32 calibration: rest that ripples up to the switch-off level gets an offer of a threshold that keeps it off', () => {
+  const span = 0.5, ripple = (offThreshold(SIGNAL.onThreshold) * span) / CALIBRATION_QUALITY.restPeakNoise * 1.3;
+  const r = calibrate((step, i) => ({ a: (step === 'a' ? 0.1 + span : 0.1) + wobble(i, ripple * 1.6), b: (step === 'b' ? 0.8 : 0.05) + wobble(i + 5, 0.002) }));
+  assert.ok(r.issues.some(x => /Канал A: в покое сигнал дрожит/.test(x)), 'the same calibration warns');
+  const a = thresholdForRest(r.restLevel[0], SIGNAL.onThreshold), b = thresholdForRest(r.restLevel[1], SIGNAL.onThreshold);
+  assert.ok(a && a.value > SIGNAL.onThreshold && !a.capped, JSON.stringify(a));
+  assert.ok(offThreshold(a.value) > r.restLevel[0], 'the switch-off level of the offer is above the ripple');
+  assert.ok(offThreshold(a.value - SETTINGS_RANGES.sensitivity.step) <= r.restLevel[0] + 1e-9, 'and it is the lowest such step');
+  assert.equal(b, null, 'a quiet channel keeps its threshold');
+});
+
+test('5.32 calibration: the offer never lowers a threshold and stops at the slider top', () => {
+  assert.equal(thresholdForRest(0.1, 0.4), null, 'a high threshold already keeps a small ripple off');
+  assert.equal(thresholdForRest(null, 0.22), null);
+  const top = thresholdForRest(0.6, 0.22);
+  assert.deepEqual(top, { value: SETTINGS_RANGES.sensitivity.max, capped: true });
+  const r = calibrate((step, i) => ({ a: (step === 'a' ? 0.9 : 0.1) + wobble(i, 0.002), b: (step === 'b' ? 0.9 : 0.05) + wobble(i + 5, 0.002) }));
+  assert.deepEqual(r.restLevel.map(x => thresholdForRest(x, SIGNAL.onThreshold)), [null, null], 'a clean calibration offers nothing');
+});
+
+test('5.32 Mio: sensors on the shoulder or other muscles — the game reads two channels, the prosthetist picks the sites', () => {
+  const item = FAQ.flatMap(g => g.items).find(i => i.id === 'muscles');
+  const text = item.a().join(' ');
+  assert.match(item.q, /других мышцах/);
+  assert.match(text, /A закрывает кисть, B открывает/);
+  assert.match(text, /решает протезист/);
+  assert.match(text, /Поменять каналы A и B/);
+  assert.doesNotMatch(text, /согн(и|ите) кисть/, 'no imaginary hand: the sensor muscle is what moves');
 });

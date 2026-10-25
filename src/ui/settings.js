@@ -5,7 +5,7 @@ import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, signalTraceView, BRIDGE_STATUS, icon } from './widgets.js';
 import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS } from '../core/vocabulary.js';
 import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
-import { CalibrationRecorder, CALIBRATION_STEPS } from '../core/calibration.js';
+import { CalibrationRecorder, CALIBRATION_STEPS, thresholdForRest } from '../core/calibration.js';
 import { defaultCalibration } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
@@ -17,8 +17,8 @@ import { hashPin, pinConfirmed, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
 import { MAX_BACKUP_BYTES } from '../core/storage.js';
 import { ELECTRICAL_SAFETY } from '../core/wellbeing.js';
-import { fourStates } from '../core/fourstates.js';
-import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK, GRIP_SWITCH } from '../config.js';
+import { fourStates, bothOnText } from '../core/fourstates.js';
+import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK, GRIP_SWITCH, BOTH_ON } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
 /** Section glyph and its tile tint (5.12): the sections are told apart at a glance, the title stays the name. */
@@ -84,8 +84,10 @@ export function settingsScreen(app, { back = null } = {}) {
   const statesList = h('dl', { class: 'four-states', 'aria-label': 'Четыре состояния двух каналов' });
   const paintStates = () => statesList.replaceChildren(...fourStates(app.settings).flatMap(st => [h('dt', {}, st.signal), h('dd', {}, st.action)]));
   paintStates();
-  const preview = { pipeline: app.createPipeline(), source: app.signalSource() };
-  const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.signalSource(); paintLimits(); };
+  // 5.32 — liveFrames(), not signalSource(): the host's first frame rebuilds the bridge, and a screen opened before it
+  // kept reading the stopped one («Нет сигнала» in a calibration that had a signal).
+  const preview = { pipeline: app.createPipeline(), source: app.liveFrames() };
+  const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.liveFrames(); paintLimits(); };
   // 5.29 — the prosthesis's own thresholds, when the host (Motorica Start) passed them: read, never written.
   const limitsNote = h('p', { class: 'note', 'aria-live': 'polite' });
   function paintLimits() {
@@ -106,6 +108,9 @@ export function settingsScreen(app, { back = null } = {}) {
     const coNote = h('p', { class: 'note', hidden: s.gripSwitch === 'open' }, 'Сейчас хват меняет коактивация A+B. В протезах «Моторики» хват меняет повторное раскрытие, а A+B — блокировка. Время удержания появится, если выбрать «Снова раскрыть».');
     if (s.gripSwitch !== 'open') hold.hidden = true;
     const pick = v => { app.updateSettings({ gripSwitch: v }); hold.hidden = v !== 'open'; openNote.hidden = v !== 'open'; coNote.hidden = v === 'open'; paintStates(); };
+    // 5.32 — the second channel later than the first: the hand stands or goes on with the first command (BOTH_ON).
+    const bothNote = h('p', { class: 'note' }, bothOnText(s.bothOn));
+    const pickBoth = v => { app.updateSettings({ bothOn: v }); bothNote.textContent = bothOnText(v); refreshPreview(); };
     return [
       sliderRow('Порог коактивации (A+B)', { ...R.coThreshold, value: s.coThreshold, format: pct, onInput: v => { app.updateSettings({ coThreshold: v }); refreshPreview(); meter.setThresholds(); } }),
       sliderRow('Блокировка протеза: удержание A+B', { min: LOCK.minS, max: LOCK.maxS, step: LOCK.stepS, value: s.lockHoldS, format: v => fmtFixed(v) + '\u00a0с', onInput: v => { app.updateSettings({ lockHoldS: Math.round(v * 10) / 10 }); paintStates(); } }),
@@ -113,6 +118,9 @@ export function settingsScreen(app, { back = null } = {}) {
       h('div', { class: 'row' }, h('span', {}, 'Смена хвата'),
         segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, pick, 'Смена хвата')),
       hold, openNote, coNote,
+      h('div', { class: 'row' }, h('span', {}, 'Второй канал позже первого'),
+        segmented([{ value: 'hold', label: 'Кисть стоит', sub: 'как раньше' }, { value: 'first', label: 'Первая команда', sub: 'со слов «Моторики»' }], s.bothOn ?? BOTH_ON.defaultMode, pickBoth, 'Второй канал включился позже первого')),
+      bothNote,
     ];
   };
 
@@ -297,7 +305,7 @@ export function calibrationScreen(app) {
   const meter = signalMeter(app);
   const result = h('div', { class: 'cal-result' });
   const pipeline = app.createPipeline();
-  const source = app.signalSource();
+  const source = app.liveFrames(); // 5.32: follows the bridge the host's first frame rebuilds
   const announce = (words, interrupt = true) => { live.textContent = words; app.say(words, { interrupt }); };
   const startButton = h('button', { class: 'btn primary big', onclick: () => begin() }, 'Начать калибровку');
   const again = h('button', { class: 'btn ghost', hidden: true, onclick: () => begin() }, 'Заново');
@@ -345,8 +353,23 @@ export function calibrationScreen(app) {
         announce(`${title.textContent}. ${r.issues.join(' ')}`);
         // Without signal there is nothing to save: the previous calibration stays.
         const save = r.usable && kind !== 'touch';
-        const done = h('button', { class: 'btn primary big', onclick: () => { if (save) { app.state.calibrations[app.calibrationKey(kind)] = r.calibration; app.save(); toast('Калибровка сохранена', 'good'); } app.go('settings', { back: 'calibration' }); } }, save ? 'Сохранить' : 'Понятно');
-        result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)), done);
+        // 5.32 — rest that ripples up to the switch-off level: offer the threshold that keeps it off (game thresholds
+        // only; the prosthesis's own ones, when the host sent them, are not the game's to change).
+        const s = app.settings, current = [s.sensitivity, s.sensitivityB ?? s.sensitivity];
+        const raise = save && !app.prosthesisThresholds() ? current.map((v, ch) => thresholdForRest(r.restLevel?.[ch], v)) : [null, null];
+        let applyRaise = raise.some(Boolean);
+        const raiseRow = applyRaise ? toggleRow(
+          `Поднять ${raise.filter(Boolean).length > 1 ? 'пороги' : 'порог'} по дрожи покоя`, true, v => { applyRaise = v; },
+          `${raise.map((x, ch) => (x ? `${ch ? 'B' : 'A'} — ${pct(x.value)}${x.capped ? ' (выше нельзя: проверьте датчик)' : ''}` : null)).filter(Boolean).join(', ')}. Так покой не включит канал сам. Ползунки — в «Чувствительности».`) : null;
+        const done = h('button', { class: 'btn primary big', onclick: () => {
+          if (save) {
+            app.state.calibrations[app.calibrationKey(kind)] = r.calibration; app.save();
+            if (applyRaise) app.updateSettings({ sensitivity: raise[0]?.value ?? current[0], sensitivityB: raise[1]?.value ?? current[1] });
+            toast(applyRaise ? 'Калибровка и пороги сохранены' : 'Калибровка сохранена', 'good');
+          }
+          app.go('settings', { back: 'calibration' });
+        } }, save ? 'Сохранить' : 'Понятно');
+        result.replaceChildren(...r.issues.map(i => h('p', { class: 'note warn' }, i)), ...(raiseRow ? [raiseRow] : []), done); // replaceChildren(null) would print «null»
         done.focus({ preventScroll: true });
       }
     },
