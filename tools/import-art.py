@@ -98,7 +98,7 @@ def fill_shaded_holes(core: np.ndarray, d: np.ndarray, min_px: int = 150, min_sh
     """The mask misses white surfaces inside an outline (a speech bubble, a clipboard, a speaker, a stopwatch face).
     An enclosed region that carries shading is such a surface; a flat one (mean < 4 grey levels — the inside of the
     empty star, the handle of the lantern) is the background seen through and stays transparent."""
-    from scipy import ndimage  # here, not at the top: tools/import-duo.py reuses this file without SciPy
+    from scipy import ndimage  # here, not at the top: tools/import-generated.py reuses this file without SciPy
     lab, k = ndimage.label(~core)
     edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]])))
     out = core.copy()
@@ -113,7 +113,7 @@ def fill_shaded_holes(core: np.ndarray, d: np.ndarray, min_px: int = 150, min_sh
 
 def matte(rgb: np.ndarray, mask: np.ndarray) -> Image.Image:
     """Alpha matte on a known white background: max(subject core, colour-to-alpha), then F = (C − (1 − a)·W) / a."""
-    from scipy import ndimage  # here, not at the top: tools/import-duo.py reuses this file without SciPy
+    from scipy import ndimage  # here, not at the top: tools/import-generated.py reuses this file without SciPy
     c = rgb.astype(np.float32)
     w = white_point(c)
     # The least alpha that explains the pixel over the background, with a dead zone for the noise.
@@ -349,11 +349,11 @@ def sheet(items: list[tuple[str, Image.Image]], path: Path, tile=200):
 
 
 def write_catalogue(manifest: dict):
-    """Writes public/art/manifest.json and the generated src/ui/art-manifest.js (tools/import-duo.py uses it too)."""
+    """Writes public/art/manifest.json and the generated src/ui/art-manifest.js (tools/import-generated.py uses it too)."""
     manifest["items"] = dict(sorted(manifest["items"].items()))
     manifest["total_bytes"] = sum(v["bytes"] for v in manifest["items"].values())
     manifest["generator"] = ("tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); "
-                             "hand-*, bg-duo-*: tools/import-duo.py (colour-to-alpha on a magenta key; the rooms whole)")
+                             "hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)")
     manifest["layout"] = dict(sorted(manifest.get("layout", {}).items()))
     MANIFEST_LAYOUT.update(manifest["layout"])
     write(OUT / "manifest.json", (json.dumps(manifest, ensure_ascii=False, indent=1) + "\n").encode())

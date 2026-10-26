@@ -11,7 +11,7 @@ import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services
 import { voiceAvailable } from '../services/voice.js';
 import { bleSupported } from '../input/ble.js';
 import { createTwoChannelPads } from './controls.js';
-import { picture } from './pictures.js';
+import { picture, artUrl, hasArt } from './pictures.js';
 import { fmtOffset } from './audiosync.js';
 import { hashPin, pinConfirmed, pinGateScreen } from './pin.js';
 import { dayKey } from '../core/progress.js';
@@ -300,7 +300,10 @@ export function calibrationScreen(app) {
   const pace = Math.max(0.6, app.settings.gameSpeed || 1);
   const steps = () => CALIBRATION_STEPS.map(st => ({ ...st, seconds: st.seconds / pace }));
   let recorder = new CalibrationRecorder(steps()), started = false, finished = false, lastStep = null;
-  const title = h('h2', {}, 'Готовы?'), text = h('p', {}, 'Четыре шага: покой, сжатие, отдых, раскрытие. Каждый шаг будет назван и озвучен.'), ring = h('div', { class: 'cal-ring' });
+  const title = h('h2', {}, 'Готовы?'), text = h('p', {}, 'Четыре шага: покой, сжатие, отдых, раскрытие. Каждый шаг будет назван и озвучен.'), ringPic = picture('hand-rest', 56, 'cal-hand'), ring = h('div', { class: 'cal-ring' }, ringPic);
+  // 5.32: the bionic hand of the games in the ring shows the pose of the step
+  const STEP_HAND = { rest: 'hand-rest', a: 'hand-close', relax: 'hand-rest', b: 'hand-open' };
+  let ringPose = 'hand-rest';
   const live = h('p', { class: 'sr-only', role: 'status' });
   const meter = signalMeter(app);
   const result = h('div', { class: 'cal-result' });
@@ -345,6 +348,8 @@ export function calibrationScreen(app) {
         }
         ring.style.setProperty('--p', String(recorder.stepProgress));
         ring.dataset.step = step.id;
+        const want = STEP_HAND[step.id];
+        if (ringPic && want && want !== ringPose && hasArt(want)) { ringPic.src = artUrl(want); ringPose = want; }
       } else if (!finished) {
         finished = true;
         const r = recorder.result();

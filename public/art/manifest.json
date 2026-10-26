@@ -144,6 +144,22 @@
    "sha256": "f6ed6f7d44a296154dbeb47130f6dbbd9e480133794c9a5d72b8ea0ca72017d4",
    "source": "314fc247f715185dd527227e7ba4d3422a952a65eefd85d72b52698d48ef89a2"
   },
+  "bg-grip-day": {
+   "w": 848,
+   "h": 1264,
+   "bytes": 17996,
+   "alpha": false,
+   "sha256": "50f01f8b6c0940d52fafa73ccd2ed889823947d5b8149d405185c66fb21b4b4c",
+   "source": "b5e04be3e54cd26334d612bf21071d2aea9737b4c9bcbd55f97e3dc3a3b0c6a7"
+  },
+  "bg-grip-night": {
+   "w": 848,
+   "h": 1264,
+   "bytes": 17996,
+   "alpha": false,
+   "sha256": "7d7fbe24608dfabc3c1627ec9fa87980f8e0e645d3da20b20108867ae78a8f8f",
+   "source": "a372340f6c26110144ca638b522da96d53adb65820f9b0ff4cff44858f8c39ec"
+  },
   "bg-hero": {
    "w": 1200,
    "h": 450,
@@ -463,6 +479,30 @@
    "alpha": true,
    "sha256": "8c198aeeeb4d9844a41df6eb62025329425b91a6397faefddf21506f5fcdca57",
    "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
+  },
+  "hand-down-close": {
+   "w": 212,
+   "h": 400,
+   "bytes": 16866,
+   "alpha": true,
+   "sha256": "3794bfd114249b5827c4a784fa646ec91b5684d23f04119d44852b4c383f0503",
+   "source": "f73741eceab780ecc2fa94c02a2f48e0811764cc8ba885bfec9b1a0385825949"
+  },
+  "hand-down-open": {
+   "w": 212,
+   "h": 400,
+   "bytes": 25934,
+   "alpha": true,
+   "sha256": "e84656286d0050e5165927375243d5223a044fa4365ccf5e52a0af378c37d405",
+   "source": "f73741eceab780ecc2fa94c02a2f48e0811764cc8ba885bfec9b1a0385825949"
+  },
+  "hand-down-rest": {
+   "w": 212,
+   "h": 400,
+   "bytes": 21084,
+   "alpha": true,
+   "sha256": "d83dbbe22cdd60de0b8eabe6a8f7efffc98d8d7754cb69e1779b3a53a0540030",
+   "source": "f73741eceab780ecc2fa94c02a2f48e0811764cc8ba885bfec9b1a0385825949"
   },
   "hand-open": {
    "w": 221,
@@ -1080,6 +1120,22 @@
    "sha256": "cf6dd399ab93bfd1352cac8d75cd1002d3ed2793854d67a4dd7827371bf6bd15",
    "source": "c41c5cf68a63fef0eacfac028a448f0088ef4f6f4749541cdd95109ea0470270"
   },
+  "prop-basket": {
+   "w": 256,
+   "h": 143,
+   "bytes": 9572,
+   "alpha": true,
+   "sha256": "2be07825f25022f2c9e39b8f3684632403210b7d2a4d5324349981f6ba311971",
+   "source": "ba7ae71411470d86206326520082fe4d7e7eccdadad94d5c74aa63eee4afd56f"
+  },
+  "prop-glider": {
+   "w": 192,
+   "h": 112,
+   "bytes": 5994,
+   "alpha": true,
+   "sha256": "6cd095cfa7785b6592d9c89aa1e30a1731fea47e354a43339e2b408cb3cbc287",
+   "source": "b0f79df4de83af339b780f1e8d85be76f3ae471defbbc61202cdfdd213bb4386"
+  },
   "skin-coral": {
    "w": 192,
    "h": 192,
@@ -1148,8 +1204,8 @@
   ],
   "splash": "android/res/drawable-xxhdpi/splash_bird.png"
  },
- "total_bytes": 1601926,
- "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-duo.py (colour-to-alpha on a magenta key; the rooms whole)",
+ "total_bytes": 1717368,
+ "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)",
  "layout": {
   "pet-chick-happy": {
    "twigs": [
