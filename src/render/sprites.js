@@ -14,16 +14,56 @@ export function sprite(name) {
   return img && img.complete !== false && (img.naturalWidth ?? img.width) > 0 ? img : null;
 }
 
-/** Draws a sprite centred at (x, y), `w` wide (the height keeps its aspect); false if there is none. */
-export function drawSprite(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1 } = {}) {
+/** Height ÷ width of a loaded sprite, or null. */
+export function spriteAspect(name) {
   const img = sprite(name);
-  if (!img) return false;
-  const h = w * (img.naturalHeight ?? img.height) / (img.naturalWidth ?? img.width);
+  return img ? (img.naturalHeight ?? img.height) / (img.naturalWidth ?? img.width) : null;
+}
+
+function place(ctx, img, x, y, w, h, sx, sy, alpha) {
   ctx.save();
   ctx.globalAlpha *= alpha;
   ctx.translate(x, y);
   ctx.scale(sx, sy);
   ctx.drawImage(img, -w / 2, -h / 2, w, h);
   ctx.restore();
+}
+
+/** Draws a sprite centred at (x, y), `w` wide (the height keeps its aspect); false if there is none. */
+export function drawSprite(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1 } = {}) {
+  const img = sprite(name);
+  if (!img) return false;
+  place(ctx, img, x, y, w, w * spriteAspect(name), sx, sy, alpha);
+  return true;
+}
+
+const TINTED = new Map();
+
+/**
+ * A sprite with its upper part (above `upTo`, a fraction of the height) multiplied by `tint`: the shell of a hand in
+ * the colour of the player's skin, the socket under the wrist band as it is (5.32, «Две руки»). Each tint is painted
+ * once into a small canvas. Without a document (Node) the sprite is drawn as it is.
+ */
+export function drawTinted(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1, tint = null, upTo = 1 } = {}) {
+  const img = sprite(name);
+  if (!img) return false;
+  if (!tint || typeof document === 'undefined') return drawSprite(ctx, name, x, y, w, { sx, sy, alpha });
+  const key = `${name}|${tint}|${upTo}`;
+  let canvas = TINTED.get(key);
+  if (!canvas) {
+    const iw = img.naturalWidth ?? img.width, ih = img.naturalHeight ?? img.height;
+    canvas = document.createElement('canvas');
+    canvas.width = iw; canvas.height = ih;
+    const g = canvas.getContext('2d');
+    if (!g) return drawSprite(ctx, name, x, y, w, { sx, sy, alpha });
+    g.drawImage(img, 0, 0);
+    g.globalCompositeOperation = 'multiply';
+    g.fillStyle = tint; g.fillRect(0, 0, iw, Math.round(ih * upTo));
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(img, 0, 0); // the multiply filled the clear corners too: keep only the hand
+    TINTED.set(key, canvas);
+    if (TINTED.size > 12) TINTED.delete(TINTED.keys().next().value); // three poses × a theme switch, small pictures
+  }
+  place(ctx, canvas, x, y, w, w * spriteAspect(name), sx, sy, alpha);
   return true;
 }

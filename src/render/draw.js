@@ -118,6 +118,20 @@ export function textWidth(ctx, str, { size = 16, weight = 600, display = false }
   return m && Number.isFinite(m.width) ? m.width : str.length * px * 0.6;
 }
 
+/**
+ * Words of a name for a narrow column, wrapped greedily at the given size (UBI4 «Сгиб большого пальца» did not fit a
+ * card even at the 60 % floor of text()). More than `maxLines` lines — the name is returned as one line to shrink.
+ */
+export function wrapLines(ctx, str, maxWidth, opts, maxLines = 3) {
+  const lines = [];
+  for (const word of str.split(' ')) {
+    const joined = lines.length ? `${lines[lines.length - 1]} ${word}` : word;
+    if (lines.length && textWidth(ctx, joined, opts) <= maxWidth) lines[lines.length - 1] = joined;
+    else lines.push(word);
+  }
+  return lines.length <= maxLines ? lines : [str];
+}
+
 export function circle(ctx, x, y, r, color) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); }
 
 /** Capsule from (x1,y1) to (x2,y2) with width w. */

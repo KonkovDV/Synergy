@@ -128,6 +128,22 @@
    "sha256": "6c4fe1f591f52fddb5398c44716d4bc479c87c1c5016c29fb3dac91e9600fa2b",
    "source": "d4de6339c2f999fdc07ccee42f78b1dcbb7fe77b9e0916d8a2990dc579be9944"
   },
+  "bg-duo-day": {
+   "w": 848,
+   "h": 1264,
+   "bytes": 8090,
+   "alpha": false,
+   "sha256": "62382c9adee8e7022797f92101d7c0c6d4021b35ba8952509a60b2280678aa9b",
+   "source": "7c7b483cb6a4893d8e5928b50cf674802a5609aedecb4b68becfcc3ec7ec4559"
+  },
+  "bg-duo-night": {
+   "w": 848,
+   "h": 1264,
+   "bytes": 13648,
+   "alpha": false,
+   "sha256": "f6ed6f7d44a296154dbeb47130f6dbbd9e480133794c9a5d72b8ea0ca72017d4",
+   "source": "314fc247f715185dd527227e7ba4d3422a952a65eefd85d72b52698d48ef89a2"
+  },
   "bg-hero": {
    "w": 1200,
    "h": 450,
@@ -439,6 +455,30 @@
    "alpha": true,
    "sha256": "dbd442131fd2c40778004ea2ca48f1fdd486eed0886adafb0a739289d169b931",
    "source": "589c7e63b8e9e30f6927c07395162f6e092f19d48d30e25fab9f354aad0b2f50"
+  },
+  "hand-close": {
+   "w": 221,
+   "h": 320,
+   "bytes": 8546,
+   "alpha": true,
+   "sha256": "8c198aeeeb4d9844a41df6eb62025329425b91a6397faefddf21506f5fcdca57",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
+  },
+  "hand-open": {
+   "w": 221,
+   "h": 320,
+   "bytes": 14998,
+   "alpha": true,
+   "sha256": "8a6a6b7a85d31149162607f4dcb999d2d54338dbb5fa1787956e11d72dba1f23",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
+  },
+  "hand-rest": {
+   "w": 221,
+   "h": 320,
+   "bytes": 13438,
+   "alpha": true,
+   "sha256": "d5c925c6a5f030a8dc4c95ef064554971e99eb0edb734dda8aa43d432bd38a2d",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "ico-access": {
    "w": 160,
@@ -1108,8 +1148,8 @@
   ],
   "splash": "android/res/drawable-xxhdpi/splash_bird.png"
  },
- "total_bytes": 1543206,
- "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP)",
+ "total_bytes": 1601926,
+ "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-duo.py (colour-to-alpha on a magenta key; the rooms whole)",
  "layout": {
   "pet-chick-happy": {
    "twigs": [

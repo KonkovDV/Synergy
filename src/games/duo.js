@@ -7,12 +7,69 @@ import { SESSION } from '../config.js';
 import { Game, clamp01, pct, REST_STUCK_HINT } from './base.js';
 import { SCHEME, COMMAND_NAME, COMMAND_POSE } from '../core/vocabulary.js';
 import { SIDES } from '../core/hands.js';
-import { COLORS, text, fillRound, drawHand, drawLamp, holdRing, handShadow, panel, backdrop, scene, lookKey } from '../render/draw.js';
-import { drawSprite } from '../render/sprites.js';
-import { BRAND, linear, glow, lightTrail, wavePoints, rgba, glassPlate, cachedLayer } from '../render/fx.js';
+import { COLORS, SKIN_COLORS, text, fillRound, drawHand, drawLamp, holdRing, handShadow, panel, backdrop, scene, lookKey } from '../render/draw.js';
+import { sprite, drawSprite, drawTinted, spriteAspect } from '../render/sprites.js';
+import { BRAND, linear, glow, lightTrail, wavePoints, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { fmtFixed } from '../core/format.js';
 
 const WORD = { close: 'сжимает', open: 'раскрывает', rest: 'отдыхает' };
+
+// The bionic hands (5.32): rest, fist and open palm from one generated sheet (tools/import-duo.py, docs/ART.md),
+// standing on one baseline. Measured on the pictures by the tool: the palm light and the wrist band, in fractions.
+const HAND_PIC = { rest: 'hand-rest', close: 'hand-close', open: 'hand-open' };
+const HAND_LIGHT = { rest: [0.486, 0.595], close: [0.526, 0.604], open: [0.537, 0.612] };
+const HAND_BAND = 0.725;
+// The generated room by day and by night: the back edge of the table and its front light strip, in fractions of the
+// picture's height (measured by the same tool). The picture is laid so that the back edge falls on the table line.
+const ROOM = { light: ['bg-duo-day', 0.646, 0.771], dark: ['bg-duo-night', 0.624, 0.778] };
+
+/** Where the room picture goes on a field: its rectangle and the y of the front light strip. Null — not loaded. */
+function roomPlace(w, h, tableY, dark) {
+  const [name, back, front] = ROOM[dark ? 'dark' : 'light'], img = sprite(name);
+  if (!img) return null;
+  const iw = img.naturalWidth ?? img.width, ih = img.naturalHeight ?? img.height;
+  const k = Math.max(w / iw, tableY / (back * ih), (h - tableY) / ((1 - back) * ih)); // cover, the edge on the line
+  return { img, x: (w - iw * k) / 2, y: tableY - back * ih * k, w: iw * k, h: ih * k, strip: tableY + (front - back) * ih * k };
+}
+const closure = pose => clamp01((pose[1] + pose[2] + pose[3] + pose[4]) / 4); // the four fingers; 0 — open, 1 — fist
+const REST_CLOSURE = closure(COMMAND_POSE.rest);
+
+/** The two pictures a pose of the hand lies between and how far along: open → rest → fist. */
+export function handBlend(pose) {
+  const c = closure(pose);
+  return c <= REST_CLOSURE ? ['open', 'rest', c / REST_CLOSURE] : ['rest', 'close', (c - REST_CLOSURE) / (1 - REST_CLOSURE)];
+}
+
+/**
+ * A bionic hand standing at (x, bottom), `ht` tall, in the pose of the hand model: the two nearest pictures cross-fade
+ * so that one of them is always solid (no see-through hand halfway). `lit` lights the palm, `reflect` — its mirror
+ * image on the glossy table. False until the pictures load (the drawn hand stands in).
+ */
+function drawBionic(ctx, x, bottom, ht, pose, { mirror = false, tint = null, lit = 0, reflect = 0, reflectTo = Infinity } = {}) {
+  const aspect = spriteAspect('hand-rest');
+  if (!aspect) return false;
+  const wd = ht / aspect, sx = mirror ? -1 : 1;
+  const [a, b, t] = handBlend(pose), u = clamp01((t - 0.2) / 0.6), k = u * u * (3 - 2 * u); // a pose nearly there shows one picture
+  const pair = (cy, sy, alpha) => {
+    const one = (name, al) => al > 0.01 && drawTinted(ctx, HAND_PIC[name], x, cy, wd, { sx, sy, alpha: al * alpha, tint, upTo: sy > 0 ? HAND_BAND : 1 });
+    if (k < 0.5) { one(a, 1); one(b, k * 2); } else { one(a, (1 - k) * 2); one(b, 1); }
+  };
+  if (reflect > 0) {
+    // the mirror image fades out in bands down the table top
+    const depth = Math.min(ht * 0.4, reflectTo - bottom), bands = 5;
+    for (let i = 0; i < bands; i++) {
+      ctx.save(); ctx.beginPath(); ctx.rect(x - wd, bottom + depth * i / bands, wd * 2, depth / bands + 0.5); ctx.clip?.();
+      pair(bottom + ht / 2, -1, reflect * (1 - i / bands));
+      ctx.restore();
+    }
+  }
+  pair(bottom - ht / 2, 1, 1);
+  if (lit > 0.05) {
+    const [la, lb] = [HAND_LIGHT[a], HAND_LIGHT[b]], f = k < 0.5 ? 0 : 1, [fx, fy] = f ? lb : la;
+    glow(ctx, x + sx * (fx - 0.5) * wd, bottom - ht + fy * ht, wd * 0.42 * Math.min(1, lit + 0.2), BRAND.mint, Math.min(1, lit));
+  }
+  return true;
+}
 const prompt = (left, right, from) => ({
   id: `${left}-${right}`, left, right, from,
   name: left === right ? `Обе ${WORD[left].replace('ет', 'ют')}` : `Левая ${WORD[left]}, правая ${WORD[right]}`,
@@ -159,17 +216,17 @@ export class DuoGame extends Game {
     // 5.32 — two prostheses on a table (docs/GAME_VISUALS.md): the hands stand on the table, not at the screen edge.
     const s = Math.max(30, Math.min(w * 0.19, (h - lampY - 64) / 2.3));
     const tableY = Math.min(h - s * 0.75, Math.max(lampY + s * 2.1, h * 0.66));
-    cachedLayer(ctx, lookKey('duo'), w, h, g => paintTable(g, w, h, tableY, deco, dark));
+    const room = deco ? roomPlace(w, h, tableY, dark) : null;
+    cachedLayer(ctx, lookKey(room ? 'duo-room' : 'duo'), w, h, g => (room ? g.drawImage(room.img, room.x, room.y, room.w, room.h) : paintTable(g, w, h, tableY, deco, dark)));
     if (card && this.phase !== 'rest') panel(ctx, x0, y0, cw, ch, 18);
     else fillRound(ctx, x0, y0, cw, ch, 18, scene('rgba(255,255,255,0.6)', 'rgba(255,255,255,0.06)'));
     const size = ch * 0.24;
     SIDES.forEach((side, i) => {
       const cx = x0 + cw * (i ? 0.75 : 0.25);
       const want = card && this.phase !== 'rest' ? card[side] : 'rest';
-      // 5.32: the gesture hands of the illustrations (mirrored for the left), the drawn hand until they load
-      const pic = { close: 'gesture-fist', open: 'gesture-open', rest: 'gesture-rest' }[want];
-      // rest is faded, as on the card of «Сейф»: the relaxed hand of the illustrations is close to the fist
-      if (!drawSprite(ctx, pic, cx, y0 + ch * 0.42, Math.min(ch * 0.56, cw * 0.26), { sx: side === 'left' ? -1 : 1, alpha: want === 'rest' ? 0.75 : 1 })) {
+      // 5.32: the same bionic hands as on the table, small (mirrored for the left), the drawn hand until they load
+      const ht = ch * 0.56, aspect = spriteAspect(HAND_PIC[want]);
+      if (!aspect || !drawSprite(ctx, HAND_PIC[want], cx, y0 + ch * 0.47, ht / aspect, { sx: side === 'left' ? -1 : 1 })) {
         drawHand(ctx, { x: cx, y: y0 + ch * 0.62, size, pose: COMMAND_POSE[want], skin: 'icon', sleeve: false, mirror: side === 'left' });
       }
       text(ctx, `${i ? 'Правая' : 'Левая'}: ${COMMAND_NAME[want].toLowerCase()}`, cx, y0 + ch * 0.86, { size: 13, weight: 800, maxWidth: cw * 0.48 });
@@ -189,13 +246,19 @@ export class DuoGame extends Game {
     SIDES.forEach((side, i) => {
       const hnd = this.hands?.[side];
       const intentSide = intent?.sides?.[side];
-      const hx = w * (i ? 0.72 : 0.28), hy = tableY + s * 0.18;
-      if (deco) handShadow(ctx, hx, tableY + s * 0.7, s * 1.1, 0.2);
-      drawHand(ctx, { x: hx, y: hy, size: s, pose: hnd?.pose?.() ?? COMMAND_POSE.rest, skin: this.skin, glow: intentSide?.intensity ?? 0, mirror: side === 'left' });
+      const hx = w * (i ? 0.72 : 0.28), hy = tableY + s * 0.18, pose = hnd?.pose?.() ?? COMMAND_POSE.rest, lit = intentSide?.intensity ?? 0;
+      // the shell in the colour of the player's skin (a pastel of it, as on the skin pictures); contrast — white
+      const tint = deco ? mix(SKIN_COLORS[this.skin]?.light ?? SKIN_COLORS.graphite.light, '#ffffff', 0.5) : null;
+      const bottom = tableY + Math.min(s * 0.36, room ? (room.strip - tableY) * 0.45 : Infinity); // on the table top
+      if (deco) handShadow(ctx, hx, bottom, s * 0.85, 0.22);
+      if (!drawBionic(ctx, hx, bottom, Math.min(s * 2.8, bottom - lampY - 22), pose, { mirror: side === 'left', tint, lit: deco ? lit : 0, reflect: deco ? (dark ? 0.2 : 0.16) : 0, reflectTo: room?.strip ?? Infinity })) {
+        if (deco) handShadow(ctx, hx, tableY + s * 0.7, s * 1.1, 0.2);
+        drawHand(ctx, { x: hx, y: hy, size: s, pose, skin: this.skin, glow: lit, mirror: side === 'left' });
+      }
       if (!this.retention) {
         const seen = intentSide?.valid ? COMMAND_NAME[intentSide.command] : 'нет сигнала';
         // on a pill under the sleeve: the word stays readable over the table
-        const pw = Math.min(w * 0.4, 118), py = Math.min(h - 13, hy + s * 0.6 + 14);
+        const pw = Math.min(w * 0.4, 118), py = Math.min(h - 13, Math.max(hy + s * 0.6 + 14, room ? room.strip + 18 : 0)); // under the light strip
         if (deco) glassPlate(ctx, hx - pw / 2, py - 10, pw, 20, 10, { fill: scene('rgba(255,255,255,0.92)', 'rgba(11,20,48,0.9)'), rim: scene('rgba(5,16,26,0.1)', 'rgba(255,255,255,0.12)'), sheen: false });
         else fillRound(ctx, hx - pw / 2, py - 10, pw, 20, 10, '#000000');
         text(ctx, `${i ? 'П' : 'Л'}: ${seen}`, hx, py + 0.5, { size: 12, weight: 700, color: intentSide?.valid ? COLORS.text : COLORS.warnInk, maxWidth: pw - 8 });

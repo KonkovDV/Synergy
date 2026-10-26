@@ -7,7 +7,7 @@ import { SESSION } from '../config.js';
 import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT } from './base.js';
 import { blindBlock } from '../core/guidance.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES, GESTURES } from '../core/vocabulary.js';
-import { COLORS, text, circle, fillRound, roundRect, drawHand, drawLamp, holdRing, panel, backdrop, scene, lookKey } from '../render/draw.js';
+import { COLORS, text, textWidth, wrapLines, circle, fillRound, roundRect, drawHand, drawLamp, holdRing, panel, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, sphere, cachedLayer } from '../render/fx.js';
 import { drawSprite } from '../render/sprites.js';
 import { reachableBand } from '../core/signal.js';
@@ -255,8 +255,13 @@ export class SafeGame extends Game {
         if (!pic || !drawSprite(ctx, `gesture-${pic}`, px, py, Math.min(ch * 0.78, cw * 0.4), { sx: this.cueFlip() ? -1 : 1 })) {
           drawHand(ctx, { x: px, y: y0 + ch * 0.82, size, pose: card.pose, wrist: card.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
         }
-        text(ctx, card.name, tx, y0 + ch * 0.4, { size: 17, weight: 800, maxWidth: tMax });
-        if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {
+        const band = card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH;
+        // A long name (UBI4) goes on up to three lines, word by word, instead of shrinking to an unreadable size.
+        const lineSize = Math.min(15, ch * 0.15);
+        const lines = textWidth(ctx, card.name, { size: 17, weight: 800 }) <= tMax ? [card.name] : wrapLines(ctx, card.name, tMax, { size: lineSize, weight: 800 });
+        if (lines.length === 1) text(ctx, card.name, tx, y0 + ch * 0.4, { size: 17, weight: 800, maxWidth: tMax });
+        else lines.forEach((line, k) => text(ctx, line, tx, y0 + ch * ((band ? 0.36 : 0.42) + (k - (lines.length - 1) / 2) * 0.17), { size: lineSize, weight: 800, maxWidth: tMax }));
+        if (band) {
           // «любая сила» / «от 65 %» instead of a range that ends at 100 (5.11, design review).
           const lo = Math.round(card.band[0] * 100), hi = Math.round(card.band[1] * 100);
           const label = hi < 100 ? `${lo}–${hi}\u00a0%` : lo <= Math.round(this.onThreshold * 100) + 1 ? 'любая сила' : `от ${lo}\u00a0%`;
