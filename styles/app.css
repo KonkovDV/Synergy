@@ -909,6 +909,7 @@ table.data th { font-size: 0.75rem }
   .play-screen .stage-hint { grid-column: 1; grid-row: 4; border-top: 1px solid var(--line); border-bottom: 0; min-height: calc(1.45em + 12px) }
   .play-screen .play-side { grid-column: 2; grid-row: 3 / 5 }
   .play-screen .gkey, .frame .gkey { min-height: 44px }
+  .frame .gkey { padding-block: 2px } /* the icon sits above the name here; 4 px of padding put «Ключ» 2 px past a 320 px-tall screen */
   .play-screen .pads.gestures, .frame .pads.gestures { gap: 4px }
   .frame .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)) }
 }
@@ -1411,7 +1412,8 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 .level.rec { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px }
 
 /* The signal bar: a deeper track with an inner shadow, rounded fills with a light edge. */
-.meter-bar { height: 16px; box-shadow: inset 0 1px 3px rgba(5, 16, 26, .14) }
+/* Height stays 14 px: the short landscape tutorial has no spare vertical pixel (docs/AUDIT.md §53 LAY-1). */
+.meter-bar { box-shadow: inset 0 1px 3px rgba(5, 16, 26, .14) }
 .meter-bar .fill { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45) }
 .meter-chip { box-shadow: var(--shadow-1); transition: background-color .12s ease }
 
@@ -1424,7 +1426,7 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 @media (prefers-reduced-motion: reduce) { .pad-hand, .pad-co, .meter-chip { transition: none } }
 
 /* ===== 5.32 — система компонентов (docs/GAME_VISUALS.md §9). One layer over the 5.12 look, on tokens only:
-   · states (Material 3 state layers): an overlay of the content colour — hover 8 %, pressed 12 % — as an inset shadow,
+   · states (Material 3 state layers): an overlay of the content colour — hover 4 %, pressed 10 % — as an inset shadow,
      so no element changes its size or its children's positioning; the press sinks 1 px;
    · glass (Apple HIG «Materials»): the top bar, round icon buttons, the bottom navigation and the toasts blur what
      scrolls under them; the tint stays 84–90 % opaque (the page text behind a label must not show through — the
@@ -1443,7 +1445,7 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 .btn.primary { --elev: var(--glow-accent); box-shadow: inset 0 0 0 100vmax rgba(5, 16, 26, var(--state)), inset 0 1px 0 rgba(255, 255, 255, .45), var(--sink), var(--elev) }
 .btn.ghost, .btn.danger { border-width: 1px }
 .btn:hover:not(:disabled) { --state: .04; filter: none }
-.btn:active:not(:disabled) { --state: .1; transform: translateY(1px) scale(.985) }
+.btn:active:not(:disabled) { --state: .1; transform: translateY(1px) }
 .btn.primary:disabled { box-shadow: none }
 .icon-btn { transition: transform .12s var(--spring), box-shadow .15s ease }
 .icon-btn:active { transform: scale(.94) }

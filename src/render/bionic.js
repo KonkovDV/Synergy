@@ -26,6 +26,14 @@ export const BIONIC = Object.freeze({
 
 /** How closed a pose is: the four fingers (the thumb moves differently in each grip); 0 — open, 1 — fist. */
 export const closure = pose => Math.min(1, Math.max(0, (pose[1] + pose[2] + pose[3] + pose[4]) / 4));
+
+/** How far the joints disagree. A fist, a palm and rest stay under this; a pinch, a point, a key or a thumb do not. */
+export const PICTURE_SPAN = 0.22;
+export function poseSpan(pose) {
+  let lo = pose[0], hi = pose[0];
+  for (let i = 1; i < pose.length; i++) { if (pose[i] < lo) lo = pose[i]; if (pose[i] > hi) hi = pose[i]; }
+  return hi - lo;
+}
 // The rest pose of the hand model (COMMAND_POSE.rest in core/vocabulary.js; render does not import core — a test keeps
 // the two equal).
 export const REST_CLOSURE = 0.275;
@@ -57,6 +65,8 @@ export function bionicTip(pose) {
  * palm; `reflect` — the mirror image on a glossy table down to `reflectTo`. False until the pictures load.
  */
 export function drawBionic(ctx, x, y, ht, pose, { kind = 'stand', mirror = false, tint = null, lit = 0, reflect = 0, reflectTo = Infinity, armTo = null } = {}) {
+  // Three pictures cannot show a grip whose fingers disagree. The caller draws the hand model, which can.
+  if (!pose || poseSpan(pose) > PICTURE_SPAN) return false;
   const spec = BIONIC[kind], aspect = bionicAspect(kind);
   if (!aspect) return false;
   const wd = ht / aspect, sx = mirror ? -1 : 1, hang = kind === 'hang';
