@@ -7,69 +7,15 @@ import { SESSION } from '../config.js';
 import { Game, clamp01, pct, REST_STUCK_HINT } from './base.js';
 import { SCHEME, COMMAND_NAME, COMMAND_POSE } from '../core/vocabulary.js';
 import { SIDES } from '../core/hands.js';
-import { COLORS, SKIN_COLORS, text, fillRound, drawHand, drawLamp, holdRing, handShadow, panel, backdrop, scene, lookKey } from '../render/draw.js';
-import { sprite, drawSprite, drawTinted, spriteAspect } from '../render/sprites.js';
-import { BRAND, linear, glow, lightTrail, wavePoints, mix, glassPlate, cachedLayer } from '../render/fx.js';
+import { COLORS, text, fillRound, drawHand, drawLamp, holdRing, handShadow, panel, backdrop, scene, lookKey } from '../render/draw.js';
+import { drawSprite } from '../render/sprites.js';
+import { BRAND, linear, glow, lightTrail, wavePoints, glassPlate, cachedLayer } from '../render/fx.js';
+import { BIONIC, bionicAspect, drawBionic, roomPlace, skinTint } from '../render/bionic.js';
 import { fmtFixed } from '../core/format.js';
 
 const WORD = { close: 'сжимает', open: 'раскрывает', rest: 'отдыхает' };
 
-// The bionic hands (5.32): rest, fist and open palm from one generated sheet (tools/import-duo.py, docs/ART.md),
-// standing on one baseline. Measured on the pictures by the tool: the palm light and the wrist band, in fractions.
-const HAND_PIC = { rest: 'hand-rest', close: 'hand-close', open: 'hand-open' };
-const HAND_LIGHT = { rest: [0.486, 0.595], close: [0.526, 0.604], open: [0.537, 0.612] };
-const HAND_BAND = 0.725;
-// The generated room by day and by night: the back edge of the table and its front light strip, in fractions of the
-// picture's height (measured by the same tool). The picture is laid so that the back edge falls on the table line.
-const ROOM = { light: ['bg-duo-day', 0.646, 0.771], dark: ['bg-duo-night', 0.624, 0.778] };
-
-/** Where the room picture goes on a field: its rectangle and the y of the front light strip. Null — not loaded. */
-function roomPlace(w, h, tableY, dark) {
-  const [name, back, front] = ROOM[dark ? 'dark' : 'light'], img = sprite(name);
-  if (!img) return null;
-  const iw = img.naturalWidth ?? img.width, ih = img.naturalHeight ?? img.height;
-  const k = Math.max(w / iw, tableY / (back * ih), (h - tableY) / ((1 - back) * ih)); // cover, the edge on the line
-  return { img, x: (w - iw * k) / 2, y: tableY - back * ih * k, w: iw * k, h: ih * k, strip: tableY + (front - back) * ih * k };
-}
-const closure = pose => clamp01((pose[1] + pose[2] + pose[3] + pose[4]) / 4); // the four fingers; 0 — open, 1 — fist
-const REST_CLOSURE = closure(COMMAND_POSE.rest);
-
-/** The two pictures a pose of the hand lies between and how far along: open → rest → fist. */
-export function handBlend(pose) {
-  const c = closure(pose);
-  return c <= REST_CLOSURE ? ['open', 'rest', c / REST_CLOSURE] : ['rest', 'close', (c - REST_CLOSURE) / (1 - REST_CLOSURE)];
-}
-
-/**
- * A bionic hand standing at (x, bottom), `ht` tall, in the pose of the hand model: the two nearest pictures cross-fade
- * so that one of them is always solid (no see-through hand halfway). `lit` lights the palm, `reflect` — its mirror
- * image on the glossy table. False until the pictures load (the drawn hand stands in).
- */
-function drawBionic(ctx, x, bottom, ht, pose, { mirror = false, tint = null, lit = 0, reflect = 0, reflectTo = Infinity } = {}) {
-  const aspect = spriteAspect('hand-rest');
-  if (!aspect) return false;
-  const wd = ht / aspect, sx = mirror ? -1 : 1;
-  const [a, b, t] = handBlend(pose), u = clamp01((t - 0.2) / 0.6), k = u * u * (3 - 2 * u); // a pose nearly there shows one picture
-  const pair = (cy, sy, alpha) => {
-    const one = (name, al) => al > 0.01 && drawTinted(ctx, HAND_PIC[name], x, cy, wd, { sx, sy, alpha: al * alpha, tint, upTo: sy > 0 ? HAND_BAND : 1 });
-    if (k < 0.5) { one(a, 1); one(b, k * 2); } else { one(a, (1 - k) * 2); one(b, 1); }
-  };
-  if (reflect > 0) {
-    // the mirror image fades out in bands down the table top
-    const depth = Math.min(ht * 0.4, reflectTo - bottom), bands = 5;
-    for (let i = 0; i < bands; i++) {
-      ctx.save(); ctx.beginPath(); ctx.rect(x - wd, bottom + depth * i / bands, wd * 2, depth / bands + 0.5); ctx.clip?.();
-      pair(bottom + ht / 2, -1, reflect * (1 - i / bands));
-      ctx.restore();
-    }
-  }
-  pair(bottom - ht / 2, 1, 1);
-  if (lit > 0.05) {
-    const [la, lb] = [HAND_LIGHT[a], HAND_LIGHT[b]], f = k < 0.5 ? 0 : 1, [fx, fy] = f ? lb : la;
-    glow(ctx, x + sx * (fx - 0.5) * wd, bottom - ht + fy * ht, wd * 0.42 * Math.min(1, lit + 0.2), BRAND.mint, Math.min(1, lit));
-  }
-  return true;
-}
+// 5.32 — the bionic hands and the room are generated pictures (render/bionic.js, docs/GAME_VISUALS.md §7).
 const prompt = (left, right, from) => ({
   id: `${left}-${right}`, left, right, from,
   name: left === right ? `Обе ${WORD[left].replace('ет', 'ют')}` : `Левая ${WORD[left]}, правая ${WORD[right]}`,
@@ -225,8 +171,8 @@ export class DuoGame extends Game {
       const cx = x0 + cw * (i ? 0.75 : 0.25);
       const want = card && this.phase !== 'rest' ? card[side] : 'rest';
       // 5.32: the same bionic hands as on the table, small (mirrored for the left), the drawn hand until they load
-      const ht = ch * 0.56, aspect = spriteAspect(HAND_PIC[want]);
-      if (!aspect || !drawSprite(ctx, HAND_PIC[want], cx, y0 + ch * 0.47, ht / aspect, { sx: side === 'left' ? -1 : 1 })) {
+      const ht = ch * 0.56, aspect = bionicAspect();
+      if (!aspect || !drawSprite(ctx, BIONIC.stand.pics[want], cx, y0 + ch * 0.47, ht / aspect, { sx: side === 'left' ? -1 : 1 })) {
         drawHand(ctx, { x: cx, y: y0 + ch * 0.62, size, pose: COMMAND_POSE[want], skin: 'icon', sleeve: false, mirror: side === 'left' });
       }
       text(ctx, `${i ? 'Правая' : 'Левая'}: ${COMMAND_NAME[want].toLowerCase()}`, cx, y0 + ch * 0.86, { size: 13, weight: 800, maxWidth: cw * 0.48 });
@@ -248,7 +194,7 @@ export class DuoGame extends Game {
       const intentSide = intent?.sides?.[side];
       const hx = w * (i ? 0.72 : 0.28), hy = tableY + s * 0.18, pose = hnd?.pose?.() ?? COMMAND_POSE.rest, lit = intentSide?.intensity ?? 0;
       // the shell in the colour of the player's skin (a pastel of it, as on the skin pictures); contrast — white
-      const tint = deco ? mix(SKIN_COLORS[this.skin]?.light ?? SKIN_COLORS.graphite.light, '#ffffff', 0.5) : null;
+      const tint = deco ? skinTint(this.skin) : null;
       const bottom = tableY + Math.min(s * 0.36, room ? (room.strip - tableY) * 0.45 : Infinity); // on the table top
       if (deco) handShadow(ctx, hx, bottom, s * 0.85, 0.22);
       if (!drawBionic(ctx, hx, bottom, Math.min(s * 2.8, bottom - lampY - 22), pose, { mirror: side === 'left', tint, lit: deco ? lit : 0, reflect: deco ? (dark ? 0.2 : 0.16) : 0, reflectTo: room?.strip ?? Infinity })) {

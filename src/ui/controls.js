@@ -6,6 +6,7 @@ import { GESTURES, ACTIVE_GESTURES } from '../core/vocabulary.js';
 import { drawHand } from '../render/draw.js';
 import { h, longestWord } from './dom.js';
 import { gestureArt } from './art.js';
+import { picture } from './pictures.js';
 
 const MIN_LEVEL = 0.12;
 
@@ -88,13 +89,13 @@ function bindPadKeys(el, onLevel, channel = null, fixed = KB_FIXED.gesture) {
   el.addEventListener('blur', () => { if (!latched) end(); });
 }
 
-function padView(label, sub, cls, keys, channel) {
+function padView(label, sub, cls, keys, channel, hand = null) {
   const fill = h('div', { class: 'pad-fill' });
   const value = h('div', { class: 'pad-value' }, '0%');
   // A slider for assistive tech (5.11): its value is the keyboard strength, Space holds the muscle at it.
   const el = h('div', { class: `pad ${cls}`, role: 'slider', tabindex: '0', 'aria-orientation': 'vertical', 'aria-valuemin': 10, 'aria-valuemax': 100, 'aria-keyshortcuts': keys,
     'aria-label': `${label}, ${sub}: касание — высота пальца задаёт силу; клавиатура — пробел держит, стрелки меняют силу, ${keys.split(' ')[0]} — тоже` },
-    fill, h('div', { class: 'pad-ticks' }), h('div', { class: 'pad-label' }, h('b', {}, label), h('span', {}, sub)), value);
+    fill, h('div', { class: 'pad-ticks' }), hand ? h('span', { class: 'pad-hand', 'aria-hidden': 'true' }, picture(hand, 40)) : null, h('div', { class: 'pad-label' }, h('b', {}, label), h('span', {}, sub)), value);
   el.describe = (latched = el.classList.contains('latched')) => {
     const pct = Math.round(kbStrength[channel] * 100);
     el.classList.toggle('latched', latched);
@@ -109,8 +110,9 @@ function padView(label, sub, cls, keys, channel) {
 export function createTwoChannelPads(emulator, { forceOrder = false, keys = true, co: withCo = true, shortcuts = ['F ArrowLeft', 'J ArrowRight'] } = {}) {
   const state = { a: 0, b: 0, co: 0 };
   const apply = () => emulator.setTarget({ gesture: null, a: Math.max(state.a, state.co), b: Math.max(state.b, state.co) });
-  const A = padView('A', 'сжатие', 'pad-a', shortcuts[0], 'a');
-  const B = padView('B', 'раскрытие', 'pad-b', shortcuts[1], 'b');
+  // 5.32: the bionic hand of the games on each pad — the fist on A, the open palm on B (decorative; the words carry it)
+  const A = padView('A', 'сжатие', 'pad-a', shortcuts[0], 'a', 'hand-close');
+  const B = padView('B', 'раскрытие', 'pad-b', shortcuts[1], 'b', 'hand-open');
   const co = h('button', { class: 'pad-co', type: 'button', 'aria-keyshortcuts': 'Space', 'aria-label': 'A+B — коактивация: оба канала сразу' }, h('span', {}, 'A+B')); // 5.29: the name starts with the visible label (WCAG 2.5.3, axe 4.14)
   const onA = v => { state.a = v; A.show(v); apply(); }, onB = v => { state.b = v; B.show(v); apply(); }, onCo = v => { state.co = v ? 0.75 : 0; apply(); };
   bindPad(A.el, onA); bindPadKeys(A.el, onA, 'a');

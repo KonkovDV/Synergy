@@ -40,15 +40,15 @@ export function drawSprite(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1 } = {
 const TINTED = new Map();
 
 /**
- * A sprite with its upper part (above `upTo`, a fraction of the height) multiplied by `tint`: the shell of a hand in
- * the colour of the player's skin, the socket under the wrist band as it is (5.32, «Две руки»). Each tint is painted
+ * A sprite with a band of its height (`band` — from, to, in fractions) multiplied by `tint`: the shell of a hand in
+ * the colour of the player's skin, the socket or the arm beyond the wrist band as it is (5.32). Each tint is painted
  * once into a small canvas. Without a document (Node) the sprite is drawn as it is.
  */
-export function drawTinted(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1, tint = null, upTo = 1 } = {}) {
+export function drawTinted(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1, tint = null, band = [0, 1] } = {}) {
   const img = sprite(name);
   if (!img) return false;
   if (!tint || typeof document === 'undefined') return drawSprite(ctx, name, x, y, w, { sx, sy, alpha });
-  const key = `${name}|${tint}|${upTo}`;
+  const key = `${name}|${tint}|${band}`;
   let canvas = TINTED.get(key);
   if (!canvas) {
     const iw = img.naturalWidth ?? img.width, ih = img.naturalHeight ?? img.height;
@@ -58,11 +58,11 @@ export function drawTinted(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1, tint
     if (!g) return drawSprite(ctx, name, x, y, w, { sx, sy, alpha });
     g.drawImage(img, 0, 0);
     g.globalCompositeOperation = 'multiply';
-    g.fillStyle = tint; g.fillRect(0, 0, iw, Math.round(ih * upTo));
+    g.fillStyle = tint; g.fillRect(0, Math.round(ih * band[0]), iw, Math.round(ih * (band[1] - band[0])));
     g.globalCompositeOperation = 'destination-in';
     g.drawImage(img, 0, 0); // the multiply filled the clear corners too: keep only the hand
     TINTED.set(key, canvas);
-    if (TINTED.size > 12) TINTED.delete(TINTED.keys().next().value); // three poses × a theme switch, small pictures
+    if (TINTED.size > 12) TINTED.delete(TINTED.keys().next().value); // three poses of a kind × a theme switch, small pictures
   }
   place(ctx, canvas, x, y, w, w * spriteAspect(name), sx, sy, alpha);
   return true;
