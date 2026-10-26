@@ -9,8 +9,8 @@ import { COLORS, text, holdRing } from '../render/draw.js';
 import { BRAND, glow, radial, clearLayers } from '../render/fx.js';
 import { clearTints } from '../render/sprites.js';
 import { gameArt, mio } from './art.js';
-import { useSprite, petFlyer } from './pictures.js';
-import { petStageIndex } from '../core/pet.js';
+import { useFlier } from './pictures.js';
+import { petStageIndex, wornItems } from '../core/pet.js';
 import { PET } from '../config.js';
 import { LiveAnnouncer } from '../core/announce.js';
 import { MusicPlayer, offsetClock } from '../core/music.js';
@@ -27,9 +27,9 @@ const FEEDBACK_HINT = /^(Держите|Сильнее|Слабее|Слабо|�
 export function playScreen(app, { game, level, retention = false, plan = false, demo = false, pose = null, quick = false }) {
   const s = app.settings;
   // 5.16+: in «Полёт» the player's Firebird flies through the rings once it has wings (fledgling on); the egg and the
-  // chick leave it to the glider. The game reads the sprite `flight-flier` (render/sprites.js).
+  // chick leave it to the glider. The game reads the sprite `flight-flier` (render/sprites.js). 26.10: in its outfit.
   const stage = PET.stages[petStageIndex(trainingDays(app.profile))];
-  useSprite('flight-flier', petFlyer(stage.id));
+  useFlier('flight-flier', stage.id, wornItems(app.profile, stage.id));
   let session = app.createSession({ game, level, retention, demo, plan, pose, quick });
   // Procedural music (only «Ритм» has a song): scheduled on the audio clock, heard when the note reaches the line.
   const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: offsetClock(audioClock, s.audioOffsetMs), play: playMusic }) : null; };

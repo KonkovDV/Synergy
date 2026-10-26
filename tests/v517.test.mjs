@@ -7,7 +7,8 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { levelBest, createProfile, unlockAchievements, trainingDaysWithin } from '../src/core/progress.js';
 import { petFlyer } from '../src/ui/pictures.js';
-import { ART } from '../src/ui/art-manifest.js';
+import { ART, PET_LAYOUT } from '../src/ui/art-manifest.js';
+import { PET_ITEMS, PET_SLOTS } from '../src/core/pet.js';
 import { PET } from '../src/config.js';
 import { renderTable, readmeBlock, README_MARKERS } from '../tools/evidence.mjs';
 
@@ -52,6 +53,14 @@ test('flight: the Firebird flies once it has wings — the egg and the chick lea
     else assert.ok(Object.hasOwn(ART, name), `${st.id}: ${name}`);
   }
   assert.match(readFileSync('src/games/flight.js', 'utf8'), /drawSprite\(ctx, 'flight-flier'/, 'the game draws the sprite and falls back to the glider');
+  // 26.10: it flies in its outfit — every head and chest thing has a box on the happy picture it flies as
+  assert.match(readFileSync('src/ui/play.js', 'utf8'), /useFlier\('flight-flier', stage\.id, wornItems\(app\.profile, stage\.id\)\)/);
+  for (const st of PET.stages) {
+    const name = petFlyer(st.id);
+    if (!name) continue;
+    const open = PET_SLOTS.filter(s => s.id !== 'nest' && PET.stages.findIndex(x => x.id === st.id) >= PET.stages.findIndex(x => x.id === s.from));
+    for (const item of PET_ITEMS.filter(i => open.some(s => s.id === i.slot))) assert.ok(Object.hasOwn(PET_LAYOUT[name] ?? {}, item.id), `${name}: ${item.id}`);
+  }
 });
 
 test('evidence: the README table is rendered from docs/evidence.json — words agree with numbers', () => {
