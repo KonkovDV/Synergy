@@ -167,7 +167,7 @@ test('safe card: a long gesture name wraps by words, every line fits the column 
 });
 
 test('bionic hand: the pose of the hand model picks the two nearest pictures — open, rest, fist', async () => {
-  const { handBlend, REST_CLOSURE, closure } = await import('../src/render/bionic.js');
+  const { handBlend, REST_CLOSURE, closure, poseSpan, PICTURE_SPAN } = await import('../src/render/bionic.js');
   const { COMMAND_POSE } = await import('../src/core/vocabulary.js');
   assert.equal(REST_CLOSURE, closure(COMMAND_POSE.rest), 'render keeps the rest pose of the hand model');
   assert.deepEqual(handBlend(COMMAND_POSE.open), ['open', 'rest', 0]);
@@ -177,6 +177,9 @@ test('bionic hand: the pose of the hand model picks the two nearest pictures —
   const half = handBlend([0.5, 0.6, 0.6, 0.6, 0.6]);
   assert.deepEqual(half.slice(0, 2), ['rest', 'close']);
   assert.ok(half[2] > 0 && half[2] < 1);
+  assert.ok(poseSpan(COMMAND_POSE.close) <= PICTURE_SPAN && poseSpan(COMMAND_POSE.rest) <= PICTURE_SPAN, 'a fist and rest are pictures');
+  assert.ok(poseSpan([0.7, 0.72, 0.15, 0.15, 0.15]) > PICTURE_SPAN, 'a pinch is not a fist or a rest');
+  assert.ok(poseSpan([0.8, 0, 1, 1, 1]) > PICTURE_SPAN, 'a point is not a fist');
   const src = readFileSync('src/render/bionic.js', 'utf8');
   for (const name of ['hand-rest', 'hand-close', 'hand-open', 'hand-down-open', 'hand-down-rest', 'hand-down-close', 'bg-duo-day', 'bg-duo-night']) assert.ok(src.includes(`'${name}'`), `${name} is drawn`);
   assert.match(readFileSync('src/games/duo.js', 'utf8'), /drawHand\(ctx, \{ x: hx/, 'until the pictures load, the drawn hand stands in');
@@ -210,6 +213,7 @@ test('5.32 generated pictures: with every picture loaded, «Мастерская
     assert.ok(at.x <= 0 && at.y <= 0 && at.x + at.w >= 360 - 1e-6 && at.y + at.h >= 600 - 1e-6, 'the picture covers the field');
     assert.ok(Math.abs(at.y + 0.708 * at.h - 420) < 1e-6, 'its light strip is on the belt line');
     assert.equal(drawBionic(nullCanvas(), 100, 0, 200, [0.5, 0.5, 0.5, 0.5, 0.5], { kind: 'hang', armTo: -50, tint: '#aabbcc', lit: 0.8 }), true);
+    assert.equal(drawBionic(nullCanvas(), 100, 200, 180, [0.7, 0.72, 0.15, 0.15, 0.15]), false, 'a pinch is drawn by the hand model');
   } finally {
     for (const n of names) setSprite(n, null);
     setRenderOptions({ theme: 'light' });

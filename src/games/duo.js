@@ -10,7 +10,7 @@ import { SIDES } from '../core/hands.js';
 import { COLORS, text, fillRound, drawHand, drawLamp, holdRing, handShadow, panel, backdrop, scene, lookKey } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 import { BRAND, linear, glow, lightTrail, wavePoints, glassPlate, cachedLayer } from '../render/fx.js';
-import { BIONIC, bionicAspect, drawBionic, roomPlace, skinTint } from '../render/bionic.js';
+import { BIONIC, bionicAspect, drawBionic, roomPlace, skinTint, poseSpan, PICTURE_SPAN } from '../render/bionic.js';
 import { fmtFixed } from '../core/format.js';
 
 const WORD = { close: 'сжимает', open: 'раскрывает', rest: 'отдыхает' };
@@ -196,9 +196,9 @@ export class DuoGame extends Game {
       // the shell in the colour of the player's skin (a pastel of it, as on the skin pictures); contrast — white
       const tint = deco ? skinTint(this.skin) : null;
       const bottom = tableY + Math.min(s * 0.36, room ? (room.strip - tableY) * 0.45 : Infinity); // on the table top
-      if (deco) handShadow(ctx, hx, bottom, s * 0.85, 0.22);
-      if (!drawBionic(ctx, hx, bottom, Math.min(s * 2.8, bottom - lampY - 22), pose, { mirror: side === 'left', tint, lit: deco ? lit : 0, reflect: deco ? (dark ? 0.2 : 0.16) : 0, reflectTo: room?.strip ?? Infinity })) {
-        if (deco) handShadow(ctx, hx, tableY + s * 0.7, s * 1.1, 0.2);
+      const picture = poseSpan(pose) <= PICTURE_SPAN;
+      if (deco) handShadow(ctx, hx, picture ? bottom : tableY + s * 0.7, picture ? s * 0.85 : s * 1.1, picture ? 0.22 : 0.2);
+      if (!picture || !drawBionic(ctx, hx, bottom, Math.min(s * 2.8, bottom - lampY - 22), pose, { mirror: side === 'left', tint, lit: deco ? lit : 0, reflect: deco ? (dark ? 0.2 : 0.16) : 0, reflectTo: room?.strip ?? Infinity })) {
         drawHand(ctx, { x: hx, y: hy, size: s, pose, skin: this.skin, glow: lit, mirror: side === 'left' });
       }
       if (!this.retention) {
