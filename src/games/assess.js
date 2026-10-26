@@ -13,7 +13,8 @@
 import { fmtFixed } from '../core/format.js';
 import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURE_IDS } from '../core/vocabulary.js';
-import { COLORS, text, circle, fillRound, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
+import { COLORS, text, fillRound, drawHand, drawGauge, drawLamp, holdRing, panel, backdrop, scene, lookKey } from '../render/draw.js';
+import { BRAND, glow, glassPlate, cachedLayer } from '../render/fx.js';
 import { createRng } from '../core/rng.js';
 import { reachableBand } from '../core/signal.js';
 import { SESSION } from '../config.js';
@@ -262,31 +263,39 @@ export class AssessmentGame extends Game {
 
   render(ctx, view, hand, intent) {
     const { w, h } = view;
-    backdrop(ctx, w, h, scene([[0, '#e8f6f1'], [1, '#f6f8fa']], [[0, '#0d1d2a'], [1, '#071019']]));
-    // Trial lamps.
+    const deco = !COLORS.hc, dark = COLORS.theme === 'dark';
+    // 5.32 — a calm test bench (docs/GAME_VISUALS.md): the card in the middle of the field, no decoration that could
+    // pull the eye during a measurement — only the brand's soft glow behind.
+    cachedLayer(ctx, lookKey('check'), w, h, g => {
+      if (!deco) { backdrop(g, w, h, [[0, '#000000'], [1, '#000000']]); return; }
+      backdrop(g, w, h, dark ? [[0, '#0d1d2a'], [1, '#071019']] : [[0, '#e8f6f1'], [1, '#f6f8fa']]);
+      glow(g, w / 2, h * 0.45, Math.min(w, h) * 0.8, BRAND.mint, dark ? 0.3 : 0.45);
+    });
+    // Trial lamps: LEDs in sockets.
     const n = this.trials.length, lw = Math.min(30, (w - 40) / n);
     this.trials.forEach((t, i) => {
-      const x = w / 2 - (n - 1) * lw / 2 + i * lw;
-      circle(ctx, x, 22, lw * 0.3, t.state === 'ok' ? COLORS.good : t.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : scene('#d5dde3', 'rgba(255,255,255,0.15)'));
+      drawLamp(ctx, w / 2 - (n - 1) * lw / 2 + i * lw, 22, lw * 0.3, t.state === 'ok' ? COLORS.good : t.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : null);
     });
     text(ctx, `Попытка ${Math.min(this.index + 1, n)} из ${n}`, w / 2, 46, { size: 13, weight: 700, color: COLORS.muted });
     const t = this.trial;
     if (!t) return;
-    const cw = Math.min(w - 32, 320), ch = Math.min(h * 0.5, 230), x0 = w / 2 - cw / 2, y0 = 64;
-    if (this.phase === 'rest') fillRound(ctx, x0, y0, cw, ch, 20, scene('rgba(255,255,255,0.6)', 'rgba(255,255,255,0.05)'));
-    else panel(ctx, x0, y0, cw, ch, 20);
+    const cw = Math.min(w - 32, 330), ch = Math.min(Math.max(h * 0.5, Math.min(h - 130, 260)), 280), x0 = w / 2 - cw / 2;
+    const y0 = Math.max(64, Math.min((h - ch) / 2, h - ch - 46));
+    if (this.phase === 'rest') fillRound(ctx, x0, y0, cw, ch, 22, scene('rgba(255,255,255,0.65)', 'rgba(255,255,255,0.05)'));
+    else panel(ctx, x0, y0, cw, ch, 22);
     if (this.phase === 'rest') {
-      text(ctx, 'Покой', w / 2, y0 + ch * 0.45, { size: 28, weight: 800, color: COLORS.muted });
+      text(ctx, 'Покой', w / 2, y0 + ch * 0.45, { size: 26, weight: 800, color: COLORS.muted, display: true });
       text(ctx, 'расслабьтесь', w / 2, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
       return;
     }
-    const hx = x0 + cw * 0.3, hy = y0 + ch * 0.82, size = ch * 0.26;
+    const hx = x0 + cw * 0.3, cy = y0 + ch * 0.5, hy = y0 + ch * 0.82, size = ch * 0.26, rr = ch * 0.4;
+    const k = clamp01(t.hold / holdOf(t));
+    if (deco) glow(ctx, hx, cy, rr * 1.1, BRAND.mint, 0.25 + 0.5 * k);
     drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, wrist: t.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
-    ctx.strokeStyle = COLORS.good; ctx.lineWidth = 6; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.arc(hx, y0 + ch * 0.5, ch * 0.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(t.hold / holdOf(t))); ctx.stroke();
+    holdRing(ctx, hx, cy, rr, k, 6);
     // Text between the hold ring and the force gauge; «Сжатие · 30 % · широко» goes on two lines (5.8: it ran off the card).
     const showGauge = t.band && this.scheme === SCHEME.PROPORTIONAL;
-    const left = hx + ch * 0.4 + 10, right = x0 + cw - (showGauge ? 44 : 12), tx = (left + right) / 2, maxWidth = right - left;
+    const left = hx + rr + 10, right = x0 + cw - (showGauge ? 44 : 12), tx = (left + right) / 2, maxWidth = right - left;
     const [main, ...detail] = t.name.split(' · ');
     text(ctx, main, tx, y0 + ch * 0.3, { size: 18, weight: 800, maxWidth });
     if (detail.length) text(ctx, detail.join(' · '), tx, y0 + ch * 0.46, { size: 14, weight: 700, maxWidth });
@@ -296,7 +305,9 @@ export class AssessmentGame extends Game {
     }
     if (intent) {
       const seen = intent.gesture ? GESTURE_BY_ID[intent.gesture]?.name : COMMAND_NAME[intent.command];
-      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''}`, w / 2, y0 + ch + 22, { size: 13, color: COLORS.muted, maxWidth: w - 16 });
+      const label = `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''}`, py = y0 + ch + 24;
+      if (deco) glassPlate(ctx, w / 2 - Math.min(w - 24, 260) / 2, py - 12, Math.min(w - 24, 260), 24, 12, { fill: scene('rgba(255,255,255,0.85)', 'rgba(16,28,39,0.85)'), rim: scene('rgba(5,16,26,0.08)', 'rgba(255,255,255,0.1)'), sheen: false });
+      text(ctx, label, w / 2, py + 0.5, { size: 13, color: COLORS.muted, maxWidth: Math.min(w - 32, 250) });
     }
   }
 }

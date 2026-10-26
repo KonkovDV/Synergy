@@ -3,7 +3,8 @@
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
-import { COLORS, text, circle, fillRound, backdrop, scene } from '../render/draw.js';
+import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
+import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { musicPattern } from '../core/music.js';
 import { reachableBand } from '../core/signal.js';
 
@@ -168,12 +169,13 @@ export class RhythmGame extends Game {
     this.adapt.record(note.score >= 0.6);
     this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
     const label = issue ?? (!band ? (note.peak < this.bands[note.band][0] ? 'Слабее нужного' : 'Сильнее нужного') : note.grade === 'perfect' ? 'Отлично' : 'Хорошо');
-    this.popup(note.lane, label, !band || issue ? COLORS.warn : note.grade === 'perfect' ? COLORS.good : COLORS.accent);
+    this.popup(note.lane, label, !band || issue ? COLORS.warn : note.grade === 'perfect' ? COLORS.good : COLORS.accent, band && !issue);
     if (this.combo > 0 && this.combo % 8 === 0) this.emit('perfect');
   }
 
   miss(note) { this.adapt.record(false); this.combo = 0; note.score = 0; this.popup(note.lane, 'Нота прошла', COLORS.warn); this.emit('miss', { timed: true }); } // 5.17: «Мимо» in red read as a verdict
-  popup(lane, label, color) { this.popups.push({ lane, label, color, t: 0.7 }); }
+  /** `hit` — a clean hit: the field answers with a ring and sparks (5.32; never on a miss, 5.17). */
+  popup(lane, label, color, hit = false) { this.popups.push({ lane, label, color, t: 0.7, hit }); }
 
   autopilot() {
     const now = this.time - this.latency;
@@ -211,29 +213,46 @@ export class RhythmGame extends Game {
     // and the HUD text sat on the falling notes. HUD text is drawn *behind* the notes, the notes are never covered.
     const { R, labels, hitY, laneX, laneW, noteR } = rhythmLayout(w, h);
     const beatPhase = (this.time / this.beat) % 1;
-    // Stage: lavender to pink by day, the night club in the dark theme. 5.17 — the beat glows around the two hit circles
-    // only: a whole-field pulse for the whole song is the long low flicker XAG 118 counts as a risk (≥ 20 % of the screen).
-    backdrop(ctx, w, h, scene([[0, '#e2f0ff'], [1, '#ece7ff']], [[0, '#081322'], [1, '#191240']]));
+    const deco = !COLORS.hc, dark = COLORS.theme === 'dark';
+    // 5.32 — the brand's stage (docs/GAME_VISUALS.md): spotlights, light trails on the horizon, glass lanes; cached.
+    cachedLayer(ctx, lookKey('rhythm'), w, h, g => paintStage(g, w, h, hitY, laneX, laneW, deco, dark));
+    // 5.17 — the beat glows around the two hit circles only: a whole-field pulse for the whole song is the long low
+    // flicker XAG 118 counts as a risk (≥ 20 % of the screen).
     if (!this.reduceMotion) {
-      ctx.globalAlpha = scene(0.22, 0.3) * (1 - beatPhase);
-      for (const lane of ['a', 'b']) circle(ctx, laneX[lane], hitY, R * 1.45, COLORS.violet);
-      ctx.globalAlpha = 1;
+      if (deco) for (const lane of ['a', 'b']) glow(ctx, laneX[lane], hitY, R * 2.1, COLORS.violet, scene(0.5, 0.7) * (1 - beatPhase));
+      else { ctx.globalAlpha = 0.3 * (1 - beatPhase); for (const lane of ['a', 'b']) circle(ctx, laneX[lane], hitY, R * 1.45, COLORS.violet); ctx.globalAlpha = 1; }
     }
     const y = t => hitY - ((t - this.time) / LOOKAHEAD_S) * hitY;
-    // Lanes.
+    // The beat grid: a line on every beat, a brighter one on the bar — when to act, read before the note arrives.
+    const x0 = laneX.a - laneW - 6, x1 = laneX.b + laneW + 6;
+    for (let k = Math.max(0, Math.floor(this.time / this.beat)); k * this.beat <= this.time + LOOKAHEAD_S; k++) {
+      const yy = y(k * this.beat);
+      if (yy < 0 || yy > hitY) continue;
+      const bar = k % 4 === 0;
+      ctx.fillStyle = deco ? (bar ? scene('rgba(91,79,214,0.28)', 'rgba(156,140,255,0.38)') : scene('rgba(5,16,26,0.08)', 'rgba(255,255,255,0.1)')) : (bar ? '#ffffff' : 'rgba(255,255,255,0.4)');
+      ctx.fillRect(x0, yy - (bar ? 1 : 0.5), x1 - x0, bar ? 2 : 1);
+    }
+    // Hit circles: the lane light, the glass face, the letter.
     for (const lane of ['a', 'b']) {
       const x = laneX[lane], col = lane === 'a' ? COLORS.a : COLORS.b;
-      fillRound(ctx, x - laneW, 0, laneW * 2, h, 18, scene('rgba(255,255,255,0.62)', 'rgba(255,255,255,0.04)'));
       const active = !this.retention && (this.lane[lane] || this.lane.both); // live lane light = concurrent feedback
       circle(ctx, x, hitY, R, active ? col : scene('#d5dde3', 'rgba(255,255,255,0.08)'));
-      circle(ctx, x, hitY, R * 0.76, COLORS.panel);
-      text(ctx, lane === 'a' ? 'A' : 'B', x, hitY, { size: Math.min(18, R * 0.6), weight: 850, color: lane === 'a' ? COLORS.aInk : COLORS.bInk });
+      if (active && deco) glow(ctx, x, hitY, R * 2.4, col, 0.9);
+      if (deco) { ctx.lineWidth = 2; ctx.strokeStyle = rgba(col, active ? 0.9 : 0.45); ctx.beginPath(); ctx.arc(x, hitY, R + 4, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.fillStyle = deco ? radial(ctx, x - R * 0.25, hitY - R * 0.3, R * 0.05, R * 0.8, scene([[0, '#ffffff'], [1, '#eef2f7']], [[0, '#25344a'], [1, '#121c2b']]), COLORS.panel) : COLORS.panel;
+      ctx.beginPath(); ctx.arc(x, hitY, R * 0.76, 0, Math.PI * 2); ctx.fill();
+      text(ctx, lane === 'a' ? 'A' : 'B', x, hitY + 1, { size: Math.min(17, R * 0.56), weight: 800, color: lane === 'a' ? COLORS.aInk : COLORS.bInk, display: true });
       if (labels) text(ctx, this.scheme === SCHEME.GESTURE ? (lane === 'a' ? 'жест хвата' : OPENING_GESTURE.name) : lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, weight: 700, color: COLORS.muted, maxWidth: laneW * 2 + 16 });
     }
     // Behind the notes: the count-in and the combo.
     // The game's count-in only while it runs: not drawn under the app's own 3-2-1 (5.11).
-    if (!this.paused && this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, hitY * 0.5, { size: Math.min(54, h * 0.2), weight: 850, color: scene('rgba(5,16,26,0.28)', 'rgba(255,255,255,0.35)') });
-    if (this.combo >= 4) text(ctx, `${this.combo} подряд`, w / 2, Math.max(16, hitY * 0.12), { size: 15, weight: 850, color: COLORS.warnInk, maxWidth: w * 0.3 });
+    if (!this.paused && this.time < COUNT_IN_BEATS * this.beat) text(ctx, String(COUNT_IN_BEATS - Math.floor(this.time / this.beat)), w / 2, hitY * 0.5, { size: Math.min(54, h * 0.2), weight: 800, color: scene('rgba(5,16,26,0.22)', 'rgba(255,255,255,0.35)'), display: true });
+    if (this.combo >= 4) {
+      const cy = Math.max(16, hitY * 0.12), label = `${this.combo} подряд`;
+      const pw = Math.min(w * 0.42, textWidth(ctx, label, { size: 13, weight: 800, display: true }) + 24);
+      if (deco) glassPlate(ctx, w / 2 - pw / 2, cy - 13, pw, 26, 13, { fill: scene('rgba(255,255,255,0.85)', 'rgba(20,16,52,0.85)'), rim: rgba(BRAND.violet, 0.35), sheen: false });
+      text(ctx, label, w / 2, cy + 0.5, { size: 13, weight: 800, color: COLORS.warnInk, maxWidth: pw - 12, display: true });
+    }
     // Notes are the task, not feedback: the retention probe shows them too (it hides the lane light and the force meter).
     // A note is on the line exactly at its beat — when the music and the vibration mark it. The input delay is
     // compensated once, in judging (`time − latency`); until 5.10 it was also added here, so a player who acted on
@@ -242,30 +261,74 @@ export class RhythmGame extends Game {
       const ny = y(n.at), endY = y(n.at + n.dur);
       if (ny < -60 || endY > h + 40 || n.state === 'done' || n.state === 'miss') continue;
       if (n.lane === 'both') {
-        fillRound(ctx, laneX.a - noteR - 10, ny - noteR * 0.6, laneX.b - laneX.a + noteR * 2 + 20, noteR * 1.2, noteR * 0.6, COLORS.violet);
-        text(ctx, 'A + B', w / 2, ny, { size: 13, weight: 850, color: '#ffffff' });
+        const bx = laneX.a - noteR - 10, bw = laneX.b - laneX.a + noteR * 2 + 20, bh = noteR * 1.2;
+        if (deco) glow(ctx, w / 2, ny, bw * 0.45, COLORS.violet, 0.6);
+        fillRound(ctx, bx, ny - bh / 2, bw, bh, bh / 2, deco ? linear(ctx, 0, ny - bh / 2, 0, ny + bh / 2, [[0, mix(COLORS.violet, '#ffffff', 0.25)], [1, mix(COLORS.violet, '#05101a', 0.15)]], COLORS.violet) : COLORS.violet);
+        if (deco) fillRound(ctx, bx + 8, ny - bh / 2 + 3, bw - 16, bh * 0.28, bh * 0.14, 'rgba(255,255,255,0.3)');
+        text(ctx, 'A + B', w / 2, ny + 0.5, { size: 12, weight: 800, color: '#ffffff', display: true });
         continue;
       }
       const x = laneX[n.lane], col = n.lane === 'a' ? COLORS.a : COLORS.b;
-      if (n.dur > 0) fillRound(ctx, x - noteR * 0.58, endY, noteR * 1.16, ny - endY, noteR * 0.58, n.lane === 'a' ? 'rgba(242,98,46,0.38)' : 'rgba(47,111,224,0.32)');
-      circle(ctx, x, ny, noteR, col);
-      for (let i = 0; i < n.band; i++) circle(ctx, x - (n.band - 1) * noteR * 0.3 + i * noteR * 0.6, ny, Math.max(2.5, noteR * 0.17), COLORS.panel);
+      // 5.32: a held note stops on the hit line and is eaten there (it used to slide over the circle and its word)
+      const headY = n.state === 'active' ? Math.min(ny, hitY) : ny;
+      if (n.dur > 0) {
+        fillRound(ctx, x - noteR * 0.58, endY, noteR * 1.16, Math.max(0, headY - endY), noteR * 0.58, deco ? linear(ctx, 0, endY, 0, ny, [[0, rgba(col, 0.12)], [1, rgba(col, 0.5)]], rgba(col, 0.35)) : (n.lane === 'a' ? 'rgba(242,98,46,0.38)' : 'rgba(47,111,224,0.32)'));
+        if (deco) fillRound(ctx, x - 2, endY + 4, 4, Math.max(0, headY - endY - 8), 2, rgba('#ffffff', 0.55));
+      }
+      if (deco) glow(ctx, x, headY, noteR * 2, col, dark ? 0.8 : 0.5);
+      // the note itself: a glossy sphere (its disc has the note radius — what the tests and the hit line measure)
+      ctx.fillStyle = deco ? radial(ctx, x - noteR * 0.35, headY - noteR * 0.4, noteR * 0.05, noteR * 1.3, [[0, mix(col, '#ffffff', 0.55)], [0.4, col], [1, mix(col, '#05101a', 0.3)]], col) : col;
+      ctx.beginPath(); ctx.arc(x, headY, noteR, 0, Math.PI * 2); ctx.fill();
+      if (deco) { ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.ellipse(x - noteR * 0.3, headY - noteR * 0.42, noteR * 0.36, noteR * 0.2, -0.5, 0, Math.PI * 2); ctx.fill(); }
+      for (let i = 0; i < n.band; i++) circle(ctx, x - (n.band - 1) * noteR * 0.3 + i * noteR * 0.6, headY + noteR * 0.08, Math.max(2.5, noteR * 0.17), COLORS.panel);
     }
     // Intensity meter for graded notes.
     // Faded feedback by bars of 8 beats: the force meter is hidden on some bars, the verdict still pops up.
     if (this.graded && intent && this.liveFeedback(Math.floor(this.time / (this.beat * 8)))) {
-      const mx = w - 26, my = h * 0.12, mh = hitY - h * 0.12 - 18;
+      const mx = w - 26, my = h * 0.12, mh = hitY - h * 0.12 - 18, v = clamp01(intent.intensity);
+      fillRound(ctx, mx - 3, my - 3, 18, mh + 6, 9, deco ? scene('rgba(255,255,255,0.75)', 'rgba(255,255,255,0.06)') : COLORS.panel);
       fillRound(ctx, mx, my, 12, mh, 6, COLORS.track);
       for (const b of [1, 2, 3]) { const [lo] = this.bands[b]; ctx.fillStyle = scene('rgba(5,16,26,0.4)', 'rgba(255,255,255,0.35)'); ctx.fillRect(mx - 4, my + mh * (1 - lo), 20, 2); }
-      fillRound(ctx, mx + 2, my + mh * (1 - intent.intensity), 8, Math.max(4, mh * intent.intensity), 4, COLORS.good);
+      fillRound(ctx, mx + 2, my + mh * (1 - v), 8, Math.max(4, mh * v), 4, deco ? linear(ctx, 0, my + mh, 0, my + mh * (1 - v), [[0, BRAND.teal], [1, BRAND.mint]], COLORS.good) : COLORS.good);
+      if (deco && v > 0.03) glow(ctx, mx + 6, my + mh * (1 - v), 16, BRAND.mint, 0.8);
       text(ctx, 'сила', mx + 6, my + mh + 10, { size: 12, weight: 700, color: COLORS.muted });
     }
-    // Verdicts last, with a dark rim: readable over the notes they may cross.
+    // Verdicts last, with a dark rim: readable over the notes they may cross. A clean hit spreads a ring and sparks.
     for (const p of this.popups) {
       const x = p.lane === 'both' ? w / 2 : laneX[p.lane];
+      if (p.hit && !p.fx) { p.fx = true; this.wave(x, hitY, p.color, R * 2.2, 0.45); this.burst(x, hitY - R * 0.4, p.color, 8, 120, 240, 0.5, false); }
       ctx.globalAlpha = Math.min(1, p.t * 2);
-      text(ctx, p.label, x, hitY - R - 22 - (0.7 - p.t) * 30, { size: 16, weight: 800, color: p.color, outline: true, maxWidth: laneW * 2 + 24 });
+      text(ctx, p.label, x, hitY - R - 22 - (0.7 - p.t) * 30, { size: 15, weight: 800, color: p.color, outline: true, display: true, maxWidth: laneW * 2 + 24 });
       ctx.globalAlpha = 1;
     }
+    this.renderParticles(ctx);
+  }
+}
+
+/** The static stage (5.32): a gradient sky, two spotlights, the brand's light trails on the horizon, glass lanes. */
+function paintStage(g, w, h, hitY, laneX, laneW, deco, dark) {
+  if (!deco) {
+    backdrop(g, w, h, [[0, '#000000'], [1, '#000000']]); // static black field (no full-field fill that could pulse, XAG 118)
+    g.strokeStyle = '#ffffff'; g.lineWidth = 2;
+    for (const x of [laneX.a, laneX.b]) { g.beginPath(); g.moveTo(x - laneW, 0); g.lineTo(x - laneW, h); g.moveTo(x + laneW, 0); g.lineTo(x + laneW, h); g.stroke(); }
+    return;
+  }
+  backdrop(g, w, h, dark ? [[0, '#050b1a'], [0.6, '#120e33'], [1, '#1d1150']] : [[0, '#dcefff'], [0.6, '#e9e4ff'], [1, '#f3ecff']]);
+  // spotlights from the top corners
+  for (const [x, col] of [[w * 0.08, dark ? BRAND.cyan : '#ffffff'], [w * 0.92, dark ? BRAND.violet : '#ffffff']]) {
+    g.fillStyle = linear(g, x, 0, w / 2, hitY, [[0, rgba(col, dark ? 0.32 : 0.75)], [1, rgba(col, 0)]], 'rgba(255,255,255,0)');
+    g.beginPath(); g.moveTo(x - 10, 0); g.lineTo(x + 10, 0); g.lineTo(w / 2 + w * 0.35 * (x < w / 2 ? 1 : -1), hitY); g.lineTo(w / 2 - w * 0.05 * (x < w / 2 ? 1 : -1), hitY); g.closePath(); g.fill();
+  }
+  glow(g, w / 2, hitY, w * 0.7, BRAND.violet, dark ? 0.5 : 0.3);
+  const a = dark ? 0.95 : 0.55;
+  lightTrail(g, wavePoints(-20, w + 20, hitY - 10, 12, 60, 0), BRAND.mint, 2, a);
+  lightTrail(g, wavePoints(-20, w + 20, hitY + 6, 10, 75, 140), BRAND.sky, 1.6, a * 0.85);
+  lightTrail(g, wavePoints(-20, w + 20, hitY + 20, 9, 50, 260), BRAND.violet, 1.4, a * 0.75);
+  // glass lanes: clear at the top, tinted with the channel colour toward the hit line
+  for (const [lane, col] of [['a', '#f2622e'], ['b', '#2f6fe0']]) {
+    const x = laneX[lane];
+    fillRound(g, x - laneW, -20, laneW * 2, h + 40, 18, linear(g, 0, 0, 0, h, [[0, dark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.35)'], [0.85, rgba(col, dark ? 0.16 : 0.12)], [1, rgba(col, dark ? 0.1 : 0.08)]], 'rgba(255,255,255,0.3)'));
+    g.strokeStyle = rgba(col, dark ? 0.35 : 0.25); g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(x - laneW, 0); g.lineTo(x - laneW, h); g.moveTo(x + laneW, 0); g.lineTo(x + laneW, h); g.stroke();
   }
 }

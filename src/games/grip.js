@@ -6,8 +6,9 @@ import { blindBlock } from '../core/guidance.js';
 import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
-import { COLORS, text, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene } from '../render/draw.js';
+import { COLORS, text, textWidth, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
+import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 
 /** The first of these grips the gesture set has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by «Щипок»). */
 /** A grip the set actually has; a set without «щепоть» takes the power grip (the СППР set of the meetup, 5.31). */
@@ -312,34 +313,33 @@ export class GripGame extends Game {
 
   render(ctx, view, hand) {
     const { w, h } = view;
-    // Workshop: a light wall with soft brand glows by day, the night workshop in the dark theme.
-    backdrop(ctx, w, h, scene([[0, '#e6f7f0'], [0.6, '#f6f9fa'], [1, '#edf2f5']], [[0, '#0d1d2a'], [1, '#071019']]));
     const s = Math.min(w * 0.2, h * 0.15);
     const beltY = h * 0.68, objY = beltY - s * 0.55, beltH = s * 0.36;
-    circle(ctx, w * 0.12, h * 0.1, Math.min(w, h) * 0.22, scene('rgba(22,225,130,0.16)', 'rgba(22,225,130,0.08)'));
-    circle(ctx, w * 0.9, h * 0.3, Math.min(w, h) * 0.14, scene('rgba(59,130,246,0.12)', 'rgba(77,148,255,0.08)'));
-    // Floor and the conveyor belt of a prosthesis workshop: a light top, moving slats, a graphite edge, green rollers.
-    ctx.fillStyle = scene('#e4eaee', '#0b1822'); ctx.fillRect(0, beltY + beltH * 0.5, w, h - beltY);
-    fillRound(ctx, -10, beltY + beltH * 0.55, w + 20, beltH * 0.6, 8, scene('#1f2d38', '#05101a'));
-    fillRound(ctx, -10, beltY, w + 20, beltH, 10, scene('#cdd7de', '#1d2f3d'));
-    ctx.fillStyle = scene('#b3c1cc', '#28404f');
+    const deco = !COLORS.hc;
+    // 5.32 — the bionic workshop (docs/GAME_VISUALS.md): a light wall with the brand's glow and light trails, a graphite
+    // bench with a mint light strip instead of an empty floor. Static, so it is painted once into a cached layer.
+    cachedLayer(ctx, lookKey('grip'), w, h, g => paintWorkshop(g, w, h, beltY, beltH, deco));
+    // The conveyor: the rubber belt and its metal rollers are in the cached workshop; only the cleats move.
     const off = this.reduceMotion ? 0 : (this.time * 60) % 28; // a still belt with «Меньше движения» (5.11)
-    for (let x = -28 + off; x < w; x += 28) ctx.fillRect(x, beltY + 4, 12, beltH - 8);
-    for (let x = 18; x < w; x += 64) { circle(ctx, x, beltY + beltH * 0.86, beltH * 0.2, scene('#0b151d', '#030a10')); circle(ctx, x, beltY + beltH * 0.86, beltH * 0.08, '#16e182'); }
+    ctx.fillStyle = deco ? scene('rgba(255,255,255,0.13)', 'rgba(255,255,255,0.09)') : '#ffffff';
+    for (let x = -28 + off; x < w; x += 28) { roundRect(ctx, x, beltY + 3, 10, beltH * 0.5, 3); ctx.fill(); }
     const blocks = this.level.items.some(id => OBJECTS[id]?.block);
     const pegs = this.level.items.some(id => OBJECTS[id]?.peg);
-    if (blocks) fillRound(ctx, w * 0.58, beltY - s * 0.85, 14, s * 0.85, 4, scene('#8fa1c7', '#24384a'));
-    // Basket: orange wicker with a rim.
+    if (blocks) { // the barrier of the cubes: an acrylic plate on the belt
+      const px = w * 0.58, ph = s * 0.85;
+      fillRound(ctx, px, beltY - ph, 14, ph, 4, deco ? scene('rgba(120,170,220,0.45)', 'rgba(120,170,220,0.3)') : '#ffffff');
+      fillRound(ctx, px + 2, beltY - ph + 4, 3, ph - 10, 1.5, 'rgba(255,255,255,0.7)');
+    }
+    // The basket: a brand teal crate with slots; its rim lights up when it is time to let go.
     const bx = w * 0.82, by = beltY - s * 0.2;
-    fillRound(ctx, bx - s * 0.7, by - s * 0.55 + 4, s * 1.4, s * 0.75, 12, COLORS.shade);
-    fillRound(ctx, bx - s * 0.7, by - s * 0.55, s * 1.4, s * 0.75, 12, '#f59e0b');
-    ctx.strokeStyle = '#c96f05'; ctx.lineWidth = 3;
-    for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(bx - s * 0.7 + i * s * 0.35, by - s * 0.55); ctx.lineTo(bx - s * 0.7 + i * s * 0.35, by + s * 0.2); ctx.stroke(); }
-    ctx.beginPath(); ctx.moveTo(bx - s * 0.7, by - s * 0.2); ctx.lineTo(bx + s * 0.7, by - s * 0.2); ctx.stroke();
-    fillRound(ctx, bx - s * 0.78, by - s * 0.62, s * 1.56, s * 0.16, s * 0.08, '#b45309');
-    if (pegs) { ctx.fillStyle = scene('#f2c14e', '#c9962e'); ctx.fillRect(bx, by - s * 1.15, 6, s * 0.7); circle(ctx, bx + 3, by - s * 1.15, 7, scene('#f2c14e', '#c9962e')); }
-    text(ctx, 'корзина', bx, by + s * 0.42, { size: 12, weight: 700, color: COLORS.muted, outline: true });
     const o = this.current;
+    drawBasket(ctx, bx, by, s, deco, o?.phase === 'release' && !this.retention ? 0.5 + 0.5 * (this.reduceMotion ? 1 : Math.sin(this.time * 4) * 0.5 + 0.5) : 0);
+    if (pegs) {
+      const pg = linear(ctx, bx, 0, bx + 8, 0, [[0, '#ffe08a'], [1, '#c9962e']], '#f2c14e');
+      fillRound(ctx, bx - 1, by - s * 1.15, 8, s * 0.7, 3, deco ? pg : '#ffffff');
+      if (deco) { ctx.fillStyle = radial(ctx, bx + 1, by - s * 1.17, 1, 9, [[0, '#fff6d6'], [1, '#d9a536']], '#f2c14e'); ctx.beginPath(); ctx.arc(bx + 3, by - s * 1.15, 8, 0, Math.PI * 2); ctx.fill(); }
+    }
+    pill(ctx, 'корзина', bx, by + s * 0.42, deco);
     const startX = w * 0.42;
     let ox = startX, oy = objY, handX = startX;
     if (o) {
@@ -349,15 +349,24 @@ export class GripGame extends Game {
         ox = startX + (bx - startX) * k; handX = ox; oy = objY - s * 0.5 * Math.sin(Math.PI * Math.min(1, k)) - (o.phase === 'release' ? s * 0.25 : 0);
         if (o.phase === 'done') oy = by - s * 0.15;
       }
+      // its shadow stays on the belt and fades as it rises
+      const lift = Math.max(0, objY - oy) / (s * 0.8);
+      if (deco && !(o.phase === 'done' && o.delivered)) softShadow(ctx, ox, beltY + 2, s * 0.42 * (1 - 0.3 * Math.min(1, lift)), s * 0.09, 0.28 * (1 - 0.6 * Math.min(1, lift)));
       const squeeze = o.phase !== 'arrive' && hand.inContact ? hand.force : 0;
       if (!(o.phase === 'done' && o.failed === 'timeout')) drawObject(ctx, o, ox, oy, s, squeeze);
       // 5.17 — the sparks belong to the delivery, not to the mistake (feedback after a good try teaches more); a crushed
       // thing stays a still drawing.
       if (o.phase === 'done' && o.delivered && !o.bursted) { o.bursted = true; this.burst(ox, oy, COLORS.good, 12, 140, 260, 0.6); }
     }
-    // Hand from above (fingers down).
-    const fingerReach = s * 1.72;
-    drawHand(ctx, { x: handX, y: oy - fingerReach - s * 0.1, size: s, pose: hand.pose(), skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
+    // Hand from above (fingers down) with its shadow on the belt; a soft scan light points at the object to take.
+    const fingerReach = s * 1.72, hy = oy - fingerReach - s * 0.1;
+    if (deco) handShadow(ctx, handX, beltY + 2, s, 0.12);
+    if (deco && o && o.phase === 'grasp' && !hand.inContact) {
+      const top = hy + s * 1.0, bottom = oy + s * 0.2;
+      ctx.fillStyle = linear(ctx, 0, top, 0, bottom, [[0, rgba(BRAND.mint, 0.0)], [0.25, rgba(BRAND.mint, scene(0.16, 0.2))], [1, rgba(BRAND.mint, 0.0)]], 'rgba(0,0,0,0)');
+      ctx.beginPath(); ctx.moveTo(handX - s * 0.25, top); ctx.lineTo(handX + s * 0.25, top); ctx.lineTo(handX + s * 0.6, bottom); ctx.lineTo(handX - s * 0.6, bottom); ctx.closePath(); ctx.fill();
+    }
+    drawHand(ctx, { x: handX, y: hy, size: s, pose: hand.pose(), skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
     // Force gauge (hidden in the retention probe).
     const gx = 18, gy = h * 0.14, gh = h * 0.5;
     if (o && this.liveFeedback(this.results.length)) {
@@ -371,20 +380,99 @@ export class GripGame extends Game {
         ctx.globalAlpha = 1;
       }
     } else if (o) {
+      fillRound(ctx, gx - 4, gy - 4, 30, gh + 8, 15, COLORS.panel);
       fillRound(ctx, gx, gy, 22, gh, 11, COLORS.track);
-      text(ctx, '?', gx + 11, gy + gh / 2, { size: 18, color: COLORS.muted });
+      text(ctx, '?', gx + 11, gy + gh / 2, { size: 18, color: COLORS.muted, display: true });
     }
-    // Grip badge.
+    // Grip badge: the grip in hand over the grip needed.
     const need = o ? GRIP_NAME[o.grip] : '';
     panel(ctx, w - 150, 12, 138, 48, 14);
-    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 81, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 128 });
-    text(ctx, o ? `Нужен: ${need}` : '', w - 81, 46, { size: 12, color: COLORS.muted, maxWidth: 128 });
-    text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 14, weight: 700, color: COLORS.muted });
-    if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, 40, { size: 11, color: COLORS.muted, maxWidth: w - 180 });
-    if (o) text(ctx, o.name, ox, oy + s * 0.75, { size: 13, weight: 700, color: COLORS.text, outline: true });
+    if (deco) fillRound(ctx, w - 150, 12, 5, 48, 2.5, hand.grip === o?.grip ? COLORS.good : COLORS.warn);
+    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 79, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 124 });
+    text(ctx, o ? `Нужен: ${need}` : '', w - 79, 46, { size: 12, color: COLORS.muted, maxWidth: 124 });
+    text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 13, weight: 700, color: COLORS.muted, display: true });
+    if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, h - 14, { size: 11, weight: 600, color: deco ? '#a9b8c4' : COLORS.muted, maxWidth: w - 24 }); // on the bench, clear of the badge
+    if (o && !(o.phase === 'done' && o.delivered)) pill(ctx, o.name, ox, oy + s * 0.78, deco, COLORS.text); // in the basket its name would sit on «корзина»
     this.renderParticles(ctx);
-    if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, Math.max(52, h * 0.16), { size: 20, weight: 800, color: this.flash.color, outline: true, maxWidth: w - 24 }); // under the «1 / 6» counter
+    if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, Math.max(52, h * 0.16), { size: 19, weight: 800, color: this.flash.color, outline: true, display: true, maxWidth: w - 24 }); // under the «1 / 6» counter
   }
+}
+
+/** The static workshop (5.32): the wall with the brand's glows, light trails and a dot grid; the graphite bench. */
+function paintWorkshop(g, w, h, beltY, beltH, deco) {
+  paintBench(g, w, h, beltY, beltH, deco);
+  paintBelt(g, w, beltY, beltH, deco);
+}
+
+/** The rubber belt and its rollers (static under the moving cleats). */
+function paintBelt(g, w, beltY, beltH, deco) {
+  const belt = linear(g, 0, beltY, 0, beltY + beltH, scene([[0, '#3a4a57'], [0.5, '#25323d'], [1, '#18222b']], [[0, '#2a4052'], [0.5, '#1c2e3c'], [1, '#13212d']]), scene('#25323d', '#1c2e3c'));
+  fillRound(g, -10, beltY, w + 20, beltH, beltH * 0.5, deco ? belt : '#000000');
+  if (!deco) { roundRect(g, -10, beltY, w + 20, beltH, beltH * 0.5); g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.stroke(); }
+  for (let x = 18; x < w; x += 64) {
+    const ry = beltY + beltH * 0.86, rr = beltH * 0.22;
+    if (deco) { g.fillStyle = radial(g, x - rr * 0.3, ry - rr * 0.4, rr * 0.1, rr * 1.2, [[0, '#f2f6f8'], [0.6, '#9fb0bd'], [1, '#55636e']], '#9fb0bd'); g.beginPath(); g.arc(x, ry, rr, 0, Math.PI * 2); g.fill(); }
+    else circle(g, x, ry, rr, '#ffffff');
+    circle(g, x, ry, rr * 0.38, deco ? BRAND.mint : '#000000');
+  }
+}
+
+/** The wall and the bench. */
+function paintBench(g, w, h, beltY, beltH, deco) {
+  const benchTop = beltY + beltH * 0.5;
+  if (!deco) { g.fillStyle = COLORS.bg; g.fillRect(0, 0, w, h); g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, benchTop); g.lineTo(w, benchTop); g.stroke(); return; }
+  backdrop(g, w, h, scene([[0, '#e4f6ef'], [0.55, '#f3f8fa'], [1, '#eef3f6']], [[0, '#10273a'], [0.6, '#0b1824'], [1, '#08121b']]));
+  const m = Math.min(w, h);
+  glow(g, w * 0.08, h * 0.06, m * 0.75, BRAND.mint, scene(0.55, 0.45));
+  glow(g, w * 1.0, h * 0.42, m * 0.55, BRAND.sky, scene(0.4, 0.35));
+  // a dot grid of a lab wall
+  g.fillStyle = scene('rgba(5,16,26,0.07)', 'rgba(255,255,255,0.06)');
+  for (let y = 26; y < benchTop - 20; y += 22) for (let x = 14 + ((y / 22) % 2) * 11; x < w; x += 22) { g.beginPath(); g.arc(x, y, 1.2, 0, Math.PI * 2); g.fill(); }
+  // the brochure's light trails across the wall
+  const a = scene(0.4, 0.85), base = beltY * 0.42;
+  lightTrail(g, wavePoints(-20, w + 20, base, 16, 70, 0), BRAND.mint, 2.2, a);
+  lightTrail(g, wavePoints(-20, w + 20, base + 22, 12, 55, 90), BRAND.sky, 1.6, a * 0.8);
+  lightTrail(g, wavePoints(-20, w + 20, base + 40, 10, 85, 200), BRAND.violet, 1.3, a * 0.6);
+  // the bench: a light top edge, a graphite front with a mint strip, drawers and handles, a floor reflection
+  g.fillStyle = scene('#dfe7ec', '#2a4153'); g.fillRect(0, benchTop, w, 8);
+  g.fillStyle = linear(g, 0, benchTop + 8, 0, h, scene([[0, '#2c3c49'], [1, '#121b23']], [[0, '#172838'], [1, '#070e15']]), '#1f2d38');
+  g.fillRect(0, benchTop + 8, w, h - benchTop - 8);
+  g.fillStyle = BRAND.mint; g.fillRect(0, benchTop + 8, w, 2.5);
+  glow(g, w * 0.5, benchTop + 9, w * 0.6, BRAND.mint, 0.25);
+  const drawers = Math.max(2, Math.round(w / 170)), dw = w / drawers;
+  for (let i = 0; i < drawers; i++) {
+    const x = i * dw + 10, y = benchTop + 22, ww = dw - 20, hh = Math.min(h - y - 14, 110);
+    if (hh < 24) break;
+    g.strokeStyle = 'rgba(255,255,255,0.07)'; g.lineWidth = 1.5; roundRect(g, x, y, ww, hh, 10); g.stroke();
+    fillRound(g, x + ww / 2 - 22, y + 12, 44, 6, 3, 'rgba(255,255,255,0.18)');
+    g.fillStyle = 'rgba(255,255,255,0.05)';
+    for (let k = 0; k < 4 && y + 34 + k * 9 < y + hh - 8; k++) g.fillRect(x + 16, y + 34 + k * 9, ww - 32, 3);
+    g.fillStyle = i % 2 ? BRAND.sky : BRAND.mint; g.beginPath(); g.arc(x + ww - 14, y + 14, 2.5, 0, Math.PI * 2); g.fill();
+  }
+}
+
+/** The basket: a teal crate with a darker rim and slots; `lit` 0..1 makes the rim glow (time to let go). */
+function drawBasket(ctx, bx, by, s, deco, lit) {
+  const x = bx - s * 0.7, y = by - s * 0.55, ww = s * 1.4, hh = s * 0.75;
+  if (deco) softShadow(ctx, bx, by + s * 0.22, s * 0.85, s * 0.12, 0.3);
+  if (deco && lit > 0) glow(ctx, bx, y, s * 1.2, BRAND.mint, lit);
+  const body = linear(ctx, x, y, x + ww, y + hh, [[0, '#3fe3c4'], [0.5, BRAND.teal], [1, '#0d8f80']], BRAND.teal);
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ww, y); ctx.lineTo(x + ww * 0.92, y + hh); ctx.lineTo(x + ww * 0.08, y + hh); ctx.closePath();
+  ctx.fillStyle = deco ? body : COLORS.panel; ctx.fill();
+  if (!deco) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke(); }
+  ctx.fillStyle = deco ? 'rgba(5,40,40,0.35)' : '#ffffff';
+  for (let r = 0; r < 2; r++) for (let i = 0; i < 4; i++) fillRound(ctx, x + ww * (0.16 + i * 0.19), y + hh * (0.3 + r * 0.32), ww * 0.12, hh * 0.18, 3, ctx.fillStyle);
+  fillRound(ctx, x + 6, y + hh * 0.1, ww * 0.3, 3, 1.5, 'rgba(255,255,255,0.45)');
+  fillRound(ctx, bx - s * 0.78, by - s * 0.62, s * 1.56, s * 0.16, s * 0.08, deco ? linear(ctx, 0, by - s * 0.62, 0, by - s * 0.46, [[0, mix(BRAND.teal, '#ffffff', 0.25)], [1, '#0b7a6e']], '#0e9f8f') : '#ffffff');
+  if (lit > 0) { ctx.globalAlpha = lit; fillRound(ctx, bx - s * 0.78, by - s * 0.62, s * 1.56, 3, 1.5, BRAND.mint); ctx.globalAlpha = 1; }
+}
+
+/** A label on a glass pill (the name of an object, the basket): readable over the belt and the bench. */
+function pill(ctx, label, x, y, deco, color = COLORS.muted) {
+  const tw = textWidth(ctx, label, { size: 12, weight: 700 });
+  const pw = Math.max(44, tw + 18), ph = Math.max(20, tw / Math.max(1, label.length) * 1.6 + 6);
+  if (deco) glassPlate(ctx, x - pw / 2, y - ph / 2, pw, ph, ph / 2, { fill: scene('rgba(255,255,255,0.9)', 'rgba(16,28,39,0.88)'), rim: scene('rgba(5,16,26,0.1)', 'rgba(255,255,255,0.1)'), sheen: false });
+  text(ctx, label, x, y + 0.5, { size: 12, weight: 700, color, outline: !deco });
 }
 
 /** Procedural objects; `squeeze` deforms soft ones, failed ones are drawn broken. */
