@@ -63,6 +63,39 @@ test('flight: the Firebird flies once it has wings — the egg and the chick lea
   }
 });
 
+test('flight outfit: a slower first load does not paint over the outfit asked later', async () => {
+  const { useFlier } = await import('../src/ui/pictures.js');
+  const { sprite, setSprite } = await import('../src/render/sprites.js');
+  const pending = [];
+  const prevImage = globalThis.Image, prevDoc = globalThis.document;
+  globalThis.Image = class {
+    set src(v) { this._src = v; pending.push(this); }
+    get src() { return this._src; }
+  };
+  globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage() {}, save() {}, restore() {}, translate() {}, rotate() {} }) }) };
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  try {
+    useFlier('flight-flier', 'fledgling', { head: 'kokoshnik' });
+    useFlier('flight-flier', 'fledgling', { head: 'wreath' });
+    const bodies = pending.filter(i => String(i.src).includes('pet-fledgling-happy'));
+    assert.equal(bodies.length, 2);
+    bodies[0].naturalWidth = 10; bodies[0].naturalHeight = 10; bodies[0].onload();
+    await tick();
+    assert.equal(pending.some(i => String(i.src).includes('kokoshnik')), false, 'the outfit that was replaced is not loaded');
+    bodies[1].naturalWidth = 12; bodies[1].naturalHeight = 12; bodies[1].onload();
+    await tick();
+    const wreath = pending.find(i => String(i.src).includes('gift-wreath'));
+    assert.ok(wreath, 'the later outfit is loaded');
+    wreath.naturalWidth = 4; wreath.naturalHeight = 4; wreath.onload();
+    await tick();
+    assert.equal(sprite('flight-flier')?.width, 12, 'the bird on screen is the later outfit');
+  } finally {
+    setSprite('flight-flier', null);
+    if (prevImage) globalThis.Image = prevImage; else delete globalThis.Image;
+    if (prevDoc) globalThis.document = prevDoc; else delete globalThis.document;
+  }
+});
+
 test('evidence: the README table is rendered from docs/evidence.json — words agree with numbers', () => {
   const ev = {
     tests: { total: 262, failed: 0 }, a11y: { light: 28, dark: 10, violations: 0, at: '2026-10-20T01:00:00Z' },
