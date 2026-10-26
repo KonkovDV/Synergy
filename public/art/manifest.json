@@ -337,60 +337,76 @@
    "source": "ab82d252771733973c841496b70fe2f1f9ab36dc4e40ad700c707928a9a2f9a8"
   },
   "gesture-fist": {
-   "w": 192,
-   "h": 192,
-   "bytes": 5480,
+   "w": 256,
+   "h": 256,
+   "bytes": 11526,
    "alpha": true,
-   "sha256": "31a8c692eb6e743f4aa9cc5f8a813649c930854047b59068ed7f4521fdcbf05c",
-   "source": "a37711166a257445616e9f3a8aaacc5499673364e05c6f75cea49a05f0217e9a"
+   "sha256": "609ea30f3ab0c870879d147bdc5a7585a4cecab1c812acb70cbddd9335374e70",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
+  },
+  "gesture-indication": {
+   "w": 256,
+   "h": 256,
+   "bytes": 10922,
+   "alpha": true,
+   "sha256": "a91da322347356d58fc11c1a008e05371426e4ee7ea4b985fb4dfff194cd19e9",
+   "source": "49b0c8e6497e90eb520bd0a4c9faa167e72eff222b57cc3653e84d1fd17f2958"
   },
   "gesture-key": {
-   "w": 192,
-   "h": 192,
-   "bytes": 4912,
+   "w": 256,
+   "h": 256,
+   "bytes": 14272,
    "alpha": true,
-   "sha256": "236dcdbc9918ba099c36900025e7b387cef3ed23db41584a7089ed03ced80ae1",
-   "source": "20ddc90fa2c00b437aa459f85b646a7a93cf4d3b12c6e52eb049046234edaf8c"
+   "sha256": "0aba8e531a877d5e68d3846a2a04a6723d1d6c1598c7b1c4aa527a48a0b01674",
+   "source": "9cab6f87e35873e494282b6efd3beffd5920517d88b8a9440303301edf863f7a"
   },
   "gesture-open": {
-   "w": 192,
-   "h": 192,
-   "bytes": 6922,
+   "w": 256,
+   "h": 256,
+   "bytes": 14934,
    "alpha": true,
-   "sha256": "e2b635e92e8ebfe3eef894b2645ef19d86d0ed772688cbd70aa5172cc86441ed",
-   "source": "d2f3cb1166503280d3d8cacaf14117d9fc1a7b3f3611e7fe49adac19d022dc62"
+   "sha256": "123461a7402ddbf26e51445e78a2084468f4aa5d9d38258e55464208646adfe0",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "gesture-pinch": {
-   "w": 192,
-   "h": 192,
-   "bytes": 5390,
+   "w": 256,
+   "h": 256,
+   "bytes": 14186,
    "alpha": true,
-   "sha256": "bbef7cfa882b65cb1bb2a053f75ab99a992b561c3f5e72a82d4d5e32aab419e6",
-   "source": "542b7bc00454cf24874b381547cabece326db17089af25933e0dfa6f4f9a517f"
+   "sha256": "b1d8f747ccdf50bcdf61b7a79b57b86ad74d3365ab7a9d008cfbeb8339108954",
+   "source": "9cab6f87e35873e494282b6efd3beffd5920517d88b8a9440303301edf863f7a"
   },
   "gesture-point": {
-   "w": 192,
-   "h": 192,
-   "bytes": 5266,
+   "w": 256,
+   "h": 256,
+   "bytes": 11162,
    "alpha": true,
-   "sha256": "2b134faf93f74250fb69c7b51dff80983c29b87d2f5c418f4e146bc7b9a42f91",
-   "source": "a3b548160a8538dbb0ae49238d4d3486f1dbf12982c8642abe371315dfe301ff"
+   "sha256": "90d868ef8cd6d12aed42e6642f82b4fcf65b4a852c14bf57170d3223aa89512f",
+   "source": "9cab6f87e35873e494282b6efd3beffd5920517d88b8a9440303301edf863f7a"
   },
   "gesture-rest": {
-   "w": 192,
-   "h": 192,
-   "bytes": 5824,
+   "w": 256,
+   "h": 256,
+   "bytes": 14666,
    "alpha": true,
-   "sha256": "e75a630eb7d919a61078178d1b889cdc71bc36e729da5e208d6992d5d7885ff3",
-   "source": "ff451a2d446e44ed48593c2df71f0d4f771ebdbae5484ce8ae996533febc927d"
+   "sha256": "d8a93e8e92d814a0594d45b814afb6dcfc459ee2ce6c0a15d5235f991be1493f",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "gesture-thumb": {
-   "w": 192,
-   "h": 192,
-   "bytes": 4342,
+   "w": 256,
+   "h": 256,
+   "bytes": 13962,
    "alpha": true,
-   "sha256": "30ac6fb4a2ceae18af669065d3ea51a72e3259b659278a258fa49aada7de325f",
-   "source": "6e398f8e456c879e36a4bdb5cacba86ce49ee98b0773202603c26eaeec8d30a0"
+   "sha256": "c4685103b68eb90843b7d010c630ceac6de88ce46c92908c33cdeefea4b9511f",
+   "source": "49b0c8e6497e90eb520bd0a4c9faa167e72eff222b57cc3653e84d1fd17f2958"
+  },
+  "gesture-thumbflex": {
+   "w": 256,
+   "h": 256,
+   "bytes": 11448,
+   "alpha": true,
+   "sha256": "97f8f5d5f95e95bed693cd13054144c0c7f45bdc43503d3f0ba793f6c1bf6278",
+   "source": "49b0c8e6497e90eb520bd0a4c9faa167e72eff222b57cc3653e84d1fd17f2958"
   },
   "gift-amulet": {
    "w": 192,
@@ -633,12 +649,12 @@
    "source": "ac391b33f96d13a29f68a3e4076b27e376b1b3a9526c043d5b58f2e6336041e0"
   },
   "ico-hand": {
-   "w": 160,
-   "h": 160,
-   "bytes": 5512,
+   "w": 192,
+   "h": 192,
+   "bytes": 10260,
    "alpha": true,
-   "sha256": "59e37433fcd8e820c0e4d7c87246b73dbb4d8ab950a876f95f5e3238d9f2a4f5",
-   "source": "86ca2e06755ef4238833ea8d91c74e37d2dd646b4113e17169e62254f721c494"
+   "sha256": "430e5b20080b7410204a3a37a68320dc9a8bdca942e87bd1f31a1106a5681f96",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "ico-info": {
    "w": 160,
@@ -1137,60 +1153,60 @@
    "source": "b0f79df4de83af339b780f1e8d85be76f3ae471defbbc61202cdfdd213bb4386"
   },
   "skin-coral": {
-   "w": 192,
-   "h": 192,
-   "bytes": 6444,
+   "w": 256,
+   "h": 256,
+   "bytes": 15320,
    "alpha": true,
-   "sha256": "47b25cb7c5652062af70c33aad15a4365d00aa496a51e32b2d28764869a00d07",
-   "source": "a2a168a18d39df69fe23cf6c727a61a2ab13579301da70e4c95f8c6982ce3b17"
+   "sha256": "1993831eda43a5e3dccfa42726743de8a4851e86faf77b88fccf8ac5e131080c",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "skin-cosmos": {
-   "w": 192,
-   "h": 192,
-   "bytes": 6448,
+   "w": 256,
+   "h": 256,
+   "bytes": 14200,
    "alpha": true,
-   "sha256": "a4875f76819ab76f7b8e75edbdbe06e19e4c0457840684f2096cdb6865d18848",
-   "source": "976c9351b735f11d4976908551c67472373b452031071d9921023ab199f426c9"
+   "sha256": "38fa696e07e7fe68918f1e110395c06acd18f1072e2ee3cfd3a404a98d9d03be",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "skin-gold": {
-   "w": 192,
-   "h": 192,
-   "bytes": 6762,
+   "w": 256,
+   "h": 256,
+   "bytes": 15562,
    "alpha": true,
-   "sha256": "7ae1b96c80ba1ae41386698694e5a8271aedd82035c3d7db8c329bebe82beab8",
-   "source": "9d30cb4966f236ed2021b3253342ef872ed4d22967d84d3c450f20b89c99304e"
+   "sha256": "d2c5e349ba7461b46f2380f97d58ba8a8d0b658f84b4626ab0a8c68946cff8e5",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "skin-graphite": {
-   "w": 192,
-   "h": 192,
-   "bytes": 6494,
+   "w": 256,
+   "h": 256,
+   "bytes": 14432,
    "alpha": true,
-   "sha256": "1edd8d66a5380697939c568eeadbf7484195add678d03a212a7c1823483bc346",
-   "source": "c23399013453b8b9f9abfbc7c98dca2faed006f9d0216f936628693b2a11a72e"
+   "sha256": "a6f5c081ac59873dc796480a8b51e977a5ab6a6d6c058096b0ebcc6377fb78df",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "skin-mint": {
-   "w": 192,
-   "h": 192,
-   "bytes": 7106,
+   "w": 256,
+   "h": 256,
+   "bytes": 14838,
    "alpha": true,
-   "sha256": "a0aaf3e65ab081866e726b176e7fc29d6314b05674286ab495b3303beafa3b2e",
-   "source": "8685e80df54f7f6af5ef54e0f4bb046614f0b6d996bc665ed4d19e033d7af8c9"
+   "sha256": "9cdb24f0fa0182afc2089d040073d7c3f0a39d32bdf70a621c3d19b8b2b6873c",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "skin-neon": {
-   "w": 192,
-   "h": 192,
-   "bytes": 6756,
+   "w": 256,
+   "h": 256,
+   "bytes": 15152,
    "alpha": true,
-   "sha256": "5b3e9275f1fc5970a0294b553019564956955124b20a1d50c1ee7e5dd8cf0356",
-   "source": "e4e2835fbaed62132bfa37f87afc645f83cbbcdf8970861265cd34b66ab80695"
+   "sha256": "249a401b6ce5026b516734968304ae563f479f7bcfd5bff9138a68d9dc45d8e4",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   },
   "skin-sky": {
-   "w": 192,
-   "h": 192,
-   "bytes": 7186,
+   "w": 256,
+   "h": 256,
+   "bytes": 15030,
    "alpha": true,
-   "sha256": "5a50e6674695e2ce8c26d8da80421520d4057730e48ec2a62cca620eee2fca95",
-   "source": "e835e95f569e1ff365dbc0d6ea965d99abfc2f887d58a4e2b92fd86754656a44"
+   "sha256": "0620659b9e03d0b0cb2dfee88ddcd7d2c701a468b1cfa15f7ae636919233249b",
+   "source": "3fd72031e6e04b46f4bf40f77260a0e10e2a3a61e4e593c0b6da23ea4c8385f1"
   }
  },
  "icons": {
@@ -1204,7 +1220,7 @@
   ],
   "splash": "android/res/drawable-xxhdpi/splash_bird.png"
  },
- "total_bytes": 1986556,
+ "total_bytes": 2127584,
  "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)",
  "layout": {
   "pet-chick-happy": {
