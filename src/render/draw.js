@@ -107,6 +107,9 @@ export function text(ctx, str, x, y, { size = 16, weight = 600, color = COLORS.t
   ctx.fillText(str, x, y);
 }
 
+/** The pixel size text() will use for a nominal size (the canvas text follows the accessibility text size). */
+export const scaledPx = size => Math.round(size * textScale);
+
 /** The width a label will take when drawn by text() with the same options (plates sized to their words). */
 export function textWidth(ctx, str, { size = 16, weight = 600, display = false } = {}) {
   const px = Math.round(size * textScale), wt = display ? Math.min(800, Math.max(500, weight)) : weight;
