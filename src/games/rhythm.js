@@ -242,7 +242,7 @@ export class RhythmGame extends Game {
       ctx.fillStyle = deco ? radial(ctx, x - R * 0.25, hitY - R * 0.3, R * 0.05, R * 0.8, scene([[0, '#ffffff'], [1, '#eef2f7']], [[0, '#25344a'], [1, '#121c2b']]), COLORS.panel) : COLORS.panel;
       ctx.beginPath(); ctx.arc(x, hitY, R * 0.76, 0, Math.PI * 2); ctx.fill();
       text(ctx, lane === 'a' ? 'A' : 'B', x, hitY + 1, { size: Math.min(17, R * 0.56), weight: 800, color: lane === 'a' ? COLORS.aInk : COLORS.bInk, display: true });
-      if (labels) text(ctx, this.scheme === SCHEME.GESTURE ? (lane === 'a' ? 'жест хвата' : OPENING_GESTURE.name) : lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, weight: 700, color: COLORS.muted, maxWidth: laneW * 2 + 16 });
+      if (labels) text(ctx, this.scheme === SCHEME.GESTURE ? (lane === 'a' ? 'жест хвата' : OPENING_GESTURE.name) : lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, weight: 700, color: COLORS.muted, maxWidth: laneW * 2 + 16, outline: true }); // over the light trails of the stage
     }
     // Behind the notes: the count-in and the combo.
     // The game's count-in only while it runs: not drawn under the app's own 3-2-1 (5.11).
@@ -291,7 +291,7 @@ export class RhythmGame extends Game {
       for (const b of [1, 2, 3]) { const [lo] = this.bands[b]; ctx.fillStyle = scene('rgba(5,16,26,0.4)', 'rgba(255,255,255,0.35)'); ctx.fillRect(mx - 4, my + mh * (1 - lo), 20, 2); }
       fillRound(ctx, mx + 2, my + mh * (1 - v), 8, Math.max(4, mh * v), 4, deco ? linear(ctx, 0, my + mh, 0, my + mh * (1 - v), [[0, BRAND.teal], [1, BRAND.mint]], COLORS.good) : COLORS.good);
       if (deco && v > 0.03) glow(ctx, mx + 6, my + mh * (1 - v), 16, BRAND.mint, 0.8);
-      text(ctx, 'сила', mx + 6, my + mh + 10, { size: 12, weight: 700, color: COLORS.muted });
+      text(ctx, 'сила', mx + 6, my + mh + 10, { size: 12, weight: 700, color: COLORS.muted, outline: true });
     }
     // Verdicts last, with a dark rim: readable over the notes they may cross. A clean hit spreads a ring and sparks.
     for (const p of this.popups) {

@@ -6,7 +6,7 @@ import { signalMeter, icon, handsFreeText, bridgeLine, lostSignalHint } from './
 import { createTwoChannelPads, createGesturePads, createDuoPads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
 import { COLORS, text, holdRing } from '../render/draw.js';
-import { BRAND, glow, radial } from '../render/fx.js';
+import { BRAND, glow, radial, clearLayers } from '../render/fx.js';
 import { gameArt, mio } from './art.js';
 import { useSprite, petFlyer } from './pictures.js';
 import { petStageIndex } from '../core/pet.js';
@@ -286,6 +286,6 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     /** Back during a run pauses it (a stray gesture must not throw the attempt away); back again leaves. */
     onBack() { if (phase === 'running') pause(); else if (phase !== 'leaving') exit(); return true; },
     onBridgeStatus: updateBridge,
-    cleanup() { music?.update(0, 1, false); observer.disconnect(); headerObserver.disconnect(); },
+    cleanup() { music?.update(0, 1, false); observer.disconnect(); headerObserver.disconnect(); clearLayers(); },
   };
 }

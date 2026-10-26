@@ -126,3 +126,23 @@ test('5.32 canvas type: the brand fonts first (Inter for words, Unbounded for nu
     assert.match(readFileSync(`src/games/${file}.js`, 'utf8'), /cachedLayer\(ctx, lookKey\(/, `${file}: the static scene is cached`);
   }
 });
+
+test('fx: the layer cache keeps two full-screen bitmaps at most, and the play screen can drop them', async () => {
+  const { clearLayers, layerCount } = await import('../src/render/fx.js');
+  const made = [];
+  globalThis.document = { createElement: () => { const c = { width: 0, height: 0, getContext: () => ({ setTransform() {} }) }; made.push(c); return c; } };
+  try {
+    clearLayers();
+    const ctx = { drawImage() {}, getTransform: () => ({ a: 2.5 }) };
+    for (const key of ['grip:light', 'flight:light', 'rhythm:light', 'safe5:light', 'grip:dark']) cachedLayer(ctx, key, 390, 600, () => {});
+    assert.equal(layerCount(), 2, 'about 6 MB a layer at density 2.5: one game and one theme switch, not 24');
+    assert.equal(made.filter(c => c.width > 0).length, 2, 'an evicted layer gives its bitmap back (zero size)');
+    let painted = 0;
+    cachedLayer(ctx, 'grip:dark', 390, 600, () => { painted++; });
+    assert.equal(painted, 0, 'the latest layer is still there');
+    clearLayers();
+    assert.equal(layerCount(), 0);
+    assert.ok(made.every(c => c.width === 0 && c.height === 0), 'leaving the game frees every bitmap');
+  } finally { delete globalThis.document; }
+  assert.match(readFileSync('src/ui/play.js', 'utf8'), /cleanup\(\) \{[^}]*clearLayers\(\)/, 'leaving the play screen frees the bitmaps');
+});

@@ -129,6 +129,16 @@ export function glassPlate(ctx, x, y, w, h, r, { fill = 'rgba(255,255,255,0.86)'
 
 // ── The static layer of a scene ─────────────────────────────────────────────────────────────────────────────────────
 const LAYERS = new Map();
+const MAX_LAYERS = 2;
+
+// A zero-sized canvas gives its bitmap back at once (WebKit otherwise holds it until a late collection).
+const release = entry => { if (entry) { entry.canvas.width = 0; entry.canvas.height = 0; } };
+
+/** Drops every cached layer (the play screen calls it on leaving: the bitmaps are not kept in the background). */
+export function clearLayers() { for (const entry of LAYERS.values()) release(entry); LAYERS.clear(); }
+
+/** How many layers are cached (tests). */
+export const layerCount = () => LAYERS.size;
 
 /**
  * Draws the static part of a scene from a cache: `paint(g)` runs once per key, field size and pixel density, then the
@@ -150,8 +160,11 @@ export function cachedLayer(ctx, key, w, h, paint) {
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       paint(g);
       entry = { id, canvas };
+      release(LAYERS.get(key)); LAYERS.delete(key);
       LAYERS.set(key, entry);
-      if (LAYERS.size > 24) LAYERS.delete(LAYERS.keys().next().value); // a few scenes × themes; old sizes go
+      // One game is on screen at a time: keep its layer and one more (a theme switch). A layer is a full-screen bitmap —
+      // at a pixel density of 2.5 about 6 MB — so a bigger cache would cost a weak phone tens of megabytes.
+      while (LAYERS.size > MAX_LAYERS) { const oldest = LAYERS.keys().next().value; release(LAYERS.get(oldest)); LAYERS.delete(oldest); }
     }
     ctx.drawImage(entry.canvas, 0, 0, w, h);
   } catch {
