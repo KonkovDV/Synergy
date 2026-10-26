@@ -10,6 +10,7 @@ import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GEST
 import { COLORS, text, textWidth, wrapLines, circle, fillRound, roundRect, drawHand, drawLamp, holdRing, panel, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, sphere, cachedLayer } from '../render/fx.js';
 import { drawSprite } from '../render/sprites.js';
+import { coverScene } from '../render/bionic.js';
 import { reachableBand } from '../core/signal.js';
 import { poseHint } from '../core/restmotion.js';
 import { fmtFixed } from '../core/format.js';
@@ -227,7 +228,12 @@ export class SafeGame extends Game {
     const open = this.openedAt !== undefined ? Math.min(1, (this.time - this.openedAt) * 2) : 0;
     // 5.32 — the vault room (docs/GAME_VISUALS.md): a light from above onto the safe, light trails on the wall; cached.
     // the body and the door ring do not move: they are part of the cached room, only the dial turns in the frame
-    cachedLayer(ctx, lookKey(`safe${n}`), w, h, g => { paintVault(g, w, h, cx, cy, R, deco, dark); drawSafeBody(g, cx, cy, R, deco); drawDoor(g, R, deco, 'ring', cx, cy); });
+    // 5.32, later: the vault room is a generated picture by day and by night (render/bionic.js); the safe stays drawn
+    const room = deco ? coverScene(dark ? 'bg-safe-night' : 'bg-safe-day', w, h, 0.5) : null;
+    cachedLayer(ctx, lookKey(`safe${n}${room ? '-room' : ''}`), w, h, g => {
+      if (room) g.drawImage(room.img, room.x, room.y, room.w, room.h); else paintVault(g, w, h, cx, cy, R, deco, dark);
+      drawSafeBody(g, cx, cy, R, deco); drawDoor(g, R, deco, 'ring', cx, cy);
+    });
     drawSafe(ctx, cx, cy, R, open, this.index * (Math.PI * 2 / Math.max(1, n)) + this.holdFor * 2, deco, dark);
     // Code lamps: LEDs in sockets; the current one glows amber, a done one green.
     this.code.forEach((c, i) => {

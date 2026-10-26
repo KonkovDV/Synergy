@@ -5,6 +5,7 @@ import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
 import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
+import { coverScene } from '../render/bionic.js';
 import { musicPattern } from '../core/music.js';
 import { reachableBand } from '../core/signal.js';
 
@@ -215,7 +216,9 @@ export class RhythmGame extends Game {
     const beatPhase = (this.time / this.beat) % 1;
     const deco = !COLORS.hc, dark = COLORS.theme === 'dark';
     // 5.32 — the brand's stage (docs/GAME_VISUALS.md): spotlights, light trails on the horizon, glass lanes; cached.
-    cachedLayer(ctx, lookKey('rhythm'), w, h, g => paintStage(g, w, h, hitY, laneX, laneW, deco, dark));
+    // 5.32, later: the stage is a generated picture by day and by night (render/bionic.js); the glass lanes stay drawn
+    const stage = deco ? coverScene(dark ? 'bg-rhythm-night' : 'bg-rhythm-day', w, h, 1) : null;
+    cachedLayer(ctx, lookKey(stage ? 'rhythm-stage' : 'rhythm'), w, h, g => paintStage(g, w, h, hitY, laneX, laneW, deco, dark, stage));
     // 5.17 — the beat glows around the two hit circles only: a whole-field pulse for the whole song is the long low
     // flicker XAG 118 counts as a risk (≥ 20 % of the screen).
     if (!this.reduceMotion) {
@@ -306,13 +309,14 @@ export class RhythmGame extends Game {
 }
 
 /** The static stage (5.32): a gradient sky, two spotlights, the brand's light trails on the horizon, glass lanes. */
-function paintStage(g, w, h, hitY, laneX, laneW, deco, dark) {
+function paintStage(g, w, h, hitY, laneX, laneW, deco, dark, stage = null) {
   if (!deco) {
     backdrop(g, w, h, [[0, '#000000'], [1, '#000000']]); // static black field (no full-field fill that could pulse, XAG 118)
     g.strokeStyle = '#ffffff'; g.lineWidth = 2;
     for (const x of [laneX.a, laneX.b]) { g.beginPath(); g.moveTo(x - laneW, 0); g.lineTo(x - laneW, h); g.moveTo(x + laneW, 0); g.lineTo(x + laneW, h); g.stroke(); }
     return;
   }
+  if (stage) { g.drawImage(stage.img, stage.x, stage.y, stage.w, stage.h); paintLanes(g, h, laneX, laneW, dark); return; }
   backdrop(g, w, h, dark ? [[0, '#050b1a'], [0.6, '#120e33'], [1, '#1d1150']] : [[0, '#dcefff'], [0.6, '#e9e4ff'], [1, '#f3ecff']]);
   // spotlights from the top corners
   for (const [x, col] of [[w * 0.08, dark ? BRAND.cyan : '#ffffff'], [w * 0.92, dark ? BRAND.violet : '#ffffff']]) {
@@ -324,7 +328,11 @@ function paintStage(g, w, h, hitY, laneX, laneW, deco, dark) {
   lightTrail(g, wavePoints(-20, w + 20, hitY - 10, 12, 60, 0), BRAND.mint, 2, a);
   lightTrail(g, wavePoints(-20, w + 20, hitY + 6, 10, 75, 140), BRAND.sky, 1.6, a * 0.85);
   lightTrail(g, wavePoints(-20, w + 20, hitY + 20, 9, 50, 260), BRAND.violet, 1.4, a * 0.75);
-  // glass lanes: clear at the top, tinted with the channel colour toward the hit line
+  paintLanes(g, h, laneX, laneW, dark);
+}
+
+/** The glass lanes: clear at the top, tinted with the channel colour toward the hit line. */
+function paintLanes(g, h, laneX, laneW, dark) {
   for (const [lane, col] of [['a', '#f2622e'], ['b', '#2f6fe0']]) {
     const x = laneX[lane];
     fillRound(g, x - laneW, -20, laneW * 2, h + 40, 18, linear(g, 0, 0, 0, h, [[0, dark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.35)'], [0.85, rgba(col, dark ? 0.16 : 0.12)], [1, rgba(col, dark ? 0.1 : 0.08)]], 'rgba(255,255,255,0.3)'));

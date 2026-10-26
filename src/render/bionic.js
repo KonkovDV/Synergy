@@ -134,3 +134,16 @@ export function workshopPlace(w, h, stripY, dark) {
   const [name, frac] = WORKSHOP[dark ? 'dark' : 'light'];
   return placeScene(name, frac, w, h, stripY);
 }
+
+/**
+ * A generated scene covering the whole field (the sky of «Полёт», the stage of «Ритм», the vault of «Сейф»): `anchor`
+ * — which part of the picture stays in view when the field is narrower or shorter (0 — the top, 0.5 — the middle,
+ * 1 — the bottom). Null until the picture loads; the game then paints its drawn scene.
+ */
+export function coverScene(name, w, h, anchor = 0.5) {
+  const img = sprite(name);
+  if (!img) return null;
+  const iw = img.naturalWidth ?? img.width, ih = img.naturalHeight ?? img.height;
+  const k = Math.max(w / iw, h / ih);
+  return { img, x: (w - iw * k) / 2, y: (h - ih * k) * anchor, w: iw * k, h: ih * k };
+}

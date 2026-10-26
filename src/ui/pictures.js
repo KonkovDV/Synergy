@@ -41,25 +41,32 @@ export function picture(name, size, cls = '', fallback = null) {
 const MOOD_PICTURE = { fed: 'happy', waiting: 'waiting', rest: 'rest' };
 const PET_POSES = ['wave', 'read', 'star'];
 
+/** The nest the bird can sit in: on a `…-nest` picture it is the picture itself. */
+const NESTED = 'twigs';
+const inPicture = (name, item) => item === NESTED && name.endsWith('-nest');
+
 /**
  * The picture of the Firebird for a stage, a mood and an optional pose (young and grown birds wave, read and hold a
  * star). A pose that covers a slot where something is worn (the star above the head, the book on the chest) gives way
  * to the mood picture: what the player chose to wear is never hidden.
+ * 26.10: with the nest of twigs worn, the bird is a picture of its own sitting in the nest (`…-nest`, generated whole —
+ * one light, one scale); the nest is not laid under the bird. Where that picture is missing, the nest is laid as before.
  */
 export function petPictureName(stage, mood, pose = null, items = {}) {
-  const base = `pet-${stage}-${MOOD_PICTURE[mood] ?? 'waiting'}`;
+  const nested = name => (items.nest === NESTED && Object.hasOwn(ART, `${name}-nest`) ? `${name}-nest` : name);
+  const base = nested(`pet-${stage}-${MOOD_PICTURE[mood] ?? 'waiting'}`);
   if (!pose || !PET_POSES.includes(pose)) return base;
-  const posed = `pet-${stage}-${pose}`;
+  const posed = nested(`pet-${stage}-${pose}`);
   if (!Object.hasOwn(ART, posed)) return base;
   const layout = PET_LAYOUT[posed] ?? {};
-  return Object.values(items).every(item => !item || Object.hasOwn(layout, item)) ? posed : base;
+  return Object.values(items).every(item => !item || Object.hasOwn(layout, item) || inPicture(posed, item)) ? posed : base;
 }
 
 /** Boxes of what the bird wears on this picture: [{ item, box: [cx %, cy %, w %, rot°], behind }], in drawing order. */
 export function petThings(name, items = {}) {
   const layout = PET_LAYOUT[name] ?? {};
-  return Object.values(items).filter(item => item && Object.hasOwn(layout, item))
-    .map(item => ({ item, box: layout[item], behind: item === 'twigs' }));
+  return Object.values(items).filter(item => item && Object.hasOwn(layout, item) && !inPicture(name, item))
+    .map(item => ({ item, box: layout[item], behind: item === NESTED }));
 }
 
 /**
@@ -95,7 +102,7 @@ export function petPicture(stage, mood, size, { items = {}, pose = null, cls = '
 }
 
 /** Pictures that games draw on the canvas: the Workshop objects, the gesture hands of «Сейф», the bionic hands, the generated rooms and the basket, the tutorial lock. */
-export const CANVAS_PICTURES = Object.freeze(Object.keys(ART).filter(n => /^(obj|gesture|hand|bg-duo|bg-grip|prop)-/.test(n)).concat('ico-lock'));
+export const CANVAS_PICTURES = Object.freeze(Object.keys(ART).filter(n => /^(obj|gesture|hand|bg-(duo|grip|flight|rhythm|safe)|prop)-/.test(n)).concat('ico-lock'));
 
 /** Loads the canvas pictures once, in the background, into render/sprites.js (a game draws its drawing until then). */
 export function loadSprites(names = CANVAS_PICTURES) {
@@ -104,7 +111,12 @@ export function loadSprites(names = CANVAS_PICTURES) {
     if (!hasArt(name)) continue;
     const img = new Image();
     img.decoding = 'async';
-    img.onload = () => setSprite(name, img);
+    // 5.32: decoded once into an ImageBitmap — the first frame that draws a big picture (a room, a hand) does not
+    // stall on decoding it, which a weak phone shows as a jerk; the <img> itself where ImageBitmap is missing
+    img.onload = () => {
+      if (typeof createImageBitmap !== 'function') { setSprite(name, img); return; }
+      createImageBitmap(img).then(bitmap => setSprite(name, bitmap), () => setSprite(name, img));
+    };
     img.onerror = () => failed.add(name);
     img.src = artUrl(name);
   }

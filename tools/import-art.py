@@ -206,13 +206,29 @@ def ground(img: Image.Image):
     return float(xs[low].mean() / a.shape[1]), float(bottom / a.shape[0]), float(span)
 
 
+def nest_mask(rgba: np.ndarray) -> np.ndarray:
+    """The twigs of the nest on a picture of the bird in its nest (pet-*-nest, 26.10): caramel-orange (hue 12–40°,
+    saturated, not glossy-bright) in the lower 45 % of the subject. The coral crest and the golden star are higher up
+    or brighter; the bird is teal, cream and pink."""
+    p = rgba.astype(np.float64) / 255.0
+    r, g, b, a = p[..., 0], p[..., 1], p[..., 2], p[..., 3]
+    mx, mn = p[..., :3].max(-1), p[..., :3].min(-1)
+    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1e-6), 0)
+    hue = np.degrees(np.arctan2(np.sqrt(3) * (g - b), 2 * r - g - b)) % 360
+    rows = np.nonzero((a > 0.5).any(1))[0]
+    top, bottom = rows[0], rows[-1]
+    yy = np.arange(rgba.shape[0])[:, None]
+    return (a > 0.5) & (hue >= 12) & (hue <= 40) & (sat > 0.4) & (mx > 0.35) & (mx < 0.97) & (yy > bottom - 0.45 * (bottom - top))
+
+
 def pet_layout(name: str, img: Image.Image) -> dict:
     """Boxes [centre x %, centre y %, width %, rotation°] of every item that this picture can wear."""
     s = img.width
     gx, gy, span = ground(img)
     out = {}
     clamp = lambda v, w: min(max(v, w / 2 + 1.0), 100 - w / 2 - 1.0)
-    for item, (dx, dy, w) in NEST.items():
+    nested = name.endswith("-nest")  # 26.10: the bird in its nest — the nest slot is the picture itself
+    for item, (dx, dy, w) in ({} if nested else NEST).items():
         w = w if w else min(0.8, max(0.5, span * 1.3))
         dy = dy if dy is not None else 0.01 - 0.30 * w
         out[item] = [round(clamp((gx + dx) * 100, w * 100), 1), round(min((gy + dy) * 100, 100 - w * 50 - 0.5), 1), round(w * 100, 1), 0]
@@ -224,7 +240,7 @@ def pet_layout(name: str, img: Image.Image) -> dict:
     ux, uy = math.sin(math.radians(tilt)), -math.cos(math.radians(tilt))
     rx, ry = -uy, ux
     anchor = {"head": 1.05, "brow": 0.5, "chest": -1.55}
-    blocked = BLOCKED.get(name.split("-")[-1], set())
+    blocked = BLOCKED.get(name.split("-")[2], set())
     stage = name.split("-")[1]
     for item, (at, du, dr, w, rot) in WEAR.items():
         if SLOT[item] in blocked or (SLOT[item] == "chest" and stage == "chick"):
@@ -232,7 +248,36 @@ def pet_layout(name: str, img: Image.Image) -> dict:
         k = anchor[at] + du
         px, py = cx + ux * k * e + rx * dr * e, cy + uy * k * e + ry * dr * e
         out[item] = [round(px / s * 100, 1), round(py / s * 100, 1), round(w * e / s * 100, 1), round(tilt + rot, 1)]
+        if nested and SLOT[item] == "chest":
+            # what the bird wears on its chest sits above the rim of the nest: lifted along the head's «up» until the
+            # twigs cover no more than HIDDEN of it, at most LIFT eye distances (above that it reaches the beak);
+            # a bird lying in the nest wears it over the rim
+            twigs = nest_mask(np.asarray(img.convert("RGBA")))
+            for lift in (i * 0.05 for i in range(1, round(LIFT / 0.05) + 1)):
+                if hidden(item, out[item], twigs) <= HIDDEN:
+                    break
+                k2 = k + lift
+                px, py = cx + ux * k2 * e + rx * dr * e, cy + uy * k2 * e + ry * dr * e
+                out[item] = [round(px / s * 100, 1), round(py / s * 100, 1), round(w * e / s * 100, 1), round(tilt + rot, 1)]
+            if hidden(item, out[item], twigs) > HIDDEN:  # lying in the nest: over the rim where the chest is
+                out[item] = [round((cx + ux * k * e + rx * dr * e) / s * 100, 1), round((cy + uy * k * e + ry * dr * e) / s * 100, 1),
+                             round(w * e / s * 100, 1), round(tilt + rot, 1)]
     return out
+
+
+HIDDEN, LIFT = 0.12, 0.5
+
+
+def hidden(item: str, box: list, twigs: np.ndarray) -> float:
+    """How much of a worn item lies over the twigs of the nest (their mask on the picture), by the item's alpha."""
+    size = twigs.shape[0]
+    cx, cy, w, rot = box
+    side = max(1, round(w / 100 * size))
+    g = Image.open(OUT / f"gift-{item}.webp").getchannel("A").resize((side, side), Image.LANCZOS).rotate(-rot, resample=Image.BICUBIC, expand=True)
+    frame = Image.new("L", (size, size))
+    frame.paste(g, (round(cx / 100 * size - g.width / 2), round(cy / 100 * size - g.height / 2)))
+    a = np.asarray(frame, dtype=np.float32) / 255.0
+    return float((a * twigs).sum() / max(1.0, a.sum()))
 
 
 def outfit_preview(names: list[str], path: Path):
