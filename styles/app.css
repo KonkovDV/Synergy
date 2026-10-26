@@ -1529,6 +1529,7 @@ body {
 .onb-features li { display: grid; grid-template-columns: 48px 1fr; gap: 12px; align-items: center; padding: 10px 14px 10px 10px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--hair); box-shadow: var(--shadow-1) }
 .onb-features .onb-feature-art { width: 48px; height: 48px; object-fit: contain; transform: scale(1.2); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .16)) }
 .onb-hero.welcome .onb-art.cover .art { max-height: 26vh } /* the first frame — cover, three points and «Дальше» — fits a 390 × 844 screen */
+.onb-features li > div { min-width: 0; overflow-wrap: anywhere; hyphens: auto } /* «реабилитологом» at 200 % text is wider than the column at 320 px: a split, not text past the edge */
 .onb-features b { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1.0625rem; line-height: 1.25; color: var(--text); text-wrap: balance }
 .onb-features li span { display: block; color: var(--muted); font-size: .9375rem; line-height: 1.4; margin-top: 2px; text-wrap: pretty }
 :root.hc .onb-features li { box-shadow: none; border-color: currentColor }
