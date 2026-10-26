@@ -179,8 +179,8 @@ def icon(img: Image.Image, size: int, tint: np.ndarray | None = None) -> Image.I
     return ART.resize(square, (size, size))
 
 
-def put(manifest: dict, name: str, out: Image.Image, raw: bytes):
-    data = ART.webp(out, QUALITY)
+def put(manifest: dict, name: str, out: Image.Image, raw: bytes, quality: int = QUALITY):
+    data = ART.webp(out, quality)
     ART.write(ART.OUT / f"{name}.webp", data)
     manifest["items"][name] = {"w": out.width, "h": out.height, "bytes": len(data), "alpha": True, "sha256": ART.sha256(data), "source": ART.sha256(raw)}
     print(f"{name:20s} {out.width}x{out.height} {len(data) / 1024:5.1f} KB")
@@ -254,6 +254,9 @@ def cover(manifest: dict, name: str, path: str, size=(900, 675)):
 # per stage (one design per stage); every picture is scaled so that the nest has one width and one bottom line on all
 # of them — the nest does not change as the bird grows, and turning the nest on does not move the bird's frame.
 NEST_W, NEST_FLOOR, PET_SIZE = 0.62, 0.95, 512
+# 26.10: the archive of the platform holds ≈ 6 MB more and a picture lands in it ≈ 4.3 times (docs/ART.md, «Бюджет»):
+# the 21 birds in their nests at WebP 80 (≈ 20 KB each, the team's birds are 17–48 KB), the grips of the hanging hand at 85
+PET_QUALITY, GRIP_QUALITY = 80, 85
 
 
 def grid_cells(rgba: np.ndarray, cols: int = 3, rows: int = 2) -> list[np.ndarray]:
@@ -300,7 +303,7 @@ def pets(manifest: dict, sheets: list[tuple[str, str]]):
         img = ART.resize(img, (max(1, round(img.width * k)), max(1, round(img.height * k))))
         frame = Image.new("RGBA", (PET_SIZE, PET_SIZE), (0, 0, 0, 0))
         frame.paste(img, (round(PET_SIZE / 2 - cx * k), round(NEST_FLOOR * PET_SIZE - bottom * k)))  # clipped to the frame
-        put(manifest, name, frame, raw)
+        put(manifest, name, frame, raw, PET_QUALITY)
 
 
 def grips(manifest: dict, sheet: str, names: list[str], hang: bool):
@@ -343,7 +346,7 @@ def grips(manifest: dict, sheet: str, names: list[str], hang: bool):
         tlo, thi = sorted((cut_row, rend))
         canvas.paste((0, 0, 0, 0), (0, 0, W, thi + 1) if hang else (0, tlo, W, H))
         canvas.paste(ART.resize(part, (W, thi - tlo + 1)), (0, tlo))
-        put(manifest, name, canvas, raw)
+        put(manifest, name, canvas, raw, GRIP_QUALITY if hang else QUALITY)
         light, band = marks(canvas)
         rows = np.nonzero((np.asarray(canvas.getchannel("A")) > 128).any(1))[0]
         tip = rows[-1] if hang else rows[0]
