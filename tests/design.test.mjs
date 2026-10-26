@@ -40,7 +40,7 @@ const PAIRS = [
   ['a-ink', 'card'], ['b-ink', 'card'], ['co-ink', 'card'], ['good-ink', 'card'], ['good-ink', 'tint-green'],
   ['warn-ink', 'bg'], ['warn-ink', 'card'], ['warn-ink', 'tint-yellow'], ['bad-ink', 'bg'], ['bad-ink', 'card'],
   ['accent-ink', 'tint-yellow'], ['accent-ink', 'card2'], // 5.14: the gift line on an earned / not yet earned achievement
-  ['banner-text', 'banner-bg'], ['banner-btn-text', 'banner-btn'], // 5.33: the demo-profile banner in brand graphite (was warning orange)
+  ['banner-text', 'banner-bg'], ['banner-btn-text', 'banner-btn'], // 5.32: the demo-profile banner in brand graphite (was warning orange)
   ...['green', 'teal', 'blue', 'violet', 'coral', 'yellow'].flatMap(t => [['text', `tint-${t}`], ['muted', `tint-${t}`], ['muted', `deco-${t}`], ['ico', `tint-${t}`]]),
 ];
 

@@ -5,7 +5,8 @@ import { h, toast } from './dom.js';
 import { signalMeter, icon, handsFreeText, bridgeLine, lostSignalHint } from './widgets.js';
 import { createTwoChannelPads, createGesturePads, createDuoPads } from './controls.js';
 import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
-import { COLORS, circle, text } from '../render/draw.js';
+import { COLORS, text, holdRing } from '../render/draw.js';
+import { BRAND, glow, radial } from '../render/fx.js';
 import { gameArt, mio } from './art.js';
 import { useSprite, petFlyer } from './pictures.js';
 import { petStageIndex } from '../core/pet.js';
@@ -213,13 +214,15 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   function showResults() { phase = 'leaving'; app.go('results', { ...outcome, plan, demo, pose }); }
 
   // Countdown: the scene under a veil, the number in a round badge whose ring runs out with the second.
+  // 5.32: a glass badge with the brand's glow, the ring in the brand gradient, the number in Unbounded.
   function drawCountdown() {
     ctx.fillStyle = COLORS.veil; ctx.fillRect(0, 0, view.w, view.h);
-    const r = Math.max(30, Math.min(60, view.h * 0.2)), cx = view.w / 2, cy = view.h / 2 - 12;
-    circle(ctx, cx, cy, r, COLORS.panel);
-    ctx.strokeStyle = COLORS.accent; ctx.lineWidth = 6; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.arc(cx, cy, r - 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (countdown % 1 || 1)); ctx.stroke();
-    text(ctx, String(Math.ceil(countdown)), cx, cy + 2, { size: Math.round(r * 1.1), weight: 850, color: COLORS.accentInk });
+    const r = Math.max(30, Math.min(60, view.h * 0.2)), cx = view.w / 2, cy = view.h / 2 - 12, deco = !COLORS.hc;
+    if (deco) glow(ctx, cx, cy, r * 2.4, BRAND.mint, 0.6);
+    ctx.fillStyle = deco ? radial(ctx, cx - r * 0.3, cy - r * 0.35, r * 0.1, r * 1.2, COLORS.theme === 'dark' ? [[0, '#22344a'], [1, '#101c27']] : [[0, '#ffffff'], [1, '#eef3f6']], COLORS.panel) : COLORS.panel;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    holdRing(ctx, cx, cy, r - 5, countdown % 1 || 1, 6);
+    text(ctx, String(Math.ceil(countdown)), cx, cy + 2, { size: Math.round(r * 0.95), weight: 800, color: COLORS.accentInk, display: true });
     text(ctx, 'Расслабьтесь', cx, cy + r + 22, { size: 16, weight: 700, color: COLORS.text, maxWidth: view.w - 24 });
   }
 
