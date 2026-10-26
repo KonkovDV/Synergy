@@ -366,15 +366,15 @@ export class GripGame extends Game {
     // Hand from above (fingers down) with its shadow on the belt; a soft scan light points at the object to take.
     // 5.32: the hand is a generated picture hanging from an arm (render/bionic.js); its fingertips reach the top of the
     // object, so the fist closes over it. The drawn hand stands in until the pictures load.
-    const fingerReach = s * 1.72, hy = oy - fingerReach - s * 0.1, pose = hand.pose();
-    const ht = s * 2.6, handTop = oy - s * 0.18 - bionicTip(pose) * ht;
+    const fingerReach = s * 1.72, hy = oy - fingerReach - s * 0.1, pose = hand.pose(), held = { grip: hand.grip, amount: hand.closure };
+    const ht = s * 2.6, handTop = oy - s * 0.18 - bionicTip(pose, held) * ht;
     if (deco) handShadow(ctx, handX, beltY + 2, s, 0.12);
     if (deco && o && o.phase === 'grasp' && !hand.inContact) {
       const top = handTop + ht * 0.62, bottom = oy + s * 0.2;
       ctx.fillStyle = linear(ctx, 0, top, 0, bottom, [[0, rgba(BRAND.mint, 0.0)], [0.25, rgba(BRAND.mint, scene(0.16, 0.2))], [1, rgba(BRAND.mint, 0.0)]], 'rgba(0,0,0,0)');
       ctx.beginPath(); ctx.moveTo(handX - s * 0.25, top); ctx.lineTo(handX + s * 0.25, top); ctx.lineTo(handX + s * 0.6, bottom); ctx.lineTo(handX - s * 0.6, bottom); ctx.closePath(); ctx.fill();
     }
-    if (!drawBionic(ctx, handX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0 })) {
+    if (!drawBionic(ctx, handX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0, ...held })) {
       drawHand(ctx, { x: handX, y: hy, size: s, pose, skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
     }
     // Force gauge (hidden in the retention probe).
@@ -401,7 +401,7 @@ export class GripGame extends Game {
     text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 79, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 124, outline: true });
     text(ctx, o ? `Нужен: ${need}` : '', w - 79, 46, { size: 12, color: COLORS.muted, maxWidth: 124, outline: true });
     text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 13, weight: 700, color: COLORS.muted, display: true, outline: true });
-    if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, h - 14, { size: 12, weight: 700, color: deco ? '#e7eef3' : COLORS.muted, maxWidth: w - 24, outline: true }); // on the dark bench: light ink plus a rim, so the disclaimer stays readable
+    if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, h - 14, { size: 12, weight: 700, color: deco ? '#e7eef3' : COLORS.muted, maxWidth: w - 24, outline: deco ? 'rgba(10, 18, 26, 0.85)' : true }); // on the dark bench: light ink with a dark rim (26.10: a light rim in the light theme fused the letters)
     // over the basket (and in it) the name would sit on «корзина»: it has been read on the way
     if (o && !(o.phase === 'done' && o.delivered) && Math.abs(ox - bx) > s * 0.9) pill(ctx, o.name, ox, oy + s * 0.78, deco, COLORS.text);
     this.renderParticles(ctx);

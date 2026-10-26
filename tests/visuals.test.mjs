@@ -185,6 +185,23 @@ test('bionic hand: the pose of the hand model picks the two nearest pictures —
   assert.match(readFileSync('src/games/duo.js', 'utf8'), /drawHand\(ctx, \{ x: hx/, 'until the pictures load, the drawn hand stands in');
 });
 
+test('26.10 grips of the bionic hand: every grip picture is in the catalogue, is a gesture of a set and has its palm light', async () => {
+  const { BIONIC } = await import('../src/render/bionic.js');
+  const { ART } = await import('../src/ui/art-manifest.js');
+  const { GESTURE_SETS } = await import('../src/core/vocabulary.js');
+  const grips = new Set(Object.values(GESTURE_SETS).flatMap(set => set.gestures.map(g => g.grip)));
+  for (const [kind, spec] of Object.entries(BIONIC)) {
+    for (const [grip, name] of Object.entries(spec.grips ?? {})) {
+      assert.ok(grips.has(grip), `${kind} ${grip}: a grip of a gesture set`);
+      if (kind === 'stand') assert.ok(Object.hasOwn(ART, name), `${name} is in the catalogue`);
+      if (Object.hasOwn(ART, name)) {
+        assert.deepEqual(ART[name].slice(0, 2), ART[spec.pics.rest].slice(0, 2), `${name}: the size of ${spec.pics.rest}`);
+        assert.ok(spec.light[grip] || kind === 'hang', `${kind} ${grip}: palm light`);
+      }
+    }
+  }
+});
+
 test('5.32 generated pictures: with every picture loaded, «Мастерская», «Две руки» and «Полёт» draw in every look', async () => {
   const { setSprite } = await import('../src/render/sprites.js');
   const { ART } = await import('../src/ui/art-manifest.js');
@@ -214,6 +231,12 @@ test('5.32 generated pictures: with every picture loaded, «Мастерская
     assert.ok(Math.abs(at.y + 0.708 * at.h - 420) < 1e-6, 'its light strip is on the belt line');
     assert.equal(drawBionic(nullCanvas(), 100, 0, 200, [0.5, 0.5, 0.5, 0.5, 0.5], { kind: 'hang', armTo: -50, tint: '#aabbcc', lit: 0.8 }), true);
     assert.equal(drawBionic(nullCanvas(), 100, 200, 180, [0.7, 0.72, 0.15, 0.15, 0.15]), false, 'a pinch is drawn by the hand model');
+    // 26.10: a grip with its own picture closes into it — the same hand, not the drawn one
+    const pinch = [0.7, 0.72, 0.15, 0.15, 0.15];
+    assert.equal(drawBionic(nullCanvas(), 100, 200, 180, pinch, { grip: 'pinch', amount: 1 }), true, 'the standing pinch is a picture');
+    assert.equal(drawBionic(nullCanvas(), 100, 0, 200, pinch, { kind: 'hang', grip: 'pinch', amount: 1 }), Object.hasOwn(ART, 'hand-down-pinch'), 'the hanging pinch, once its picture exists');
+    assert.equal(drawBionic(nullCanvas(), 100, 200, 180, pinch, { grip: 'pinch', amount: Number.NaN }), false, 'no closure — the hand model');
+    assert.equal(bionicTip(pinch, { grip: 'pinch', amount: 0 }), Object.hasOwn(ART, 'hand-down-pinch') ? bionicTip([0, 0, 0, 0, 0]) : bionicTip(pinch), 'a grip closes from the open hand');
   } finally {
     for (const n of names) setSprite(n, null);
     setRenderOptions({ theme: 'light' });

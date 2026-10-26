@@ -376,7 +376,7 @@ export function scheduleOffer(profile, { dismissed = false } = {}) {
   for (let i = 1; i < first.length; i++) gap = Math.max(gap, dayIndex(first[i]) - dayIndex(first[i - 1]));
   const span = dayIndex(first[first.length - 1]) - dayIndex(first[0]);
   if (span <= SCHEDULE_OFFER.spanDays && gap < SCHEDULE_OFFER.gapDays) return null;
-  return { text: 'Первые семь дней вышли короткими и в разные дни. Можно выбрать, сколько дней в неделю и в какое время напомнить. Это не обязательство: устали или болит — сегодня отдых.' };
+  return { text: 'Первые семь дней с тренировкой были короткими и шли вразброс. Можно выбрать, сколько дней в неделю и в какое время напомнить. Это не обязательство: устали или болит — сегодня отдых.' };
 }
 
 /** Training days among the `n` calendar days that end with `today` (5.17: the «Три дня» and «Неделя» achievements). */

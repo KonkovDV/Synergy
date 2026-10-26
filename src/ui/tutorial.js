@@ -88,7 +88,7 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
         circle(ctx, 150, 150, 96, COLORS.accentSoft); // a soft spotlight behind the hand
       }
       const standY = room ? Math.min(178 + (room.strip - 178) * 0.5, 232) : 238;
-      if (!drawBionic(ctx, 150, standY, Math.min(220, standY - 8), pose, { mirror, tint: COLORS.hc ? null : skinTint(app.profile.skin), lit: COLORS.hc ? 0 : lit, reflect: room ? 0.18 : 0, reflectTo: room?.strip ?? 240 })) {
+      if (!drawBionic(ctx, 150, standY, Math.min(220, standY - 8), pose, { mirror, tint: COLORS.hc ? null : skinTint(app.profile.skin), lit: COLORS.hc ? 0 : lit, reflect: room ? 0.18 : 0, reflectTo: room?.strip ?? 240, grip: hand.grip, amount: hand.closure })) {
         drawHand(ctx, { x: 150, y: 228, size: 92, pose, skin: app.profile.skin, glow: lit, mirror });
       }
       if (locked && !drawSprite(ctx, 'ico-lock', 214, 76, 56)) padlock(ctx, 214, 70, COLORS.goodInk); // 5.16: the lock of the illustrations

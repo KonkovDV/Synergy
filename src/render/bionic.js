@@ -13,14 +13,21 @@ import { sprite, drawTinted, spriteAspect } from './sprites.js';
 export const BIONIC = Object.freeze({
   stand: {
     pics: { open: 'hand-open', rest: 'hand-rest', close: 'hand-close' },
-    light: { open: [0.538, 0.611], rest: [0.488, 0.594], close: [0.526, 0.602] },
+    light: { open: [0.538, 0.611], rest: [0.488, 0.594], close: [0.526, 0.602], pinch: [0.46, 0.619], point: [0.478, 0.6],
+      key: [0.513, 0.61], thumb: [0.526, 0.639], indication: [0.527, 0.644], thumbflex: [0.524, 0.651] },
     band: 0.724,
+    // 26.10: the grips whose fingers disagree, from the sheets of the gesture pictures laid onto these (the same band
+    // row and socket end — tools/import-generated.py --stand-grips)
+    grips: { pinch: 'hand-pinch', point: 'hand-point', key: 'hand-key', thumb: 'hand-thumb', indication: 'hand-indication', thumbflex: 'hand-thumbflex' },
   },
   hang: {
     pics: { open: 'hand-down-open', rest: 'hand-down-rest', close: 'hand-down-close' },
     light: { open: [0.451, 0.485], rest: [0.453, 0.491], close: [0.472, 0.496] },
     band: 0.402,
     tip: { open: 0.993, rest: 0.955, close: 0.824 },
+    // 26.10: the grips whose fingers disagree (a pinch, a key), the same hand from another sheet scaled onto these
+    // pictures (tools/import-generated.py --hang-grips); a grip closes from the open hand straight into its picture
+    grips: { pinch: 'hand-down-pinch', key: 'hand-down-key', point: 'hand-down-point' },
   },
 });
 
@@ -57,10 +64,16 @@ export const bionicAspect = (kind = 'stand') => spriteAspect(BIONIC[kind].pics.r
  */
 export const skinTint = skin => mix(SKIN_COLORS[skin]?.light ?? SKIN_COLORS.graphite.light, '#ffffff', !skin || skin === 'graphite' ? 0.78 : 0.5);
 
-/** Where the fingertips of a hanging hand are in this pose, in fractions of the picture. */
-export function bionicTip(pose) {
-  const [a, b, t] = handBlend(pose), k = settle(t), tip = BIONIC.hang.tip;
-  return tip[a] + (tip[b] - tip[a]) * k;
+/** The picture of a grip and how far the hand is closed into it, when there is one (else null). */
+function gripBlend(kind, grip, amount) {
+  const name = grip && BIONIC[kind].grips?.[grip];
+  return name && sprite(name) && Number.isFinite(amount) ? ['open', grip, Math.min(1, Math.max(0, amount))] : null;
+}
+
+/** Where the fingertips of a hanging hand are in this pose (or closing into `grip`), in fractions of the picture. */
+export function bionicTip(pose, { grip = null, amount = null } = {}) {
+  const [a, b, t] = gripBlend('hang', grip, amount) ?? handBlend(pose), k = settle(t), tip = BIONIC.hang.tip;
+  return (tip[a] ?? tip.close) + ((tip[b] ?? tip.close) - (tip[a] ?? tip.close)) * k;
 }
 
 /**
@@ -68,16 +81,19 @@ export function bionicTip(pose) {
  * picture, and the arm goes on up to `armTo`. The shell is tinted, the arm and the socket stay white. `lit` lights the
  * palm; `reflect` — the mirror image on a glossy table down to `reflectTo`. False until the pictures load.
  */
-export function drawBionic(ctx, x, y, ht, pose, { kind = 'stand', mirror = false, tint = null, lit = 0, reflect = 0, reflectTo = Infinity, armTo = null } = {}) {
-  // Three pictures cannot show a grip whose fingers disagree. The caller draws the hand model, which can.
-  if (!pose || poseSpan(pose) > PICTURE_SPAN) return false;
+export function drawBionic(ctx, x, y, ht, pose, { kind = 'stand', mirror = false, tint = null, lit = 0, reflect = 0, reflectTo = Infinity, armTo = null, grip = null, amount = null } = {}) {
+  // Three pictures cannot show a grip whose fingers disagree: a grip with its own picture closes into it (`grip`,
+  // `amount` — the hand's closure); else the caller draws the hand model, which can.
+  const held = gripBlend(kind, grip, amount);
+  if (!pose || (!held && poseSpan(pose) > PICTURE_SPAN)) return false;
   const spec = BIONIC[kind], aspect = bionicAspect(kind);
   if (!aspect) return false;
+  const pics = held ? { ...spec.pics, [grip]: spec.grips[grip] } : spec.pics;
   const wd = ht / aspect, sx = mirror ? -1 : 1, hang = kind === 'hang';
-  const [a, b, t] = handBlend(pose), k = settle(t);
+  const [a, b, t] = held ?? handBlend(pose), k = settle(t);
   const band = hang ? [spec.band, 1] : [0, spec.band];
   const pair = (cy, sy, alpha) => {
-    const one = (pose, al) => al > 0.01 && drawTinted(ctx, spec.pics[pose], x, cy, wd, { sx, sy, alpha: al * alpha, tint, band: sy > 0 ? band : [0, 1] });
+    const one = (pose, al) => al > 0.01 && drawTinted(ctx, pics[pose], x, cy, wd, { sx, sy, alpha: al * alpha, tint, band: sy > 0 ? band : [0, 1] });
     if (k < 0.5) { one(a, 1); one(b, k * 2); } else { one(a, (1 - k) * 2); one(b, 1); }
   };
   const top = hang ? y : y - ht;
@@ -99,7 +115,7 @@ export function drawBionic(ctx, x, y, ht, pose, { kind = 'stand', mirror = false
   }
   pair(top + ht / 2, 1, 1);
   if (lit > 0.05) {
-    const [fx, fy] = spec.light[k < 0.5 ? a : b];
+    const [fx, fy] = spec.light[k < 0.5 ? a : b] ?? spec.light.close;
     glow(ctx, x + sx * (fx - 0.5) * wd, top + fy * ht, wd * 0.42 * Math.min(1, lit + 0.2), BRAND.mint, Math.min(1, lit));
   }
   return true;
