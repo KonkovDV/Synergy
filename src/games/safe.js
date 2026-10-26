@@ -246,6 +246,8 @@ export class SafeGame extends Game {
         text(ctx, this.scheme === SCHEME.GESTURE ? poseHint(this.index) : 'расслабьтесь перед следующей цифрой', w / 2, y0 + ch * 0.7, { size: 12, color: COLORS.muted, maxWidth: cw - 16 });
       } else {
         const size = ch * 0.27, px = w / 2 - cw * 0.22, py = y0 + ch * 0.5;
+        // The words sit between the hold ring and the card edge: a fixed column ran into the ring on a narrow phone.
+        const ringR = ch * 0.42, ringRight = px + ringR + 4, tx = (ringRight + x0 + cw) / 2, tMax = x0 + cw - ringRight - 10;
         if (deco) glow(ctx, px, py, ch * 0.5, BRAND.mint, 0.35);
         // 5.16: the bionic hand of the illustrations showing the gesture; a two-channel command shows the first
         // gesture of the vocabulary with that command (closing — the fist, opening — the palm).
@@ -253,17 +255,17 @@ export class SafeGame extends Game {
         if (!pic || !drawSprite(ctx, `gesture-${pic}`, px, py, Math.min(ch * 0.78, cw * 0.4), { sx: this.cueFlip() ? -1 : 1 })) {
           drawHand(ctx, { x: px, y: y0 + ch * 0.82, size, pose: card.pose, wrist: card.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
         }
-        text(ctx, card.name, w / 2 + cw * 0.14, y0 + ch * 0.4, { size: 17, weight: 800, maxWidth: cw * 0.6 });
+        text(ctx, card.name, tx, y0 + ch * 0.4, { size: 17, weight: 800, maxWidth: tMax });
         if (card.band && this.scheme === SCHEME.PROPORTIONAL && card.command !== COMMAND.SWITCH) {
           // «любая сила» / «от 65 %» instead of a range that ends at 100 (5.11, design review).
           const lo = Math.round(card.band[0] * 100), hi = Math.round(card.band[1] * 100);
           const label = hi < 100 ? `${lo}–${hi}\u00a0%` : lo <= Math.round(this.onThreshold * 100) + 1 ? 'любая сила' : `от ${lo}\u00a0%`;
-          text(ctx, label, w / 2 + cw * 0.14, y0 + ch * 0.62, { size: 13, color: COLORS.muted });
+          text(ctx, label, tx, y0 + ch * 0.62, { size: 13, color: COLORS.muted, maxWidth: tMax });
         }
         const left = Math.max(0, this.limit - this.cardTime);
-        text(ctx, `${fmtFixed(left)} с`, w / 2 + cw * 0.14, y0 + ch * 0.82, { size: 12, weight: 700, color: left < 1.5 ? COLORS.warnInk : COLORS.muted }); // amber ink: ≥ 4.5:1 on the card in every theme
+        text(ctx, `${fmtFixed(left)} с`, tx, y0 + ch * 0.82, { size: 12, weight: 700, color: left < 1.5 ? COLORS.warnInk : COLORS.muted }); // amber ink: ≥ 4.5:1 on the card in every theme
         if (this.liveFeedback(this.index)) {
-          holdRing(ctx, px, py, ch * 0.42, clamp01(this.holdFor / this.level.hold));
+          holdRing(ctx, px, py, ringR, clamp01(this.holdFor / this.level.hold));
         }
       }
     }
@@ -307,6 +309,9 @@ function drawSafeBody(ctx, cx, cy, R, deco) {
     for (const [bx, by] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) sphere(ctx, cx + bx * B, cy + by * B, R * 0.055, scene('#c8f5ee', '#4fb8ad'));
     for (const hy of [-0.55, 0.45]) fillRound(ctx, cx - B - 5, cy + hy * B, 9, B * 0.22, 4, linear(ctx, cx - B - 5, 0, cx - B + 4, 0, [[0, '#7c8d99'], [1, '#d6e0e6']], '#a7b4bd'));
   }
+  // the index mark above the door: part of the body, it stays where it is when the door swings open
+  ctx.fillStyle = deco ? BRAND.mint : '#ffffff';
+  ctx.beginPath(); ctx.moveTo(cx - 7, cy - R - 10); ctx.lineTo(cx + 7, cy - R - 10); ctx.lineTo(cx, cy - R + 1); ctx.closePath(); ctx.fill();
 }
 
 /** The round door: `part` 'ring' — the metal ring and the dial face (static); 'dial' — the ticks, the wheel and the knob. */
@@ -319,9 +324,6 @@ function drawDoor(ctx, R, deco, part, cx = 0, cy = 0, dialAngle = 0) {
     ctx.fillStyle = deco ? radial(ctx, -R * 0.2, -R * 0.25, R * 0.05, R * 0.85, scene([[0, '#ffffff'], [1, '#d9f3ee']], [[0, '#1c6e66'], [1, '#0c3f3b']]), '#f0fdfa') : '#000000';
     ctx.beginPath(); ctx.arc(0, 0, R * 0.82, 0, Math.PI * 2); ctx.fill();
     if (deco) { ctx.strokeStyle = scene('rgba(5,16,26,0.12)', 'rgba(255,255,255,0.12)'); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, R * 0.82, 0, Math.PI * 2); ctx.stroke(); }
-    // the index mark above the door (does not turn)
-    ctx.fillStyle = deco ? BRAND.mint : '#ffffff';
-    ctx.beginPath(); ctx.moveTo(-7, -R - 10); ctx.lineTo(7, -R - 10); ctx.lineTo(0, -R + 1); ctx.closePath(); ctx.fill();
   } else {
     ctx.save(); ctx.rotate(dialAngle);
     ctx.fillStyle = deco ? scene('#0f766e', '#5eead4') : '#ffffff';

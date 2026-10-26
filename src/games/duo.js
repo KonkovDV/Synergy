@@ -168,7 +168,8 @@ export class DuoGame extends Game {
       const want = card && this.phase !== 'rest' ? card[side] : 'rest';
       // 5.32: the gesture hands of the illustrations (mirrored for the left), the drawn hand until they load
       const pic = { close: 'gesture-fist', open: 'gesture-open', rest: 'gesture-rest' }[want];
-      if (!drawSprite(ctx, pic, cx, y0 + ch * 0.42, Math.min(ch * 0.56, cw * 0.26), { sx: side === 'left' ? -1 : 1 })) {
+      // rest is faded, as on the card of «Сейф»: the relaxed hand of the illustrations is close to the fist
+      if (!drawSprite(ctx, pic, cx, y0 + ch * 0.42, Math.min(ch * 0.56, cw * 0.26), { sx: side === 'left' ? -1 : 1, alpha: want === 'rest' ? 0.75 : 1 })) {
         drawHand(ctx, { x: cx, y: y0 + ch * 0.62, size, pose: COMMAND_POSE[want], skin: 'icon', sleeve: false, mirror: side === 'left' });
       }
       text(ctx, `${i ? 'Правая' : 'Левая'}: ${COMMAND_NAME[want].toLowerCase()}`, cx, y0 + ch * 0.86, { size: 13, weight: 800, maxWidth: cw * 0.48 });

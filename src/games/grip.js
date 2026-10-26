@@ -6,7 +6,7 @@ import { blindBlock } from '../core/guidance.js';
 import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
-import { COLORS, text, textWidth, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
+import { COLORS, text, textWidth, scaledPx, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 
@@ -470,7 +470,7 @@ function drawBasket(ctx, bx, by, s, deco, lit) {
 /** A label on a glass pill (the name of an object, the basket): readable over the belt and the bench. */
 function pill(ctx, label, x, y, deco, color = COLORS.muted) {
   const tw = textWidth(ctx, label, { size: 12, weight: 700 });
-  const pw = Math.max(44, tw + 18), ph = Math.max(20, tw / Math.max(1, label.length) * 1.6 + 6);
+  const pw = Math.max(44, tw + 18), ph = Math.max(20, scaledPx(12) + 8);
   if (deco) glassPlate(ctx, x - pw / 2, y - ph / 2, pw, ph, ph / 2, { fill: scene('rgba(255,255,255,0.9)', 'rgba(16,28,39,0.88)'), rim: scene('rgba(5,16,26,0.1)', 'rgba(255,255,255,0.1)'), sheen: false });
   text(ctx, label, x, y + 0.5, { size: 12, weight: 700, color, outline: !deco });
 }
