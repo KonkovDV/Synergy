@@ -3,6 +3,7 @@ import { h } from './dom.js';
 import { segmented } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
 import { mio, badgeArt, trails, coverArt } from './art.js';
+import { picture } from './pictures.js';
 import { PET, SESSION } from '../config.js';
 import { SAFETY_RULES, SAFETY_VERSION } from '../core/wellbeing.js';
 
@@ -20,12 +21,15 @@ export function onboardingScreen(app, { safety = false } = {}) {
   const pages = [
     // Each page opens with a cover (the sample's onboarding, the brand's dark cover with light trails): Мио, the title, one line.
     // 5.16: the three covers of the illustrations (the egg in its nest, the bird with the shield, Мио with the phone).
-    () => [h('div', { class: 'onb-hero' }, trails(), h('div', { class: 'onb-art cover' }, coverArt('welcome', 320)),
+    () => [h('div', { class: 'onb-hero welcome' }, trails(), h('div', { class: 'onb-art cover' }, coverArt('welcome', 320)),
       h('h1', {}, 'Синергия'),
       h('p', { class: 'lead' }, 'Игра-тренажёр управления бионическим протезом.')),
-      h('p', { class: 'lead pet-promise' }, 'Тренировки согревают яйцо Жар-птицы: вырастите её от птенца до огненной птицы.'),
-      h('p', {}, 'Четыре игры тренируют то, что нужно протезу каждый день: взять предмет с нужной силой, удержать, отпустить, сменить хват, включиться вовремя.'),
-      h('p', { class: 'note' }, `Тренировка короткая: ${SESSION.activeMin[0]}–${SESSION.activeMin[1]} минут активной игры. Сколько дней в неделю заниматься, лучше решить с реабилитологом или протезистом; цель недели меняется в настройках.`)],
+      // 26.10: three points with a picture each (the welcome screens of Apple HIG «Onboarding»), not three paragraphs —
+      // the first frame is read at a glance; the words are the same
+      h('ul', { class: 'onb-features' },
+        feature('pet-egg-happy', 'Жар-птица растёт с вами', 'Тренировки согревают яйцо — из него вырастет огненная птица.'),
+        feature('ico-effort', 'Четыре игры', 'Взять с нужной силой, удержать, отпустить, сменить хват, включиться вовремя.'),
+        feature('ico-waiting', `${SESSION.activeMin[0]}–${SESSION.activeMin[1]} минут за раз`, 'Сколько дней в неделю, лучше решить с реабилитологом или протезистом.'))],
     () => [h('div', { class: 'onb-hero' }, trails(), safetyCover(),
       h('h1', {}, 'Безопасно'),
       h('p', { class: 'lead' }, 'Комфорт и самочувствие важнее очков.')),
@@ -73,6 +77,11 @@ export function onboardingScreen(app, { safety = false } = {}) {
     // forever, so the APK could not be closed with back on the first launch).
     onBack() { if (step === 0) return 'exit'; step--; render(); main.scrollTop = 0; window.scrollTo?.(0, 0); return true; },
   };
+}
+
+/** A point of the welcome page: its picture (none when the catalogue lacks it), a bold title, one line. */
+function feature(art, title, text) {
+  return h('li', {}, picture(art, 44, 'onb-feature-art') ?? h('span', { class: 'onb-feature-art' }), h('div', {}, h('b', {}, title), h('span', {}, text)));
 }
 
 /** A cover of the illustrations in the dark hero, or the drawn stand-in. */
