@@ -39,6 +39,12 @@ export function drawSprite(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1 } = {
 
 const TINTED = new Map();
 
+/** Drops the tinted copies (the play screen calls it on leaving, with the layer cache). */
+export function clearTints() {
+  for (const canvas of TINTED.values()) { canvas.width = 0; canvas.height = 0; }
+  TINTED.clear();
+}
+
 /**
  * A sprite with a band of its height (`band` — from, to, in fractions) multiplied by `tint`: the shell of a hand in
  * the colour of the player's skin, the socket or the arm beyond the wrist band as it is (5.32). Each tint is painted
@@ -62,7 +68,7 @@ export function drawTinted(ctx, name, x, y, w, { sx = 1, sy = 1, alpha = 1, tint
     g.globalCompositeOperation = 'destination-in';
     g.drawImage(img, 0, 0); // the multiply filled the clear corners too: keep only the hand
     TINTED.set(key, canvas);
-    if (TINTED.size > 12) TINTED.delete(TINTED.keys().next().value); // three poses of a kind × a theme switch, small pictures
+    while (TINTED.size > 12) { const oldest = TINTED.keys().next().value; const old = TINTED.get(oldest); if (old) { old.width = 0; old.height = 0; } TINTED.delete(oldest); }
   }
   place(ctx, canvas, x, y, w, w * spriteAspect(name), sx, sy, alpha);
   return true;
