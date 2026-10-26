@@ -1,6 +1,6 @@
 {
  "version": "5.32.0",
- "generated": "2026-10-26T16:47:52.005Z",
+ "generated": "2026-10-26T17:24:00.000Z",
  "tests": {
   "total": 426,
   "failed": 0,
@@ -35,15 +35,15 @@
  },
  "apk": {
   "file": "release/Synergy-5.32.0.apk",
-  "bytes": 2192222,
+  "bytes": 2192287,
   "kb": 2141,
-  "sha256": "e93fa84496e54e732c9b58e08480c8cdf276ad7a6eabbb6d37a169bddfb60a9a"
+  "sha256": "88d143f5212287bbbddb53daed7785ae9b70f8701b4425f3542c028d5d8c4e30"
  },
  "html": {
   "file": "release/synergy-standalone.html",
-  "bytes": 2749124,
+  "bytes": 2749380,
   "kb": 2685,
-  "sha256": "cf7734ca91e50c9a9e5b7b9435228ebde91acac2147ffbad8f5703e2f2790b6a"
+  "sha256": "1d8378435e2eed9ff08ef80dfcdfd43e188bd725faf0a47e2a0cc53184f31670"
  },
  "art": {
   "pictures": 137,
