@@ -402,7 +402,8 @@ export class GripGame extends Game {
     text(ctx, o ? `Нужен: ${need}` : '', w - 79, 46, { size: 12, color: COLORS.muted, maxWidth: 124, outline: true });
     text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 13, weight: 700, color: COLORS.muted, display: true, outline: true });
     if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, h - 14, { size: 12, weight: 700, color: deco ? '#e7eef3' : COLORS.muted, maxWidth: w - 24, outline: true }); // on the dark bench: light ink plus a rim, so the disclaimer stays readable
-    if (o && !(o.phase === 'done' && o.delivered)) pill(ctx, o.name, ox, oy + s * 0.78, deco, COLORS.text); // in the basket its name would sit on «корзина»
+    // over the basket (and in it) the name would sit on «корзина»: it has been read on the way
+    if (o && !(o.phase === 'done' && o.delivered) && Math.abs(ox - bx) > s * 0.9) pill(ctx, o.name, ox, oy + s * 0.78, deco, COLORS.text);
     this.renderParticles(ctx);
     if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, Math.max(52, h * 0.16), { size: 19, weight: 800, color: this.flash.color, outline: true, display: true, maxWidth: w - 24 }); // under the «1 / 6» counter
   }
