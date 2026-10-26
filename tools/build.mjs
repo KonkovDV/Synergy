@@ -40,7 +40,10 @@ const preload = prefix => fonts.filter(f => f.endsWith('-cyr.woff2')).map(f => `
 
 // Content-Security-Policy: no network except WebSocket bridges, no foreign scripts, no plugins.
 const csp = inline => `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'${inline ? " 'unsafe-inline'" : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">`;
-const page = ({ head, body, inline = false }) => `<!doctype html>
+// 26.10: the app shell — the brand before the script runs (after the APK splash a weak phone showed a blank page for
+// up to 2 s); the first screen replaces it. It fades in only after 250 ms, so a fast start never flashes it.
+const boot = src => `<div class="boot" aria-hidden="true"><img src="${src}" alt="" width="96" height="96"><b>Синергия</b><span>тренажёр протеза</span></div>`;
+const page = ({ head, body, inline = false, bootIcon }) => `<!doctype html>
 <html lang="ru" data-build="dist">
 <head>
 <meta charset="utf-8">
@@ -56,7 +59,7 @@ ${csp(inline)}
 ${head}
 </head>
 <body>
-<div id="app" class="app"></div>
+<div id="app" class="app">${boot(bootIcon)}</div>
 <div id="toasts" aria-live="polite"></div>
 ${body}
 </body>
@@ -70,6 +73,7 @@ for (const f of fonts) copyFileSync(join(root, 'public/fonts', f), join(dist, 'f
 writeFileSync(join(dist, 'index.html'), page({
   head: '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icons/icon-48.png" type="image/png">\n<link rel="apple-touch-icon" href="icons/icon-180.png">\n' + preload('fonts/') + '\n<link rel="stylesheet" href="app.css">',
   body: '<script src="app.js"></script>',
+  bootIcon: 'icons/icon-192.png',
 }));
 for (const f of readdirSync(join(root, 'public/icons'))) copyFileSync(join(root, 'public/icons', f), join(dist, 'icons', f));
 copyFileSync(join(root, 'public/manifest.webmanifest'), join(dist, 'manifest.webmanifest'));
@@ -105,6 +109,7 @@ const standalone = page({
   head: `<link rel="icon" href="data:image/png;base64,${icon.toString('base64')}">\n<style>${inlineCss}</style>`,
   body: `<script>window.SYNERGY_ART=${JSON.stringify(inlineArt)};</script>\n<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`,
   inline: true,
+  bootIcon: `data:image/png;base64,${readFileSync(join(root, 'public/icons/icon-192.png')).toString('base64')}`,
 });
 writeFileSync(join(dist, 'synergy-standalone.html'), standalone);
 const kb = text => (Buffer.byteLength(text) / 1024).toFixed(0);

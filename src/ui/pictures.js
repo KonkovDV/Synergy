@@ -123,15 +123,46 @@ export function loadSprites(names = CANVAS_PICTURES) {
 /** The picture of the Firebird that flies in «Полёт»: from the fledgling on, wings up; null — the glider flies. */
 export const petFlyer = stageId => (['egg', 'chick'].includes(stageId) ? null : `pet-${stageId}-happy`);
 
-/** Points a canvas alias at a catalogue picture (loads it once), or clears the alias. */
-export function useSprite(alias, name) {
+/** What the flying bird can wear: on its head and chest — the things of the nest stay in the nest. */
+const WORN_IN_FLIGHT = item => item && !/^(twigs|apples|lantern|book)$/.test(item);
+
+/**
+ * 26.10: the Firebird of «Полёт» wears what it wears in the nest. The happy picture with its head and chest things laid
+ * at the boxes of art-manifest.js (as petPicture lays them), drawn once into a canvas — the game draws one sprite.
+ * Until the pictures load, or if a thing fails to, the bird flies as it is; the egg and the chick leave it to the glider.
+ */
+export function useFlier(alias, stageId, items = {}) {
+  const name = petFlyer(stageId);
   if (!name || !hasArt(name) || typeof Image === 'undefined') { setSprite(alias, null); return; }
-  const img = new Image();
-  img.decoding = 'async';
-  img.onload = () => setSprite(alias, img);
-  img.onerror = () => failed.add(name);
+  const layout = PET_LAYOUT[name] ?? {};
+  const worn = Object.values(items).filter(item => WORN_IN_FLIGHT(item) && Object.hasOwn(layout, item) && hasArt(`gift-${item}`));
+  const load = n => new Promise((ok, no) => {
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => ok(img);
+    img.onerror = () => { failed.add(n); no(new Error(n)); };
+    img.src = artUrl(n);
+  });
   setSprite(alias, null); // until it has loaded, the game draws its own
-  img.src = artUrl(name);
+  load(name).then(body => {
+    if (!worn.length || typeof document === 'undefined') { setSprite(alias, body); return; }
+    Promise.allSettled(worn.map(item => load(`gift-${item}`))).then(results => {
+      const W = body.naturalWidth, H = body.naturalHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const g = canvas.getContext('2d');
+      if (!g) { setSprite(alias, body); return; }
+      g.drawImage(body, 0, 0);
+      results.forEach((r, i) => {
+        if (r.status !== 'fulfilled') return;
+        const [cx, cy, w, rot] = layout[worn[i]], side = w / 100 * W;
+        g.save(); g.translate(cx / 100 * W, cy / 100 * H); g.rotate((rot || 0) * Math.PI / 180);
+        g.drawImage(r.value, -side / 2, -side / 2, side, side);
+        g.restore();
+      });
+      setSprite(alias, canvas);
+    });
+  }, () => setSprite(alias, null));
 }
 
 /** CSS `url()` of a picture for a background (the nest room, the home header), or null. */
