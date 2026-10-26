@@ -16,6 +16,11 @@ game lays the picture so that this line falls on its own table line or belt.
 
 Props: one object on the key (prop-basket, prop-glider), cropped to itself.
 
+Icons of the same hand (26.10, night — one prosthesis on every screen): the gesture pictures (gesture-*) cut from the
+sheets of poses, the picture of the hand (ico-hand) and the skins (skin-*) from the open hand of the standing sheet. An
+icon is the hand down to just under the wrist band, centred on a square. A skin is that hand with its shell multiplied
+by the same pastel of the skin colour the games use (render/bionic.js skinTint): the nest shows the hand of the game.
+
 Everything goes into the catalogue with the writer of tools/import-art.py.
 
 Usage: python tools/import-generated.py [--hands SHEET.png --flip rest] [--hanging SHEET.png] [--day PNG] [--night PNG]
@@ -141,6 +146,67 @@ def prop(manifest: dict, name: str, path: str, width: int):
     print(f"{name:14s} {out.width}x{out.height} {len(data) / 1024:5.1f} KB")
 
 
+# render/draw.js SKIN_COLORS[*].light of the light theme; the games mix it with white (render/bionic.js skinTint)
+SKIN_LIGHT = {"graphite": "#6b7a88", "sky": "#8fb8ff", "coral": "#ffab9f", "mint": "#7fe6cb", "gold": "#f7d47d", "neon": "#c4a1ff", "cosmos": "#4b5fb8"}
+
+
+def mixed(hex_a: str, hex_b: str, t: float) -> np.ndarray:
+    a = np.array([int(hex_a[i:i + 2], 16) for i in (1, 3, 5)], np.float64)
+    b = np.array([int(hex_b[i:i + 2], 16) for i in (1, 3, 5)], np.float64)
+    return a + (b - a) * t
+
+
+def band_row(img: Image.Image) -> int:
+    p = np.asarray(img).astype(np.int32)
+    band = (p[..., 3] > 200) & (p[..., 2] > 140) & (p[..., 1] > 140) & (p[..., 0] < 120)
+    return int(np.median(np.nonzero(band)[0]))
+
+
+def icon(img: Image.Image, size: int, tint: np.ndarray | None = None) -> Image.Image:
+    """The hand down to just under its wrist band, centred on a square `size` wide; the shell multiplied by `tint`."""
+    p = np.asarray(img).astype(np.float64)
+    band = band_row(img)
+    if tint is not None:
+        p[:band, :, :3] *= tint / 255.0
+    a = p[..., 3] > 16
+    rows = np.nonzero(a.any(1))[0]
+    bottom = min(len(p), band + int(0.06 * (band - rows[0])))
+    cols = np.nonzero(a[rows[0]:bottom].any(0))[0]
+    crop = Image.fromarray(np.clip(p, 0, 255).astype(np.uint8)[rows[0]:bottom, cols[0]:cols[-1] + 1], "RGBA")
+    side = int(max(crop.size) * 1.12)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.paste(crop, ((side - crop.width) // 2, (side - crop.height) // 2))
+    return ART.resize(square, (size, size))
+
+
+def put(manifest: dict, name: str, out: Image.Image, raw: bytes):
+    data = ART.webp(out, QUALITY)
+    ART.write(ART.OUT / f"{name}.webp", data)
+    manifest["items"][name] = {"w": out.width, "h": out.height, "bytes": len(data), "alpha": True, "sha256": ART.sha256(data), "source": ART.sha256(raw)}
+    print(f"{name:20s} {out.width}x{out.height} {len(data) / 1024:5.1f} KB")
+
+
+def gesture_icons(manifest: dict, sheet: str, names: list[str], flips: set[str], size: int = 256):
+    """Gesture pictures from a sheet of standing hands: `names` left to right, «-» skips a hand."""
+    raw = Path(sheet).read_bytes()
+    for name, (img, _) in zip(names, cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), len(names), False)):
+        if name == "-":
+            continue
+        put(manifest, f"gesture-{name}", icon(img.transpose(Image.FLIP_LEFT_RIGHT) if name in flips else img, size), raw)
+
+
+def hand_family(manifest: dict, sheet: str):
+    """From the standing sheet (rest — a left hand, fist, open): gesture-rest/fist/open, ico-hand and the seven skins."""
+    raw = Path(sheet).read_bytes()
+    rest, fist, palm = [img for img, _ in cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), 3, False)]
+    rest = rest.transpose(Image.FLIP_LEFT_RIGHT)
+    for name, img in (("rest", rest), ("fist", fist), ("open", palm)):
+        put(manifest, f"gesture-{name}", icon(img, 256), raw)
+    put(manifest, "ico-hand", icon(palm, 192), raw)
+    for skin, light in SKIN_LIGHT.items():
+        put(manifest, f"skin-{skin}", icon(palm, 256, mixed(light, "#ffffff", 0.78 if skin == "graphite" else 0.5)), raw)
+
+
 def hands(manifest: dict, sheet: str, flip_arg: str, height_px: int, prefix: str = "hand-", poses=POSES, hang: bool = False):
     raw = Path(sheet).read_bytes()
     hands = cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), len(poses), hang)
@@ -177,6 +243,9 @@ def main():
     ap.add_argument("--workshop-night")
     ap.add_argument("--basket")
     ap.add_argument("--glider")
+    ap.add_argument("--family", help="the standing sheet again: gesture-rest/fist/open, ico-hand, skin-*")
+    ap.add_argument("--gestures", nargs=3, action="append", metavar=("SHEET", "NAMES", "FLIP"),
+                    help="a sheet of standing hands, their gesture ids left to right («-» skips), ids drawn as left hands")
     args = ap.parse_args()
     manifest = json.loads((ART.OUT / "manifest.json").read_text("utf-8"))
     if args.hands:
@@ -189,6 +258,10 @@ def main():
         prop(manifest, "prop-basket", args.basket, 640)
     if args.glider:
         prop(manifest, "prop-glider", args.glider, 480)
+    if args.family:
+        hand_family(manifest, args.family)
+    for sheet, names, flip in args.gestures or []:
+        gesture_icons(manifest, sheet, names.split(","), set(flip.split(",")) - {"-"})
     ART.write_catalogue(manifest)
     print(f"{len(manifest['items'])} pictures, {manifest['total_bytes'] / 1024 / 1024:.2f} MB")
 
