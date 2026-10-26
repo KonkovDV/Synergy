@@ -91,7 +91,7 @@ export function backdrop(ctx, w, h, stops) {
 /**
  * Canvas text. `maxWidth` — the font shrinks (not squeezes) until the line fits, down to 60 % of its size;
  * `outline` — a rim in the scene colour (white by day, dark at night), so a label stays readable over notes,
- * particles and the glider (5.8).
+ * particles and the glider (5.8); a colour string — a rim of that colour (light ink on a dark surface by day).
  */
 export function text(ctx, str, x, y, { size = 16, weight = 600, color = COLORS.text, align = 'center', baseline = 'middle', display = false, font = display ? FONT_DISPLAY : FONT_TEXT, maxWidth = 0, outline = false } = {}) {
   let px = Math.round(size * textScale);
@@ -102,7 +102,7 @@ export function text(ctx, str, x, y, { size = 16, weight = 600, color = COLORS.t
     if (width > maxWidth) { px = Math.max(Math.round(size * textScale * 0.6), Math.floor(px * maxWidth / width)); ctx.font = `${weight} ${px}px ${font}`; }
   }
   ctx.textAlign = align; ctx.textBaseline = baseline;
-  if (outline) { ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, px * 0.24); ctx.strokeStyle = COLORS.rim; ctx.strokeText(str, x, y); }
+  if (outline) { ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, px * 0.24); ctx.strokeStyle = typeof outline === 'string' ? outline : COLORS.rim; ctx.strokeText(str, x, y); }
   ctx.fillStyle = color;
   ctx.fillText(str, x, y);
 }

@@ -31,7 +31,7 @@ test('results lead after a demo: the real exercise, not a rest before the same g
   const a = resultsAction({ ...base, run: run(), plan: true, demo: true, next: { game: 'grip', level: 2 } });
   assert.deepEqual(a, { kind: 'play', label: 'Начать упражнение', params: { game: 'grip', level: 2, retention: false, plan: true } });
   const free = resultsAction({ ...base, run: run(), demo: true });
-  assert.equal(free.label, 'Попробовать самому');
+  assert.equal(free.label, 'Сыграть самостоятельно');
   assert.equal(free.params.demo, undefined, 'the player plays, not the bot');
 });
 
