@@ -1451,7 +1451,7 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
   border: 1px solid var(--hair); box-shadow: var(--edge), var(--shadow-1) }
 
 /* Bars: glass over the page; a hairline under the top bar. */
-.top-bar { background: var(--glass-bg); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px); border-bottom: 1px solid var(--hair) }
+.top-bar { background: var(--glass-bg); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px); box-shadow: 0 1px 0 var(--hair) } /* a shadow, not a border: the bar keeps its height */
 .bottom-nav { background: var(--glass); -webkit-backdrop-filter: saturate(1.8) blur(20px); backdrop-filter: saturate(1.8) blur(20px); border-color: var(--hair); box-shadow: var(--edge), var(--shadow-2) }
 .nav-item { transition: color .15s ease }
 .nav-item .nav-icon { transition: background .2s ease, transform .18s var(--spring) }
