@@ -193,6 +193,7 @@ test('5.32 session length: every promise of the session length comes from SESSIO
   const ics = reminderIcs('19:00', new Date(2026, 9, 26, 12), 4);
   assert.match(ics, new RegExp(`SUMMARY:Синергия: тренировка ${span}`));
   assert.match(ics, new RegExp(`DURATION:PT${SESSION.activeMin[1]}M`));
+  assert.match(ics.replace(/\r\n /g, ''), new RegExp(`Можно потренироваться ${span} — или отдохнуть`), 'the alarm names the range, not only its top');
   const files = ['src/ui/onboarding.js', 'src/core/faq.js', 'src/services/report.js', ...readdirSync('src/ui').map(f => `src/ui/${f}`)];
   const stale = files.filter(f => /10[–-]15 минут/.test(readFileSync(f, 'utf8')));
   assert.deepEqual(stale, [], 'no hard-coded 10–15 minutes left');
