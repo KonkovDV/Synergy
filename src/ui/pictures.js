@@ -111,12 +111,10 @@ export function loadSprites(names = CANVAS_PICTURES) {
     if (!hasArt(name)) continue;
     const img = new Image();
     img.decoding = 'async';
-    // 5.32: decoded once into an ImageBitmap — the first frame that draws a big picture (a room, a hand) does not
-    // stall on decoding it, which a weak phone shows as a jerk; the <img> itself where ImageBitmap is missing
-    img.onload = () => {
-      if (typeof createImageBitmap !== 'function') { setSprite(name, img); return; }
-      createImageBitmap(img).then(bitmap => setSprite(name, bitmap), () => setSprite(name, img));
-    };
+    // 5.32: given to the games once decoded (HTMLImageElement.decode) — the first frame that draws a big picture (a
+    // room, a hand) does not stall on decoding it, which a weak phone shows as a jerk. Not an ImageBitmap: those stay
+    // decoded in memory for good (≈ 4 MB a room), an <img> the browser may drop and decode again under memory pressure.
+    img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => setSprite(name, img));
     img.onerror = () => failed.add(name);
     img.src = artUrl(name);
   }

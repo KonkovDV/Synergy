@@ -45,7 +45,7 @@ export function resultsAction({ run, plan, demo, next, stopAdvice, restS, titleO
   if (stopAdvice) return { kind: 'home', label: 'Закончить на сегодня' };
   if (next) return { kind: 'rest', label: `Отдых ${restS} с → ${titleOf(next.game)}`, params: { next } };
   if (run.stars > 0 && run.level < run.levelCount && !demo) return { kind: 'play', label: `Уровень ${run.level + 1}`, params: { game: run.game, level: run.level + 1 } };
-  if (demo) return { kind: 'play', label: 'Попробовать самому', params: same };
+  if (demo) return { kind: 'play', label: 'Сыграть самостоятельно', params: same };
   return { kind: 'play', label: 'Ещё раз', params: same };
 }
 
@@ -220,7 +220,7 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
     const pet = petState(trainingDays(app.profile), { trainedToday: true, name });
     const play = petReaction({ grown, stars: run.stars, planDone, goalDone: !!report.mission?.completed, items: report.items?.length ?? 0 });
     const words = grown ? (grown.id === 'chick' ? `${name} вылупилась из яйца!` : `${name} растёт: ${grown.name}!`)
-      : report.items?.length ? `${name} примеряет подарок. Выбрать наряд — в гнезде, вкладка «Жар-птица».` : `${name} радуется выполненной цели.`;
+      : report.items?.length ? `${name} примеряет подарок. Выбрать наряд — в разделе «Жар-птица».` : `${name} радуется выполненной цели.`;
     const items = wornItems(app.profile, pet.stage.id);
     // 5.14 — a new stage is the one «macro» moment (core/pet.js CELEBRATION): the growth ceremony, the stage's
     // character, and the place for things it opens. Everything else stays a small reaction of the bird.

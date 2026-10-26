@@ -211,7 +211,7 @@ def icons(manifest: dict, sheet: str, names: list[str], sizes: list[int]):
     """Objects on the magenta key, left to right, each centred on a transparent square (game-*, ico-*)."""
     raw = Path(sheet).read_bytes()
     for name, size, (img, _) in zip(names, sizes, cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), len(names), False)):
-        side = int(max(img.size) * 1.08)
+        side = int(max(img.size) * (1.35 if name.startswith("obj-") else 1.08))  # a Workshop object fills ~¾ of its square, as obj-* of 5.16
         square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
         square.paste(img, ((side - img.width) // 2, (side - img.height) // 2))
         put(manifest, name, ART.resize(square, (size, size)), raw)
@@ -303,6 +303,53 @@ def pets(manifest: dict, sheets: list[tuple[str, str]]):
         put(manifest, name, frame, raw)
 
 
+def grips(manifest: dict, sheet: str, names: list[str], hang: bool):
+    """The grips whose fingers disagree (26.10: a pinch, a point, a key… — the Workshop and the tutorial showed the
+    drawn hand for them), from another sheet of the same hand, each laid onto the pictures of its kind
+    (hand-down-* hanging, hand-* standing): scaled to the same socket width, its wrist band on the same row and its
+    socket — a plain white cylinder — stretched to the same flat end, so a cross-fade from the open hand keeps the
+    band, the tint and the socket in place. A name with «!» in front is mirrored (drawn as a left hand), «-» skips a
+    hand. Prints the palm light and the fingertip line (BIONIC in src/render/bionic.js)."""
+    raw = Path(sheet).read_bytes()
+    ref = Image.open(ART.OUT / f"hand-{'down-' if hang else ''}rest.webp").convert("RGBA")
+    W, H = ref.size
+
+    def socket(img):  # the socket's flat end, its centre and width a few rows inside it
+        a = np.asarray(img.getchannel("A")) > 128
+        rows = np.nonzero(a.any(1))[0]
+        end, step = (int(rows[0]), 1) if hang else (int(rows[-1]), -1)
+        near = sorted((end + step * 3, end + step * (3 + max(4, img.height // 40))))
+        cols = np.nonzero(a[near[0]:near[1]].any(0))[0]
+        return (cols[0] + cols[-1]) / 2, cols[-1] - cols[0] + 1, end
+    rcx, rw, rend = socket(ref)
+    rband = band_row(ref)
+    gap = round(0.03 * H) * (-1 if hang else 1)  # the socket starts this far past the band
+    for name, (img, _) in zip(names, cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), len(names), hang)):
+        if name == "-":
+            continue
+        if name.startswith("!"):
+            name, img = name[1:], img.transpose(Image.FLIP_LEFT_RIGHT)
+        cx, w, end = socket(img)
+        k = rw / w
+        big = ART.resize(img, (round(img.width * k), round(img.height * k)))
+        dy = rband - band_row(big)
+        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        canvas.paste(big, (round(rcx - cx * k), dy))
+        # the socket from just past the band to its end, stretched onto the reference's
+        cut_row, own_end = rband + gap, round(end * k) + dy
+        lo, hi = sorted((cut_row, own_end))
+        part = Image.new("RGBA", (W, hi - lo + 1), (0, 0, 0, 0))
+        part.paste(big, (round(rcx - cx * k), dy - lo))
+        tlo, thi = sorted((cut_row, rend))
+        canvas.paste((0, 0, 0, 0), (0, 0, W, thi + 1) if hang else (0, tlo, W, H))
+        canvas.paste(ART.resize(part, (W, thi - tlo + 1)), (0, tlo))
+        put(manifest, name, canvas, raw)
+        light, band = marks(canvas)
+        rows = np.nonzero((np.asarray(canvas.getchannel("A")) > 128).any(1))[0]
+        tip = rows[-1] if hang else rows[0]
+        print(f"  light {light}  band {band}  tip {tip / H:.3f}  scale {k:.3f}")
+
+
 def open_loop(manifest: dict, name: str = "gift-amulet", seed=(0.49, 0.26)):
     """The cord loop of the amulet was filled white in the 5.16 picture: on the bird's chest it read as a white blot.
     The white inside the loop (the region connected to `seed`) becomes transparent; its 3 px edge is unmixed from white."""
@@ -372,6 +419,8 @@ def main():
     ap.add_argument("--glider")
     ap.add_argument("--family", help="the standing sheet again: gesture-rest/fist/open, ico-hand, skin-*")
     ap.add_argument("--open-loop", action="store_true", help="make the white inside the amulet's cord transparent")
+    ap.add_argument("--hang-grips", nargs=2, metavar=("SHEET", "NAMES"), help="hanging hands in other grips: hand-down-pinch,hand-down-key,…")
+    ap.add_argument("--stand-grips", nargs=2, action="append", metavar=("SHEET", "NAMES"), help="standing hands in other grips: hand-pinch,…, «!» — mirror, «-» — skip")
     ap.add_argument("--pets", nargs=2, action="append", metavar=("SHEET", "NAMES"),
                     help="the bird in its nest: a 3 × 2 sheet on magenta, six names (pet-young-wave-nest …) or «-»")
     ap.add_argument("--icons", nargs=3, metavar=("SHEET", "NAMES", "SIZES"), help="objects on magenta → square icons")
@@ -398,6 +447,10 @@ def main():
         open_loop(manifest)
     if args.pets:
         pets(manifest, args.pets)
+    if args.hang_grips:
+        grips(manifest, args.hang_grips[0], args.hang_grips[1].split(","), True)
+    for sheet, names in args.stand_grips or []:
+        grips(manifest, sheet, names.split(","), False)
     if args.icons:
         icons(manifest, args.icons[0], args.icons[1].split(","), [int(x) for x in args.icons[2].split(",")])
     if args.tiles:

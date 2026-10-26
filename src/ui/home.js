@@ -180,7 +180,7 @@ export function homeScreen(app) {
       h('h2', {}, name),
       pet.next ? h('div', { class: 'pet-progress' },
         h('div', { class: 'xp-track', role: 'progressbar', 'aria-label': `Рост до стадии «${pet.next.name}»`, 'aria-valuenow': Math.round(pet.progress * 100), 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: { width: `${Math.round(pet.progress * 100)}%` } })),
-        h('small', {}, `${pet.next.name} — через ${count(pet.left, FORMS.days)} с тренировкой`)) : h('small', {}, 'Выросла! Каждая тренировка держит её в силе.'),
+        h('small', {}, `${pet.next.name} — через ${count(pet.left, FORMS.days)} с тренировкой`)) : h('small', {}, 'Выросла! Свет не гаснет и в дни отдыха.'),
       say,
       // 5.14 — the bird's own section (the nest): its path, outfits and gifts.
       h('button', { class: 'btn ghost nest-link', onclick: () => app.go('nest') }, 'Гнездо и наряды')),

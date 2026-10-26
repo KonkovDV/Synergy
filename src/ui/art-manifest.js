@@ -65,8 +65,14 @@ export const ART = Object.freeze({
   'hand-down-close': [364, 686, 1],
   'hand-down-open': [364, 686, 1],
   'hand-down-rest': [364, 686, 1],
+  'hand-indication': [438, 635, 1],
+  'hand-key': [438, 635, 1],
   'hand-open': [438, 635, 1],
+  'hand-pinch': [438, 635, 1],
+  'hand-point': [438, 635, 1],
   'hand-rest': [438, 635, 1],
+  'hand-thumb': [438, 635, 1],
+  'hand-thumbflex': [438, 635, 1],
   'ico-access': [160, 160, 1],
   'ico-ask': [160, 160, 1],
   'ico-audiosync': [160, 160, 1],
@@ -152,7 +158,7 @@ export const ART = Object.freeze({
   'skin-neon': [256, 256, 1],
   'skin-sky': [256, 256, 1],
 });
-export const ART_BYTES = 2129574;
+export const ART_BYTES = 2317936;
 // What the Firebird wears, per picture: item → [centre x %, centre y %, width %, rotation°]. A missing item —
 // the pose covers its slot (the star above the head, the book on the chest) or the stage has not opened it.
 export const PET_LAYOUT = Object.freeze({
