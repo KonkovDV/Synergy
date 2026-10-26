@@ -180,3 +180,20 @@ test('5.32 Mio: sensors on the shoulder or other muscles — the game reads two 
   assert.match(text, /Поменять каналы A и B/);
   assert.doesNotMatch(text, /согн(и|ите) кисть/, 'no imaginary hand: the sensor muscle is what moves');
 });
+
+// 26.10: the onboarding, the FAQ and the calendar reminder promised «10–15 минут», while the plan, the organiser and
+// SESSION.activeMin say 5–10 minutes of active play. The promise is now read from the one constant.
+test('5.32 session length: every promise of the session length comes from SESSION.activeMin', async () => {
+  const { SESSION } = await import('../src/config.js');
+  const { reminderIcs } = await import('../src/services/report.js');
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const span = `${SESSION.activeMin[0]}–${SESSION.activeMin[1]} минут`;
+  const howmuch = FAQ.flatMap(s => s.items).find(i => i.id === 'howmuch');
+  assert.ok(howmuch.a().join(' ').includes(span), 'FAQ «Сколько заниматься?»');
+  const ics = reminderIcs('19:00', new Date(2026, 9, 26, 12), 4);
+  assert.match(ics, new RegExp(`SUMMARY:Синергия: тренировка ${span}`));
+  assert.match(ics, new RegExp(`DURATION:PT${SESSION.activeMin[1]}M`));
+  const files = ['src/ui/onboarding.js', 'src/core/faq.js', 'src/services/report.js', ...readdirSync('src/ui').map(f => `src/ui/${f}`)];
+  const stale = files.filter(f => /10[–-]15 минут/.test(readFileSync(f, 'utf8')));
+  assert.deepEqual(stale, [], 'no hard-coded 10–15 minutes left');
+});

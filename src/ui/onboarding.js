@@ -3,7 +3,7 @@ import { h } from './dom.js';
 import { segmented } from './widgets.js';
 import { SCHEME_INFO } from '../core/vocabulary.js';
 import { mio, badgeArt, trails, coverArt } from './art.js';
-import { PET } from '../config.js';
+import { PET, SESSION } from '../config.js';
 import { SAFETY_RULES, SAFETY_VERSION } from '../core/wellbeing.js';
 
 export function onboardingScreen(app, { safety = false } = {}) {
@@ -25,7 +25,7 @@ export function onboardingScreen(app, { safety = false } = {}) {
       h('p', { class: 'lead' }, 'Игра-тренажёр управления бионическим протезом.')),
       h('p', { class: 'lead pet-promise' }, 'Тренировки согревают яйцо Жар-птицы: вырастите её от птенца до огненной птицы.'),
       h('p', {}, 'Четыре игры тренируют то, что нужно протезу каждый день: взять предмет с нужной силой, удержать, отпустить, сменить хват, включиться вовремя.'),
-      h('p', { class: 'note' }, 'Короткие игры по 10–15 минут. Сколько дней в неделю заниматься, лучше решить с реабилитологом или протезистом; цель недели меняется в настройках.')],
+      h('p', { class: 'note' }, `Тренировка короткая: ${SESSION.activeMin[0]}–${SESSION.activeMin[1]} минут активной игры. Сколько дней в неделю заниматься, лучше решить с реабилитологом или протезистом; цель недели меняется в настройках.`)],
     () => [h('div', { class: 'onb-hero' }, trails(), safetyCover(),
       h('h1', {}, 'Безопасно'),
       h('p', { class: 'lead' }, 'Комфорт и самочувствие важнее очков.')),

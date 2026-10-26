@@ -33,6 +33,7 @@
   --grad-a: linear-gradient(0deg, #f2622e 0%, #ffa06b 100%);
   --grad-b: linear-gradient(0deg, #2f6fe0 0%, #7fb0ff 100%);
   --hero-text: #05101a; --hero-muted: #0b2a2a; --hero-track: #ffffff; --hero-ring: #05101a; --cover-text: #ffffff; --cover-muted: #d6e2ea;
+  --banner-bg: #05101a; --banner-text: #ffffff; --banner-btn: #16e182; --banner-btn-text: #05101a;
   --shadow-1: 0 1px 2px rgba(5, 16, 26, .05), 0 6px 18px rgba(5, 16, 26, .06);
   --shadow-2: 0 2px 6px rgba(5, 16, 26, .06), 0 18px 40px rgba(5, 16, 26, .12);
   --glow-accent: 0 8px 22px rgba(22, 225, 130, .32);
@@ -55,6 +56,7 @@
     --deco-green: #12382c; --deco-teal: #113637; --deco-blue: #152d4a; --deco-violet: #231f4a; --deco-coral: #3d221d; --deco-yellow: #3a301a;
     --ico-green: #4cf0a6; --ico-teal: #5fe3d4; --ico-blue: #8ab8ff; --ico-violet: #c3b3ff; --ico-coral: #ffb084; --ico-yellow: #ffd27a;
     --heat-0: #15232f; --heat-1: #0f4a35; --heat-2: #0e7a52; --heat-3: #12b36f; --heat-4: #3ef0a0;
+    --banner-bg: #1b2a37; --banner-text: #ffffff; --banner-btn: #16e182; --banner-btn-text: #05101a;
     --shadow-1: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 6px 18px rgba(0, 0, 0, .35);
     --shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 16px 36px rgba(0, 0, 0, .5);
     --backdrop: rgba(2, 6, 10, .72);
@@ -71,6 +73,7 @@
   --deco-green: #12382c; --deco-teal: #113637; --deco-blue: #152d4a; --deco-violet: #231f4a; --deco-coral: #3d221d; --deco-yellow: #3a301a;
   --ico-green: #4cf0a6; --ico-teal: #5fe3d4; --ico-blue: #8ab8ff; --ico-violet: #c3b3ff; --ico-coral: #ffb084; --ico-yellow: #ffd27a;
   --heat-0: #15232f; --heat-1: #0f4a35; --heat-2: #0e7a52; --heat-3: #12b36f; --heat-4: #3ef0a0;
+  --banner-bg: #1b2a37; --banner-text: #ffffff; --banner-btn: #16e182; --banner-btn-text: #05101a;
   --shadow-1: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 6px 18px rgba(0, 0, 0, .35);
   --shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 16px 36px rgba(0, 0, 0, .5);
   --backdrop: rgba(2, 6, 10, .72);
@@ -89,6 +92,7 @@
   --heat-0: #222; --heat-1: #3c6e5a; --heat-2: #2f9e72; --heat-3: #3fe0a0; --heat-4: #b6ffe0;
   --grad-primary: #ffe14d; --grad-hero: #000; --grad-cover: #000; --grad-good: #3fe0a0; --grad-a: #ffb547; --grad-b: #5ad1ff;
   --hero-text: #fff; --hero-muted: #e8ecff; --hero-track: #333; --hero-ring: #fff; --cover-text: #fff; --cover-muted: #e8ecff;
+  --banner-bg: #ffe14d; --banner-text: #000; --banner-btn: #000; --banner-btn-text: #ffe14d;
   --shadow-1: none; --shadow-2: none; --glow-accent: none; --backdrop: rgba(0, 0, 0, .85);
 }
 
@@ -359,8 +363,8 @@ output { color: var(--accent); font-weight: 700 }
 
 /* v5: check-in, tutorial, skill check, data tables, showcase, PIN. */
 .btn.small { min-height: 36px; padding: 4px 12px; font-size: 0.8125rem }
-.showcase-banner { position: sticky; top: 0; z-index: 30; display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--warn); color: #241a00; font-weight: 800; font-size: 0.8125rem; padding: 4px 12px }
-.showcase-banner .btn { color: #241a00; border-color: #241a00 }
+.showcase-banner { position: sticky; top: 0; z-index: 30; display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--banner-bg); color: var(--banner-text); font-weight: 800; font-size: 0.8125rem; padding: 4px 12px }
+.showcase-banner .btn { color: var(--banner-btn-text); border-color: var(--banner-btn) }
 .warn-card { border-color: var(--warn) }
 .tutorial-card { border-color: var(--accent) }
 
@@ -634,7 +638,7 @@ td.heat.h3 { background: #f59a9a } td.heat.h4 { background: #c21b2e; color: #fff
 .pin-input { border-radius: 16px; border: 2px solid var(--line-strong); background: var(--card) }
 .checkin-hero { display: flex; align-items: center; gap: 12px; text-align: left }
 .tut-canvas { border-radius: 20px }
-.showcase-banner .btn { background: #ffd27a }
+.showcase-banner .btn { background: var(--banner-btn) }
 
 /* Coach «Мио» next to its advice (5.4) */
 .coach-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px }
