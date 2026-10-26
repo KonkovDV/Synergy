@@ -35,15 +35,15 @@
  },
  "apk": {
   "file": "release/Synergy-5.32.0.apk",
-  "bytes": 2184279,
-  "kb": 2133,
-  "sha256": "531500c18cfa9c634117a5355fa18f17b627604c6bcb23ac2c411834eaf0f128"
+  "bytes": 2192130,
+  "kb": 2141,
+  "sha256": "171052d254366bc7e553bfbae335ed5ba9c606594ea7054f95c77aa07afcd036"
  },
  "html": {
   "file": "release/synergy-standalone.html",
-  "bytes": 2727148,
-  "kb": 2663,
-  "sha256": "9b01f8164c18c82d1c760f70ee404a1f66f3ceb5905734eba0caf3e899501f0e"
+  "bytes": 2748711,
+  "kb": 2684,
+  "sha256": "44dbe184803b5b43c3ff15c282baf1f28540d970b416732817bc6cfade704ef5"
  },
  "art": {
   "pictures": 137,
