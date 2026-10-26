@@ -16,6 +16,8 @@ export const ART = Object.freeze({
   'ach-switcher': [192, 192, 1],
   'ach-tutorial': [192, 192, 1],
   'ach-week_goal': [192, 192, 1],
+  'bg-duo-day': [848, 1264, 0],
+  'bg-duo-night': [848, 1264, 0],
   'bg-hero': [1200, 450, 0],
   'bg-nest-room': [720, 1080, 0],
   'cover-prosthesis': [900, 675, 0],
@@ -55,6 +57,9 @@ export const ART = Object.freeze({
   'gift-star': [192, 192, 1],
   'gift-twigs': [192, 192, 1],
   'gift-wreath': [192, 192, 1],
+  'hand-close': [221, 320, 1],
+  'hand-open': [221, 320, 1],
+  'hand-rest': [221, 320, 1],
   'ico-access': [160, 160, 1],
   'ico-ask': [160, 160, 1],
   'ico-audiosync': [160, 160, 1],
@@ -138,7 +143,7 @@ export const ART = Object.freeze({
   'skin-neon': [192, 192, 1],
   'skin-sky': [192, 192, 1],
 });
-export const ART_BYTES = 1543206;
+export const ART_BYTES = 1601926;
 // What the Firebird wears, per picture: item → [centre x %, centre y %, width %, rotation°]. A missing item —
 // the pose covers its slot (the star above the head, the book on the chest) or the stage has not opened it.
 export const PET_LAYOUT = Object.freeze({

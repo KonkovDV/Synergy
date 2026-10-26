@@ -146,3 +146,37 @@ test('fx: the layer cache keeps two full-screen bitmaps at most, and the play sc
   } finally { delete globalThis.document; }
   assert.match(readFileSync('src/ui/play.js', 'utf8'), /cleanup\(\) \{[^}]*clearLayers\(\)/, 'leaving the play screen frees the bitmaps');
 });
+
+test('safe card: a long gesture name wraps by words, every line fits the column beside the hold ring', async () => {
+  const { wrapLines, textWidth } = await import('../src/render/draw.js');
+  const { GESTURE_SETS } = await import('../src/core/vocabulary.js');
+  // Inter 800 is about 0.6 em per Cyrillic letter (measured in Chromium: «большого пальца» at 15 px — 134 px).
+  const ctx = { font: '', measureText(s) { return { width: s.length * Number(/(\d+)px/.exec(this.font)[1]) * 0.6 }; } };
+  for (const w of [320, 390]) {
+    const cw = Math.min(w * 0.6, 240), ch = 112, x0 = w / 2 - cw / 2, ringRight = w / 2 - cw * 0.22 + ch * 0.42 + 4;
+    const tMax = x0 + cw - ringRight - 10, lineSize = Math.min(15, ch * 0.15);
+    for (const set of Object.values(GESTURE_SETS)) for (const g of set.gestures) {
+      if (textWidth(ctx, g.name, { size: 17, weight: 800 }) <= tMax) continue;
+      const lines = wrapLines(ctx, g.name, tMax, { size: lineSize, weight: 800 });
+      assert.ok(lines.length <= 3, `${set.id} «${g.name}» at ${w} px: ${lines.length} lines`);
+      for (const line of lines) assert.ok(textWidth(ctx, line, { size: lineSize, weight: 800 }) <= tMax || !line.includes(' '), `${set.id} «${line}» at ${w} px is wider than ${Math.round(tMax)} px`);
+    }
+  }
+  assert.deepEqual(wrapLines(ctx, 'Сгиб большого пальца', 77, { size: 15, weight: 800 }), ['Сгиб', 'большого', 'пальца']);
+  assert.match(readFileSync('src/games/safe.js', 'utf8'), /wrapLines\(ctx, card\.name, tMax/, 'the safe card uses the wrap');
+});
+
+test('«Две руки»: the pose of the hand model picks the two nearest pictures — open, rest, fist', async () => {
+  const { handBlend } = await import('../src/games/duo.js');
+  const { COMMAND_POSE } = await import('../src/core/vocabulary.js');
+  assert.deepEqual(handBlend(COMMAND_POSE.open), ['open', 'rest', 0]);
+  assert.deepEqual(handBlend(COMMAND_POSE.rest).slice(0, 2), ['open', 'rest']);
+  assert.equal(handBlend(COMMAND_POSE.rest)[2], 1);
+  assert.deepEqual(handBlend(COMMAND_POSE.close), ['rest', 'close', 1]);
+  const half = handBlend([0.5, 0.6, 0.6, 0.6, 0.6]);
+  assert.deepEqual(half.slice(0, 2), ['rest', 'close']);
+  assert.ok(half[2] > 0 && half[2] < 1);
+  const src = readFileSync('src/games/duo.js', 'utf8');
+  for (const name of ['hand-rest', 'hand-close', 'hand-open', 'bg-duo-day', 'bg-duo-night']) assert.ok(src.includes(`'${name}'`), `${name} is drawn`);
+  assert.match(src, /drawHand\(ctx, \{ x: hx/, 'until the pictures load, the drawn hand stands in');
+});
