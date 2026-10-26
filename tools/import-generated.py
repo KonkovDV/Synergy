@@ -31,7 +31,7 @@ import json
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 ROOT = Path(__file__).resolve().parent.parent
 POSES = ("rest", "close", "open")  # left to right on the sheet
@@ -111,11 +111,18 @@ def edges(img: Image.Image) -> tuple[float, float]:
     return round(back / h, 3), round(front / h, 3)
 
 
+# Colour grade of the rooms: the generator renders them pale; the brand's light is vivid (the day a little more —
+# airy mint on white washes out on a phone in daylight).
+VIVID = {"day": 1.3, "night": 1.12}
+QUALITY = 92  # 5.32: full native size and a high WebP quality — the archive has room (docs/GAME_VISUALS.md §10)
+
+
 def rooms(manifest: dict, pictures: dict[str, str]):
     for name, path in pictures.items():
         raw = Path(path).read_bytes()
         img = Image.open(io.BytesIO(raw)).convert("RGB")
-        data = ART.webp(img, 76)
+        img = ImageEnhance.Color(img).enhance(VIVID["night" if name.endswith("night") else "day"])
+        data = ART.webp(img, QUALITY)
         ART.write(ART.OUT / f"{name}.webp", data)
         manifest["items"][name] = {"w": img.width, "h": img.height, "bytes": len(data), "alpha": False, "sha256": ART.sha256(data), "source": ART.sha256(raw)}
         print(f"{name:12s} {img.width}x{img.height} {len(data) / 1024:5.1f} KB  table back, front {edges(img)}")
@@ -127,8 +134,8 @@ def prop(manifest: dict, name: str, path: str, width: int):
     a = rgba[..., 3] > 128
     ys, xs = np.nonzero(a)
     crop = Image.fromarray(rgba[max(0, ys.min() - 4):ys.max() + 5, max(0, xs.min() - 4):xs.max() + 5], "RGBA")
-    out = ART.resize(crop, (width, round(crop.height * width / crop.width)))
-    data = ART.webp(out, 84)
+    out = ART.resize(crop, (width, round(crop.height * width / crop.width))) if width < crop.width else crop
+    data = ART.webp(out, QUALITY)
     ART.write(ART.OUT / f"{name}.webp", data)
     manifest["items"][name] = {"w": out.width, "h": out.height, "bytes": len(data), "alpha": True, "sha256": ART.sha256(data), "source": ART.sha256(raw)}
     print(f"{name:14s} {out.width}x{out.height} {len(data) / 1024:5.1f} KB")
@@ -145,12 +152,12 @@ def hands(manifest: dict, sheet: str, flip_arg: str, height_px: int, prefix: str
         placed.append((pose, img, cx))
     half = max(max(cx, img.width - cx) for _, img, cx in placed)
     width, height = int(np.ceil(half * 2)), max(img.height for _, img, _ in placed)
-    size = (round(width * height_px / height), height_px)
+    size = (round(width * height_px / height), height_px) if 0 < height_px < height else (width, height)  # never upscale
     for pose, img, cx in placed:
         canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         canvas.paste(img, (round(half - cx), 0 if hang else height - img.height))  # one baseline (or top), one centre line
-        out = ART.resize(canvas, size)
-        data = ART.webp(out, 84)
+        out = ART.resize(canvas, size) if size != canvas.size else canvas
+        data = ART.webp(out, QUALITY)
         name = f"{prefix}{pose}"
         ART.write(ART.OUT / f"{name}.webp", data)
         manifest["items"][name] = {"w": out.width, "h": out.height, "bytes": len(data), "alpha": True, "sha256": ART.sha256(data), "source": ART.sha256(raw)}
@@ -162,7 +169,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--hands", help="the sheet of three hands on magenta")
     ap.add_argument("--flip", default="", help="poses drawn as a left hand (thumb on the right): mirrored to a right hand")
-    ap.add_argument("--height", type=int, default=320)
+    ap.add_argument("--height", type=int, default=0, help="output height of the standing hands; 0 — the sheet's own size")
     ap.add_argument("--day")
     ap.add_argument("--night")
     ap.add_argument("--hanging", help="the sheet of three hands hanging from an arm (open, rest, fist) on magenta: «Мастерская»")
@@ -175,13 +182,13 @@ def main():
     if args.hands:
         hands(manifest, args.hands, args.flip, args.height)
     if args.hanging:
-        hands(manifest, args.hanging, "", 400, "hand-down-", ("open", "rest", "close"), hang=True)
+        hands(manifest, args.hanging, "", 0, "hand-down-", ("open", "rest", "close"), hang=True)
     rooms(manifest, {k: v for k, v in (("bg-duo-day", args.day), ("bg-duo-night", args.night),
                                        ("bg-grip-day", args.workshop_day), ("bg-grip-night", args.workshop_night)) if v})
     if args.basket:
-        prop(manifest, "prop-basket", args.basket, 256)
+        prop(manifest, "prop-basket", args.basket, 640)
     if args.glider:
-        prop(manifest, "prop-glider", args.glider, 192)
+        prop(manifest, "prop-glider", args.glider, 480)
     ART.write_catalogue(manifest)
     print(f"{len(manifest['items'])} pictures, {manifest['total_bytes'] / 1024 / 1024:.2f} MB")
 

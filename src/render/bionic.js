@@ -13,14 +13,14 @@ import { sprite, drawTinted, spriteAspect } from './sprites.js';
 export const BIONIC = Object.freeze({
   stand: {
     pics: { open: 'hand-open', rest: 'hand-rest', close: 'hand-close' },
-    light: { open: [0.537, 0.612], rest: [0.486, 0.595], close: [0.526, 0.604] },
-    band: 0.725,
+    light: { open: [0.538, 0.611], rest: [0.488, 0.594], close: [0.526, 0.602] },
+    band: 0.724,
   },
   hang: {
     pics: { open: 'hand-down-open', rest: 'hand-down-rest', close: 'hand-down-close' },
-    light: { open: [0.451, 0.483], rest: [0.454, 0.489], close: [0.473, 0.492] },
-    band: 0.4,
-    tip: { open: 0.992, rest: 0.952, close: 0.822 },
+    light: { open: [0.451, 0.485], rest: [0.453, 0.491], close: [0.472, 0.496] },
+    band: 0.402,
+    tip: { open: 0.993, rest: 0.955, close: 0.824 },
   },
 });
 
@@ -42,8 +42,12 @@ const settle = t => { const u = Math.min(1, Math.max(0, (t - 0.2) / 0.6)); retur
 /** Height ÷ width of the pictures of a kind, or null until they load. */
 export const bionicAspect = (kind = 'stand') => spriteAspect(BIONIC[kind].pics.rest);
 
-/** The shell colour for a skin of the prosthesis: a pastel of it, as on the skin pictures of the nest. */
-export const skinTint = skin => mix(SKIN_COLORS[skin]?.light ?? SKIN_COLORS.graphite.light, '#ffffff', 0.5);
+/**
+ * The shell colour for a skin of the prosthesis: a pastel of it, as on the skin pictures of the nest. «Графит», the
+ * first skin, is a light silver close to the glossy white of the pictures (a grey shell read dull on a bright scene);
+ * its graphite is the joints and the fingertips.
+ */
+export const skinTint = skin => mix(SKIN_COLORS[skin]?.light ?? SKIN_COLORS.graphite.light, '#ffffff', !skin || skin === 'graphite' ? 0.78 : 0.5);
 
 /** Where the fingertips of a hanging hand are in this pose, in fractions of the picture. */
 export function bionicTip(pose) {
