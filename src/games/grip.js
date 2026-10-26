@@ -7,8 +7,9 @@ import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES } from '.
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
 import { COLORS, text, textWidth, scaledPx, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
-import { drawSprite } from '../render/sprites.js';
 import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
+import { drawBionic, bionicTip, skinTint, workshopPlace } from '../render/bionic.js';
+import { drawSprite, spriteAspect } from '../render/sprites.js';
 
 /** The first of these grips the gesture set has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by «Щипок»). */
 /** A grip the set actually has; a set without «щепоть» takes the power grip (the СППР set of the meetup, 5.31). */
@@ -318,7 +319,11 @@ export class GripGame extends Game {
     const deco = !COLORS.hc;
     // 5.32 — the bionic workshop (docs/GAME_VISUALS.md): a light wall with the brand's glow and light trails, a graphite
     // bench with a mint light strip instead of an empty floor. Static, so it is painted once into a cached layer.
-    cachedLayer(ctx, lookKey('grip'), w, h, g => paintWorkshop(g, w, h, beltY, beltH, deco));
+    // 5.32, later: the wall and the bench are a generated picture (render/bionic.js), its light strip under the belt.
+    const room = deco ? workshopPlace(w, h, beltY + beltH + 2, COLORS.theme === 'dark') : null;
+    cachedLayer(ctx, lookKey(room ? 'grip-room' : 'grip'), w, h, g => {
+      if (room) { g.drawImage(room.img, room.x, room.y, room.w, room.h); paintBelt(g, w, beltY, beltH, deco); } else paintWorkshop(g, w, h, beltY, beltH, deco);
+    });
     // The conveyor: the rubber belt and its metal rollers are in the cached workshop; only the cleats move.
     const off = this.reduceMotion ? 0 : (this.time * 60) % 28; // a still belt with «Меньше движения» (5.11)
     ctx.fillStyle = deco ? scene('rgba(255,255,255,0.13)', 'rgba(255,255,255,0.09)') : '#ffffff';
@@ -359,14 +364,19 @@ export class GripGame extends Game {
       if (o.phase === 'done' && o.delivered && !o.bursted) { o.bursted = true; this.burst(ox, oy, COLORS.good, 12, 140, 260, 0.6); }
     }
     // Hand from above (fingers down) with its shadow on the belt; a soft scan light points at the object to take.
-    const fingerReach = s * 1.72, hy = oy - fingerReach - s * 0.1;
+    // 5.32: the hand is a generated picture hanging from an arm (render/bionic.js); its fingertips reach the top of the
+    // object, so the fist closes over it. The drawn hand stands in until the pictures load.
+    const fingerReach = s * 1.72, hy = oy - fingerReach - s * 0.1, pose = hand.pose();
+    const ht = s * 2.6, handTop = oy - s * 0.18 - bionicTip(pose) * ht;
     if (deco) handShadow(ctx, handX, beltY + 2, s, 0.12);
     if (deco && o && o.phase === 'grasp' && !hand.inContact) {
-      const top = hy + s * 1.0, bottom = oy + s * 0.2;
+      const top = handTop + ht * 0.62, bottom = oy + s * 0.2;
       ctx.fillStyle = linear(ctx, 0, top, 0, bottom, [[0, rgba(BRAND.mint, 0.0)], [0.25, rgba(BRAND.mint, scene(0.16, 0.2))], [1, rgba(BRAND.mint, 0.0)]], 'rgba(0,0,0,0)');
       ctx.beginPath(); ctx.moveTo(handX - s * 0.25, top); ctx.lineTo(handX + s * 0.25, top); ctx.lineTo(handX + s * 0.6, bottom); ctx.lineTo(handX - s * 0.6, bottom); ctx.closePath(); ctx.fill();
     }
-    drawHand(ctx, { x: handX, y: hy, size: s, pose: hand.pose(), skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
+    if (!drawBionic(ctx, handX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0 })) {
+      drawHand(ctx, { x: handX, y: hy, size: s, pose, skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
+    }
     // Force gauge (hidden in the retention probe).
     const gx = 18, gy = h * 0.14, gh = h * 0.5;
     if (o && this.liveFeedback(this.results.length)) {
@@ -456,6 +466,12 @@ function drawBasket(ctx, bx, by, s, deco, lit) {
   const x = bx - s * 0.7, y = by - s * 0.55, ww = s * 1.4, hh = s * 0.75;
   if (deco) softShadow(ctx, bx, by + s * 0.22, s * 0.85, s * 0.12, 0.3);
   if (deco && lit > 0) glow(ctx, bx, y, s * 1.2, BRAND.mint, lit);
+  // 5.32: the generated basket (its bottom on the same line as the drawn one), the drawn crate until it loads
+  const aspect = deco ? spriteAspect('prop-basket') : null;
+  if (aspect && drawSprite(ctx, 'prop-basket', bx, y + hh + s * 0.04 - ww * 1.08 * aspect / 2, ww * 1.08)) {
+    if (lit > 0) { ctx.save(); ctx.globalAlpha = lit; ctx.strokeStyle = BRAND.mint; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x + ww * 0.02, y + hh + s * 0.04 - ww * 1.08 * aspect + 3); ctx.lineTo(x + ww * 0.98, y + hh + s * 0.04 - ww * 1.08 * aspect + 3); ctx.stroke(); ctx.restore(); }
+    return;
+  }
   const body = linear(ctx, x, y, x + ww, y + hh, [[0, '#3fe3c4'], [0.5, BRAND.teal], [1, '#0d8f80']], BRAND.teal);
   ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + ww, y); ctx.lineTo(x + ww * 0.92, y + hh); ctx.lineTo(x + ww * 0.08, y + hh); ctx.closePath();
   ctx.fillStyle = deco ? body : COLORS.panel; ctx.fill();

@@ -94,8 +94,8 @@ export function petPicture(stage, mood, size, { items = {}, pose = null, cls = '
   return box;
 }
 
-/** Pictures that games draw on the canvas: the Workshop objects, the gesture hands of «Сейф», the bionic hands and the room of «Две руки», the tutorial lock. */
-export const CANVAS_PICTURES = Object.freeze(Object.keys(ART).filter(n => /^(obj|gesture|hand|bg-duo)-/.test(n)).concat('ico-lock'));
+/** Pictures that games draw on the canvas: the Workshop objects, the gesture hands of «Сейф», the bionic hands, the generated rooms and the basket, the tutorial lock. */
+export const CANVAS_PICTURES = Object.freeze(Object.keys(ART).filter(n => /^(obj|gesture|hand|bg-duo|bg-grip|prop)-/.test(n)).concat('ico-lock'));
 
 /** Loads the canvas pictures once, in the background, into render/sprites.js (a game draws its drawing until then). */
 export function loadSprites(names = CANVAS_PICTURES) {

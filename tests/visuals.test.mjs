@@ -166,9 +166,10 @@ test('safe card: a long gesture name wraps by words, every line fits the column 
   assert.match(readFileSync('src/games/safe.js', 'utf8'), /wrapLines\(ctx, card\.name, tMax/, 'the safe card uses the wrap');
 });
 
-test('«Две руки»: the pose of the hand model picks the two nearest pictures — open, rest, fist', async () => {
-  const { handBlend } = await import('../src/games/duo.js');
+test('bionic hand: the pose of the hand model picks the two nearest pictures — open, rest, fist', async () => {
+  const { handBlend, REST_CLOSURE, closure } = await import('../src/render/bionic.js');
   const { COMMAND_POSE } = await import('../src/core/vocabulary.js');
+  assert.equal(REST_CLOSURE, closure(COMMAND_POSE.rest), 'render keeps the rest pose of the hand model');
   assert.deepEqual(handBlend(COMMAND_POSE.open), ['open', 'rest', 0]);
   assert.deepEqual(handBlend(COMMAND_POSE.rest).slice(0, 2), ['open', 'rest']);
   assert.equal(handBlend(COMMAND_POSE.rest)[2], 1);
@@ -176,7 +177,41 @@ test('«Две руки»: the pose of the hand model picks the two nearest pict
   const half = handBlend([0.5, 0.6, 0.6, 0.6, 0.6]);
   assert.deepEqual(half.slice(0, 2), ['rest', 'close']);
   assert.ok(half[2] > 0 && half[2] < 1);
-  const src = readFileSync('src/games/duo.js', 'utf8');
-  for (const name of ['hand-rest', 'hand-close', 'hand-open', 'bg-duo-day', 'bg-duo-night']) assert.ok(src.includes(`'${name}'`), `${name} is drawn`);
-  assert.match(src, /drawHand\(ctx, \{ x: hx/, 'until the pictures load, the drawn hand stands in');
+  const src = readFileSync('src/render/bionic.js', 'utf8');
+  for (const name of ['hand-rest', 'hand-close', 'hand-open', 'hand-down-open', 'hand-down-rest', 'hand-down-close', 'bg-duo-day', 'bg-duo-night']) assert.ok(src.includes(`'${name}'`), `${name} is drawn`);
+  assert.match(readFileSync('src/games/duo.js', 'utf8'), /drawHand\(ctx, \{ x: hx/, 'until the pictures load, the drawn hand stands in');
+});
+
+test('5.32 generated pictures: with every picture loaded, «Мастерская», «Две руки» and «Полёт» draw in every look', async () => {
+  const { setSprite } = await import('../src/render/sprites.js');
+  const { ART } = await import('../src/ui/art-manifest.js');
+  const { drawBionic, bionicTip, placeScene } = await import('../src/render/bionic.js');
+  const names = Object.keys(ART).filter(n => /^(hand|bg-duo|bg-grip|prop)-/.test(n));
+  assert.ok(names.length >= 12, 'hands, rooms and props are in the catalogue');
+  for (const n of names) setSprite(n, { complete: true, naturalWidth: ART[n][0], naturalHeight: ART[n][1] });
+  try {
+    for (const look of [{ theme: 'light' }, { theme: 'dark' }, { highContrast: true }]) {
+      setRenderOptions(look);
+      for (const id of ['grip', 'duo', 'flight']) {
+        const entry = GAMES.find(g => g.id === id);
+        const game = createGame(id, { levelNumber: 2, scheme: 'proportional', seed: 5 });
+        const emulator = new EmgEmulator({ realism: 0.3, seed: 5 }), hand = new BionicHand();
+        const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme: 'proportional' }), hand, source: emulator, emulator, autopilot: true });
+        assert.ok(entry);
+        for (let i = 0; i < 400 && !game.done; i++) {
+          runner.step(i / 60 * 1000, 1 / 60);
+          if (i % 25 === 0) for (const view of [{ w: 360, h: 600 }, { w: 800, h: 360 }]) assert.doesNotThrow(() => game.render(nullCanvas(), view, hand, runner.intent), `${id} ${JSON.stringify(look)}`);
+        }
+      }
+    }
+    // the hanging hand reaches lower when open than as a fist; a scene covers its field with the line where asked
+    assert.ok(bionicTip([0, 0, 0, 0, 0]) > bionicTip([1, 1, 1, 1, 1]));
+    const at = placeScene('bg-grip-day', 0.708, 360, 600, 420);
+    assert.ok(at.x <= 0 && at.y <= 0 && at.x + at.w >= 360 - 1e-6 && at.y + at.h >= 600 - 1e-6, 'the picture covers the field');
+    assert.ok(Math.abs(at.y + 0.708 * at.h - 420) < 1e-6, 'its light strip is on the belt line');
+    assert.equal(drawBionic(nullCanvas(), 100, 0, 200, [0.5, 0.5, 0.5, 0.5, 0.5], { kind: 'hang', armTo: -50, tint: '#aabbcc', lit: 0.8 }), true);
+  } finally {
+    for (const n of names) setSprite(n, null);
+    setRenderOptions({ theme: 'light' });
+  }
 });

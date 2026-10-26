@@ -422,6 +422,9 @@ export class FlightGame extends Game {
     const bob = this.reduceMotion ? 0 : Math.sin(this.time * 5) * 2;
     if (!COLORS.hc) glow(ctx, x + 4, y + bob, 34, BRAND.mint, COLORS.theme === 'dark' ? 0.6 : 0.4);
     if (drawSprite(ctx, 'flight-flier', x + 4, y + bob - 6, 66)) return;
+    // 5.32: until the bird has wings, a generated toy glider in the brand colours (the drawn one in contrast and until
+    // it loads)
+    if (!COLORS.hc && drawSprite(ctx, 'prop-glider', x + 2, y + bob, 60)) return;
     const flap = this.reduceMotion ? 0 : Math.sin(this.time * 10) * 6; // 5.17: the wings stand still with «Меньше движения»
     const flat = COLORS.hc;
     ctx.save(); ctx.translate(x, y + bob);

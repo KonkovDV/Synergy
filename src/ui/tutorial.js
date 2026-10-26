@@ -9,6 +9,7 @@ import { SCHEME } from '../core/vocabulary.js';
 import { ACHIEVEMENTS } from '../core/progress.js';
 import { drawHand, drawGauge, circle, COLORS } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
+import { drawBionic, roomPlace, skinTint } from '../render/bionic.js';
 
 /** A padlock on the tutorial canvas (5.14): the prosthesis is locked — signals do not move it. */
 function padlock(ctx, x, y, color) {
@@ -76,11 +77,20 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       const tipText = onScreen ? run.step.tip : 'Не получается? Проверьте, что датчики плотно прилегают к коже, или пройдите калибровку в настройках.';
       if (run.showTip && !tip.textContent) { tip.textContent = tipText; app.say(tipText); }
       // Live picture: the prosthesis follows the signal; the force band of the «level» step is drawn.
-      const bg = ctx.createLinearGradient(0, 0, 0, 240);
-      bg.addColorStop(0, COLORS.sceneTop); bg.addColorStop(1, COLORS.sceneBottom);
-      ctx.fillStyle = bg; ctx.fillRect(0, 0, 320, 240);
-      circle(ctx, 150, 150, 96, COLORS.accentSoft); // a soft spotlight behind the hand
-      drawHand(ctx, { x: 150, y: 228, size: 92, pose: hand.pose(), skin: app.profile.skin, glow: locked ? 0 : intent.intensity, mirror: (s.side === 'left') !== !!s.mirrorHint });
+      // 5.32: the generated studio and hand of «Две руки» (render/bionic.js); the drawn ones until the pictures load.
+      const mirror = (s.side === 'left') !== !!s.mirrorHint, lit = locked ? 0 : intent.intensity, pose = hand.pose();
+      const room = COLORS.hc ? null : roomPlace(320, 240, 178, COLORS.theme === 'dark');
+      if (room) ctx.drawImage(room.img, room.x, room.y, room.w, room.h);
+      else {
+        const bg = ctx.createLinearGradient(0, 0, 0, 240);
+        bg.addColorStop(0, COLORS.sceneTop); bg.addColorStop(1, COLORS.sceneBottom);
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, 320, 240);
+        circle(ctx, 150, 150, 96, COLORS.accentSoft); // a soft spotlight behind the hand
+      }
+      const standY = room ? Math.min(178 + (room.strip - 178) * 0.5, 232) : 238;
+      if (!drawBionic(ctx, 150, standY, Math.min(220, standY - 8), pose, { mirror, tint: COLORS.hc ? null : skinTint(app.profile.skin), lit: COLORS.hc ? 0 : lit, reflect: room ? 0.18 : 0, reflectTo: room?.strip ?? 240 })) {
+        drawHand(ctx, { x: 150, y: 228, size: 92, pose, skin: app.profile.skin, glow: lit, mirror });
+      }
       if (locked && !drawSprite(ctx, 'ico-lock', 214, 76, 56)) padlock(ctx, 214, 70, COLORS.goodInk); // 5.16: the lock of the illustrations
       const band = run.step?.band;
       // The channel of the step: B on «Раскрытие» (5.11 — the gauge always showed A, empty while B was working).
