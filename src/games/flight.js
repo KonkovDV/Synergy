@@ -7,6 +7,7 @@ import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/voca
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { drawSprite } from '../render/sprites.js';
+import { coverScene } from '../render/bionic.js';
 
 const LEVELS = [
   { rings: 8, gap: 2.8, tol: 0.15, spread: 0.25, streams: 0 },
@@ -322,8 +323,10 @@ export class FlightGame extends Game {
     // 5.32 — the brand's sky (docs/GAME_VISUALS.md): a dawn with a sun halo by day, the northern lights in the brand
     // colours at night; static, so cached. «Меньше движения» freezes the scenery (5.11); the task (rings) still moves.
     const drift = this.reduceMotion ? 0 : this.time;
-    cachedLayer(ctx, lookKey('flight'), w, h, g => paintSky(g, w, h, deco, dark));
-    if (deco && !dark) {
+    // 5.32, later: the sky is a generated picture by day and by night (render/bionic.js); the drawn one until it loads
+    const sky = deco ? coverScene(dark ? 'bg-flight-night' : 'bg-flight-day', w, h, 0) : null;
+    cachedLayer(ctx, lookKey(sky ? 'flight-sky' : 'flight'), w, h, g => (sky ? g.drawImage(sky.img, sky.x, sky.y, sky.w, sky.h) : paintSky(g, w, h, deco, dark)));
+    if (deco && !dark && !sky) {
       for (let i = 0; i < 6; i++) {
         const cw = 64 + (i % 3) * 26, span2 = w + cw * 2;
         const cx = ((i * 173 - drift * (10 + (i % 3) * 7)) % span2 + span2) % span2 - cw, cy = 26 + (i * 61) % (h * 0.5);

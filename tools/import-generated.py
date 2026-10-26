@@ -207,6 +207,133 @@ def hand_family(manifest: dict, sheet: str):
         put(manifest, f"skin-{skin}", icon(palm, 256, mixed(light, "#ffffff", 0.78 if skin == "graphite" else 0.5)), raw)
 
 
+def icons(manifest: dict, sheet: str, names: list[str], sizes: list[int]):
+    """Objects on the magenta key, left to right, each centred on a transparent square (game-*, ico-*)."""
+    raw = Path(sheet).read_bytes()
+    for name, size, (img, _) in zip(names, sizes, cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), len(names), False)):
+        side = int(max(img.size) * 1.08)
+        square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+        square.paste(img, ((side - img.width) // 2, (side - img.height) // 2))
+        put(manifest, name, ART.resize(square, (size, size)), raw)
+
+
+def tiles(manifest: dict, sheet: str, names: list[str], size: int):
+    """Scenes on their own white (the everyday tasks, day-*): split by the white gaps, each on a white square."""
+    raw = Path(sheet).read_bytes()
+    img = Image.open(io.BytesIO(raw)).convert("RGB")
+    p = np.asarray(img).astype(np.int32)
+    ink = (255 * 3 - p.sum(axis=2)) > 36  # anything but the white, shadows included
+    cols = np.nonzero(ink.any(0))[0]
+    groups = np.split(cols, np.nonzero(np.diff(cols) > 12)[0] + 1)
+    assert len(groups) == len(names), f"{len(groups)} scenes on the sheet — expected {len(names)}"
+    for name, g in zip(names, groups):
+        rows = np.nonzero(ink[:, g[0]:g[-1] + 1].any(1))[0]
+        crop = img.crop((g[0], rows[0], g[-1] + 1, rows[-1] + 1))
+        side = int(max(crop.size) * 1.12)
+        square = Image.new("RGB", (side, side), (255, 255, 255))
+        square.paste(crop, ((side - crop.width) // 2, (side - crop.height) // 2))
+        out = ART.resize(square, (size, size))
+        data = ART.webp(out, 86)
+        ART.write(ART.OUT / f"{name}.webp", data)
+        manifest["items"][name] = {"w": out.width, "h": out.height, "bytes": len(data), "alpha": False, "sha256": ART.sha256(data), "source": ART.sha256(raw)}
+        print(f"{name:20s} {out.width}x{out.height} {len(data) / 1024:5.1f} KB")
+
+
+def cover(manifest: dict, name: str, path: str, size=(900, 675)):
+    """An onboarding cover (cover-*): its own background, cut to 4 : 3."""
+    raw = Path(path).read_bytes()
+    out = ART.cover(Image.open(io.BytesIO(raw)).convert("RGB"), size)
+    data = ART.webp(out, 86)
+    ART.write(ART.OUT / f"{name}.webp", data)
+    manifest["items"][name] = {"w": out.width, "h": out.height, "bytes": len(data), "alpha": False, "sha256": ART.sha256(data), "source": ART.sha256(raw)}
+    print(f"{name:20s} {out.width}x{out.height} {len(data) / 1024:5.1f} KB")
+
+
+# The Firebird in its nest of twigs (26.10): with the nest worn, the bird is one picture — the nest is no longer laid
+# under the team's bird (a jumping bird hung over it, the nest came from another light). A sheet of 3 × 2 on the key
+# per stage (one design per stage); every picture is scaled so that the nest has one width and one bottom line on all
+# of them — the nest does not change as the bird grows, and turning the nest on does not move the bird's frame.
+NEST_W, NEST_FLOOR, PET_SIZE = 0.62, 0.95, 512
+
+
+def grid_cells(rgba: np.ndarray, cols: int = 3, rows: int = 2) -> list[np.ndarray]:
+    """The cells of a sheet, cut along the emptiest column and row near each expected border."""
+    a = rgba[..., 3].astype(np.float64)
+    h, w = a.shape
+    def cuts(profile, n, size):
+        out = [0]
+        for i in range(1, n):
+            lo, hi = int(size * (i / n - 0.08)), int(size * (i / n + 0.08))
+            out.append(lo + int(np.argmin(profile[lo:hi])))
+        return out + [size]
+    xs, ys = cuts(a.sum(0), cols, w), cuts(a.sum(1), rows, h)
+    return [rgba[ys[r]:ys[r + 1], xs[c]:xs[c + 1]] for r in range(rows) for c in range(cols)]
+
+
+def pets(manifest: dict, sheets: list[tuple[str, str]]):
+    """`sheets` — (PNG, six names in reading order, «-» for a cell to skip). One nest width for all the pictures:
+    the widest that lets every subject fit its frame."""
+    cells = []
+    for path, names in sheets:
+        raw = Path(path).read_bytes()
+        rgba = unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB")))
+        for name, cell in zip(names.split(","), grid_cells(rgba)):
+            if name == "-":
+                continue
+            alpha = cell[..., 3] > 128
+            ys, xs = np.nonzero(alpha)
+            twigs = ART.nest_mask(cell)
+            ty, tx = np.nonzero(twigs)
+            assert len(tx) > 500, f"{name}: no nest found"
+            left, right = np.percentile(tx, [1, 99])
+            cols = (xs >= left) & (xs <= right)
+            bottom = ys[cols].max()
+            cells.append((name, cell, raw, (left + right) / 2, right - left, bottom, xs.min(), xs.max(), ys.min()))
+    # the widest nest that keeps every subject 2 px inside its frame
+    fit = min(min((NEST_FLOOR * PET_SIZE - 2) / (bottom - top), (PET_SIZE / 2 - 2) / max(cx - x0, x1 - cx)) * nw / PET_SIZE
+              for _, _, _, cx, nw, bottom, x0, x1, top in cells)
+    width = min(NEST_W, fit)
+    print(f"nest width {width:.3f} of the frame (asked {NEST_W}, fits {fit:.3f})")
+    for name, cell, raw, cx, nw, bottom, *_ in cells:
+        k = width * PET_SIZE / nw
+        img = Image.fromarray(cell, "RGBA")
+        img = ART.resize(img, (max(1, round(img.width * k)), max(1, round(img.height * k))))
+        frame = Image.new("RGBA", (PET_SIZE, PET_SIZE), (0, 0, 0, 0))
+        frame.paste(img, (round(PET_SIZE / 2 - cx * k), round(NEST_FLOOR * PET_SIZE - bottom * k)))  # clipped to the frame
+        put(manifest, name, frame, raw)
+
+
+def open_loop(manifest: dict, name: str = "gift-amulet", seed=(0.49, 0.26)):
+    """The cord loop of the amulet was filled white in the 5.16 picture: on the bird's chest it read as a white blot.
+    The white inside the loop (the region connected to `seed`) becomes transparent; its 3 px edge is unmixed from white."""
+    raw = (ART.OUT / f"{name}.webp").read_bytes()
+    p = np.asarray(Image.open(io.BytesIO(raw)).convert("RGBA")).astype(np.float64)
+    h, w = p.shape[:2]
+    lo, hi = p[..., :3].min(axis=2), p[..., :3].max(axis=2)
+    hole = ((lo > 150) & (hi - lo < 40)) | (p[..., 3] < 8)  # the white fill and its grey shading; the cord is gold
+    region = np.zeros((h, w), bool)
+    region[round(seed[1] * h), round(seed[0] * w)] = True
+    while True:  # flood fill inside the cord
+        grown = region.copy()
+        grown[1:] |= region[:-1]; grown[:-1] |= region[1:]; grown[:, 1:] |= region[:, :-1]; grown[:, :-1] |= region[:, 1:]
+        grown &= hole
+        if (grown == region).all():
+            break
+        region = grown
+    if region[0].any() or region[-1].any() or region[:, 0].any() or region[:, -1].any():
+        raise SystemExit(f"{name}: the loop is open — the fill reached the edge")
+    near = region.copy()
+    for _ in range(3):
+        near[1:] |= near[:-1].copy(); near[:-1] |= near[1:].copy(); near[:, 1:] |= near[:, :-1].copy(); near[:, :-1] |= near[:, 1:].copy()
+    edge = near & ~region
+    f = np.where(edge, np.clip((lo - 90) / 165, 0, 0.97), 0)  # how much of an edge pixel is the fill: gold has little blue
+    p[..., :3] = np.where(edge[..., None], (p[..., :3] - 255 * f[..., None]) / (1 - f[..., None]), p[..., :3])
+    p[..., 3] *= 1 - f
+    p[region, 3] = 0
+    put(manifest, name, Image.fromarray(np.clip(p, 0, 255).astype(np.uint8), "RGBA"), raw)
+    print(f"{name}: {int(region.sum())} px of the loop opened, {int(edge.sum())} edge px unmixed")
+
+
 def hands(manifest: dict, sheet: str, flip_arg: str, height_px: int, prefix: str = "hand-", poses=POSES, hang: bool = False):
     raw = Path(sheet).read_bytes()
     hands = cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), len(poses), hang)
@@ -244,6 +371,13 @@ def main():
     ap.add_argument("--basket")
     ap.add_argument("--glider")
     ap.add_argument("--family", help="the standing sheet again: gesture-rest/fist/open, ico-hand, skin-*")
+    ap.add_argument("--open-loop", action="store_true", help="make the white inside the amulet's cord transparent")
+    ap.add_argument("--pets", nargs=2, action="append", metavar=("SHEET", "NAMES"),
+                    help="the bird in its nest: a 3 × 2 sheet on magenta, six names (pet-young-wave-nest …) or «-»")
+    ap.add_argument("--icons", nargs=3, metavar=("SHEET", "NAMES", "SIZES"), help="objects on magenta → square icons")
+    ap.add_argument("--tiles", nargs=3, metavar=("SHEET", "NAMES", "SIZE"), help="scenes on white → square tiles (day-*)")
+    ap.add_argument("--cover", nargs=2, metavar=("NAME", "PNG"), help="an onboarding cover, 4 : 3")
+    ap.add_argument("--scene", nargs=2, action="append", metavar=("NAME", "PNG"), help="a whole-field game scene (bg-flight-day …)")
     ap.add_argument("--gestures", nargs=3, action="append", metavar=("SHEET", "NAMES", "FLIP"),
                     help="a sheet of standing hands, their gesture ids left to right («-» skips), ids drawn as left hands")
     args = ap.parse_args()
@@ -260,6 +394,18 @@ def main():
         prop(manifest, "prop-glider", args.glider, 480)
     if args.family:
         hand_family(manifest, args.family)
+    if args.open_loop:
+        open_loop(manifest)
+    if args.pets:
+        pets(manifest, args.pets)
+    if args.icons:
+        icons(manifest, args.icons[0], args.icons[1].split(","), [int(x) for x in args.icons[2].split(",")])
+    if args.tiles:
+        tiles(manifest, args.tiles[0], args.tiles[1].split(","), int(args.tiles[2]))
+    if args.cover:
+        cover(manifest, *args.cover)
+    if args.scene:
+        rooms(manifest, dict(args.scene))
     for sheet, names, flip in args.gestures or []:
         gesture_icons(manifest, sheet, names.split(","), set(flip.split(",")) - {"-"})
     ART.write_catalogue(manifest)

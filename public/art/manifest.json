@@ -411,10 +411,10 @@
   "gift-amulet": {
    "w": 192,
    "h": 192,
-   "bytes": 7662,
+   "bytes": 9652,
    "alpha": true,
-   "sha256": "b0d45365bb393c5f94c5ff11cccd202f3707ec6124525b9defd26f20f9908ea3",
-   "source": "37740fd21e44b91cb472ba15e5985ec086effe09903f4416ecd1dea697cd43f0"
+   "sha256": "6e2e8824bf5e3a46239969b6235f0c4a1347faf6430759a94fab400ae16ff14b",
+   "source": "b0d45365bb393c5f94c5ff11cccd202f3707ec6124525b9defd26f20f9908ea3"
   },
   "gift-apples": {
    "w": 192,
@@ -1220,7 +1220,7 @@
   ],
   "splash": "android/res/drawable-xxhdpi/splash_bird.png"
  },
- "total_bytes": 2127584,
+ "total_bytes": 2129574,
  "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)",
  "layout": {
   "pet-chick-happy": {
