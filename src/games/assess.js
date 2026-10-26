@@ -276,7 +276,7 @@ export class AssessmentGame extends Game {
     this.trials.forEach((t, i) => {
       drawLamp(ctx, w / 2 - (n - 1) * lw / 2 + i * lw, 22, lw * 0.3, t.state === 'ok' ? COLORS.good : t.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : null);
     });
-    text(ctx, `Попытка ${Math.min(this.index + 1, n)} из ${n}`, w / 2, 46, { size: 13, weight: 700, color: COLORS.muted });
+    text(ctx, `Попытка ${Math.min(this.index + 1, n)} из ${n}`, w / 2, 46, { size: 13, weight: 700, color: COLORS.muted, outline: true });
     const t = this.trial;
     if (!t) return;
     const cw = Math.min(w - 32, 330), ch = Math.min(Math.max(h * 0.5, Math.min(h - 130, 260)), 280), x0 = w / 2 - cw / 2;
