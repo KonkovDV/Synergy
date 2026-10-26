@@ -7,7 +7,9 @@ import { SESSION } from '../config.js';
 import { Game, clamp01, pct, REST_STUCK_HINT } from './base.js';
 import { SCHEME, COMMAND_NAME, COMMAND_POSE } from '../core/vocabulary.js';
 import { SIDES } from '../core/hands.js';
-import { COLORS, text, circle, fillRound, drawHand, panel, backdrop, scene } from '../render/draw.js';
+import { COLORS, text, fillRound, drawHand, drawLamp, holdRing, handShadow, panel, backdrop, scene, lookKey } from '../render/draw.js';
+import { drawSprite } from '../render/sprites.js';
+import { BRAND, linear, glow, lightTrail, wavePoints, rgba, glassPlate, cachedLayer } from '../render/fx.js';
 import { fmtFixed } from '../core/format.js';
 
 const WORD = { close: 'сжимает', open: 'раскрывает', rest: 'отдыхает' };
@@ -149,47 +151,73 @@ export class DuoGame extends Game {
 
   render(ctx, view, hand, intent) {
     const { w, h } = view;
-    backdrop(ctx, w, h, scene([[0, '#eaf2ff'], [1, '#f3eefc']], [[0, '#0b1430'], [1, '#140b24']]));
+    const deco = !COLORS.hc, dark = COLORS.theme === 'dark';
     const card = this.card;
     // The card: what each hand should do, as two small hands with a word under each.
     const cw = Math.min(w - 24, 300), ch = Math.max(92, Math.min(h * 0.3, 128)), x0 = w / 2 - cw / 2, y0 = 10;
+    const n = this.code.length, lw = Math.min(30, (w - 40) / n), lampY = y0 + ch + 14;
+    // 5.32 — two prostheses on a table (docs/GAME_VISUALS.md): the hands stand on the table, not at the screen edge.
+    const s = Math.max(30, Math.min(w * 0.19, (h - lampY - 64) / 2.3));
+    const tableY = Math.min(h - s * 0.75, Math.max(lampY + s * 2.1, h * 0.66));
+    cachedLayer(ctx, lookKey('duo'), w, h, g => paintTable(g, w, h, tableY, deco, dark));
     if (card && this.phase !== 'rest') panel(ctx, x0, y0, cw, ch, 18);
-    else fillRound(ctx, x0, y0, cw, ch, 18, scene('rgba(255,255,255,0.55)', 'rgba(255,255,255,0.06)'));
+    else fillRound(ctx, x0, y0, cw, ch, 18, scene('rgba(255,255,255,0.6)', 'rgba(255,255,255,0.06)'));
     const size = ch * 0.24;
     SIDES.forEach((side, i) => {
       const cx = x0 + cw * (i ? 0.75 : 0.25);
       const want = card && this.phase !== 'rest' ? card[side] : 'rest';
-      drawHand(ctx, { x: cx, y: y0 + ch * 0.62, size, pose: COMMAND_POSE[want], skin: 'icon', sleeve: false, mirror: side === 'left' });
-      text(ctx, `${i ? 'Правая' : 'Левая'}: ${COMMAND_NAME[want].toLowerCase()}`, cx, y0 + ch * 0.84, { size: 13, weight: 800, maxWidth: cw * 0.48 });
+      // 5.32: the gesture hands of the illustrations (mirrored for the left), the drawn hand until they load
+      const pic = { close: 'gesture-fist', open: 'gesture-open', rest: 'gesture-rest' }[want];
+      if (!drawSprite(ctx, pic, cx, y0 + ch * 0.42, Math.min(ch * 0.56, cw * 0.26), { sx: side === 'left' ? -1 : 1 })) {
+        drawHand(ctx, { x: cx, y: y0 + ch * 0.62, size, pose: COMMAND_POSE[want], skin: 'icon', sleeve: false, mirror: side === 'left' });
+      }
+      text(ctx, `${i ? 'Правая' : 'Левая'}: ${COMMAND_NAME[want].toLowerCase()}`, cx, y0 + ch * 0.86, { size: 13, weight: 800, maxWidth: cw * 0.48 });
     });
     if (card && this.phase !== 'rest') {
       const left = Math.max(0, this.limit - this.cardTime);
       text(ctx, `${fmtFixed(left)} с`, w / 2, y0 + 16, { size: 12, weight: 700, color: left < 1.5 ? COLORS.warnInk : COLORS.muted });
       if (this.liveFeedback(this.index)) {
-        ctx.strokeStyle = COLORS.good; ctx.lineWidth = 5; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.arc(w / 2, y0 + ch * 0.5, Math.min(22, ch * 0.2), -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp01(this.holdFor / this.level.hold)); ctx.stroke();
+        holdRing(ctx, w / 2, y0 + ch * 0.5, Math.min(22, ch * 0.2), clamp01(this.holdFor / this.level.hold));
       }
     } else text(ctx, 'Покой обеих рук', w / 2, y0 + 18, { size: 14, weight: 800, color: COLORS.muted });
-    // Code lamps.
-    const n = this.code.length, lw = Math.min(30, (w - 40) / n), lampY = y0 + ch + 14;
-    this.code.forEach((c, i) => circle(ctx, w / 2 - (n - 1) * lw / 2 + i * lw, lampY, lw * 0.3,
-      c.state === 'ok' ? COLORS.good : c.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : scene('#d5dde3', 'rgba(255,255,255,0.15)')));
-    // The two prostheses as they are now: each follows its own stream.
-    const s = Math.max(30, Math.min(w * 0.17, (h - lampY - 60) / 2.2));
+    // Code lamps: LEDs in sockets.
+    this.code.forEach((c, i) => {
+      drawLamp(ctx, w / 2 - (n - 1) * lw / 2 + i * lw, lampY, lw * 0.3, c.state === 'ok' ? COLORS.good : c.state === 'fail' ? COLORS.bad : i === this.index ? COLORS.warn : null);
+    });
+    // The two prostheses as they are now: each follows its own stream, standing on the table with its shadow.
     SIDES.forEach((side, i) => {
       const hnd = this.hands?.[side];
       const intentSide = intent?.sides?.[side];
-      drawHand(ctx, { x: w * (i ? 0.72 : 0.28), y: h - 26, size: s, pose: hnd?.pose?.() ?? COMMAND_POSE.rest, skin: this.skin, glow: intentSide?.intensity ?? 0, mirror: side === 'left' });
+      const hx = w * (i ? 0.72 : 0.28), hy = tableY + s * 0.18;
+      if (deco) handShadow(ctx, hx, tableY + s * 0.7, s * 1.1, 0.2);
+      drawHand(ctx, { x: hx, y: hy, size: s, pose: hnd?.pose?.() ?? COMMAND_POSE.rest, skin: this.skin, glow: intentSide?.intensity ?? 0, mirror: side === 'left' });
       if (!this.retention) {
         const seen = intentSide?.valid ? COMMAND_NAME[intentSide.command] : 'нет сигнала';
-        // on a pill: the word sits over the sleeve of the hand and must stay readable
-        const lx = w * (i ? 0.72 : 0.28), pw = Math.min(w * 0.4, 112);
-        fillRound(ctx, lx - pw / 2, h - 21, pw, 18, 9, scene('rgba(255,255,255,0.9)', 'rgba(11,20,48,0.85)'));
-        text(ctx, `${i ? 'П' : 'Л'}: ${seen}`, lx, h - 12, { size: 12, weight: 700, color: intentSide?.valid ? COLORS.text : COLORS.warnInk, maxWidth: pw - 8 });
+        // on a pill under the sleeve: the word stays readable over the table
+        const pw = Math.min(w * 0.4, 118), py = Math.min(h - 13, hy + s * 0.6 + 14);
+        if (deco) glassPlate(ctx, hx - pw / 2, py - 10, pw, 20, 10, { fill: scene('rgba(255,255,255,0.92)', 'rgba(11,20,48,0.9)'), rim: scene('rgba(5,16,26,0.1)', 'rgba(255,255,255,0.12)'), sheen: false });
+        else fillRound(ctx, hx - pw / 2, py - 10, pw, 20, 10, '#000000');
+        text(ctx, `${i ? 'П' : 'Л'}: ${seen}`, hx, py + 0.5, { size: 12, weight: 700, color: intentSide?.valid ? COLORS.text : COLORS.warnInk, maxWidth: pw - 8 });
       }
     });
     this.renderParticles(ctx);
   }
+}
+
+/** The static room of «Две руки» (5.32): a soft wall with the brand's glow and light trails, a table with a mint edge. */
+function paintTable(g, w, h, tableY, deco, dark) {
+  if (!deco) { backdrop(g, w, h, [[0, '#000000'], [1, '#000000']]); g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, tableY); g.lineTo(w, tableY); g.stroke(); return; }
+  backdrop(g, w, h, dark ? [[0, '#0b1430'], [1, '#140b24']] : [[0, '#e9f1ff'], [1, '#f3eefc']]);
+  glow(g, w * 0.5, tableY * 0.55, Math.min(w, h) * 0.7, BRAND.violet, dark ? 0.35 : 0.22);
+  glow(g, w * 0.05, h * 0.1, Math.min(w, h) * 0.6, BRAND.mint, dark ? 0.3 : 0.4);
+  const a = dark ? 0.8 : 0.45;
+  lightTrail(g, wavePoints(-20, w + 20, tableY - 40, 12, 70, 0), BRAND.mint, 2, a);
+  lightTrail(g, wavePoints(-20, w + 20, tableY - 22, 10, 90, 150), BRAND.violet, 1.5, a * 0.8);
+  // the table top in perspective, a mint edge light, the front
+  g.fillStyle = linear(g, 0, tableY, 0, h, dark ? [[0, '#1b2948'], [1, '#0e1529']] : [[0, '#ffffff'], [1, '#dfe7f2']], dark ? '#1b2948' : '#ffffff');
+  g.beginPath(); g.moveTo(w * 0.04, tableY); g.lineTo(w * 0.96, tableY); g.lineTo(w + 20, h); g.lineTo(-20, h); g.closePath(); g.fill();
+  g.fillStyle = BRAND.mint; g.fillRect(w * 0.04, tableY - 1, w * 0.92, 2);
+  glow(g, w / 2, tableY, w * 0.5, BRAND.mint, 0.3);
 }
 
 /** Which schemes «Две руки» has: each hand is two channels. */

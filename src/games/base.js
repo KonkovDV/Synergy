@@ -7,6 +7,8 @@ import { createRng } from '../core/rng.js';
 import { AdaptiveDifficulty } from '../core/adaptive.js';
 import { showsFeedback, blindBlock } from '../core/guidance.js';
 import { SIGNAL } from '../config.js';
+import { COLORS } from '../render/draw.js';
+import { sparkle, rgba } from '../render/fx.js';
 
 export const clamp01 = x => Math.max(0, Math.min(1, x));
 export const pct = x => Math.round(100 * clamp01(x));
@@ -120,6 +122,7 @@ export class Game {
     this.paused = false;
     this.events = [];                // { type:'sfx'|'haptic'|'toast', name, text }
     this.particles = [];
+    this.waves = [];                 // 5.32: rings that spread from a success
     this.hint = '';
   }
 
@@ -140,23 +143,45 @@ export class Game {
     this.time += dt;
     this.step(dt, intent, hand);
     this.particles = this.particles.filter(p => (p.life -= dt) > 0);
-    for (const p of this.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.g ?? 0) * dt; }
+    for (const p of this.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.g ?? 0) * dt; p.rot = (p.rot ?? 0) + (p.spin ?? 0) * dt; }
+    this.waves = this.waves.filter(w => (w.t += dt) < w.max);
   }
 
   /** Sparks of a success (5.17: never on a mistake); `maxLife` — seconds, at most 1. Off with «Меньше движения». */
-  burst(x, y, color, count = 14, speed = 160, g = 300, maxLife = 1) {
+  burst(x, y, color, count = 14, speed = 160, g = 300, maxLife = 1, ring = true) {
     if (this.reduceMotion) return;
     for (let i = 0; i < count; i++) {
       const a = this.rng() * Math.PI * 2, v = speed * (0.4 + this.rng());
-      this.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * 0.4, g, life: (0.5 + this.rng() * 0.5) * maxLife, max: 1, color, r: 2 + this.rng() * 3 });
+      this.particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * 0.4, g, life: (0.5 + this.rng() * 0.5) * maxLife, max: 1, color, r: 2 + this.rng() * 3,
+        rot: this.fxRand() * Math.PI, spin: (this.fxRand() - 0.5) * 8, star: i % 3 === 0 });
     }
+    if (ring) this.wave(x, y, color);
+  }
+
+  /** Cosmetic randomness (5.32): the spin of a sparkle must not shift the game's own random sequence. */
+  fxRand() { let x = this._fx ?? 0x9e3779b9; x ^= x << 13; x ^= x >>> 17; x ^= x << 5; this._fx = x >>> 0; return this._fx / 4294967296; }
+
+  /** 5.32 — a ring spreading from a success (the brand's light, Kao 2020: medium juice). Off with «Меньше движения». */
+  wave(x, y, color, size = 56, max = 0.5) {
+    if (this.reduceMotion) return;
+    this.waves.push({ x, y, color, size, t: 0, max });
   }
 
   renderParticles(ctx) {
+    for (const w of this.waves) {
+      const k = w.t / w.max, r = w.size * (0.35 + 0.65 * (1 - (1 - k) * (1 - k)));
+      ctx.globalAlpha = Math.max(0, 1 - k);
+      ctx.strokeStyle = w.color; ctx.lineWidth = 2 + 5 * (1 - k);
+      ctx.beginPath(); ctx.arc(w.x, w.y, r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    const deco = !COLORS.hc;
     for (const p of this.particles) {
-      ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2));
-      ctx.fillStyle = p.color;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      const a = Math.max(0, Math.min(1, p.life * 2));
+      if (deco) { ctx.fillStyle = p.color; ctx.globalAlpha = a * 0.18; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 3.2, 0, Math.PI * 2); ctx.fill(); } // a halo without a gradient per spark
+      ctx.globalAlpha = a;
+      if (p.star) sparkle(ctx, p.x, p.y, p.r * 2.2, deco ? rgba('#ffffff', 0.95) : p.color, p.rot ?? 0);
+      else { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); }
     }
     ctx.globalAlpha = 1;
   }
