@@ -388,10 +388,10 @@ export class GripGame extends Game {
     const need = o ? GRIP_NAME[o.grip] : '';
     panel(ctx, w - 150, 12, 138, 48, 14);
     if (deco) fillRound(ctx, w - 150, 12, 5, 48, 2.5, hand.grip === o?.grip ? COLORS.good : COLORS.warn);
-    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 79, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 124 });
-    text(ctx, o ? `Нужен: ${need}` : '', w - 79, 46, { size: 12, color: COLORS.muted, maxWidth: 124 });
-    text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 13, weight: 700, color: COLORS.muted, display: true });
-    if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, h - 14, { size: 11, weight: 600, color: deco ? '#a9b8c4' : COLORS.muted, maxWidth: w - 24 }); // on the bench, clear of the badge
+    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 79, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 124, outline: true });
+    text(ctx, o ? `Нужен: ${need}` : '', w - 79, 46, { size: 12, color: COLORS.muted, maxWidth: 124, outline: true });
+    text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 13, weight: 700, color: COLORS.muted, display: true, outline: true });
+    if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, h - 14, { size: 12, weight: 700, color: deco ? '#e7eef3' : COLORS.muted, maxWidth: w - 24, outline: true }); // on the dark bench: light ink plus a rim, so the disclaimer stays readable
     if (o && !(o.phase === 'done' && o.delivered)) pill(ctx, o.name, ox, oy + s * 0.78, deco, COLORS.text); // in the basket its name would sit on «корзина»
     this.renderParticles(ctx);
     if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, Math.max(52, h * 0.16), { size: 19, weight: 800, color: this.flash.color, outline: true, display: true, maxWidth: w - 24 }); // under the «1 / 6» counter
