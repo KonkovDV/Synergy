@@ -124,7 +124,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     // The same pixel size: keep the backing store (5.11 — a 1 px hint change re-allocated 4–6 MB, 12 times in 15 s).
     if (Math.round(r.width) === Math.round(view.w) && Math.round(r.height) === Math.round(view.h) && canvas.dataset.dpr === String(app.fps.degraded)) return;
     canvas.dataset.dpr = String(app.fps.degraded);
-    const dpr = Math.min(app.fps.degraded ? 1.5 : 2.5, window.devicePixelRatio || 1); // fewer pixels on a slow phone
+    // 5.32: up to 3 — the generated pictures are sharp on today's 3× screens; a slow phone still drops to 1.5 (FpsGuard)
+    const dpr = Math.min(app.fps.degraded ? 1.5 : 3, window.devicePixelRatio || 1);
     view = { w: Math.max(100, r.width), h: Math.max(100, r.height) };
     canvas.width = Math.round(view.w * dpr); canvas.height = Math.round(view.h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

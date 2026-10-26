@@ -42,9 +42,11 @@ test('art: the catalogue is the files — every entry exists with its size, byte
   assert.equal(ART_BYTES, manifest.total_bytes);
 });
 
-test('art: size budget — the whole set ≤ 2 MB, a pet ≤ 64 KB, an icon or a medal ≤ 32 KB, a scene ≤ 120 KB', () => {
-  assert.ok(ART_BYTES <= 2 * 1024 * 1024, `${(ART_BYTES / 1024).toFixed(0)} KB`);
-  const limit = name => (/^pet-/.test(name) ? 64 : /^(cover|bg)-/.test(name) ? 120 : /^(mio|game|day|empty)-/.test(name) ? 48 : 32) * 1024;
+// 5.32: the budget follows the real limit — the platform takes a 30 MB archive, and a picture lands in it about 4.3 times
+// (the tree, the history, the APK, the one-file HTML as base64). Measured 26.10: about 20 MB with 1.9 MB of pictures.
+test('art: size budget — the whole set ≤ 3.5 MB, a pet ≤ 64 KB, a generated hand, prop or scene ≤ 160 KB, an icon ≤ 32 KB', () => {
+  assert.ok(ART_BYTES <= 3.5 * 1024 * 1024, `${(ART_BYTES / 1024).toFixed(0)} KB`);
+  const limit = name => (/^(hand|prop)-/.test(name) ? 160 : /^pet-/.test(name) ? 64 : /^bg-(duo|grip)-/.test(name) ? 160 : /^(cover|bg)-/.test(name) ? 120 : /^(mio|game|day|empty)-/.test(name) ? 48 : 32) * 1024;
   const over = Object.keys(ART).filter(n => manifest.items[n].bytes > limit(n)).map(n => `${n}: ${(manifest.items[n].bytes / 1024).toFixed(1)} KB`);
   assert.deepEqual(over, []);
 });
@@ -177,7 +179,7 @@ test('build: dist/ carries the pictures and precaches them; the one-file build i
   const inline = JSON.parse(one.match(/window\.SYNERGY_ART=(\{.*?\});<\/script>/s)[1]);
   assert.deepEqual(Object.keys(inline).sort(), Object.keys(ART).sort());
   assert.ok(Object.values(inline).every(u => u.startsWith('data:image/webp;base64,')));
-  assert.ok(Buffer.byteLength(one) < 4 * 1024 * 1024, 'the one-file build stays under 4 MB');
+  assert.ok(Buffer.byteLength(one) < 6 * 1024 * 1024, 'the one-file build stays under 6 MB (the archive limit is 30 MB)');
 });
 
 // 5.16, found on Windows: a PowerShell round trip read a UTF-8 file as Windows-1251 and wrote it back — the title of
