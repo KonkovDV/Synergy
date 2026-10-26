@@ -1412,7 +1412,7 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 .level.rec { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px }
 
 /* The signal bar: a deeper track with an inner shadow, rounded fills with a light edge. */
-/* Height stays 14 px: the short landscape tutorial has no spare vertical pixel (docs/AUDIT.md §53 LAY-1). */
+/* Height stays 14 px. A border under the top bar also grew it by 1 px; the line is a shadow now (docs/AUDIT.md §53 LAY-1). */
 .meter-bar { box-shadow: inset 0 1px 3px rgba(5, 16, 26, .14) }
 .meter-bar .fill { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45) }
 .meter-chip { box-shadow: var(--shadow-1); transition: background-color .12s ease }
@@ -1453,7 +1453,7 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
   border: 1px solid var(--hair); box-shadow: var(--edge), var(--shadow-1) }
 
 /* Bars: glass over the page; a hairline under the top bar. */
-.top-bar { background: var(--glass-bg); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px); border-bottom: 1px solid var(--hair) }
+.top-bar { background: var(--glass-bg); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px); box-shadow: 0 1px 0 var(--hair) } /* a shadow, not a border: the bar keeps its height */
 .bottom-nav { background: var(--glass); -webkit-backdrop-filter: saturate(1.8) blur(20px); backdrop-filter: saturate(1.8) blur(20px); border-color: var(--hair); box-shadow: var(--edge), var(--shadow-2) }
 .nav-item { transition: color .15s ease }
 .nav-item .nav-icon { transition: background .2s ease, transform .18s var(--spring) }
@@ -1507,3 +1507,18 @@ p, li, small { text-wrap: pretty }
 :root.hc .segmented, :root.hc input[type=checkbox], :root.hc input[type=checkbox]::before, :root.hc .nav-item.active .nav-icon { box-shadow: none }
 :root.hc .btn:active:not(:disabled) { box-shadow: inset 0 0 0 3px var(--text) }
 @media (forced-colors: active) { .top-bar, .bottom-nav, .toast { -webkit-backdrop-filter: none; backdrop-filter: none } }
+
+/* 5.32 — a brighter page: three brand glows behind the content (mint, sky, violet; quieter at night). Decoration only:
+   cards keep their solid surfaces, so no text changes its contrast; high contrast stays black. */
+:root { --page-glow-1: rgba(22, 225, 130, .26); --page-glow-2: rgba(47, 166, 224, .2); --page-glow-3: rgba(91, 79, 214, .14) }
+:root[data-theme="dark"] { --page-glow-1: rgba(22, 225, 130, .12); --page-glow-2: rgba(47, 166, 224, .12); --page-glow-3: rgba(91, 79, 214, .14) }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page-glow-1: rgba(22, 225, 130, .12); --page-glow-2: rgba(47, 166, 224, .12); --page-glow-3: rgba(91, 79, 214, .14) } }
+body {
+  background:
+    radial-gradient(620px 420px at 110% -6%, var(--page-glow-1), transparent 70%),
+    radial-gradient(560px 460px at -16% 30%, var(--page-glow-2), transparent 70%),
+    radial-gradient(640px 420px at 70% 108%, var(--page-glow-3), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+:root.hc body { background: var(--bg) }
