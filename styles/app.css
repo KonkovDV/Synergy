@@ -1411,7 +1411,7 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 .level.rec { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px }
 
 /* The signal bar: a deeper track with an inner shadow, rounded fills with a light edge. */
-.meter-bar { height: 16px; box-shadow: inset 0 1px 3px rgba(5, 16, 26, .14) }
+.meter-bar { box-shadow: inset 0 1px 3px rgba(5, 16, 26, .14) } /* the height stays 14 px: 2 px more pushed a pad off a 320 px landscape screen */
 .meter-bar .fill { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45) }
 .meter-chip { box-shadow: var(--shadow-1); transition: background-color .12s ease }
 
