@@ -262,7 +262,7 @@ test('the calendar reminder invites (rest is an answer too); a child’s rings b
   const now = new Date(2026, 9, 20, 10, 0);
   assert.match(reminderIcs('03:00', now, 4, { child: true }), /DTSTART:\d{8}T080000/);
   assert.match(reminderIcs('03:00', now, 4), /DTSTART:\d{8}T030000/);
-  assert.match(reminderIcs('19:00', now, 4).replace(/\r\n /g, ''), /DESCRIPTION:Можно потренироваться 10 минут — или отдохнуть/);
+  assert.match(reminderIcs('19:00', now, 4).replace(/\r\n /g, ''), /DESCRIPTION:Можно потренироваться 5–10 минут — или отдохнуть/);
 });
 
 test('no stars is still a counted practice — said first', () => {

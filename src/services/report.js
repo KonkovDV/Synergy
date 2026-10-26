@@ -289,7 +289,7 @@ export function reminderIcs(time = '19:00', now = new Date(), weeklyGoal = 4, { 
     `UID:synergy-${now.getTime()}@local`, `DTSTAMP:${utc}`, `DTSTART:${day}T${pad(hh)}${pad(mm)}00`, `DURATION:PT${SESSION.activeMin[1]}M`, `RRULE:FREQ=WEEKLY;BYDAY=${REMINDER_DAYS[weeklyGoal] ?? REMINDER_DAYS[4]}`,
     `SUMMARY:Синергия: тренировка ${SESSION.activeMin[0]}–${SESSION.activeMin[1]} минут`, 'DESCRIPTION:Тренировка дня ждёт. Устали или болит — сегодня отдых.',
     // 5.17 — an invitation, not an order: rest is a valid answer to the reminder too (no guilt for a missed day).
-    'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', `DESCRIPTION:Можно потренироваться ${SESSION.activeMin[1]} минут — или отдохнуть`, 'END:VALARM',
+    'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', `DESCRIPTION:Можно потренироваться ${SESSION.activeMin[0]}–${SESSION.activeMin[1]} минут — или отдохнуть`, 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR',
   ].map(foldIcsLine).join('\r\n');
 }
