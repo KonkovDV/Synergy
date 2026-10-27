@@ -1,10 +1,10 @@
 {
  "version": "5.32.0",
- "generated": "2026-10-27T13:31:31.936Z",
+ "generated": "2026-10-27T14:09:35.239Z",
  "tests": {
-  "total": 432,
+  "total": 433,
   "failed": 0,
-  "at": "2026-10-27T13:31:31.935Z",
+  "at": "2026-10-27T14:09:35.238Z",
   "platform": "win32 10.0.26200",
   "node": "v24.11.0"
  },
@@ -15,8 +15,8 @@
   "errors": 0,
   "browser": "156.0.8078.4",
   "axe": "4.14.0",
-  "source": "b84f13864f21b071",
-  "at": "2026-10-27T13:30:12.388Z",
+  "source": "acd7c11bc786a92d",
+  "at": "2026-10-27T14:08:25.293Z",
   "platform": "win32 10.0.26200",
   "node": "v24.11.0"
  },
@@ -27,23 +27,23 @@
   "combinations": 1824,
   "findings": 0,
   "errors": 0,
-  "seconds": 1035,
-  "source": "b84f13864f21b071",
-  "at": "2026-10-27T13:28:49.659Z",
+  "seconds": 1023,
+  "source": "acd7c11bc786a92d",
+  "at": "2026-10-27T14:07:02.184Z",
   "platform": "win32 10.0.26200",
   "node": "v24.11.0"
  },
  "apk": {
   "file": "release/Synergy-5.32.0.apk",
-  "bytes": 3738011,
+  "bytes": 3738015,
   "kb": 3650,
-  "sha256": "c1ade3d3682c5de8259c6953ebd2b05fb1437d4e00fa72d3f33a6f73c645edf6"
+  "sha256": "92897941f0f219c3eab70105ed6294b18339a04a9a08716ee23997de96a0f62e"
  },
  "html": {
   "file": "release/synergy-standalone.html",
-  "bytes": 4838671,
+  "bytes": 4838686,
   "kb": 4725,
-  "sha256": "998d9279d1ed7ff7c686f6debdad85135071f57ce9cbc0efb98b5331ac841972"
+  "sha256": "f2d04c126f2a6a5f662464a0d909f9e37345926c8796cd78f0efaba83d73d522"
  },
  "art": {
   "pictures": 183,

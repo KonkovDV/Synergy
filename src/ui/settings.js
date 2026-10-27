@@ -359,9 +359,12 @@ export function calibrationScreen(app) {
         // not clear rest (the slider is already at its top), so it is said and not applied.
         const s = app.settings, current = [s.sensitivity, s.sensitivityB ?? s.sensitivity];
         const hostRaw = app.prosthesisThresholds();
-        const judging = save && !hostRaw;
+        // Judge the person's own line even when nothing can be saved. One flat channel used to hide the other
+        // channel's ripple when that ripple sat between their slider and the default 22 % line. The offer to raise
+        // a slider still needs a calibration we keep: a new threshold on the old calibration would be a different muscle.
+        const judging = kind !== 'touch' && !hostRaw;
         const judged = judging ? current.map((v, ch) => thresholdForRest(r.restLevel?.[ch], v)) : [null, null];
-        const raise = judged.map(x => (x?.clears ? x : null));
+        const raise = judged.map(x => (save && x?.clears ? x : null));
         const stuck = judged.map((x, ch) => (x && !x.clears ? ch : null)).filter(ch => ch !== null);
         // The recorder's ripple line is the default 22 %. Compare it with the line that will actually switch the
         // channel on: the prosthesis thresholds read through this calibration, or the game sliders.
