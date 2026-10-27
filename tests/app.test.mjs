@@ -408,6 +408,33 @@ test('5.32: a calibration that cannot be saved keeps its rest-ripple warning; th
   assert.match(capped, /покой может включить/);
 });
 
+test('5.32: a flat channel does not hide the other channel\'s ripple under a threshold below 22 %', () => {
+  globalThis.location ??= { protocol: 'https:', search: '' };
+  const wobble = (i, k) => k * Math.sin(i * 1.7) * Math.cos(i * 0.31);
+  const run = sensitivity => {
+    const app = fresh();
+    app.updateSettings({ source: 'bridge', wsUrl: '', sensitivity, sensitivityB: 0.22 });
+    const screen = calibrationScreen(app);
+    nodes(screen.node).find(n => n.tag === 'button' && n.kids?.some(k => k.textContent === 'Начать калибровку')).on.click();
+    for (let i = 0, t = 0; t <= 12500; i++, t += 16) {
+      const step = t < 3000 ? 'rest' : t < 6000 ? 'a' : t < 8000 ? 'relax' : 'b';
+      // Rest of A reaches the switch-off of 10 % and not of 22 %. B never leaves rest (a flat channel).
+      window.Synergy.feed({ a: (step === 'a' ? 0.6 : 0.1) + wobble(i, 0.03), b: 0.05 + wobble(i + 5, 0.002) });
+      screen.tick(t, 1 / 60);
+    }
+    return { app, text: textOf(screen.node), screen };
+  };
+  const low = run(0.10);
+  assert.match(low.text, /Канал B: напряжение почти не отличается/);
+  assert.match(low.text, /Канал A: в покое сигнал дрожит/, 'the 10 % line is the one in force, not the default 22 %');
+  assert.doesNotMatch(low.text, /Поднять порог по дрожи покоя/, 'nothing is saved, so nothing is offered');
+  assert.ok(nodes(low.screen.node).some(n => n.tag === 'button' && n.kids?.some(k => k.textContent === 'Понятно')));
+  assert.equal(low.app.settings.sensitivity, 0.10);
+  const atDefault = run(0.22);
+  assert.match(atDefault.text, /Канал B: напряжение почти не отличается/);
+  assert.doesNotMatch(atDefault.text, /Канал A: в покое сигнал дрожит/, 'the same ripple stays under the 22 % line');
+});
+
 test('5.32: the prosthesis line, not the default 22 %, decides whether rest ripple is warned', () => {
   globalThis.location ??= { protocol: 'https:', search: '' };
   const run = thresholds => {

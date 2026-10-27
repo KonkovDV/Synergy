@@ -179,7 +179,7 @@
 ```bash
 npm test && npm run build && node tools/gesture-drill.mjs
 node tests/e2e/v5.mjs                    # сервер поднимает сам (C.1.43); 0 ошибок JS, a11y: [] ; скриншоты → docs/screenshots
-npm run audit:layout                     # ≈ 6 мин; записать число состояний и находок с датой и средой (C.1.45)
+npm run audit:layout                     # ≈ 17 мин, 1824 сочетания; вторую не начинать, пока первая держит JSON (C.1.45)
 # версия: patch — исправления, minor — функции; package.json (+ package-lock), src/config.js, AndroidManifest (versionCode +1), CHANGELOG, CITATION.cff (version, date-released), значок и имя APK в README
 VERIFY_API=1 sh tools/build-apk.sh && cp android/build/synergy.apk release/Synergy-X.Y.Z.apk && cp dist/synergy-standalone.html release/ && git rm release/Synergy-<старая>.apk
 npm run pack                             # zip + проверка распакованной копии; должно быть «Черновик без ошибок»
