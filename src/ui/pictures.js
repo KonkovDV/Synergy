@@ -48,9 +48,11 @@ const inPicture = (name, item) => item === NESTED && name.endsWith('-nest');
 /**
  * The picture of the Firebird for a stage, a mood and an optional pose (young and grown birds wave, read and hold a
  * star). A pose that covers a slot where something is worn (the star above the head, the book on the chest) gives way
- * to the mood picture: what the player chose to wear is never hidden.
+ * to the mood picture, so a pose does not hide what the player chose to wear.
  * 26.10: with the nest of twigs worn, the bird is a picture of its own sitting in the nest (`…-nest`, generated whole —
  * one light, one scale); the nest is not laid under the bird. Where that picture is missing, the nest is laid as before.
+ * A sleeping bird in that picture is the one exception: its chest is in the bowl, so a chest thing with no place above
+ * the twigs (the amulet) is not drawn on top — it stays under the bird. Beads that fit above the twigs are still drawn.
  */
 export function petPictureName(stage, mood, pose = null, items = {}) {
   const nested = name => (items.nest === NESTED && Object.hasOwn(ART, `${name}-nest`) ? `${name}-nest` : name);
@@ -105,18 +107,31 @@ export function petPicture(stage, mood, size, { items = {}, pose = null, cls = '
 /** Pictures that games draw on the canvas: the Workshop objects, the gesture hands of «Сейф», the bionic hands, the generated rooms and the basket, the tutorial lock. */
 export const CANVAS_PICTURES = Object.freeze(Object.keys(ART).filter(n => /^(obj|gesture|hand|bg-(duo|grip|flight|rhythm|safe)|prop)-/.test(n)).concat('ico-lock'));
 
-/** Loads the canvas pictures once, in the background, into render/sprites.js (a game draws its drawing until then). */
-export function loadSprites(names = CANVAS_PICTURES) {
+/** The rooms of one game. «Первые шаги» uses the studio of «Две руки». Empty until those files exist. */
+export function roomPictures(game) {
+  const prefix = { duo: 'bg-duo-', grip: 'bg-grip-', flight: 'bg-flight-', rhythm: 'bg-rhythm-', safe: 'bg-safe-', tutorial: 'bg-duo-' }[game];
+  return prefix ? CANVAS_PICTURES.filter(n => n.startsWith(prefix)) : [];
+}
+
+const spriteLoads = new Set();
+
+/**
+ * Loads canvas pictures once, in the background, into render/sprites.js (a game draws its drawing until then).
+ * Rooms stay out of the default set: a room is about 4 MB decoded, and the home screen never paints one.
+ * A game and the tutorial ask for their own (`roomPictures`) when they open.
+ */
+export function loadSprites(names = CANVAS_PICTURES.filter(n => !n.startsWith('bg-'))) {
   if (typeof Image === 'undefined') return;
   for (const name of names) {
-    if (!hasArt(name)) continue;
+    if (!hasArt(name) || spriteLoads.has(name)) continue;
+    spriteLoads.add(name);
     const img = new Image();
     img.decoding = 'async';
     // 5.32: given to the games once decoded (HTMLImageElement.decode) — the first frame that draws a big picture (a
     // room, a hand) does not stall on decoding it, which a weak phone shows as a jerk. Not an ImageBitmap: those stay
     // decoded in memory for good (≈ 4 MB a room), an <img> the browser may drop and decode again under memory pressure.
     img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => setSprite(name, img));
-    img.onerror = () => failed.add(name);
+    img.onerror = () => { spriteLoads.delete(name); failed.add(name); };
     img.src = artUrl(name);
   }
 }

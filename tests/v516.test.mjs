@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { ART, ART_BYTES, PET_LAYOUT } from '../src/ui/art-manifest.js';
-import { petPictureName, petThings, CANVAS_PICTURES } from '../src/ui/pictures.js';
+import { petPictureName, petThings, CANVAS_PICTURES, roomPictures } from '../src/ui/pictures.js';
 import { PET } from '../src/config.js';
 import { PET_ITEMS, PET_SLOTS } from '../src/core/pet.js';
 import { ACHIEVEMENTS, SKINS } from '../src/core/progress.js';
@@ -122,6 +122,15 @@ test('art: the canvas pictures — every Workshop object and the lock of the tut
   assert.ok(kinds.length >= 10, kinds.join());
   assert.deepEqual(kinds.filter(k => !drawnInCode.has(k) && !CANVAS_PICTURES.includes(`obj-${OBJECTS[k].art ?? k}`)), []); // 5.31: hot tea is drawn in the cup
   assert.ok(CANVAS_PICTURES.includes('ico-lock'));
+  // Rooms decode to about 4 MB each and the home screen never paints one: they load with their game.
+  assert.deepEqual([...roomPictures('grip')].sort(), ['bg-grip-day', 'bg-grip-night']);
+  assert.deepEqual([...roomPictures('tutorial')].sort(), ['bg-duo-day', 'bg-duo-night']);
+  assert.deepEqual(roomPictures('flight'), [], 'no generated sky until the archive has room');
+  const pictures = readFileSync('src/ui/pictures.js', 'utf8');
+  assert.match(pictures, /names = CANVAS_PICTURES\.filter\(n => !n\.startsWith\('bg-'\)\)/);
+  assert.match(readFileSync('src/ui/play.js', 'utf8'), /loadSprites\(roomPictures\(game\)\)/);
+  assert.match(readFileSync('src/ui/tutorial.js', 'utf8'), /loadSprites\(roomPictures\('tutorial'\)\)/);
+  assert.match(readFileSync('src/ui/tutorial.js', 'utf8'), /cleanup\(\) \{ clearTints\(\)/);
 });
 
 test('pet layout: every box inside the frame; slots by stage; the star pose leaves no head, the book no chest', () => {
@@ -163,6 +172,7 @@ test('pet picture: mood and pose, and a pose gives way to what is worn where it 
   assert.equal(petPictureName('young', 'fed', null, { nest: 'apples' }), 'pet-young-happy', 'apples by the nest — no nest');
   assert.deepEqual(petThings('pet-young-happy-nest', { head: 'kokoshnik', chest: 'beads', nest: 'twigs' }).map(t => t.item), ['kokoshnik', 'beads'], 'the nest is the picture');
   assert.deepEqual(petThings('pet-young-rest-nest', { chest: 'amulet', nest: 'twigs' }).map(t => t.item), [], 'the amulet is under the sleeping bird');
+  assert.deepEqual(petThings('pet-young-rest-nest', { chest: 'beads', nest: 'twigs' }).map(t => t.item), ['beads'], 'beads that fit above the twigs stay visible');
   assert.equal(petPictureName('young', 'fed', 'star', { head: null, chest: 'beads', nest: 'apples' }), 'pet-young-star');
   assert.equal(petPictureName('firebird', 'fed', 'read', { chest: 'amulet' }), 'pet-firebird-happy', 'the amulet would be under the book');
   const things = petThings('pet-young-happy', { head: 'kokoshnik', chest: 'beads', nest: 'twigs' });
