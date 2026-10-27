@@ -9,7 +9,7 @@ import { COLORS, text, holdRing } from '../render/draw.js';
 import { BRAND, glow, radial, clearLayers } from '../render/fx.js';
 import { clearTints } from '../render/sprites.js';
 import { gameArt, mio } from './art.js';
-import { useFlier } from './pictures.js';
+import { useFlier, loadSprites, roomPictures } from './pictures.js';
 import { petStageIndex, wornItems } from '../core/pet.js';
 import { PET } from '../config.js';
 import { LiveAnnouncer } from '../core/announce.js';
@@ -25,6 +25,7 @@ import { howFor } from '../games/registry.js';
 const FEEDBACK_HINT = /^(Держите|Сильнее|Слабее|Слабо|Сильно|Отлично|Несите)/;
 
 export function playScreen(app, { game, level, retention = false, plan = false, demo = false, pose = null, quick = false }) {
+  loadSprites(roomPictures(game)); // the room of this game only — not the four rooms at startup
   const s = app.settings;
   // 5.16+: in «Полёт» the player's Firebird flies through the rings once it has wings (fledgling on); the egg and the
   // chick leave it to the glider. The game reads the sprite `flight-flier` (render/sprites.js). 26.10: in its outfit.
