@@ -131,7 +131,10 @@ const WORN_IN_FLIGHT = item => item && !/^(twigs|apples|lantern|book)$/.test(ite
  * at the boxes of art-manifest.js (as petPicture lays them), drawn once into a canvas — the game draws one sprite.
  * Until the pictures load, or if a thing fails to, the bird flies as it is; the egg and the chick leave it to the glider.
  */
+let flierTicket = 0;
+
 export function useFlier(alias, stageId, items = {}) {
+  const ticket = ++flierTicket;
   const name = petFlyer(stageId);
   if (!name || !hasArt(name) || typeof Image === 'undefined') { setSprite(alias, null); return; }
   const layout = PET_LAYOUT[name] ?? {};
@@ -143,10 +146,13 @@ export function useFlier(alias, stageId, items = {}) {
     img.onerror = () => { failed.add(n); no(new Error(n)); };
     img.src = artUrl(n);
   });
+  const current = () => ticket === flierTicket;
   setSprite(alias, null); // until it has loaded, the game draws its own
   load(name).then(body => {
+    if (!current()) return;
     if (!worn.length || typeof document === 'undefined') { setSprite(alias, body); return; }
     Promise.allSettled(worn.map(item => load(`gift-${item}`))).then(results => {
+      if (!current()) return;
       const W = body.naturalWidth, H = body.naturalHeight;
       const canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
@@ -162,7 +168,7 @@ export function useFlier(alias, stageId, items = {}) {
       });
       setSprite(alias, canvas);
     });
-  }, () => setSprite(alias, null));
+  }, () => { if (current()) setSprite(alias, null); });
 }
 
 /** CSS `url()` of a picture for a background (the nest room, the home header), or null. */
