@@ -8,7 +8,7 @@ import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
 import { COLORS, text, textWidth, scaledPx, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
 import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
-import { drawBionic, bionicTip, skinTint, workshopPlace } from '../render/bionic.js';
+import { drawBionic, bionicTip, bionicGraspShift, bionicAspect, skinTint, workshopPlace } from '../render/bionic.js';
 import { drawSprite, spriteAspect } from '../render/sprites.js';
 
 /** The first of these grips the gesture set has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by «Щипок»). */
@@ -374,7 +374,9 @@ export class GripGame extends Game {
       ctx.fillStyle = linear(ctx, 0, top, 0, bottom, [[0, rgba(BRAND.mint, 0.0)], [0.25, rgba(BRAND.mint, scene(0.16, 0.2))], [1, rgba(BRAND.mint, 0.0)]], 'rgba(0,0,0,0)');
       ctx.beginPath(); ctx.moveTo(handX - s * 0.25, top); ctx.lineTo(handX + s * 0.25, top); ctx.lineTo(handX + s * 0.6, bottom); ctx.lineTo(handX - s * 0.6, bottom); ctx.closePath(); ctx.fill();
     }
-    if (!drawBionic(ctx, handX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0, ...held })) {
+    // a pinch or a key holds the thing between the thumb and the index, right of the picture's centre (26.10)
+    const aspect = bionicAspect('hang'), drawX = handX - (this.mirror ? -1 : 1) * (aspect ? bionicGraspShift(held) * ht / aspect : 0);
+    if (!drawBionic(ctx, drawX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0, ...held })) {
       drawHand(ctx, { x: handX, y: hy, size: s, pose, skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
     }
     // Force gauge (hidden in the retention probe).
