@@ -22,9 +22,14 @@ export const BIONIC = Object.freeze({
   },
   hang: {
     pics: { open: 'hand-down-open', rest: 'hand-down-rest', close: 'hand-down-close' },
-    light: { open: [0.451, 0.485], rest: [0.453, 0.491], close: [0.472, 0.496] },
+    light: { open: [0.451, 0.485], rest: [0.453, 0.491], close: [0.472, 0.496], pinch: [0.431, 0.461], key: [0.447, 0.499], point: [0.435, 0.443] },
     band: 0.402,
-    tip: { open: 0.993, rest: 0.955, close: 0.824 },
+    // the line that closes on a thing: the fingertips of a fist; for a pinch and a key — where they hold it (`grasp`)
+    // put on the same line, so the Workshop lays every grip on its object one way (26.10)
+    tip: { open: 0.993, rest: 0.955, close: 0.824, pinch: 0.869, key: 0.809, point: 0.984 },
+    // where a grip holds a thing, in fractions of the picture: the pinch between the tips of the thumb and the index,
+    // the key between the thumb's pad and the side of the index (read from 2× crops with a 0.1 grid)
+    grasp: { pinch: [0.70, 0.80], key: [0.60, 0.74] },
     // 26.10: the grips whose fingers disagree (a pinch, a key), the same hand from another sheet scaled onto these
     // pictures (tools/import-generated.py --hang-grips); a grip closes from the open hand straight into its picture
     grips: { pinch: 'hand-down-pinch', key: 'hand-down-key', point: 'hand-down-point' },
@@ -68,6 +73,15 @@ export const skinTint = skin => mix(SKIN_COLORS[skin]?.light ?? SKIN_COLORS.grap
 function gripBlend(kind, grip, amount) {
   const name = grip && BIONIC[kind].grips?.[grip];
   return name && sprite(name) && Number.isFinite(amount) ? ['open', grip, Math.min(1, Math.max(0, amount))] : null;
+}
+
+/**
+ * How far to move a hanging hand sideways so that its grip closes on the thing under its centre, in fractions of the
+ * picture's width (toward the thumb; 0 for a fist, the open hand or a grip without a picture). Grows as it closes.
+ */
+export function bionicGraspShift({ grip = null, amount = null } = {}) {
+  const held = gripBlend('hang', grip, amount), at = held && BIONIC.hang.grasp[grip];
+  return at ? (at[0] - 0.5) * settle(held[2]) : 0;
 }
 
 /** Where the fingertips of a hanging hand are in this pose (or closing into `grip`), in fractions of the picture. */

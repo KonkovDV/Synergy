@@ -211,7 +211,8 @@ def icons(manifest: dict, sheet: str, names: list[str], sizes: list[int]):
     """Objects on the magenta key, left to right, each centred on a transparent square (game-*, ico-*)."""
     raw = Path(sheet).read_bytes()
     for name, size, (img, _) in zip(names, sizes, cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), len(names), False)):
-        side = int(max(img.size) * (1.35 if name.startswith("obj-") else 1.08))  # a Workshop object fills ~¾ of its square, as obj-* of 5.16
+        # as the pictures of 5.16 around them: a Workshop object fills ~¾ of its square, a game or a card icon ~⅘
+        side = int(max(img.size) * (1.35 if name.startswith("obj-") else 1.2 if name.startswith(("game-", "ico-")) else 1.08))
         square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
         square.paste(img, ((side - img.width) // 2, (side - img.height) // 2))
         put(manifest, name, ART.resize(square, (size, size)), raw)
@@ -222,6 +223,26 @@ def tiles(manifest: dict, sheet: str, names: list[str], size: int):
     raw = Path(sheet).read_bytes()
     img = Image.open(io.BytesIO(raw)).convert("RGB")
     p = np.asarray(img).astype(np.int32)
+    # 26.10: a generator may lay each scene on its own off-white rounded tile (≈ 249 on 255). Then the whole tile is the
+    # picture — cropped by content, a bag or a table would end in a hard edge — with its off-white lifted to white
+    tile = p.sum(axis=2) < 255 * 3 - 6
+    cols = np.nonzero(tile.any(0))[0]
+    frames = [f for f in np.split(cols, np.nonzero(np.diff(cols) > 12)[0] + 1) if len(f) > 0.18 * p.shape[1]]  # not the sheet's edge vignette
+    if len(frames) == len(names):
+        for name, f in zip(names, frames):
+            rows = np.nonzero(tile[:, f[0]:f[-1] + 1].any(1))[0]
+            box = p[rows[0]:rows[-1] + 1, f[0]:f[-1] + 1]
+            bg = float(np.median(np.concatenate([box[24:40, 24:60].ravel(), box[24:40, -60:-24].ravel()])))  # the tile's top corners, inside the rounding
+            lifted = Image.fromarray(np.clip(box * (255.0 / bg), 0, 255).astype(np.uint8), "RGB")
+            side = max(lifted.size)
+            square = Image.new("RGB", (side, side), (255, 255, 255))
+            square.paste(lifted, ((side - lifted.width) // 2, (side - lifted.height) // 2))
+            out = ART.resize(square, (size, size))
+            data = ART.webp(out, 86)
+            ART.write(ART.OUT / f"{name}.webp", data)
+            manifest["items"][name] = {"w": out.width, "h": out.height, "bytes": len(data), "alpha": False, "sha256": ART.sha256(data), "source": ART.sha256(raw)}
+            print(f"{name:20s} {out.width}x{out.height} {len(data) / 1024:5.1f} KB  (tile, white {bg:.0f} → 255)")
+        return
     ink = (255 * 3 - p.sum(axis=2)) > 36  # anything but the white, shadows included
     cols = np.nonzero(ink.any(0))[0]
     groups = np.split(cols, np.nonzero(np.diff(cols) > 12)[0] + 1)
@@ -257,6 +278,14 @@ NEST_W, NEST_FLOOR, PET_SIZE = 0.62, 0.95, 512
 # 26.10: the archive of the platform holds ≈ 6 MB more and a picture lands in it ≈ 4.3 times (docs/ART.md, «Бюджет»):
 # the 21 birds in their nests at WebP 80 (≈ 20 KB each, the team's birds are 17–48 KB), the grips of the hanging hand at 85
 PET_QUALITY, GRIP_QUALITY = 80, 85
+
+
+def nest_layouts(manifest: dict):
+    """What the birds in their nests wear (tools/import-art.py pet_layout: the eyes in EYES, a chest thing lifted above
+    the twigs); the nest itself is the picture, so it has no box."""
+    for name in sorted(n for n in manifest["items"] if n.startswith("pet-") and n.endswith("-nest")):
+        manifest.setdefault("layout", {})[name] = ART.pet_layout(name, Image.open(ART.OUT / f"{name}.webp").convert("RGBA"))
+        print(f"{name:28s} {manifest['layout'][name]}")
 
 
 def grid_cells(rgba: np.ndarray, cols: int = 3, rows: int = 2) -> list[np.ndarray]:
@@ -304,6 +333,7 @@ def pets(manifest: dict, sheets: list[tuple[str, str]]):
         frame = Image.new("RGBA", (PET_SIZE, PET_SIZE), (0, 0, 0, 0))
         frame.paste(img, (round(PET_SIZE / 2 - cx * k), round(NEST_FLOOR * PET_SIZE - bottom * k)))  # clipped to the frame
         put(manifest, name, frame, raw, PET_QUALITY)
+    nest_layouts(manifest)
 
 
 def grips(manifest: dict, sheet: str, names: list[str], hang: bool):
@@ -324,8 +354,14 @@ def grips(manifest: dict, sheet: str, names: list[str], hang: bool):
         near = sorted((end + step * 3, end + step * (3 + max(4, img.height // 40))))
         cols = np.nonzero(a[near[0]:near[1]].any(0))[0]
         return (cols[0] + cols[-1]) / 2, cols[-1] - cols[0] + 1, end
+    def wrist(img):  # the centre and width of the hand at its wrist band
+        a = np.asarray(img.getchannel("A")) > 128
+        row = band_row(img)
+        cols = np.nonzero(a[row - 2:row + 3].any(0))[0]
+        return (cols[0] + cols[-1]) / 2, cols[-1] - cols[0] + 1
     rcx, rw, rend = socket(ref)
     rband = band_row(ref)
+    rwx, rww = wrist(ref)
     gap = round(0.03 * H) * (-1 if hang else 1)  # the socket starts this far past the band
     for name, (img, _) in zip(names, cut(unkey(np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))), len(names), hang)):
         if name == "-":
@@ -333,24 +369,54 @@ def grips(manifest: dict, sheet: str, names: list[str], hang: bool):
         if name.startswith("!"):
             name, img = name[1:], img.transpose(Image.FLIP_LEFT_RIGHT)
         cx, w, end = socket(img)
-        k = rw / w
-        big = ART.resize(img, (round(img.width * k), round(img.height * k)))
-        dy = rband - band_row(big)
-        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        canvas.paste(big, (round(rcx - cx * k), dy))
-        # the socket from just past the band to its end, stretched onto the reference's
-        cut_row, own_end = rband + gap, round(end * k) + dy
-        lo, hi = sorted((cut_row, own_end))
-        part = Image.new("RGBA", (W, hi - lo + 1), (0, 0, 0, 0))
-        part.paste(big, (round(rcx - cx * k), dy - lo))
-        tlo, thi = sorted((cut_row, rend))
-        canvas.paste((0, 0, 0, 0), (0, 0, W, thi + 1) if hang else (0, tlo, W, H))
-        canvas.paste(ART.resize(part, (W, thi - tlo + 1)), (0, tlo))
+        if hang:
+            # hanging: the forearm is the same in every pose, so the arm and the band are the Workshop's own (the sheet
+            # of the grips has a short cuff); the hand below the band is the new one, scaled to the same wrist and, if its
+            # fingers reach lower than the frame, a little smaller about the band (26.10)
+            wx, ww = wrist(img)
+            k = rww / ww
+            reach = (np.nonzero((np.asarray(img.getchannel("A")) > 128).any(1))[0][-1] - band_row(img)) * k
+            k *= min(1.0, (0.985 * H - rband) / reach)
+            big = ART.resize(img, (round(img.width * k), round(img.height * k)))
+            hand = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            hand.paste(big, (round(rwx - wx * k), rband - band_row(big)))
+            seam = rband + 3
+            fade = np.clip((np.arange(H) - seam) / 4.0, 0, 1)[:, None, None]  # 4 px from the Workshop's band to the new hand
+            canvas = Image.fromarray(np.clip(np.asarray(ref, dtype=np.float64) * (1 - fade) + np.asarray(hand, dtype=np.float64) * fade, 0, 255).astype(np.uint8), "RGBA")
+        else:
+            # standing: the sheets of the gestures have the hands' own socket — the same width, the band on the same row,
+            # the socket stretched to the same end
+            k = rw / w
+            big = ART.resize(img, (round(img.width * k), round(img.height * k)))
+            dy = rband - band_row(big)
+            canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            canvas.paste(big, (round(rcx - cx * k), dy))
+            cut_row, own_end = rband + gap, round(end * k) + dy
+            lo, hi = sorted((cut_row, own_end))
+            part = Image.new("RGBA", (W, hi - lo + 1), (0, 0, 0, 0))
+            part.paste(big, (round(rcx - cx * k), dy - lo))
+            tlo, thi = sorted((cut_row, rend))
+            canvas.paste((0, 0, 0, 0), (0, tlo, W, H))
+            canvas.paste(ART.resize(part, (W, thi - tlo + 1)), (0, tlo))
         put(manifest, name, canvas, raw, GRIP_QUALITY if hang else QUALITY)
         light, band = marks(canvas)
         rows = np.nonzero((np.asarray(canvas.getchannel("A")) > 128).any(1))[0]
         tip = rows[-1] if hang else rows[0]
         print(f"  light {light}  band {band}  tip {tip / H:.3f}  scale {k:.3f}")
+
+
+def hue_to(manifest: dict, name: str, colour: str):
+    """Turns the hue of a picture's coloured pixels to that of `colour`, keeping their saturation and light (26.10: the
+    generated cube came out lavender, the game's cube is cornflower #5A8DFF)."""
+    raw = (ART.OUT / f"{name}.webp").read_bytes()
+    img = Image.open(io.BytesIO(raw)).convert("RGBA")
+    hsv = np.asarray(img.convert("RGB").convert("HSV")).astype(np.int32)
+    target = Image.new("RGB", (1, 1), colour).convert("HSV").getpixel((0, 0))[0]
+    coloured = hsv[..., 1] > 40
+    hsv[..., 0] = np.where(coloured, target, hsv[..., 0])
+    rgb = Image.fromarray(hsv.astype(np.uint8), "HSV").convert("RGB")
+    rgb.putalpha(img.getchannel("A"))
+    put(manifest, name, rgb, raw)
 
 
 def open_loop(manifest: dict, name: str = "gift-amulet", seed=(0.49, 0.26)):
@@ -422,8 +488,10 @@ def main():
     ap.add_argument("--glider")
     ap.add_argument("--family", help="the standing sheet again: gesture-rest/fist/open, ico-hand, skin-*")
     ap.add_argument("--open-loop", action="store_true", help="make the white inside the amulet's cord transparent")
+    ap.add_argument("--hue", nargs=2, metavar=("NAME", "COLOUR"), help="turn a picture's hue to that of a colour (#5A8DFF)")
     ap.add_argument("--hang-grips", nargs=2, metavar=("SHEET", "NAMES"), help="hanging hands in other grips: hand-down-pinch,hand-down-key,…")
     ap.add_argument("--stand-grips", nargs=2, action="append", metavar=("SHEET", "NAMES"), help="standing hands in other grips: hand-pinch,…, «!» — mirror, «-» — skip")
+    ap.add_argument("--nest-layouts", action="store_true", help="the boxes of what the birds in their nests wear, again")
     ap.add_argument("--pets", nargs=2, action="append", metavar=("SHEET", "NAMES"),
                     help="the bird in its nest: a 3 × 2 sheet on magenta, six names (pet-young-wave-nest …) or «-»")
     ap.add_argument("--icons", nargs=3, metavar=("SHEET", "NAMES", "SIZES"), help="objects on magenta → square icons")
@@ -448,8 +516,12 @@ def main():
         hand_family(manifest, args.family)
     if args.open_loop:
         open_loop(manifest)
+    if args.hue:
+        hue_to(manifest, *args.hue)
     if args.pets:
         pets(manifest, args.pets)
+    if args.nest_layouts:
+        nest_layouts(manifest)
     if args.hang_grips:
         grips(manifest, args.hang_grips[0], args.hang_grips[1].split(","), True)
     for sheet, names in args.stand_grips or []:
