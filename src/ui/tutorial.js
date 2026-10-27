@@ -10,6 +10,8 @@ import { ACHIEVEMENTS } from '../core/progress.js';
 import { drawHand, drawGauge, circle, COLORS } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 import { drawBionic, roomPlace, skinTint } from '../render/bionic.js';
+import { clearTints } from '../render/sprites.js';
+import { loadSprites, roomPictures } from './pictures.js';
 
 /** A padlock on the tutorial canvas (5.14): the prosthesis is locked — signals do not move it. */
 function padlock(ctx, x, y, color) {
@@ -21,6 +23,7 @@ function padlock(ctx, x, y, color) {
 }
 
 export function tutorialScreen(app, { from = 'home' } = {}) {
+  loadSprites(roomPictures('tutorial')); // the studio of «Две руки», not at startup
   const s = app.settings;
   const run = new TutorialRun(s.scheme, { lockHoldS: s.lockHoldS, gripSwitch: s.gripSwitch, holdOpenS: s.holdOpenS });
   let locked = false; // 5.14: between «Замок» and «Открыть замок» the drawn prosthesis holds still, a padlock shows it
@@ -97,5 +100,6 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
       const ch = run.step?.id === 'open' ? 'b' : 'a';
       drawGauge(ctx, { x: 282, y: 20, w: 20, h: 180, value: intent[ch], min: band?.[0] ?? null, max: band?.[1] ?? null, color: COLORS[ch], label: ch.toUpperCase() });
     },
+    cleanup() { clearTints(); }, // the tinted shell of the hand; the play screen drops its own on leaving
   };
 }
