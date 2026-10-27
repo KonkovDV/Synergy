@@ -84,6 +84,11 @@ export function bionicGraspShift({ grip = null, amount = null } = {}) {
   return at ? (at[0] - 0.5) * settle(held[2]) : 0;
 }
 
+/** Whether drawBionic can show this pose: its grip picture is loaded, or the fingers agree enough for open/rest/fist. */
+export function bionicHolds(kind, pose, grip, amount) {
+  return !!gripBlend(kind, grip, amount) || (!!pose && poseSpan(pose) <= PICTURE_SPAN);
+}
+
 /** Where the fingertips of a hanging hand are in this pose (or closing into `grip`), in fractions of the picture. */
 export function bionicTip(pose, { grip = null, amount = null } = {}) {
   const [a, b, t] = gripBlend('hang', grip, amount) ?? handBlend(pose), k = settle(t), tip = BIONIC.hang.tip;

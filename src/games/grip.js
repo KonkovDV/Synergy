@@ -8,7 +8,7 @@ import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
 import { COLORS, text, textWidth, scaledPx, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
 import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
-import { drawBionic, bionicTip, bionicGraspShift, bionicAspect, skinTint, workshopPlace } from '../render/bionic.js';
+import { drawBionic, bionicTip, bionicHolds, bionicGraspShift, bionicAspect, skinTint, workshopPlace } from '../render/bionic.js';
 import { drawSprite, spriteAspect } from '../render/sprites.js';
 
 /** The first of these grips the gesture set has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by «Щипок»). */
@@ -368,15 +368,17 @@ export class GripGame extends Game {
     // object, so the fist closes over it. The drawn hand stands in until the pictures load.
     const fingerReach = s * 1.72, hy = oy - fingerReach - s * 0.1, pose = hand.pose(), held = { grip: hand.grip, amount: hand.closure };
     const ht = s * 2.6, handTop = oy - s * 0.18 - bionicTip(pose, held) * ht;
+    // A pinch, a point or a key has no hanging picture yet: the drawn hand is lower, and the scan light must start there.
+    const usePicture = bionicHolds('hang', pose, hand.grip, hand.closure);
     if (deco) handShadow(ctx, handX, beltY + 2, s, 0.12);
     if (deco && o && o.phase === 'grasp' && !hand.inContact) {
-      const top = handTop + ht * 0.62, bottom = oy + s * 0.2;
+      const top = usePicture ? handTop + ht * 0.62 : hy + s, bottom = oy + s * 0.2;
       ctx.fillStyle = linear(ctx, 0, top, 0, bottom, [[0, rgba(BRAND.mint, 0.0)], [0.25, rgba(BRAND.mint, scene(0.16, 0.2))], [1, rgba(BRAND.mint, 0.0)]], 'rgba(0,0,0,0)');
       ctx.beginPath(); ctx.moveTo(handX - s * 0.25, top); ctx.lineTo(handX + s * 0.25, top); ctx.lineTo(handX + s * 0.6, bottom); ctx.lineTo(handX - s * 0.6, bottom); ctx.closePath(); ctx.fill();
     }
     // a pinch or a key holds the thing between the thumb and the index, right of the picture's centre (26.10)
     const aspect = bionicAspect('hang'), drawX = handX - (this.mirror ? -1 : 1) * (aspect ? bionicGraspShift(held) * ht / aspect : 0);
-    if (!drawBionic(ctx, drawX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0, ...held })) {
+    if (!usePicture || !drawBionic(ctx, drawX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0, ...held })) {
       drawHand(ctx, { x: handX, y: hy, size: s, pose, skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
     }
     // Force gauge (hidden in the retention probe).
