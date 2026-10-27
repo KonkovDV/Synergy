@@ -1544,3 +1544,14 @@ body {
 .boot span { color: var(--muted); font-size: .9375rem }
 @keyframes boot-in { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 @media (prefers-reduced-motion: reduce) { .boot { animation: none } }
+
+/* ===== 26.10 — the bird in its nest is one picture (pet-*-nest): a hop or a bounce lifted the nest off the ground
+   with it. Here it perks up in place — squash and stretch from the nest's bottom (95 % of the frame) — and a wave
+   rocks the nest a little. Still off with reduced motion (the rule for :root.rm and prefers-reduced-motion). ===== */
+.pet-pic.nested > .fb-bird { transform-origin: 50% 95% }
+.firebird.nested.alive .fb-bird { animation-name: fb-nest-breathe }
+.firebird-fed.nested.alive .fb-bird, .firebird.nested.anim-hop .fb-bird, .firebird.nested.anim-celebrate .fb-bird { animation-name: fb-nest-perk }
+.firebird.nested.anim-wave .fb-bird { animation-name: fb-nest-rock }
+@keyframes fb-nest-breathe { 0%, 100% { transform: none } 50% { transform: scaleY(1.015) } }
+@keyframes fb-nest-perk { 0%, 100% { transform: none } 30% { transform: scale(.98, 1.045) } 60% { transform: scale(1.03, .97) } 80% { transform: scale(.995, 1.005) } }
+@keyframes fb-nest-rock { 0%, 100% { transform: none } 25% { transform: rotate(-3deg) } 50% { transform: rotate(2.5deg) } 75% { transform: rotate(-1.5deg) } }

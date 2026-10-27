@@ -170,6 +170,19 @@ test('pet picture: mood and pose, and a pose gives way to what is worn where it 
   assert.deepEqual(petThings('pet-egg-waiting', { head: 'bow', nest: 'lantern' }).map(t => t.item), ['lantern'], 'an egg wears nothing on a head');
 });
 
+test('26.10 the bird in its nest is one picture: its motions stay on the ground', () => {
+  const css = readFileSync('styles/app.css', 'utf8'), js = readFileSync('src/ui/pictures.js', 'utf8');
+  assert.match(js, /name\.endsWith\('-nest'\) \? ' nested'/, 'the box of a nest picture is marked');
+  for (const [rule, name] of [[/\.firebird\.nested\.anim-hop \.fb-bird[^{]*\{ animation-name: (fb-nest-[a-z]+)/, 'fb-nest-perk'], [/\.firebird\.nested\.anim-wave \.fb-bird \{ animation-name: (fb-nest-[a-z]+)/, 'fb-nest-rock']]) {
+    assert.equal(css.match(rule)?.[1], name);
+  }
+  for (const k of ['fb-nest-breathe', 'fb-nest-perk', 'fb-nest-rock']) {
+    const frames = css.match(new RegExp(`@keyframes ${k} \\{(.*)\\}`))?.[1];
+    assert.ok(frames, k);
+    assert.doesNotMatch(frames, /translate/, `${k}: the nest does not leave the ground`);
+  }
+});
+
 test('sprites: a game draws a picture only once it has loaded; else it keeps its drawing', () => {
   assert.equal(sprite('obj-egg-test'), null);
   const calls = [];
