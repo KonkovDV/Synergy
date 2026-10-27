@@ -25,11 +25,23 @@ const { emptyState } = await import('../src/core/storage.js');
 const { dayKey, recordDayNote } = await import('../src/core/progress.js');
 const { calibrationScreen } = await import('../src/ui/settings.js');
 const { tutorialScreen } = await import('../src/ui/tutorial.js');
+const { sharePlain } = await import('../src/ui/share.js');
 
 const fresh = () => { store.clear(); return new App(el('main')); };
 const nodes = n => [n, ...(n?.kids ?? []).flatMap(nodes)];
 const textOf = n => nodes(n).map(x => x.textContent ?? '').join(' ');
 const byClass = (n, c) => nodes(n).filter(x => String(x.attrs?.class ?? '').split(' ').includes(c));
+
+test('week share: the sheet can be cancelled, and the progress screen asks only an adult', async () => {
+  const src = readFileSync(new URL('../src/ui/progress.js', import.meta.url), 'utf8');
+  assert.match(src, /audience === 'child' \? null/);
+  assert.match(src, /Поделиться успехом недели/);
+  assert.match(src, /weekShareText\(p\)/);
+  const line = 'На этой неделе в «Синергии» — 1 день с игрой.';
+  assert.equal(await sharePlain(line, { share: async payload => { assert.equal(payload.text, line); throw Object.assign(new Error('cancel'), { name: 'AbortError' }); }, clipboard: { writeText: async () => { throw new Error('no'); } } }), 'cancel');
+  assert.equal(await sharePlain(line, { clipboard: { writeText: async t => { assert.equal(t, line); } } }), 'copied');
+  assert.equal(await sharePlain(line, {}), 'none');
+});
 
 test('reset and undo re-apply the signal source (the game loop threw on a null bridge after undo)', () => {
   let app = fresh();
