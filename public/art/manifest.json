@@ -179,10 +179,10 @@
   "cover-prosthesis": {
    "w": 900,
    "h": 675,
-   "bytes": 18204,
+   "bytes": 29292,
    "alpha": false,
-   "sha256": "071182c8d502708a576c3fa2334005c1d2d331e80abe22d538a802ce02a86b17",
-   "source": "731c8cedbc85b18ba3bd2fe4bec3a023e1aa709e995ca143ff92e38353dad97b"
+   "sha256": "143875ac21b7d9df9905b2202ec70e852143313bbd65d9bb13096863296459d3",
+   "source": "be5689c1b06f8b8d4cdb88941d09c4426add67e2e61bdfc334f9ff678b5c3164"
   },
   "cover-safety": {
    "w": 900,
@@ -203,18 +203,18 @@
   "day-apple": {
    "w": 256,
    "h": 256,
-   "bytes": 3408,
+   "bytes": 4092,
    "alpha": false,
-   "sha256": "e8213ae48f2efb283330d98bf516fcee1cc54493d37541a4c088e04b582a6a22",
-   "source": "999a264b4a80dcc065026d26e09ec3654878f9014457e44bf15a1d76353e81ab"
+   "sha256": "97d334bc411e116d523457ce6a159e01eeb5e29321cd7651bd2e414ff95644a2",
+   "source": "b27c08efb10aa6b3745d348fa53e6083f25fc70d622a6cb3f2723fb06311ec08"
   },
   "day-bag": {
    "w": 256,
    "h": 256,
-   "bytes": 2402,
+   "bytes": 3496,
    "alpha": false,
-   "sha256": "0a2028ca39ee2519cd849ca36efb6c345445ac639cc45e1a1c6812233ae050ce",
-   "source": "68f4abae52001d9d7f4737f5ff26f694b74b1f81610b5aff62b3e54fda2975a9"
+   "sha256": "1e246f17fc774b410b5b2e2b321694be4a8dc64cb112444571cf5750f1b923a4",
+   "source": "b27c08efb10aa6b3745d348fa53e6083f25fc70d622a6cb3f2723fb06311ec08"
   },
   "day-bottle": {
    "w": 256,
@@ -243,10 +243,10 @@
   "day-paper": {
    "w": 256,
    "h": 256,
-   "bytes": 3558,
+   "bytes": 4602,
    "alpha": false,
-   "sha256": "09b49497f0ed311b40ac041b0bed202801483c8dda257d123b44808ecbcbe3d8",
-   "source": "cfae079e622e05ab31dac1903ef42fae0e1717048c00c6517d4e4c2acc67f9f0"
+   "sha256": "be3ecb85c7da1b5ce218cc56166c7d9d81c686f77b2e08e8d4be93c75549c326",
+   "source": "b27c08efb10aa6b3745d348fa53e6083f25fc70d622a6cb3f2723fb06311ec08"
   },
   "day-pegs": {
    "w": 256,
@@ -307,10 +307,10 @@
   "game-grip": {
    "w": 256,
    "h": 256,
-   "bytes": 11878,
+   "bytes": 10714,
    "alpha": true,
-   "sha256": "ae49dfc3f8f3253d9e082721e5637d78bee866b3953e0260945d52fa88598e34",
-   "source": "3fbc29b389ac83fb26d8f96aaee480da1ca85034e6e8586529592910f30c30ba"
+   "sha256": "5ce7e923a99b5035cd9ad9c9f9cf16b769e0d5d88f37710013cd0a5c097dd5b1",
+   "source": "a0d150aa567e2c1fac8bba06cdf0d5ebd829abea93698d8f8cad931759b19307"
   },
   "game-rhythm": {
    "w": 256,
@@ -331,10 +331,10 @@
   "game-tutorial": {
    "w": 256,
    "h": 256,
-   "bytes": 8696,
+   "bytes": 10258,
    "alpha": true,
-   "sha256": "47e0002273c72c258e8fe4c2c32168eefc13db42939e9bd7ceb9a08aef12343b",
-   "source": "ab82d252771733973c841496b70fe2f1f9ab36dc4e40ad700c707928a9a2f9a8"
+   "sha256": "65a73c7867001ba38535f318650f927571c8cf834febf3d5214f3d65774deaf3",
+   "source": "a0d150aa567e2c1fac8bba06cdf0d5ebd829abea93698d8f8cad931759b19307"
   },
   "gesture-fist": {
    "w": 256,
@@ -504,6 +504,14 @@
    "sha256": "dbb909168abdc01ebf70ca0d6f6caa6143c8ec5a0cdac7eeb3bf163828d416bb",
    "source": "f73741eceab780ecc2fa94c02a2f48e0811764cc8ba885bfec9b1a0385825949"
   },
+  "hand-down-key": {
+   "w": 364,
+   "h": 686,
+   "bytes": 30654,
+   "alpha": true,
+   "sha256": "7802f04b7bea5e912ddd49b440940f49dd0ae62de080af0be831bb2973f493a2",
+   "source": "bebd738477fd620bf0b99efbcab4195ded3ec8e6c3fb2d6a2ee6d36a980beaab"
+  },
   "hand-down-open": {
    "w": 364,
    "h": 686,
@@ -511,6 +519,22 @@
    "alpha": true,
    "sha256": "aada4b34f6fe33c3962cda41c854b4cec64ebc3320b063cf2fbfac6104c6dd8b",
    "source": "f73741eceab780ecc2fa94c02a2f48e0811764cc8ba885bfec9b1a0385825949"
+  },
+  "hand-down-pinch": {
+   "w": 364,
+   "h": 686,
+   "bytes": 40364,
+   "alpha": true,
+   "sha256": "d7ee61706d6bf9230556d0a0d4e1a16d1e497430e7e45007994834b7a20d6d28",
+   "source": "bebd738477fd620bf0b99efbcab4195ded3ec8e6c3fb2d6a2ee6d36a980beaab"
+  },
+  "hand-down-point": {
+   "w": 364,
+   "h": 686,
+   "bytes": 37470,
+   "alpha": true,
+   "sha256": "37a64f50a9a77e5fbe0e09e53156e7a7a49d4092671cd12f3117ae234ae7ad04",
+   "source": "bebd738477fd620bf0b99efbcab4195ded3ec8e6c3fb2d6a2ee6d36a980beaab"
   },
   "hand-down-rest": {
    "w": 364,
@@ -667,10 +691,10 @@
   "ico-everyday": {
    "w": 160,
    "h": 160,
-   "bytes": 5458,
+   "bytes": 6350,
    "alpha": true,
-   "sha256": "47f3853974b869fac6a6b4d2caf8cdd867e830e2183dc50274ebb45b98bf001a",
-   "source": "3464dc6e25571f298ea4123f7b3b20d6b579e29a1176936806d2ca85eab9d502"
+   "sha256": "41a9c621a01a7bb73873c18c37abd29996884c2869887355726774a80a98d760",
+   "source": "a0d150aa567e2c1fac8bba06cdf0d5ebd829abea93698d8f8cad931759b19307"
   },
   "ico-gift": {
    "w": 160,
@@ -976,6 +1000,14 @@
    "sha256": "868c5bc5fe0555a2d96977aea195fc521a05890d620cf67aca11125c3d6740af",
    "source": "2d128b371110c0e84a937292b78336a2d15967a1ef1642b4e8586438c51044af"
   },
+  "obj-cube": {
+   "w": 192,
+   "h": 192,
+   "bytes": 6654,
+   "alpha": true,
+   "sha256": "7e2520894525963da0a21f27d86e6f259e140e13eab9a016b1fb2ee3c451cab1",
+   "source": "87e58f4d60ef2974ef8714bcf508a74ac973670212040386e074f7a283a24bba"
+  },
   "obj-cup": {
    "w": 192,
    "h": 192,
@@ -1008,6 +1040,14 @@
    "sha256": "f6467252ca1db18491eeb2606b1d399b28c68be3bb6b0cb0b0690723d14f2320",
    "source": "a012da1fee2d9c18dcaa2b1a3c83e26fd5bbf25438e2c16b9009872cda166f92"
   },
+  "obj-ring": {
+   "w": 192,
+   "h": 192,
+   "bytes": 8304,
+   "alpha": true,
+   "sha256": "d72e5243dc7f398d051ed9d702d4dfaa03f648b6522702826d9fab30af977a78",
+   "source": "f9cb579b9858d735092445baf1c835efc37f5e528c1839f4e8547e5afe44a652"
+  },
   "obj-sponge": {
    "w": 192,
    "h": 192,
@@ -1024,6 +1064,14 @@
    "sha256": "b6af05c8157b0c5bcce21360ca8c9051956497b87c44e6e09ed6be13c5a048c2",
    "source": "4f27877d3bcc27210b821c11f030337556a54aa554c3f1b5f904ae53bf071ddd"
   },
+  "pet-chick-happy-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 28486,
+   "alpha": true,
+   "sha256": "370bfc5ad483938c8f57b546793ba8f3c5040ec05c0ef9ec433c93ea8bd5c11e",
+   "source": "51cad8503eb6bcb34568f3db0e13f6f87ba56a2d124c19cdfb9c1fb093cc41d3"
+  },
   "pet-chick-rest": {
    "w": 512,
    "h": 512,
@@ -1031,6 +1079,14 @@
    "alpha": true,
    "sha256": "1e16061f25a06020a98be877ad12fb38454d9cae7156202291142ee6af8a70ba",
    "source": "80bae3337f7f5608c45ef4376913664c1d62242fe136540ec74b66565cf130c0"
+  },
+  "pet-chick-rest-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 21738,
+   "alpha": true,
+   "sha256": "83d7964de959a4f1e3cb2fb90695957805df561fadb05eb23525ba24de0754d8",
+   "source": "51cad8503eb6bcb34568f3db0e13f6f87ba56a2d124c19cdfb9c1fb093cc41d3"
   },
   "pet-chick-waiting": {
    "w": 512,
@@ -1040,6 +1096,14 @@
    "sha256": "8d636ef8ea87563967846ca93a0d3ea583664b74e0282a8e26facf573f254e3e",
    "source": "12d3a34e6a46ba7aad6139f63d86136ab70701c3f8f68cb202ce48021e5618b5"
   },
+  "pet-chick-waiting-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 20904,
+   "alpha": true,
+   "sha256": "5cf815e57d683feaf472eeee7e93153f619cc0de75cfe92b7030cfc125ff2c40",
+   "source": "51cad8503eb6bcb34568f3db0e13f6f87ba56a2d124c19cdfb9c1fb093cc41d3"
+  },
   "pet-egg-happy": {
    "w": 512,
    "h": 512,
@@ -1047,6 +1111,14 @@
    "alpha": true,
    "sha256": "627d8ab177b3914222566657ee8e346d351d14d7cf1176edf31bde495f925c8a",
    "source": "83d84545702775ed2ff5e840e40142b168eeb9aff79100bec0614e65bfc15b62"
+  },
+  "pet-egg-happy-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 25892,
+   "alpha": true,
+   "sha256": "f281336fb676a6c8507c0b1d7868558920df5f442356253fdadf020b51fdfc7f",
+   "source": "51cad8503eb6bcb34568f3db0e13f6f87ba56a2d124c19cdfb9c1fb093cc41d3"
   },
   "pet-egg-rest": {
    "w": 512,
@@ -1056,6 +1128,14 @@
    "sha256": "890f9511146b1a464aaf1870d88b2c30ad878d7f406b16e451378fcb08a5c735",
    "source": "6e361fc372da80fe527ef6f3e2b2cd3d689a0de3f9e3a9c1b15eba08a9ec7d88"
   },
+  "pet-egg-rest-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 19514,
+   "alpha": true,
+   "sha256": "7e8ae808629a94d3b080d34187489e6ec247b874f55b3bba8cc272b7f65432d4",
+   "source": "51cad8503eb6bcb34568f3db0e13f6f87ba56a2d124c19cdfb9c1fb093cc41d3"
+  },
   "pet-egg-waiting": {
    "w": 512,
    "h": 512,
@@ -1063,6 +1143,14 @@
    "alpha": true,
    "sha256": "8c9be1eb3decdae3dfdfbf8a9ccea0fe41af979dcc17c480ff1ed7fd72ac9d47",
    "source": "b77debd5124fa98c9b4bba0d5f868cb9bf082fe0fea6e48972c383f4e8f1e255"
+  },
+  "pet-egg-waiting-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 17468,
+   "alpha": true,
+   "sha256": "458e8ccbc07f31959ef89efe4afd1462f41d6e3873357a859ef702ee64e3e0e7",
+   "source": "51cad8503eb6bcb34568f3db0e13f6f87ba56a2d124c19cdfb9c1fb093cc41d3"
   },
   "pet-firebird-happy": {
    "w": 512,
@@ -1072,6 +1160,14 @@
    "sha256": "180ded8e432b7778ed851f176e56bf88971e77a6c88ed0777f22c4660ed96b24",
    "source": "5babdc5ae5e128c9021383622ca6b20435e4d0c734c4d187e3aeab163cec3503"
   },
+  "pet-firebird-happy-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 41494,
+   "alpha": true,
+   "sha256": "4b712636dd903a46b77c159c73df5e2549ab9709930047cf9cebd6d781a76257",
+   "source": "1c63cbed5dabcf184c5b0b7a7f07796be73c318b85420a9702a4d0b6628d45e5"
+  },
   "pet-firebird-read": {
    "w": 512,
    "h": 512,
@@ -1079,6 +1175,14 @@
    "alpha": true,
    "sha256": "accfdac774c0e3559fac435b7b5c1163b02eaa9b87f4f7e390673fe2321fbcc7",
    "source": "afc4bc84d5a498932d1812c0e986b44bf6b1d01c38eccc2b1f8b4f8b4be917ac"
+  },
+  "pet-firebird-read-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 34860,
+   "alpha": true,
+   "sha256": "41a0a02944e532097d7ce7776e210e288ab5ea11ac341818478b8a7985903344",
+   "source": "1c63cbed5dabcf184c5b0b7a7f07796be73c318b85420a9702a4d0b6628d45e5"
   },
   "pet-firebird-rest": {
    "w": 512,
@@ -1088,6 +1192,14 @@
    "sha256": "382ea6e3ff0a837fdb794f5e3c98e89c21a761ecb8d4ad26a9430665f04c0577",
    "source": "4acace14fb90233cdfefd566cbe8ab4264882c256f9bd4f4b334fa20da55d551"
   },
+  "pet-firebird-rest-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 35438,
+   "alpha": true,
+   "sha256": "76de7dd1892a9d5c6bd5cfc7851ab9b3084ceaa65a6f18f85e4cbfc14edb72dc",
+   "source": "1c63cbed5dabcf184c5b0b7a7f07796be73c318b85420a9702a4d0b6628d45e5"
+  },
   "pet-firebird-star": {
    "w": 512,
    "h": 512,
@@ -1095,6 +1207,14 @@
    "alpha": true,
    "sha256": "6ffc2178f08b30985488d3fd6a3d9270cd9574d869127df43855c2e3dc532d2f",
    "source": "0a4ac9a2e34be38bc816053e92e95a83de0f1b77bedf21e4052ba18952f9dd41"
+  },
+  "pet-firebird-star-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 40650,
+   "alpha": true,
+   "sha256": "5060407813f0aa1da03d98a7d39ae3afa341c37f52fbfd6a8e1d6b25733b6da4",
+   "source": "1c63cbed5dabcf184c5b0b7a7f07796be73c318b85420a9702a4d0b6628d45e5"
   },
   "pet-firebird-waiting": {
    "w": 512,
@@ -1104,6 +1224,14 @@
    "sha256": "d2d941e3639cc554a4640d00686e2257edd7ad5a4f4b58f813938dfee7fe3287",
    "source": "b8c9a73b1ccba7b7557101d354c2c7d4f4dcaa761e5d3d22591d2c172884aaa6"
   },
+  "pet-firebird-waiting-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 36196,
+   "alpha": true,
+   "sha256": "fc83648523ff70e617b5975d49e2de66221cf29318ab86939c80912e048423da",
+   "source": "1c63cbed5dabcf184c5b0b7a7f07796be73c318b85420a9702a4d0b6628d45e5"
+  },
   "pet-firebird-wave": {
    "w": 512,
    "h": 512,
@@ -1111,6 +1239,14 @@
    "alpha": true,
    "sha256": "fbbb69c0b511cc4dfcfcbe8221321a275ff6dcd599981b1360ceae8ae2e63a4d",
    "source": "416343f3691a421b0382e7efecf7884f34a15075f5e5226c7d49959960386a6d"
+  },
+  "pet-firebird-wave-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 39912,
+   "alpha": true,
+   "sha256": "0cef19046944789a2e1c17a665e41b5c4066239648a8aedccb51ac07b8b44d40",
+   "source": "1c63cbed5dabcf184c5b0b7a7f07796be73c318b85420a9702a4d0b6628d45e5"
   },
   "pet-fledgling-happy": {
    "w": 512,
@@ -1120,6 +1256,14 @@
    "sha256": "5d2366a43d120e67409732ee3b1ef870e84439df92f089e4be2156e2ecb67e35",
    "source": "772dd8d7c38fafbbc16e64214b684ee691665c251746e6de5b085cc9e076edc6"
   },
+  "pet-fledgling-happy-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 28572,
+   "alpha": true,
+   "sha256": "4f49e1c108d6118f292121da3917b1e3f2a0af044196290c9240e0b46b47aa62",
+   "source": "e16020db13ce6e506e22486fffed3e762f4bb020bfef83bf51e0bdcdd7fe8c18"
+  },
   "pet-fledgling-rest": {
    "w": 512,
    "h": 512,
@@ -1127,6 +1271,14 @@
    "alpha": true,
    "sha256": "d82b05efe0fa8e83c9483de4e2ea993e4eb61e5063057adea6df11a8ff613435",
    "source": "87559a2172b1195310fee35e901ef51b6bcd0c4ae4a23a1646997a3829a5535c"
+  },
+  "pet-fledgling-rest-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 22652,
+   "alpha": true,
+   "sha256": "c6decbfdd09de1612b0144fbddaf6e71e7fd16f31a8b3fbe352217bf4d369658",
+   "source": "e16020db13ce6e506e22486fffed3e762f4bb020bfef83bf51e0bdcdd7fe8c18"
   },
   "pet-fledgling-waiting": {
    "w": 512,
@@ -1136,6 +1288,14 @@
    "sha256": "48916c0dc7ad5b3c98d759f122d0ec2ecdcfa37ec3eefabf6c584e074af5d149",
    "source": "47f1619e7c1dd196ad51fd0792060d08ced09eeab89fb4df1b36fd23d6367269"
   },
+  "pet-fledgling-waiting-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 24468,
+   "alpha": true,
+   "sha256": "7a3fe653852228a81e40cacf8cc818827d1d380d51348f9583cba0cfee169ba2",
+   "source": "e16020db13ce6e506e22486fffed3e762f4bb020bfef83bf51e0bdcdd7fe8c18"
+  },
   "pet-young-happy": {
    "w": 512,
    "h": 512,
@@ -1143,6 +1303,14 @@
    "alpha": true,
    "sha256": "7460076db54fb69bc1b9293c3a7723990cf87ea504817a862c5994000cc6ebaf",
    "source": "1603a0859a7b66971948b1dfc70bd95036a1ea73972a9308e2942ad57076eed1"
+  },
+  "pet-young-happy-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 32186,
+   "alpha": true,
+   "sha256": "8835fc384eaffd860271067e778928bb6bd4d2267b3382142f6ba5f1d96a8cf5",
+   "source": "85e1a8fdbc728eee58ab6a57ed82ec597a8ee861edc095ad086e04065a1ce0e7"
   },
   "pet-young-read": {
    "w": 512,
@@ -1152,6 +1320,14 @@
    "sha256": "96de54de7ec903afa1a359631e71dd92076d2b1ba87c84b32d1356caa0f0cd5c",
    "source": "0b75e80faa676647143c83422ddd0a8ce2f20b88e923e43917dac4a9a71a3296"
   },
+  "pet-young-read-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 27564,
+   "alpha": true,
+   "sha256": "62b7f1d95861bc390f02a1feb868ef56dfd758b410aa08869e43706750c14bac",
+   "source": "85e1a8fdbc728eee58ab6a57ed82ec597a8ee861edc095ad086e04065a1ce0e7"
+  },
   "pet-young-rest": {
    "w": 512,
    "h": 512,
@@ -1159,6 +1335,14 @@
    "alpha": true,
    "sha256": "c1d26caaf3ec5d9c1eba8e61cca915dfb37846c9d39db74f2dbbcfd1e817b145",
    "source": "308b1415bea9a80718d672644c21c131ded7a7b80b48f679bf1f91488884f9e0"
+  },
+  "pet-young-rest-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 28150,
+   "alpha": true,
+   "sha256": "80f140f5bc7979ab76778eb536e2b81fd5f3c793af480a1e130e1347fdcbd559",
+   "source": "85e1a8fdbc728eee58ab6a57ed82ec597a8ee861edc095ad086e04065a1ce0e7"
   },
   "pet-young-star": {
    "w": 512,
@@ -1168,6 +1352,14 @@
    "sha256": "c03e5b0659abaa0607b0d2ef5a71fc0bb7e0bf4a3c829744c72f7faa6fe1979a",
    "source": "1f5861864259627509245202fcefac69fbb535047026020800107a7b539918b9"
   },
+  "pet-young-star-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 28280,
+   "alpha": true,
+   "sha256": "29f1dee8af1cf22db9bc55539ce9e2ed77614409f3268444319237c274e5142d",
+   "source": "85e1a8fdbc728eee58ab6a57ed82ec597a8ee861edc095ad086e04065a1ce0e7"
+  },
   "pet-young-waiting": {
    "w": 512,
    "h": 512,
@@ -1176,6 +1368,14 @@
    "sha256": "6e2cc14bddf827de974ef5ce3f6bf8c33ba4e495a78316105407aa0a50bb3de3",
    "source": "d0fdfbdbf3dc1b1f30105ac348b7bccc75a5555616f1f27d7babe17ac0f07207"
   },
+  "pet-young-waiting-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 28176,
+   "alpha": true,
+   "sha256": "b465a8be77fea8da1847a100b66f2ad4bff70972a87b89221ee437763c7decb5",
+   "source": "85e1a8fdbc728eee58ab6a57ed82ec597a8ee861edc095ad086e04065a1ce0e7"
+  },
   "pet-young-wave": {
    "w": 512,
    "h": 512,
@@ -1183,6 +1383,14 @@
    "alpha": true,
    "sha256": "cf6dd399ab93bfd1352cac8d75cd1002d3ed2793854d67a4dd7827371bf6bd15",
    "source": "c41c5cf68a63fef0eacfac028a448f0088ef4f6f4749541cdd95109ea0470270"
+  },
+  "pet-young-wave-nest": {
+   "w": 512,
+   "h": 512,
+   "bytes": 29912,
+   "alpha": true,
+   "sha256": "5309f0598254f0c50fa45beccb82601edea8e5dfffb7d64a416af2f910fbf7e7",
+   "source": "85e1a8fdbc728eee58ab6a57ed82ec597a8ee861edc095ad086e04065a1ce0e7"
   },
   "prop-basket": {
    "w": 640,
@@ -1268,7 +1476,7 @@
   ],
   "splash": "android/res/drawable-xxhdpi/splash_bird.png"
  },
- "total_bytes": 2317936,
+ "total_bytes": 3069094,
  "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)",
  "layout": {
   "pet-chick-happy": {
@@ -1321,6 +1529,32 @@
     8.4
    ]
   },
+  "pet-chick-happy-nest": {
+   "bow": [
+    65.9,
+    30.7,
+    18.8,
+    24.3
+   ],
+   "wreath": [
+    51.8,
+    27.9,
+    41.1,
+    6.3
+   ],
+   "star": [
+    50.7,
+    38.0,
+    11.1,
+    6.3
+   ],
+   "kokoshnik": [
+    52.5,
+    21.1,
+    42.0,
+    6.3
+   ]
+  },
   "pet-chick-rest": {
    "twigs": [
     53.7,
@@ -1369,6 +1603,32 @@
     23.9,
     35.2,
     -19.0
+   ]
+  },
+  "pet-chick-rest-nest": {
+   "bow": [
+    69.0,
+    45.3,
+    17.7,
+    31.4
+   ],
+   "wreath": [
+    56.1,
+    41.0,
+    38.8,
+    13.4
+   ],
+   "star": [
+    53.9,
+    50.4,
+    10.5,
+    13.4
+   ],
+   "kokoshnik": [
+    57.6,
+    34.8,
+    39.6,
+    13.4
    ]
   },
   "pet-chick-waiting": {
@@ -1421,6 +1681,32 @@
     0.8
    ]
   },
+  "pet-chick-waiting-nest": {
+   "bow": [
+    65.0,
+    32.6,
+    17.7,
+    22.0
+   ],
+   "wreath": [
+    51.6,
+    30.5,
+    38.7,
+    4.0
+   ],
+   "star": [
+    51.0,
+    40.0,
+    10.4,
+    4.0
+   ],
+   "kokoshnik": [
+    52.1,
+    24.1,
+    39.6,
+    4.0
+   ]
+  },
   "pet-egg-happy": {
    "twigs": [
     53.9,
@@ -1447,6 +1733,7 @@
     0
    ]
   },
+  "pet-egg-happy-nest": {},
   "pet-egg-rest": {
    "twigs": [
     53.3,
@@ -1473,6 +1760,7 @@
     0
    ]
   },
+  "pet-egg-rest-nest": {},
   "pet-egg-waiting": {
    "twigs": [
     53.7,
@@ -1499,6 +1787,7 @@
     0
    ]
   },
+  "pet-egg-waiting-nest": {},
   "pet-firebird-happy": {
    "twigs": [
     54.0,
@@ -1561,6 +1850,44 @@
     11.2
    ]
   },
+  "pet-firebird-happy-nest": {
+   "bow": [
+    67.1,
+    27.5,
+    20.2,
+    23.2
+   ],
+   "wreath": [
+    51.9,
+    24.7,
+    44.2,
+    5.2
+   ],
+   "star": [
+    50.9,
+    35.6,
+    11.9,
+    5.2
+   ],
+   "kokoshnik": [
+    52.5,
+    17.5,
+    45.2,
+    5.2
+   ],
+   "amulet": [
+    48.1,
+    65.5,
+    23.1,
+    5.2
+   ],
+   "beads": [
+    48.1,
+    66.3,
+    34.6,
+    5.2
+   ]
+  },
   "pet-firebird-read": {
    "twigs": [
     48.6,
@@ -1609,6 +1936,32 @@
     21.9,
     29.8,
     0.9
+   ]
+  },
+  "pet-firebird-read-nest": {
+   "bow": [
+    62.8,
+    27.4,
+    18.1,
+    14.1
+   ],
+   "wreath": [
+    48.9,
+    27.1,
+    39.6,
+    -3.9
+   ],
+   "star": [
+    49.6,
+    36.9,
+    10.7,
+    -3.9
+   ],
+   "kokoshnik": [
+    48.5,
+    20.6,
+    40.5,
+    -3.9
    ]
   },
   "pet-firebird-rest": {
@@ -1673,6 +2026,38 @@
     -26.3
    ]
   },
+  "pet-firebird-rest-nest": {
+   "bow": [
+    62.8,
+    39.3,
+    20.0,
+    -1.7
+   ],
+   "wreath": [
+    48.0,
+    43.2,
+    43.9,
+    -19.7
+   ],
+   "star": [
+    51.7,
+    53.4,
+    11.8,
+    -19.7
+   ],
+   "kokoshnik": [
+    45.5,
+    36.3,
+    44.9,
+    -19.7
+   ],
+   "beads": [
+    58.8,
+    73.2,
+    34.4,
+    -19.7
+   ]
+  },
   "pet-firebird-star": {
    "twigs": [
     51.8,
@@ -1709,6 +2094,20 @@
     54.5,
     14.2,
     8.5
+   ]
+  },
+  "pet-firebird-star-nest": {
+   "amulet": [
+    48.3,
+    65.3,
+    20.4,
+    3.9
+   ],
+   "beads": [
+    48.4,
+    63.4,
+    30.7,
+    3.9
    ]
   },
   "pet-firebird-waiting": {
@@ -1773,6 +2172,44 @@
     5.5
    ]
   },
+  "pet-firebird-waiting-nest": {
+   "bow": [
+    65.2,
+    29.6,
+    18.5,
+    21.8
+   ],
+   "wreath": [
+    51.3,
+    27.5,
+    40.5,
+    3.8
+   ],
+   "star": [
+    50.6,
+    37.5,
+    10.9,
+    3.8
+   ],
+   "kokoshnik": [
+    51.7,
+    20.8,
+    41.4,
+    3.8
+   ],
+   "amulet": [
+    48.7,
+    65.8,
+    21.1,
+    3.8
+   ],
+   "beads": [
+    48.7,
+    65.6,
+    31.7,
+    3.8
+   ]
+  },
   "pet-firebird-wave": {
    "twigs": [
     48.8,
@@ -1833,6 +2270,44 @@
     47.9,
     22.2,
     5.4
+   ]
+  },
+  "pet-firebird-wave-nest": {
+   "bow": [
+    69.7,
+    30.2,
+    18.2,
+    32.3
+   ],
+   "wreath": [
+    56.6,
+    25.6,
+    39.9,
+    14.3
+   ],
+   "star": [
+    54.1,
+    35.2,
+    10.7,
+    14.3
+   ],
+   "kokoshnik": [
+    58.2,
+    19.2,
+    40.7,
+    14.3
+   ],
+   "amulet": [
+    46.5,
+    64.7,
+    20.8,
+    14.3
+   ],
+   "beads": [
+    47.2,
+    62.0,
+    31.2,
+    14.3
    ]
   },
   "pet-fledgling-happy": {
@@ -1897,6 +2372,44 @@
     9.0
    ]
   },
+  "pet-fledgling-happy-nest": {
+   "bow": [
+    71.4,
+    27.8,
+    23.1,
+    25.1
+   ],
+   "wreath": [
+    54.1,
+    24.1,
+    50.7,
+    7.1
+   ],
+   "star": [
+    52.5,
+    36.5,
+    13.7,
+    7.1
+   ],
+   "kokoshnik": [
+    55.1,
+    15.7,
+    51.8,
+    7.1
+   ],
+   "amulet": [
+    49.1,
+    64.1,
+    26.5,
+    7.1
+   ],
+   "beads": [
+    49.1,
+    63.9,
+    39.7,
+    7.1
+   ]
+  },
   "pet-fledgling-rest": {
    "twigs": [
     53.0,
@@ -1957,6 +2470,32 @@
     69.3,
     27.6,
     -22.5
+   ]
+  },
+  "pet-fledgling-rest-nest": {
+   "bow": [
+    64.5,
+    39.6,
+    21.9,
+    -2.8
+   ],
+   "wreath": [
+    48.3,
+    44.1,
+    48.1,
+    -20.8
+   ],
+   "star": [
+    52.5,
+    55.3,
+    13.0,
+    -20.8
+   ],
+   "kokoshnik": [
+    45.5,
+    36.7,
+    49.1,
+    -20.8
    ]
   },
   "pet-fledgling-waiting": {
@@ -2021,6 +2560,44 @@
     -0.6
    ]
   },
+  "pet-fledgling-waiting-nest": {
+   "bow": [
+    66.5,
+    30.5,
+    20.1,
+    18.0
+   ],
+   "wreath": [
+    51.2,
+    29.1,
+    44.0,
+    0.0
+   ],
+   "star": [
+    51.2,
+    40.0,
+    11.9,
+    0.0
+   ],
+   "kokoshnik": [
+    51.2,
+    21.9,
+    45.0,
+    0.0
+   ],
+   "amulet": [
+    51.2,
+    66.1,
+    23.0,
+    0.0
+   ],
+   "beads": [
+    51.2,
+    65.9,
+    34.5,
+    0.0
+   ]
+  },
   "pet-young-happy": {
    "twigs": [
     58.2,
@@ -2083,6 +2660,44 @@
     10.2
    ]
   },
+  "pet-young-happy-nest": {
+   "bow": [
+    64.6,
+    26.9,
+    19.7,
+    21.6
+   ],
+   "wreath": [
+    49.7,
+    24.7,
+    43.2,
+    3.6
+   ],
+   "star": [
+    49.0,
+    35.4,
+    11.6,
+    3.6
+   ],
+   "kokoshnik": [
+    50.1,
+    17.5,
+    44.1,
+    3.6
+   ],
+   "amulet": [
+    46.8,
+    71.2,
+    22.5,
+    3.6
+   ],
+   "beads": [
+    47.1,
+    65.4,
+    33.8,
+    3.6
+   ]
+  },
   "pet-young-read": {
    "twigs": [
     49.1,
@@ -2131,6 +2746,32 @@
     23.3,
     33.2,
     5.6
+   ]
+  },
+  "pet-young-read-nest": {
+   "bow": [
+    65.3,
+    30.1,
+    18.0,
+    26.5
+   ],
+   "wreath": [
+    51.8,
+    26.8,
+    39.5,
+    8.5
+   ],
+   "star": [
+    50.4,
+    36.5,
+    10.7,
+    8.5
+   ],
+   "kokoshnik": [
+    52.8,
+    20.4,
+    40.4,
+    8.5
    ]
   },
   "pet-young-rest": {
@@ -2195,6 +2836,38 @@
     -14.4
    ]
   },
+  "pet-young-rest-nest": {
+   "bow": [
+    60.4,
+    41.3,
+    18.6,
+    -8.8
+   ],
+   "wreath": [
+    47.2,
+    46.6,
+    40.8,
+    -26.8
+   ],
+   "star": [
+    51.8,
+    55.7,
+    11.0,
+    -26.8
+   ],
+   "kokoshnik": [
+    44.2,
+    40.6,
+    41.7,
+    -26.8
+   ],
+   "beads": [
+    60.6,
+    73.1,
+    31.9,
+    -26.8
+   ]
+  },
   "pet-young-star": {
    "twigs": [
     52.3,
@@ -2231,6 +2904,20 @@
     65.6,
     22.0,
     8.3
+   ]
+  },
+  "pet-young-star-nest": {
+   "amulet": [
+    45.6,
+    71.7,
+    20.1,
+    6.7
+   ],
+   "beads": [
+    46.2,
+    66.5,
+    30.1,
+    6.7
    ]
   },
   "pet-young-waiting": {
@@ -2295,6 +2982,44 @@
     1.5
    ]
   },
+  "pet-young-waiting-nest": {
+   "bow": [
+    65.6,
+    31.3,
+    17.9,
+    27.9
+   ],
+   "wreath": [
+    52.4,
+    27.8,
+    39.2,
+    9.9
+   ],
+   "star": [
+    50.7,
+    37.4,
+    10.6,
+    9.9
+   ],
+   "kokoshnik": [
+    53.5,
+    21.4,
+    40.1,
+    9.9
+   ],
+   "amulet": [
+    45.1,
+    69.5,
+    20.5,
+    9.9
+   ],
+   "beads": [
+    46.0,
+    64.3,
+    30.7,
+    9.9
+   ]
+  },
   "pet-young-wave": {
    "twigs": [
     51.6,
@@ -2355,6 +3080,44 @@
     58.8,
     27.3,
     8.1
+   ]
+  },
+  "pet-young-wave-nest": {
+   "bow": [
+    69.8,
+    30.4,
+    18.4,
+    29.6
+   ],
+   "wreath": [
+    56.3,
+    26.3,
+    40.3,
+    11.6
+   ],
+   "star": [
+    54.3,
+    36.1,
+    10.9,
+    11.6
+   ],
+   "kokoshnik": [
+    57.6,
+    19.8,
+    41.2,
+    11.6
+   ],
+   "amulet": [
+    47.6,
+    69.0,
+    21.1,
+    11.6
+   ],
+   "beads": [
+    48.7,
+    63.6,
+    31.6,
+    11.6
    ]
   }
  }

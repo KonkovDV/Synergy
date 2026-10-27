@@ -179,6 +179,28 @@ EYES = {
     "pet-firebird-waiting": ((170, 172), (232, 178)), "pet-firebird-happy": ((174, 174), (245, 188)), "pet-firebird-rest": ((148, 294), (224, 256.5)),
     "pet-firebird-wave": ((180, 173), (243, 179)), "pet-firebird-read": ((182, 206), (247, 207)), "pet-firebird-star": ((191, 232), (231, 238)),
 }
+# 26.10: the birds in their nests (pet-*-nest, tools/import-generated.py --pets): the two darkest blobs of the face
+# (pupils, or the lines of closed happy eyes); the three sleeping birds read from 2× crops with a 20 px grid.
+EYES.update({
+    "pet-chick-waiting-nest": ((215, 245), (301, 251)),
+    "pet-chick-happy-nest": ((209, 235), (300, 245)),
+    "pet-chick-rest-nest": ((224, 290), (308, 310)),
+    "pet-fledgling-waiting-nest": ((213, 254), (311, 254)),
+    "pet-fledgling-happy-nest": ((206, 236), (318, 250)),
+    "pet-fledgling-rest-nest": ((238, 352), (338, 314)),
+    "pet-young-waiting-nest": ((209, 227), (295, 242)),
+    "pet-young-happy-nest": ((200, 226), (296, 232)),
+    "pet-young-rest-nest": ((245, 346), (326, 305)),
+    "pet-young-wave-nest": ((225, 220), (313, 238)),
+    "pet-young-read-nest": ((208, 224), (295, 237)),
+    "pet-young-star-nest": ((205, 242), (290, 252)),
+    "pet-firebird-waiting-nest": ((211, 234), (301, 240)),
+    "pet-firebird-happy-nest": ((207, 227), (305, 236)),
+    "pet-firebird-rest-nest": ((235, 336), (327, 303)),
+    "pet-firebird-wave-nest": ((223, 212), (309, 234)),
+    "pet-firebird-read-nest": ((213, 236), (301, 230)),
+    "pet-firebird-star-nest": ((211, 226), (298, 232)),
+})
 # A pose that covers a slot: the star is held above the head, the book covers the chest. The app shows the mood
 # picture instead when something is worn there.
 BLOCKED = {"star": {"head"}, "read": {"chest"}}
@@ -249,23 +271,24 @@ def pet_layout(name: str, img: Image.Image) -> dict:
         px, py = cx + ux * k * e + rx * dr * e, cy + uy * k * e + ry * dr * e
         out[item] = [round(px / s * 100, 1), round(py / s * 100, 1), round(w * e / s * 100, 1), round(tilt + rot, 1)]
         if nested and SLOT[item] == "chest":
-            # what the bird wears on its chest sits above the rim of the nest: lifted along the head's «up» until the
-            # twigs cover no more than HIDDEN of it, at most LIFT eye distances (above that it reaches the beak);
-            # a bird lying in the nest wears it over the rim
+            # what the bird wears on its chest sits on the chest, above the twigs: lifted along the head's «up» (at most
+            # LIFT eye distances — above that it reaches the beak) and, if need be, a little smaller, until the twigs
+            # cover no more than HIDDEN of it. A bird lying in its nest has its chest in the bowl: the thing is under
+            # it while it sleeps — not hung on the twigs (26.10: «предметы не на месте»)
             twigs = nest_mask(np.asarray(img.convert("RGBA")))
-            for lift in (i * 0.05 for i in range(1, round(LIFT / 0.05) + 1)):
-                if hidden(item, out[item], twigs) <= HIDDEN:
-                    break
-                k2 = k + lift
-                px, py = cx + ux * k2 * e + rx * dr * e, cy + uy * k2 * e + ry * dr * e
-                out[item] = [round(px / s * 100, 1), round(py / s * 100, 1), round(w * e / s * 100, 1), round(tilt + rot, 1)]
-            if hidden(item, out[item], twigs) > HIDDEN:  # lying in the nest: over the rim where the chest is
-                out[item] = [round((cx + ux * k * e + rx * dr * e) / s * 100, 1), round((cy + uy * k * e + ry * dr * e) / s * 100, 1),
-                             round(w * e / s * 100, 1), round(tilt + rot, 1)]
+            place = lambda k2, w2: [round((cx + ux * k2 * e + rx * dr * e) / s * 100, 1), round((cy + uy * k2 * e + ry * dr * e) / s * 100, 1),
+                                    round(w2 * e / s * 100, 1), round(tilt + rot, 1)]
+            reach = LIFT_AWAKE if name.split("-")[2] != "rest" else LIFT  # an awake bird's pendant may hang just under the beak
+            fits = next((b for size in (1.0, 0.85, 0.7) for b in (place(k + i * 0.05, w * size) for i in range(round(reach / 0.05) + 1))
+                         if hidden(item, b, twigs) <= HIDDEN), None)
+            if fits:
+                out[item] = fits
+            else:
+                del out[item]
     return out
 
 
-HIDDEN, LIFT = 0.12, 0.5
+HIDDEN, LIFT, LIFT_AWAKE = 0.12, 0.5, 0.8
 
 
 def hidden(item: str, box: list, twigs: np.ndarray) -> float:
