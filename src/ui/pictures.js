@@ -77,7 +77,8 @@ export function petPicture(stage, mood, size, { items = {}, pose = null, cls = '
   const name = petPictureName(stage, mood, pose, items);
   if (!hasArt(name)) return null;
   const box = document.createElement('span');
-  box.className = `art pet-pic ${cls}`.trim();
+  // 26.10: a bird in its nest is one picture — `nested` makes its motions stay on the ground (styles/app.css)
+  box.className = `art pet-pic ${cls}${name.endsWith('-nest') ? ' nested' : ''}`.trim();
   box.setAttribute('aria-hidden', 'true');
   box.style.setProperty('--size', `${size}px`);
   // The layers are not `.art`: the size rules of a context (`.pet-card .pet-art .art`) size the whole bird, not its parts.
