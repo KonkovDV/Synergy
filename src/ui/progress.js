@@ -1,14 +1,15 @@
 // Progress: skill profile (radar + numbers), per-skill trends, training calendar, achievements,
 // collection, and the report for a prosthetist / rehabilitation specialist.
 import { fmtNum, fmtPct, fmtDay, plural, count, FORMS } from '../core/format.js';
-import { h } from './dom.js';
+import { h, toast } from './dom.js';
+import { sharePlain } from './share.js';
 import { gameArt, firebird, sectionArt } from './art.js';
 import { picture } from './pictures.js';
 import { petStageIndex } from '../core/pet.js';
 import { PET } from '../config.js';
 import { bottomNav, skillBar, segmented } from './widgets.js';
 import { SKILL_NAME, skillKeys } from '../core/vocabulary.js';
-import { skillProfile, trainingDays, dayKey, weekCompare } from '../core/progress.js';
+import { skillProfile, trainingDays, dayKey, weekCompare, weekShareText } from '../core/progress.js';
 import { COLORS } from '../render/draw.js';
 import { gestureName as name } from '../core/vocabulary.js';
 import { buildReport, reportCsv, reportHtml, printHtml, download, wellbeingLog, REPORT_PERIODS } from '../services/report.js';
@@ -150,7 +151,7 @@ function confusionTable(conf) {
  * This week against the week before (5.14, the bars of the organiser's IR brochure: the current period in the brand
  * green, the previous one in grey, an outlined chip with the change). Words carry the numbers; the bars are pictures.
  */
-function weekCard(p, runs) {
+function weekCard(p, runs, onShare) {
   const { now, before } = weekCompare(p, runs);
   const rows = [
     ['Дни с тренировкой', now.days, before.days, v => count(v, FORMS.days)],
@@ -163,6 +164,9 @@ function weekCard(p, runs) {
     const d = a - b;
     return h('span', { class: `delta ${d > 0 ? 'up' : d < 0 ? 'down' : ''}` }, d > 0 ? `+${d}` : d < 0 ? `−${-d}` : '=');
   };
+  // Adults only, and only after a training day this week. The sentence is on screen before it leaves the phone.
+  // A child is not asked to show a result to someone else (the home screen also hides a child's streak).
+  const shareLine = onShare ? weekShareText(p) : null;
   return h('section', { class: 'card week-compare', 'data-tour': 'progress.week' },
     h('h2', {}, 'Неделя к неделе'),
     h('ul', { class: 'wk-rows' }, ...rows.map(([label, a, b, fmt]) => {
@@ -173,7 +177,9 @@ function weekCard(p, runs) {
         h('div', { class: 'wk-bar before', 'aria-hidden': 'true' }, h('i', { style: { width: `${Math.round(100 * (b ?? 0) / max)}%` } })),
         h('p', { class: 'wk-text' }, `Эти 7 дней: ${fmt(a)} · прошлые 7: ${fmt(b)}`));
     })),
-    h('p', { class: 'note' }, 'Сравнение с собой, а не с другими. Меньше — тоже нормально: отдых и самочувствие важнее цифр.'));
+    h('p', { class: 'note' }, 'Сравнение с собой, а не с другими. Меньше — тоже нормально: отдых и самочувствие важнее цифр.'),
+    shareLine ? h('p', { class: 'note' }, shareLine) : null,
+    shareLine ? h('button', { class: 'btn ghost', onclick: () => onShare(shareLine) }, 'Поделиться успехом недели') : null);
 }
 
 export function progressScreen(app) {
@@ -220,7 +226,11 @@ export function progressScreen(app) {
           h('div', {}, sectionArt('effort', 30), h('b', {}, p.totals.runs), h('small', {}, plural(p.totals.runs, FORMS.exercises))),
           h('div', {}, sectionArt('waiting', 30), h('b', {}, minutes), h('small', {}, plural(minutes, FORMS.minutes))),
           h('div', {}, sectionArt('streak', 30), h('b', {}, p.streak.best), h('small', {}, 'лучшая серия'))),
-        runs.length ? weekCard(p, runs) : null,
+        runs.length ? weekCard(p, runs, app.settings.audience === 'child' ? null : async text => {
+          const how = await sharePlain(text);
+          if (how === 'copied') toast('Текст скопирован — его можно отправить');
+          else if (how === 'none') toast('Не удалось открыть «Поделиться»');
+        }) : null,
         h('section', { class: 'card', 'data-tour': 'progress.skills' }, h('h2', {}, 'Профиль навыков'),
           runs.length ? radar(profile, app.settings.scheme) : h('p', { class: 'note' }, 'Сыграйте первое упражнение — здесь появится профиль.'),
           h('p', { class: 'note' }, 'Среднее за последние 12 упражнений. «Без подсказки» — игровая метрика удержания: насколько навык держится, когда шкалы нет.')),

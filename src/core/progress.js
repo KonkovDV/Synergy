@@ -1,7 +1,7 @@
 // Meta-game: XP, levels, training-day series, weekly goal, achievements, skins, daily plan.
 // Pure functions over plain data (easy to test and to persist).
 import { STARS, XP, SESSION, CHILD, SPACING, ARM_POSES } from '../config.js';
-import { count } from './format.js';
+import { count, FORMS } from './format.js';
 import { SKILL, ACTIVE_GESTURE_IDS } from './vocabulary.js';
 import { emptyOutfit, autoEquip, itemsFor } from './pet.js';
 import { advanceMission } from './missions.js';
@@ -149,6 +149,18 @@ export function weekOutlook(status, { restDays = [] } = {}) {
   const room = trained.slice(from).filter((done, i) => !done && !closed.has(days[from + i])).length;
   if (need === 0) return { kind: 'met', need, room };
   return { kind: need <= room ? 'fits' : 'short', need, room };
+}
+
+/**
+ * One sentence a person may send to someone close (home-rehab reviews: support helps people start the next session;
+ * we do not claim that sending it changes a clinical outcome). Training days of this week only. No pain, skin, fatigue,
+ * minutes, scores or the person's name — those stay on the device. Null when this week has no training day: a zero
+ * is not a success, and the product does not frame a missed day as a loss.
+ */
+export function weekShareText(profile, today = dayKey()) {
+  const done = weeklyStatus(profile, 0, today).done;
+  if (!done) return null;
+  return `На этой неделе в «Синергии» — ${count(done, FORMS.days)} с игрой. Тренажёр управления кистью, не отчёт о здоровье.`;
 }
 
 /** One sentence for the home week line. The count stays in front of it. */
