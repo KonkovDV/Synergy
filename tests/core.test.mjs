@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { SignalPipeline, readFrame, normalize } from '../src/core/signal.js';
 import { BionicHand } from '../src/core/hand.js';
 import { CalibrationRecorder } from '../src/core/calibration.js';
-import { createProfile, recordRun, updateStreak, buildDailyPlan, completePlanItem, playerLevel, recommendedLevel, starsFor, weeklyStatus, weekOutlook, weekOutlookText } from '../src/core/progress.js';
+import { createProfile, recordRun, updateStreak, buildDailyPlan, completePlanItem, playerLevel, recommendedLevel, starsFor, weeklyStatus, weekOutlook, weekOutlookText, weekShareText } from '../src/core/progress.js';
 import { Store, memoryStorage, parseState } from '../src/core/storage.js';
 import { parseExternal, CLASS_ORDER } from '../src/input/bridge.js';
 import { HAND } from '../src/config.js';
@@ -162,6 +162,26 @@ test('progress: stars, levels, unlocks, rest day keeps the series', () => {
   assert.ok(report.achievements.includes('first_run'));
   assert.equal(recordRun(p, { ...run, demo: true }, { today: '2026-10-17' }).xp, 0, 'demo never counts');
   assert.equal(weeklyStatus(p, 4, '2026-10-17').done, 1);
+});
+
+test('week share: training days only, nothing about health, and a quiet week is not a success', () => {
+  assert.equal(weekShareText(createProfile(), '2026-10-19'), null);
+  const p = createProfile();
+  const run = { game: 'grip', level: 1, levelCount: 8, score: 80, stars: 2, durationS: 600, skills: {}, details: {} };
+  recordRun(p, run, { today: '2026-10-19' });
+  p.days['2026-10-19'].checkin = { pain: 2, fatigue: 2, skin: 1, action: 'light' };
+  const one = weekShareText(p, '2026-10-19');
+  assert.match(one, /1 день с игрой/);
+  assert.match(one, /не отчёт о здоровье/);
+  assert.doesNotMatch(one, /боль|кож|устал|80|мин|культ/i);
+  recordRun(p, run, { today: '2026-10-20' });
+  recordRun(p, run, { today: '2026-10-21' });
+  assert.match(weekShareText(p, '2026-10-21'), /3 дня с игрой/);
+  recordRun(p, { ...run, demo: true }, { today: '2026-10-22' });
+  assert.equal(weekShareText(createProfile(), '2026-10-22'), null, 'a demo does not open an empty profile');
+  const five = createProfile();
+  for (const day of ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23']) recordRun(five, run, { today: day });
+  assert.match(weekShareText(five, '2026-10-23'), /5 дней с игрой/);
 });
 
 test('week outlook: remaining days can hold the goal, or they cannot and nothing is owed', () => {
