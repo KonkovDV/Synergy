@@ -4,7 +4,7 @@
 // Also the generated room of the hands: a studio with a glossy table, by day and by night.
 import { BRAND, glow, mix } from './fx.js';
 import { SKIN_COLORS } from './draw.js';
-import { sprite, drawTinted, spriteAspect } from './sprites.js';
+import { sprite, drawSprite, drawTinted, spriteAspect, spriteMeta } from './sprites.js';
 
 /**
  * The pictures of each kind and what tools/import-generated.py measured on them, in fractions of the picture: the palm light
@@ -56,8 +56,12 @@ export function handBlend(pose) {
   return c <= REST_CLOSURE ? ['open', 'rest', c / REST_CLOSURE] : ['rest', 'close', (c - REST_CLOSURE) / (1 - REST_CLOSURE)];
 }
 
-/** The cross-fade weight of the second picture: a pose nearly there shows one picture, not a ghost of the other. */
-const settle = t => { const u = Math.min(1, Math.max(0, (t - 0.2) / 0.6)); return u * u * (3 - 2 * u); };
+/**
+ * The cross-fade weight of the second picture: a pose nearly there shows one picture, not a ghost of the other. 29.10:
+ * the fade is the middle fifth of the way — a hand held half-closed (the proportional scheme holds any force) showed
+ * two sets of fingers at once for as long as it was held; now it shows the nearer picture.
+ */
+const settle = t => { const u = Math.min(1, Math.max(0, (t - 0.4) / 0.2)); return u * u * (3 - 2 * u); };
 
 /** Height ÷ width of the pictures of a kind, or null until they load. */
 export const bionicAspect = (kind = 'stand') => spriteAspect(BIONIC[kind].pics.rest);
@@ -116,13 +120,7 @@ export function drawBionic(ctx, x, y, ht, pose, { kind = 'stand', mirror = false
     if (k < 0.5) { one(a, 1); one(b, k * 2); } else { one(a, (1 - k) * 2); one(b, 1); }
   };
   const top = hang ? y : y - ht;
-  if (hang && armTo !== null && armTo < top) {
-    // the arm goes on above the picture: its top rows stretched up (the arm is the same in every pose)
-    const img = sprite(spec.pics.rest), iw = img.naturalWidth ?? img.width;
-    ctx.save(); ctx.translate(x, 0); ctx.scale(sx, 1);
-    ctx.drawImage(img, 0, 2, iw, 3, -wd / 2, armTo, wd, top - armTo + 1);
-    ctx.restore();
-  }
+  if (hang && armTo !== null && armTo < top) drawArm(ctx, x, top, ht, armTo, sx);
   if (reflect > 0 && !hang) {
     // the mirror image fades out in bands down the table top
     const depth = Math.min(ht * 0.4, reflectTo - y), bands = 5;
@@ -137,6 +135,35 @@ export function drawBionic(ctx, x, y, ht, pose, { kind = 'stand', mirror = false
     const [fx, fy] = spec.light[k < 0.5 ? a : b] ?? spec.light.close;
     glow(ctx, x + sx * (fx - 0.5) * wd, top + fy * ht, wd * 0.42 * Math.min(1, lit + 0.2), BRAND.mint, Math.min(1, lit));
   }
+  return true;
+}
+
+/** The arm above a hanging picture, up to `armTo`: the top rows of the rest picture stretched (the same in every pose). */
+function drawArm(ctx, x, top, ht, armTo, sx) {
+  const img = sprite(BIONIC.hang.pics.rest), aspect = bionicAspect('hang');
+  if (!img || !aspect) return;
+  const wd = ht / aspect, iw = img.naturalWidth ?? img.width;
+  ctx.save(); ctx.translate(x, 0); ctx.scale(sx, 1);
+  ctx.drawImage(img, 0, 2, iw, 3, -wd / 2, armTo, wd, top - armTo + 1);
+  ctx.restore();
+}
+
+/**
+ * 29.10 — the hanging hand holding a thing, generated whole (`hold-<thing>`, docs/GAME_VISUALS.md §12): its fingers
+ * wrap the thing, which a hand and a thing laid as two pictures did not (the thing hung under the fingertips). What
+ * tools/regen.py measured (`spriteMeta`): [x, y] — the thing's centre from the arm's axis and the picture's top,
+ * [w, h] — the picture, in heights `ht` of the hanging pictures, whose arm it shares; the wrist band, of its height. The shell below the wrist
+ * band takes the tint of the skin; the thing, cut out of the same picture (`hold-<thing>-obj`), is laid back untinted —
+ * a coral hand, not a coral egg. Draws with the thing's centre at (x, y); false until the picture loads.
+ */
+export function drawHeld(ctx, name, x, y, ht, { mirror = false, tint = null, armTo = null } = {}) {
+  const meta = spriteMeta(name);
+  if (!meta || !sprite(name)) return false;
+  const [ox, oy, pw, ph, band = BIONIC.hang.band / ph] = meta, sx = mirror ? -1 : 1;
+  const axis = x - sx * ox * ht, top = y - oy * ht, cy = top + ph * ht / 2;
+  if (armTo !== null && armTo < top) drawArm(ctx, axis, top, ht, armTo, sx);
+  drawTinted(ctx, name, axis, cy, pw * ht, { sx, tint, band: [Math.min(1, band), 1] });
+  if (tint) drawSprite(ctx, `${name}-obj`, axis, cy, pw * ht, { sx });
   return true;
 }
 

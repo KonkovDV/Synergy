@@ -6,6 +6,7 @@ import { starsFor } from '../core/progress.js';
 import { createRng } from '../core/rng.js';
 import { AdaptiveDifficulty } from '../core/adaptive.js';
 import { showsFeedback, blindBlock } from '../core/guidance.js';
+import { COMMAND_PICTURE } from '../core/vocabulary.js';
 import { SIGNAL } from '../config.js';
 import { COLORS } from '../render/draw.js';
 import { sparkle, rgba } from '../render/fx.js';
@@ -15,6 +16,9 @@ export const pct = x => Math.round(100 * clamp01(x));
 
 /** After 3 s without rest («Сейф», the skill check): what comes next, and that a tense muscle is no mistake. */
 export const REST_STUCK_HINT = 'Расслабить не получается — это не ошибка. Скоро пойдём дальше';
+
+/** The gesture picture of a card (`gesture-<id>`): its gesture, or the picture of its two-channel command (29.10). */
+export const cardPicture = card => card.gesture ?? COMMAND_PICTURE[card.command] ?? null;
 
 /**
  * Channel separation: how little the passive channel leaks while one channel works. 5.31 — `crossings`: how many times

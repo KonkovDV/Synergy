@@ -8,6 +8,14 @@ export function setSprite(name, image) {
   SPRITES.set(name, image);
 }
 
+/**
+ * What the importer measured on a picture, handed in with it (29.10: where a hand generated holding a thing holds it —
+ * render does not read the catalogue of ui/).
+ */
+const META = new Map();
+export const setSpriteMeta = (name, meta) => { META.set(name, meta); };
+export const spriteMeta = name => META.get(name) ?? null;
+
 /** The image if it is ready to draw, else null. */
 export function sprite(name) {
   const img = SPRITES.get(name);

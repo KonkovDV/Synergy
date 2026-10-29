@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { levelBest, createProfile, unlockAchievements, trainingDaysWithin } from '../src/core/progress.js';
 import { petFlyer } from '../src/ui/pictures.js';
 import { ART, PET_LAYOUT } from '../src/ui/art-manifest.js';
-import { PET_ITEMS, PET_SLOTS } from '../src/core/pet.js';
+import { PET_ITEMS, placeOpen } from '../src/core/pet.js';
 import { PET } from '../src/config.js';
 import { renderTable, readmeBlock, README_MARKERS } from '../tools/evidence.mjs';
 
@@ -59,8 +59,8 @@ test('flight: the Firebird flies once it has wings — the egg and the chick lea
   for (const st of PET.stages) {
     const name = petFlyer(st.id);
     if (!name) continue;
-    const open = PET_SLOTS.filter(s => s.id !== 'nest' && PET.stages.findIndex(x => x.id === st.id) >= PET.stages.findIndex(x => x.id === s.from));
-    for (const item of PET_ITEMS.filter(i => open.some(s => s.id === i.slot))) assert.ok(Object.hasOwn(PET_LAYOUT[name] ?? {}, item.id), `${name}: ${item.id}`);
+    // 29.10: until the whole picture of a look in flight exists (pet-<stage>-happy-<look>), the thing is laid over
+    for (const item of PET_ITEMS.filter(i => ['head', 'chest'].includes(i.place) && placeOpen(i, st.id))) assert.ok(Object.hasOwn(ART, `${name}-${item.id}`) || Object.hasOwn(PET_LAYOUT[name] ?? {}, item.id), `${name}: ${item.id}`);
   }
 });
 
@@ -76,8 +76,8 @@ test('flight outfit: a slower first load does not paint over the outfit asked la
   globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage() {}, save() {}, restore() {}, translate() {}, rotate() {} }) }) };
   const tick = () => new Promise(r => setTimeout(r, 0));
   try {
-    useFlier('flight-flier', 'fledgling', { head: 'kokoshnik' });
-    useFlier('flight-flier', 'fledgling', { head: 'wreath' });
+    useFlier('flight-flier', 'fledgling', { look: 'kokoshnik' });
+    useFlier('flight-flier', 'fledgling', { look: 'wreath' });
     const bodies = pending.filter(i => String(i.src).includes('pet-fledgling-happy'));
     assert.equal(bodies.length, 2);
     bodies[0].naturalWidth = 10; bodies[0].naturalHeight = 10; bodies[0].onload();

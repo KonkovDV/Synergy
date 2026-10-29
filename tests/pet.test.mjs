@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { PET, MISSIONS, XP } from '../src/config.js';
-import { petState, petReaction, petTap, PET_ANIMATIONS, PET_ITEMS, PET_SLOTS, wornItems, autoEquip, equipItem, itemsFor, cleanOutfit, slotOpen, petName } from '../src/core/pet.js';
+import { petState, petReaction, petTap, PET_ANIMATIONS, PET_ITEMS, PET_SLOTS, PET_PLACES, wornItems, autoEquip, equipItem, itemsFor, cleanOutfit, placeOpen, petName } from '../src/core/pet.js';
 import { createProfile, recordRun, unlockAchievements, ACHIEVEMENTS } from '../src/core/progress.js';
 import { missionOffers, validMission, takeMission, dropMission, advanceMission, missionMatches, missionText, missionXp, missionKey, cleanMissionPass, MISSION_KINDS } from '../src/core/missions.js';
 import { TOURS, TourSession, pendingTour, mergeTourState, mergeTours, tourProblems, validTourState, TOUR_STATUS } from '../src/core/tours.js';
@@ -59,35 +59,51 @@ test('pet: reactions come from the sample\'s vocabulary without a sad one; a tou
   }
 });
 
-test('outfits: every item is earned by an achievement, slots open with the stage, a chosen look is kept', () => {
+test('outfits: every item is earned by an achievement; the nest and one look; places open with the stage; a chosen look is kept', () => {
   const ids = new Set(ACHIEVEMENTS.map(a => a.id));
-  for (const i of PET_ITEMS) { assert.ok(ids.has(i.achievement), `${i.id}: achievement ${i.achievement}`); assert.ok(PET_SLOTS.some(s => s.id === i.slot)); }
+  for (const i of PET_ITEMS) {
+    assert.ok(ids.has(i.achievement), `${i.id}: achievement ${i.achievement}`);
+    assert.ok(PET_SLOTS.some(s => s.id === i.slot));
+    assert.ok(i.slot === 'nest' ? i.place === 'nest' : Object.hasOwn(PET_PLACES, i.place), i.id);
+  }
   assert.equal(new Set(PET_ITEMS.map(i => i.id)).size, PET_ITEMS.length);
   for (const s of PET_SLOTS) assert.ok(PET_ITEMS.some(i => i.slot === s.id), `${s.id} has items`);
-  assert.ok(slotOpen('nest', 'egg') && !slotOpen('head', 'egg') && slotOpen('head', 'chick') && !slotOpen('chest', 'chick') && slotOpen('chest', 'firebird'));
+  assert.ok(placeOpen('twigs', 'egg') && placeOpen('book', 'egg') && !placeOpen('bow', 'egg') && placeOpen('bow', 'chick') && !placeOpen('beads', 'chick') && placeOpen('beads', 'firebird'));
+  assert.equal(placeOpen('nope', 'firebird'), false);
   const p = createProfile();
-  assert.deepEqual(p.pet, { head: null, chest: null, nest: null });
+  assert.deepEqual(p.pet, { nest: null, look: null });
   // The first run earns «Первый шаг» → the nest of twigs goes on at once.
   const report = recordRun(p, run(), { today: '2026-10-19' });
   assert.ok(report.achievements.includes('first_run')); assert.deepEqual(report.items, ['twigs']);
   assert.equal(p.pet.nest, 'twigs');
-  assert.deepEqual(wornItems(p, 'egg'), { head: null, chest: null, nest: 'twigs' }, 'an egg lies in its nest');
-  // Earned while an egg: the head item waits for a head.
+  assert.deepEqual(wornItems(p, 'egg'), { nest: 'twigs', look: null }, 'an egg lies in its nest');
+  // Earned while an egg: a head thing waits for a head.
   p.tutorialPassed = true; unlockAchievements(p, null, {}, '2026-10-19');
-  assert.equal(p.pet.head, 'bow'); assert.equal(wornItems(p, 'egg').head, null); assert.equal(wornItems(p, 'chick').head, 'bow');
-  // The player's own choice is not replaced by a later item of the same slot.
-  assert.equal(equipItem(p, 'nest', null), true); assert.equal(p.pet.nest, null);
-  p.achievements.all_games = '2026-10-19'; autoEquip(p, itemsFor(['all_games'])); assert.equal(p.pet.nest, 'apples', 'an empty slot takes the new item');
-  autoEquip(p, itemsFor(['retention'])); assert.equal(p.pet.nest, 'apples', 'a filled slot keeps its item');
-  assert.equal(equipItem(p, 'nest', 'lantern'), false, 'not earned yet');
-  assert.equal(equipItem(p, 'head', 'twigs'), false, 'wrong slot');
+  assert.equal(p.pet.look, 'bow'); assert.equal(wornItems(p, 'egg').look, null); assert.deepEqual(wornItems(p, 'chick'), { nest: 'twigs', look: 'bow' });
+  // The player's own choice is not replaced by a later thing: one look at a time.
+  assert.equal(equipItem(p, 'look', null), true); assert.equal(p.pet.look, null); assert.equal(p.pet.nest, 'twigs', 'the nest stays');
+  p.achievements.all_games = '2026-10-19'; autoEquip(p, itemsFor(['all_games'])); assert.equal(p.pet.look, 'apples', 'an empty look takes the new thing');
+  autoEquip(p, itemsFor(['retention'])); assert.equal(p.pet.look, 'apples', 'a worn look is kept');
+  assert.equal(equipItem(p, 'look', 'lantern'), false, 'not earned yet');
+  assert.equal(equipItem(p, 'look', 'twigs'), false, 'the nest is not a look');
+  assert.equal(equipItem(p, 'nest', 'bow'), false, 'a look is not a nest');
   assert.equal(equipItem(p, 'tail', null), false, 'unknown slot');
-  assert.equal(equipItem(p, 'nest', '__proto__'), false);
-  // A backup that claims an unearned item shows nothing in that slot; unknown ids are dropped.
-  p.pet = { head: 'kokoshnik', chest: 'beads', nest: 'apples' };
-  assert.deepEqual(wornItems(p, 'firebird'), { head: null, chest: null, nest: 'apples' });
-  assert.deepEqual(cleanOutfit({ head: 'twigs', chest: 'amulet', nest: 7, x: 'y', __proto__: { nest: 'twigs' } }), { head: null, chest: 'amulet', nest: null });
-  assert.deepEqual(cleanOutfit(null), { head: null, chest: null, nest: null });
+  assert.equal(equipItem(p, 'look', '__proto__'), false);
+  assert.equal(equipItem(p, 'look', 'bow'), true); assert.deepEqual(p.pet, { nest: 'twigs', look: 'bow' }, 'a new look replaces the old one');
+  // A backup that claims an unearned thing shows nothing; unknown ids are dropped.
+  p.pet = { nest: 'twigs', look: 'kokoshnik' };
+  assert.deepEqual(wornItems(p, 'firebird'), { nest: 'twigs', look: null });
+  assert.deepEqual(cleanOutfit({ look: 'twigs', nest: 7, x: 'y', __proto__: { nest: 'twigs' } }), { nest: null, look: null });
+  assert.deepEqual(cleanOutfit(null), { nest: null, look: null });
+  // An outfit of three slots (before 29.10) keeps its nest and its first thing as the look.
+  assert.deepEqual(cleanOutfit({ head: 'bow', chest: 'beads', nest: 'twigs' }), { nest: 'twigs', look: 'bow' });
+  assert.deepEqual(cleanOutfit({ head: null, chest: 'amulet', nest: 'apples' }), { nest: null, look: 'amulet' });
+  assert.deepEqual(cleanOutfit({ nest: 'lantern' }), { nest: null, look: 'lantern' });
+  assert.deepEqual(cleanOutfit({ head: 'twigs', chest: 'amulet' }), { nest: null, look: 'amulet' });
+  assert.deepEqual(cleanOutfit({ look: 'star', head: 'bow' }), { nest: null, look: 'star' }, 'a look of this version wins');
+  // what the player wore keeps working: a restored profile wears the same nest and look
+  p.pet = { head: 'bow', chest: null, nest: 'twigs' };
+  assert.deepEqual(wornItems(p, 'chick'), { nest: 'twigs', look: 'bow' });
 });
 
 test('goals: offers follow the weakest skills and the scheme, one goal at a time, a capped reward', () => {
@@ -174,11 +190,11 @@ test('goals: a stored goal is checked like any backup field', () => {
   s.profile.mission = { kind: 'weak', game: 'grip', minStars: 2, target: 3, done: 1, since: '2026-10-19' };
   s.profile.pet = { head: 'star', chest: 'nope', nest: 'twigs' };
   const back = parseState(exportState(s), CATALOG);
-  assert.deepEqual(back.profile.mission, s.profile.mission); assert.deepEqual(back.profile.pet, { head: 'star', chest: null, nest: 'twigs' });
+  assert.deepEqual(back.profile.mission, s.profile.mission); assert.deepEqual(back.profile.pet, { nest: 'twigs', look: 'star' }, 'an old backup keeps its nest and look');
   s.profile.mission = { kind: 'weak', game: 'grip', minStars: 2, target: 3, reward: 9999 };
   s.profile.pet = 'crown';
   const hostile = parseState(exportState(s), CATALOG);
-  assert.equal(hostile.profile.mission, null); assert.deepEqual(hostile.profile.pet, { head: null, chest: null, nest: null });
+  assert.equal(hostile.profile.mission, null); assert.deepEqual(hostile.profile.pet, { nest: null, look: null });
 });
 
 test('tours: every tour is well-formed and every anchor exists in the UI code', () => {
@@ -234,5 +250,5 @@ test('tours: merging keeps the further-along record; stored state is validated',
 test('showcase: the demo bird wears what its achievements earned', () => {
   const s = buildShowcaseState(undefined, '2026-10-19', PLAN_CATALOG);
   const worn = wornItems(s.profile, 'young');
-  assert.ok(Object.values(worn).filter(Boolean).length >= 2, JSON.stringify(worn));
+  assert.ok(worn.nest && worn.look, JSON.stringify(worn));
 });

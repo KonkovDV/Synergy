@@ -10,7 +10,7 @@ import { createHash } from 'node:crypto';
 import { ART, ART_BYTES, PET_LAYOUT } from '../src/ui/art-manifest.js';
 import { petPictureName, petThings, CANVAS_PICTURES, roomPictures } from '../src/ui/pictures.js';
 import { PET } from '../src/config.js';
-import { PET_ITEMS, PET_SLOTS } from '../src/core/pet.js';
+import { PET_ITEMS, PET_PLACES, placeOpen } from '../src/core/pet.js';
 import { ACHIEVEMENTS, SKINS } from '../src/core/progress.js';
 import { EVERYDAY } from '../src/core/everyday.js';
 import { TRAINING_GAMES, ASSESSMENT } from '../src/games/registry.js';
@@ -45,9 +45,14 @@ test('art: the catalogue is the files — every entry exists with its size, byte
 
 // 5.32: the budget follows the real limit — the platform takes a 30 MB archive, and a picture lands in it about 4.3 times
 // (the tree, the history, the APK, the one-file HTML as base64). Measured 26.10: about 20 MB with 1.9 MB of pictures.
-test('art: size budget — the whole set ≤ 3.5 MB, a pet ≤ 64 KB, a generated hand, prop or scene ≤ 160 KB, an icon ≤ 32 KB', () => {
-  assert.ok(ART_BYTES <= 3.5 * 1024 * 1024, `${(ART_BYTES / 1024).toFixed(0)} KB`);
-  const limit = name => (/^(hand|prop)-/.test(name) ? 160 : /^pet-/.test(name) ? 64 : /^bg-(duo|grip)-/.test(name) ? 160 : /^(cover|bg)-/.test(name) ? 120 : /^(mio|game|day|empty)-/.test(name) ? 48 : 32) * 1024;
+// 29.10: the whole pictures that replace collages (tools/regen.py, docs/REGEN.md) have a budget of their own — their
+// first priority fits in 1.5 MB; the rest waits for room in the archive (docs/ART.md, «Бюджет»).
+const REGEN = new Set(JSON.parse(readFileSync('tools/regen-jobs.json', 'utf8')).flatMap(j => j.names.filter(n => n !== '-')).flatMap(n => [n, `${n}-obj`]));
+test('art: size budget — the set ≤ 3.5 MB and the regenerated whole pictures ≤ 1.5 MB, a pet ≤ 64 KB, a generated hand, prop or scene ≤ 160 KB, an icon ≤ 32 KB', () => {
+  const regen = Object.keys(ART).filter(n => REGEN.has(n)).reduce((sum, n) => sum + manifest.items[n].bytes, 0);
+  assert.ok(ART_BYTES - regen <= 3.5 * 1024 * 1024, `${((ART_BYTES - regen) / 1024).toFixed(0)} KB`);
+  assert.ok(regen <= 1.5 * 1024 * 1024, `regenerated: ${(regen / 1024).toFixed(0)} KB`);
+  const limit = name => (/^(hand|prop|hold)-/.test(name) ? 160 : /^pet-/.test(name) ? 64 : /^bg-(duo|grip)-/.test(name) ? 160 : /^(cover|bg)-/.test(name) ? 120 : /^(mio|game|day|empty)-/.test(name) ? 48 : 32) * 1024;
   const over = Object.keys(ART).filter(n => manifest.items[n].bytes > limit(n)).map(n => `${n}: ${(manifest.items[n].bytes / 1024).toFixed(1)} KB`);
   assert.deepEqual(over, []);
 });
@@ -109,6 +114,8 @@ test('art: no unused picture — every one has its place in the interface', () =
     skin: n => SKINS.some(s => `skin-${s.id}` === n),
     day: n => EVERYDAY.some(t => `day-${t.id}` === n),
     obj: n => Object.hasOwn(OBJECTS, n.slice(4)),
+    // 29.10: the hand holding each thing of «Мастерская», and the thing cut out of it (render/bionic.js drawHeld)
+    hold: n => Object.entries(OBJECTS).some(([k, o]) => [`hold-${o.art ?? k}`, `hold-${o.art ?? k}-obj`].includes(n)),
     gesture: () => true,
     cover: n => src.includes(`coverArt('${n.slice(6)}'`) || src.includes(`cover('${n.slice(6)}'`),
     ico: n => src.includes(`'${n}'`) || src.includes(`sectionArt('${n.slice(4)}'`) || new RegExp(`: '${n.slice(4)}'[,\\s}]`).test(src),
@@ -142,16 +149,19 @@ test('pet layout: every box inside the frame; slots by stage; the star pose leav
       assert.ok(cx - w / 2 >= -1 && cx + w / 2 <= 101 && cy - w / 2 >= -12 && cy + w / 2 <= 101, `${name} ${item}: [${cx}, ${cy}, ${w}]`);
       assert.ok(Math.abs(rot) <= 45, `${name} ${item}: rotation ${rot}`);
     }
-    const slots = new Set(Object.keys(layout).map(i => PET_ITEMS.find(x => x.id === i).slot));
-    const open = PET_SLOTS.filter(s => PET.stages.findIndex(st => st.id === stage) >= PET.stages.findIndex(st => st.id === s.from)).map(s => s.id);
+    // boxes by place (29.10 — the overlay used until a look's whole picture exists): the twigs under a bird without a
+    // nest of its own, the things beside it, a head from the chick, a chest from the fledgling
+    const place = i => PET_ITEMS.find(x => x.id === i).place;
+    const places = new Set(Object.keys(layout).map(place));
+    const open = ['nest', ...Object.keys(PET_PLACES)].filter(pl => placeOpen(PET_ITEMS.find(i => i.place === pl), stage));
     // 26.10: a bird in its nest (…-nest) is the nest itself, and lying in it, its chest is in the bowl: a chest thing
     // that does not fit above the twigs stays under the sleeping bird instead of hanging on them
     const nested = name.endsWith('-nest');
-    const blocked = [...({ star: ['head'], read: ['chest'] }[pose] ?? []), ...(nested ? ['nest'] : []), ...(nested && pose === 'rest' ? ['chest'] : [])];
+    const blocked = [...({ star: ['head'], read: ['chest'] }[pose] ?? []), ...(nested ? ['nest', 'beside'] : []), ...(nested && pose === 'rest' ? ['chest'] : [])];
     const wanted = open.filter(s => !blocked.includes(s));
-    if (nested && pose === 'rest' && slots.has('chest')) wanted.push('chest');
-    assert.deepEqual([...slots].sort(), wanted.sort(), name);
-    for (const item of PET_ITEMS) if (slots.has(item.slot) && !(nested && pose === 'rest' && item.slot === 'chest')) assert.ok(Object.hasOwn(layout, item.id), `${name}: no box for ${item.id}`);
+    if (nested && pose === 'rest' && places.has('chest')) wanted.push('chest');
+    assert.deepEqual([...places].sort(), wanted.sort(), name);
+    for (const item of PET_ITEMS) if (places.has(item.place) && !(nested && pose === 'rest' && item.place === 'chest')) assert.ok(Object.hasOwn(layout, item.id), `${name}: no box for ${item.id}`);
   }
   assert.equal(Object.keys(PET_LAYOUT).length, 42, 'the 21 pictures of the team and the 21 birds in their nests');
   // every awake bird in its nest wears what is open at its stage (the pose aside)
@@ -159,31 +169,57 @@ test('pet layout: every box inside the frame; slots by stage; the star pose leav
     for (const item of ['amulet', 'beads']) assert.ok(Object.hasOwn(PET_LAYOUT[name], item), `${name}: ${item}`);
 });
 
-test('pet picture: mood and pose, and a pose gives way to what is worn where it covers', () => {
+test('pet picture: mood and pose, a whole picture of the look first, and a pose gives way to a look laid over', () => {
   assert.equal(petPictureName('young', 'fed'), 'pet-young-happy');
   assert.equal(petPictureName('egg', 'rest'), 'pet-egg-rest');
   assert.equal(petPictureName('firebird', 'waiting', 'wave'), 'pet-firebird-wave');
   assert.equal(petPictureName('chick', 'fed', 'star'), 'pet-chick-happy', 'a chick has no star pose');
   assert.equal(petPictureName('young', 'fed', 'dance'), 'pet-young-happy', 'an unknown pose');
-  assert.equal(petPictureName('young', 'fed', 'star', { head: 'bow', chest: null, nest: 'twigs' }), 'pet-young-happy-nest', 'the bow would be under the star');
+  const dressed = Object.keys(ART).filter(n => /^pet-.*-(bow|wreath|star|kokoshnik|amulet|beads|apples|lantern|book)$/.test(n));
+  if (!dressed.includes('pet-young-happy-nest-bow')) assert.equal(petPictureName('young', 'fed', 'star', { nest: 'twigs', look: 'bow' }), 'pet-young-happy-nest', 'the bow would be under the star');
   // 26.10: with the nest of twigs worn, the bird is the picture of it sitting in the nest
   assert.equal(petPictureName('young', 'fed', null, { nest: 'twigs' }), 'pet-young-happy-nest');
   assert.equal(petPictureName('young', 'fed', 'star', { nest: 'twigs' }), 'pet-young-star-nest');
   assert.equal(petPictureName('egg', 'rest', null, { nest: 'twigs' }), 'pet-egg-rest-nest');
-  assert.equal(petPictureName('young', 'fed', null, { nest: 'apples' }), 'pet-young-happy', 'apples by the nest — no nest');
-  assert.deepEqual(petThings('pet-young-happy-nest', { head: 'kokoshnik', chest: 'beads', nest: 'twigs' }).map(t => t.item), ['kokoshnik', 'beads'], 'the nest is the picture');
-  assert.deepEqual(petThings('pet-young-rest-nest', { chest: 'amulet', nest: 'twigs' }).map(t => t.item), [], 'the amulet is under the sleeping bird');
-  assert.deepEqual(petThings('pet-young-rest-nest', { chest: 'beads', nest: 'twigs' }).map(t => t.item), ['beads'], 'beads that fit above the twigs stay visible');
-  assert.equal(petPictureName('young', 'fed', 'star', { head: null, chest: 'beads', nest: 'apples' }), 'pet-young-star');
-  assert.equal(petPictureName('firebird', 'fed', 'read', { chest: 'amulet' }), 'pet-firebird-happy', 'the amulet would be under the book');
-  const things = petThings('pet-young-happy', { head: 'kokoshnik', chest: 'beads', nest: 'twigs' });
-  assert.deepEqual(things.map(t => [t.item, t.behind]), [['kokoshnik', false], ['beads', false], ['twigs', true]]);
-  assert.deepEqual(petThings('pet-egg-waiting', { head: 'bow', nest: 'lantern' }).map(t => t.item), ['lantern'], 'an egg wears nothing on a head');
+  assert.equal(petPictureName('young', 'fed', null, { look: 'apples' }), dressed.includes('pet-young-happy-apples') ? 'pet-young-happy-apples' : 'pet-young-happy', 'apples beside, no nest');
+  if (!dressed.includes('pet-young-happy-nest-kokoshnik')) assert.deepEqual(petThings('pet-young-happy-nest', { nest: 'twigs', look: 'kokoshnik' }).map(t => t.item), ['kokoshnik'], 'the nest is the picture');
+  // 29.10: asleep, the bird has taken its look off — nothing laid over it, no whole picture asked for
+  for (const look of ['amulet', 'beads', 'kokoshnik', 'lantern']) {
+    assert.deepEqual(petThings('pet-young-rest-nest', { nest: 'twigs', look }).map(t => t.item), [], look);
+    assert.deepEqual(petThings('pet-young-rest', { nest: 'twigs', look }).map(t => [t.item, t.behind]), [['twigs', true]], look);
+    assert.equal(petPictureName('young', 'rest', null, { nest: 'twigs', look }), 'pet-young-rest-nest', look);
+  }
+  assert.equal(petPictureName('young', 'fed', 'star', { look: 'beads' }), 'pet-young-star');
+  if (!dressed.includes('pet-firebird-happy-amulet')) assert.equal(petPictureName('firebird', 'fed', 'read', { look: 'amulet' }), 'pet-firebird-happy', 'the amulet would be under the book');
+  const things = petThings('pet-young-happy', { nest: 'twigs', look: 'kokoshnik' });
+  assert.deepEqual(things.map(t => [t.item, t.behind]), [['kokoshnik', false], ['twigs', true]]);
+  assert.deepEqual(petThings('pet-egg-waiting', { look: 'lantern' }).map(t => t.item), ['lantern']);
+});
+
+test('29.10 a bird in its look is one whole picture: chosen before the pose and the mood, nothing laid over it', async () => {
+  // the catalogue of this test: two whole pictures of a look, the rest as generated
+  const { petPictureName: pick, petThings: over } = await import(`../src/ui/pictures.js?looks=${Date.now()}`);
+  const names = new Set(Object.keys(ART));
+  const whole = (stage, m, nest, look) => `pet-${stage}-${m}${nest ? '-nest' : ''}-${look}`;
+  for (const name of names) {
+    const m = new RegExp(`^pet-(egg|chick|fledgling|young|firebird)-(happy|waiting|rest|wave|read|star)(-nest)?-(${PET_ITEMS.filter(i => i.slot === 'look').map(i => i.id).join('|')})$`).exec(name);
+    if (!m) continue;
+    const [, stage, mood, nest, look] = m;
+    assert.ok(placeOpen(look, stage), `${name}: a ${stage} has no place for ${look}`);
+    assert.ok(names.has(`pet-${stage}-${mood}${nest ?? ''}`), `${name}: the bird without the look exists`);
+    const fromMood = { happy: 'fed', waiting: 'waiting', rest: 'rest' }[mood];
+    if (fromMood) assert.equal(pick(stage, fromMood, null, { nest: nest ? 'twigs' : null, look }), whole(stage, mood, !!nest, look));
+    assert.deepEqual(over(name, { nest: nest ? 'twigs' : null, look }), [], `${name}: nothing laid over a whole picture`);
+  }
+  const src = readFileSync('src/ui/pictures.js', 'utf8');
+  assert.match(src, /const whole = dressedName\(posed, look\) \?\? dressedName\(base, look\);/);
+  assert.match(src, /const inNest = name => \/-nest\(-\|\$\)\/\.test\(name\);/);
+  assert.match(src, /box\.className = `art pet-pic \$\{cls\}\$\{inNest\(name\) \? ' nested' : ''\}`/);
 });
 
 test('26.10 the bird in its nest is one picture: its motions stay on the ground', () => {
   const css = readFileSync('styles/app.css', 'utf8'), js = readFileSync('src/ui/pictures.js', 'utf8');
-  assert.match(js, /name\.endsWith\('-nest'\) \? ' nested'/, 'the box of a nest picture is marked');
+  assert.match(js, /inNest\(name\) \? ' nested'/, 'the box of a nest picture is marked (29.10: and of a bird in its look in the nest)');
   for (const [rule, name] of [[/\.firebird\.nested\.anim-hop \.fb-bird[^{]*\{ animation-name: (fb-nest-[a-z]+)/, 'fb-nest-perk'], [/\.firebird\.nested\.anim-wave \.fb-bird \{ animation-name: (fb-nest-[a-z]+)/, 'fb-nest-rock']]) {
     assert.equal(css.match(rule)?.[1], name);
   }

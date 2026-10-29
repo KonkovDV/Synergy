@@ -98,14 +98,20 @@ export function petTap(state, n = 0) {
 }
 
 /**
- * Where the pet wears things (5.13, the sample's slots on the phoenix and in its room). A slot opens with a stage: an
- * egg lies in a nest but wears nothing, a chick has a head to dress, a chest shows from the fledgling on.
+ * What the pet wears (5.13; 29.10 — one picture, not a collage). The nest it sits in and ONE look: a thing on the head,
+ * on the chest or beside it. Things laid over the bird as separate pictures read as stickers — another light and scale,
+ * a kokoshnik slid off the crest, a lantern hanging in the air (docs/GAME_VISUALS.md §12) — so the bird in its look is a
+ * picture generated whole. Three slots at once would need one for every combination (5 × 5 × 3 per stage and mood);
+ * one look needs one per thing. Until a whole picture is generated the thing is still laid on (ui/pictures.js).
  */
 export const PET_SLOTS = [
-  { id: 'head', name: 'На голову', from: 'chick' },
-  { id: 'chest', name: 'На грудь', from: 'fledgling' },
   { id: 'nest', name: 'Гнездо', from: 'egg' },
+  { id: 'look', name: 'Наряд', from: 'egg' },
 ];
+
+/** Where a look sits and the stage that opens it: an egg has things beside it, a chick a head, a fledgling a chest. */
+export const PET_PLACES = { beside: 'egg', head: 'chick', chest: 'fledgling' };
+export const PLACE_NAMES = { beside: 'Рядом', head: 'На голову', chest: 'На грудь' };
 
 /**
  * Things for the pet, each for an achievement — practice earns them; there is no currency and no shop (5.13: the
@@ -114,67 +120,80 @@ export const PET_SLOTS = [
  * Салтане»), a kokoshnik.
  */
 export const PET_ITEMS = [
-  { id: 'twigs', slot: 'nest', name: 'Гнездо из веток', achievement: 'first_run' },
-  { id: 'apples', slot: 'nest', name: 'Молодильные яблоки', achievement: 'all_games' },
-  { id: 'lantern', slot: 'nest', name: 'Фонарик', achievement: 'retention' },
-  { id: 'bow', slot: 'head', name: 'Бант', achievement: 'tutorial' },
-  { id: 'wreath', slot: 'head', name: 'Венок', achievement: 'plan' },
-  { id: 'star', slot: 'head', name: 'Звезда во лбу', achievement: 'perfect' },
-  { id: 'kokoshnik', slot: 'head', name: 'Кокошник', achievement: 'streak7' },
-  { id: 'amulet', slot: 'chest', name: 'Оберег', achievement: 'check' },
-  { id: 'beads', slot: 'chest', name: 'Бусы', achievement: 'week_goal' },
-  { id: 'book', slot: 'nest', name: 'Азбука', achievement: 'primer' }, // 5.15 — «Азбука протеза» (core/primer.js)
+  { id: 'twigs', slot: 'nest', place: 'nest', name: 'Гнездо из веток', achievement: 'first_run' },
+  { id: 'apples', slot: 'look', place: 'beside', name: 'Молодильные яблоки', achievement: 'all_games' },
+  { id: 'lantern', slot: 'look', place: 'beside', name: 'Фонарик', achievement: 'retention' },
+  { id: 'bow', slot: 'look', place: 'head', name: 'Бант', achievement: 'tutorial' },
+  { id: 'wreath', slot: 'look', place: 'head', name: 'Венок', achievement: 'plan' },
+  { id: 'star', slot: 'look', place: 'head', name: 'Звезда во лбу', achievement: 'perfect' },
+  { id: 'kokoshnik', slot: 'look', place: 'head', name: 'Кокошник', achievement: 'streak7' },
+  { id: 'amulet', slot: 'look', place: 'chest', name: 'Оберег', achievement: 'check' },
+  { id: 'beads', slot: 'look', place: 'chest', name: 'Бусы', achievement: 'week_goal' },
+  { id: 'book', slot: 'look', place: 'beside', name: 'Азбука', achievement: 'primer' }, // 5.15 — «Азбука протеза» (core/primer.js)
 ];
 export const PET_ITEM_BY_ID = Object.assign(Object.create(null), Object.fromEntries(PET_ITEMS.map(i => [i.id, i])));
 
-/** Nothing worn yet: one empty place per slot (the profile's default). */
+/** Nothing worn yet: the nest and the look empty (the profile's default). */
 export const emptyOutfit = () => Object.fromEntries(PET_SLOTS.map(s => [s.id, null]));
 
 export const itemUnlocked = (profile, item) => !!profile.achievements?.[item.achievement];
 
-/** Whether a slot is open at a stage (by stage id). */
-export function slotOpen(slotId, stageId) {
-  const slot = PET_SLOTS.find(s => s.id === slotId);
-  const at = PET.stages.findIndex(s => s.id === stageId), from = PET.stages.findIndex(s => s.id === slot?.from);
-  return !!slot && at >= from && from >= 0;
+const stageAt = id => PET.stages.findIndex(s => s.id === id);
+
+/** Whether a stage has the place for a thing (by item id or item): beside from the egg, a head from the chick… */
+export function placeOpen(item, stageId) {
+  const it = typeof item === 'string' ? PET_ITEM_BY_ID[item] : item;
+  const from = it ? (it.place === 'nest' ? 'egg' : PET_PLACES[it.place]) : null;
+  return !!from && stageAt(stageId) >= stageAt(from) && stageAt(from) >= 0;
 }
 
 /**
- * What the pet wears now, slot → item id: only earned items of that slot, only slots its stage has opened. A backup
- * is untrusted (a claimed kokoshnik without the week is not shown), an unknown id is dropped.
+ * What the pet wears now: `{ nest, look }` — earned things only, a look only where its stage has the place. A backup is
+ * untrusted (a claimed kokoshnik without the week is not shown), an unknown id is dropped.
  */
 export function wornItems(profile, stageId) {
-  const outfit = profile.pet ?? {};
+  const outfit = cleanOutfit(profile.pet);
   return Object.fromEntries(PET_SLOTS.map(s => {
-    const item = Object.hasOwn(PET_ITEM_BY_ID, outfit[s.id] ?? '') ? PET_ITEM_BY_ID[outfit[s.id]] : null;
-    return [s.id, item && item.slot === s.id && itemUnlocked(profile, item) && slotOpen(s.id, stageId) ? item.id : null];
+    const item = outfit[s.id] ? PET_ITEM_BY_ID[outfit[s.id]] : null;
+    return [s.id, item && itemUnlocked(profile, item) && placeOpen(item, stageId) ? item.id : null];
   }));
 }
 
 /** Items that the given achievement ids unlock. */
 export const itemsFor = achievementIds => PET_ITEMS.filter(i => achievementIds.includes(i.achievement));
 
-/** Puts newly earned items on, each into its slot if that slot is still empty (a chosen look is never replaced). */
+/** Puts newly earned items on: the nest, and a look if none is worn (a chosen look is never replaced). */
 export function autoEquip(profile, items) {
-  const outfit = { ...emptyOutfit(), ...(profile.pet ?? {}) };
+  const outfit = cleanOutfit(profile.pet);
   for (const item of items) if (!outfit[item.slot]) outfit[item.slot] = item.id;
   profile.pet = outfit;
   return profile.pet;
 }
 
-/** The player's choice for a slot: an earned item of that slot, or null to take it off. Returns false if refused. */
+/** The player's choice: the nest (twigs or none) or the look (an earned thing or none). Returns false if refused. */
 export function equipItem(profile, slotId, itemId) {
   if (!PET_SLOTS.some(s => s.id === slotId)) return false;
   if (itemId !== null) {
     const item = Object.hasOwn(PET_ITEM_BY_ID, itemId) ? PET_ITEM_BY_ID[itemId] : null;
     if (!item || item.slot !== slotId || !itemUnlocked(profile, item)) return false;
   }
-  profile.pet = { ...emptyOutfit(), ...(profile.pet ?? {}), [slotId]: itemId };
+  profile.pet = { ...cleanOutfit(profile.pet), [slotId]: itemId };
   return true;
 }
 
-/** Stored outfit from a backup: known slots, known items of that slot, else empty. */
+/**
+ * Stored outfit from a backup: `{ nest, look }`, known items of that slot, else empty. An outfit of three slots (before
+ * 29.10: head, chest and a nest slot for the twigs or a thing beside) keeps its nest and its first thing as the look.
+ */
 export function cleanOutfit(value) {
   const v = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  return Object.fromEntries(PET_SLOTS.map(s => [s.id, typeof v[s.id] === 'string' && PET_ITEM_BY_ID[v[s.id]]?.slot === s.id ? v[s.id] : null]));
+  const own = key => (Object.hasOwn(v, key) && typeof v[key] === 'string' && Object.hasOwn(PET_ITEM_BY_ID, v[key]) ? PET_ITEM_BY_ID[v[key]] : null);
+  const of = (key, slot) => (own(key)?.slot === slot ? own(key).id : null);
+  return { nest: of('nest', 'nest'), look: of('look', 'look') ?? of('head', 'look') ?? of('chest', 'look') ?? of('nest', 'look') };
+}
+
+/** The old three places of a look, for the drawn bird of ui/art.js: `{ head, chest, nest }` (nest — twigs or a thing beside). */
+export function outfitPlaces(items = {}) {
+  const look = items.look ? PET_ITEM_BY_ID[items.look] : null;
+  return { head: look?.place === 'head' ? look.id : null, chest: look?.place === 'chest' ? look.id : null, nest: look?.place === 'beside' ? look.id : items.nest ?? null };
 }

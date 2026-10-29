@@ -231,3 +231,7 @@ export const PET_LAYOUT = Object.freeze({
   'pet-young-wave': { twigs: [51.6, 59.5, 80.0, 0], apples: [18.6, 81.6, 28.0, 0], lantern: [85.6, 78.6, 25.0, 0], book: [20.6, 82.1, 27.0, 0], bow: [60.2, 29.0, 16.0, 26.1], wreath: [48.3, 26.2, 34.9, 8.1], star: [47.1, 34.8, 9.4, 8.1], kokoshnik: [49.1, 20.5, 35.7, 8.1], amulet: [43.0, 63.5, 18.2, 8.1], beads: [43.6, 58.8, 27.3, 8.1] },
   'pet-young-wave-nest': { bow: [69.8, 30.4, 18.4, 29.6], wreath: [56.3, 26.3, 40.3, 11.6], star: [54.3, 36.1, 10.9, 11.6], kokoshnik: [57.6, 19.8, 41.2, 11.6], amulet: [47.6, 69.0, 21.1, 11.6], beads: [48.7, 63.6, 31.6, 11.6] },
 });
+// A hand generated holding a thing (hold-*): [thing x, thing y from the arm's axis and the top, picture w, h], in
+// heights of the hanging hand pictures (render/bionic.js drawHeld).
+export const HOLD_LAYOUT = Object.freeze({
+});

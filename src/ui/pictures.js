@@ -2,8 +2,8 @@
 // tools/import-art.py (docs/DESIGN.md §6) — with the SVG drawings of art.js as the fallback: a picture that is not in
 // the catalogue or fails to load is drawn in code, so a screen never shows a broken image. Decorative like the
 // drawings (aria-hidden): the text next to a picture carries the meaning.
-import { ART, PET_LAYOUT } from './art-manifest.js';
-import { setSprite } from '../render/sprites.js';
+import { ART, PET_LAYOUT, HOLD_LAYOUT } from './art-manifest.js';
+import { setSprite, setSpriteMeta } from '../render/sprites.js';
 
 const failed = new Set();
 
@@ -43,32 +43,49 @@ const PET_POSES = ['wave', 'read', 'star'];
 
 /** The nest the bird can sit in: on a `…-nest` picture it is the picture itself. */
 const NESTED = 'twigs';
-const inPicture = (name, item) => item === NESTED && name.endsWith('-nest');
+/** Things that stand beside the bird, in front of it — not on it. */
+const BESIDE = /^(apples|lantern|book)$/;
+/** Whether a picture is a bird sitting in its nest (`…-nest`, or in a look `…-nest-<look>`). */
+const inNest = name => /-nest(-|$)/.test(name);
+/** 29.10: the bird in its look generated whole (`<picture>-<look>`, docs/GAME_VISUALS.md §12), when it exists. */
+const dressedName = (name, look) => (name && look && Object.hasOwn(ART, `${name}-${look}`) ? `${name}-${look}` : null);
+/**
+ * 29.10: a sleeping bird has taken its look off — asleep it is the picture of its mood with nothing on or beside it.
+ * A thing laid over a curled-up bird read worst of all, and a whole picture of each look asleep would add a third to
+ * the set (docs/ART.md, «Бюджет»).
+ */
+const asleep = name => /^pet-[a-z]+-rest(-|$)/.test(name);
 
 /**
  * The picture of the Firebird for a stage, a mood and an optional pose (young and grown birds wave, read and hold a
- * star). A pose that covers a slot where something is worn (the star above the head, the book on the chest) gives way
- * to the mood picture, so a pose does not hide what the player chose to wear.
- * 26.10: with the nest of twigs worn, the bird is a picture of its own sitting in the nest (`…-nest`, generated whole —
- * one light, one scale); the nest is not laid under the bird. Where that picture is missing, the nest is laid as before.
- * A sleeping bird in that picture is the one exception: its chest is in the bowl, so a chest thing with no place above
- * the twigs (the amulet) is not drawn on top — it stays under the bird. Beads that fit above the twigs are still drawn.
+ * star). `items` — `{ nest, look }` (core/pet.js). With the nest of twigs worn, the bird is a picture of its own sitting
+ * in the nest (`…-nest`, 26.10 — generated whole, one light, one scale). 29.10: in a look, the bird is the whole picture
+ * of that look (`…-<look>`) — of the pose if there is one, else of the mood. Where it is not generated yet, the look is
+ * laid over (petThings), and a pose that covers its place (the star above the head, the book on the chest) gives way to
+ * the mood picture, so a pose does not hide what the player chose to wear.
  */
 export function petPictureName(stage, mood, pose = null, items = {}) {
-  const nested = name => (items.nest === NESTED && Object.hasOwn(ART, `${name}-nest`) ? `${name}-nest` : name);
-  const base = nested(`pet-${stage}-${MOOD_PICTURE[mood] ?? 'waiting'}`);
-  if (!pose || !PET_POSES.includes(pose)) return base;
-  const posed = nested(`pet-${stage}-${pose}`);
-  if (!Object.hasOwn(ART, posed)) return base;
-  const layout = PET_LAYOUT[posed] ?? {};
-  return Object.values(items).every(item => !item || Object.hasOwn(layout, item) || inPicture(posed, item)) ? posed : base;
+  const named = m => (items.nest === NESTED && Object.hasOwn(ART, `pet-${stage}-${m}-nest`) ? `pet-${stage}-${m}-nest` : `pet-${stage}-${m}`);
+  const base = named(MOOD_PICTURE[mood] ?? 'waiting');
+  const look = asleep(base) ? null : items.look ?? null;
+  const posed = pose && PET_POSES.includes(pose) && Object.hasOwn(ART, named(pose)) ? named(pose) : null;
+  const whole = dressedName(posed, look) ?? dressedName(base, look);
+  if (whole) return whole;
+  if (!posed) return base;
+  return !look || Object.hasOwn(PET_LAYOUT[posed] ?? {}, look) ? posed : base;
 }
 
-/** Boxes of what the bird wears on this picture: [{ item, box: [cx %, cy %, w %, rot°], behind }], in drawing order. */
+/**
+ * What is laid over the picture, [{ item, box: [cx %, cy %, w %, rot°], behind }]: the look where its whole picture is
+ * missing (not on a sleeping bird), the nest of twigs under a bird that has no picture in it. Nothing on a whole picture.
+ */
 export function petThings(name, items = {}) {
   const layout = PET_LAYOUT[name] ?? {};
-  return Object.values(items).filter(item => item && Object.hasOwn(layout, item) && !inPicture(name, item))
-    .map(item => ({ item, box: layout[item], behind: item === NESTED }));
+  const out = [];
+  const look = asleep(name) ? null : items.look;
+  if (look && !name.endsWith(`-${look}`) && Object.hasOwn(layout, look)) out.push({ item: look, box: layout[look], behind: false });
+  if (items.nest === NESTED && !inNest(name) && Object.hasOwn(layout, NESTED)) out.push({ item: NESTED, box: layout[NESTED], behind: true });
+  return out;
 }
 
 /**
@@ -80,7 +97,7 @@ export function petPicture(stage, mood, size, { items = {}, pose = null, cls = '
   if (!hasArt(name)) return null;
   const box = document.createElement('span');
   // 26.10: a bird in its nest is one picture — `nested` makes its motions stay on the ground (styles/app.css)
-  box.className = `art pet-pic ${cls}${name.endsWith('-nest') ? ' nested' : ''}`.trim();
+  box.className = `art pet-pic ${cls}${inNest(name) ? ' nested' : ''}`.trim();
   box.setAttribute('aria-hidden', 'true');
   box.style.setProperty('--size', `${size}px`);
   // The layers are not `.art`: the size rules of a context (`.pet-card .pet-art .art`) size the whole bird, not its parts.
@@ -97,15 +114,18 @@ export function petPicture(stage, mood, size, { items = {}, pose = null, cls = '
   bird.className = 'fb-bird';
   const body = picture(name, size, 'pet-body');
   body.classList.remove('art');
-  bird.append(body, ...things.filter(t => !t.behind && !t.item.match(/^(apples|lantern|book)$/)).map(thing).filter(Boolean));
+  bird.append(body, ...things.filter(t => !t.behind && !BESIDE.test(t.item)).map(thing).filter(Boolean));
   box.append(...things.filter(t => t.behind).map(thing).filter(Boolean), bird,
-    ...things.filter(t => /^(apples|lantern|book)$/.test(t.item)).map(thing).filter(Boolean));
+    ...things.filter(t => BESIDE.test(t.item)).map(thing).filter(Boolean));
   body.addEventListener('error', () => { if (fallback && box.isConnected) box.replaceWith(fallback()); }, { once: true });
   return box;
 }
 
-/** Pictures that games draw on the canvas: the Workshop objects, the gesture hands of «Сейф», the bionic hands, the generated rooms and the basket, the tutorial lock. */
-export const CANVAS_PICTURES = Object.freeze(Object.keys(ART).filter(n => /^(obj|gesture|hand|bg-(duo|grip|flight|rhythm|safe)|prop)-/.test(n)).concat('ico-lock'));
+/**
+ * Pictures that games draw on the canvas: the Workshop objects and the hand holding each (29.10), the gesture hands of
+ * «Сейф», the bionic hands, the generated rooms and the basket, the tutorial lock.
+ */
+export const CANVAS_PICTURES = Object.freeze(Object.keys(ART).filter(n => /^(obj|gesture|hand|hold|bg-(duo|grip|flight|rhythm|safe)|prop)-/.test(n)).concat('ico-lock'));
 
 /** The rooms of one game. «Первые шаги» uses the studio of «Две руки». Empty until those files exist. */
 export function roomPictures(game) {
@@ -130,6 +150,7 @@ export function loadSprites(names = CANVAS_PICTURES.filter(n => !n.startsWith('b
     // 5.32: given to the games once decoded (HTMLImageElement.decode) — the first frame that draws a big picture (a
     // room, a hand) does not stall on decoding it, which a weak phone shows as a jerk. Not an ImageBitmap: those stay
     // decoded in memory for good (≈ 4 MB a room), an <img> the browser may drop and decode again under memory pressure.
+    if (Object.hasOwn(HOLD_LAYOUT, name)) setSpriteMeta(name, HOLD_LAYOUT[name]);
     img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => setSprite(name, img));
     img.onerror = () => { spriteLoads.delete(name); failed.add(name); };
     img.src = artUrl(name);
@@ -139,13 +160,14 @@ export function loadSprites(names = CANVAS_PICTURES.filter(n => !n.startsWith('b
 /** The picture of the Firebird that flies in «Полёт»: from the fledgling on, wings up; null — the glider flies. */
 export const petFlyer = stageId => (['egg', 'chick'].includes(stageId) ? null : `pet-${stageId}-happy`);
 
-/** What the flying bird can wear: on its head and chest — the things of the nest stay in the nest. */
-const WORN_IN_FLIGHT = item => item && !/^(twigs|apples|lantern|book)$/.test(item);
+/** What the flying bird can wear: on its head and chest — the nest and the things beside it stay at home. */
+const WORN_IN_FLIGHT = item => !!item && item !== NESTED && !BESIDE.test(item);
 
 /**
- * 26.10: the Firebird of «Полёт» wears what it wears in the nest. The happy picture with its head and chest things laid
- * at the boxes of art-manifest.js (as petPicture lays them), drawn once into a canvas — the game draws one sprite.
- * Until the pictures load, or if a thing fails to, the bird flies as it is; the egg and the chick leave it to the glider.
+ * 26.10: the Firebird of «Полёт» wears what it wears in the nest. 29.10: the happy picture of its look generated whole
+ * (`pet-<stage>-happy-<look>`); until that exists, the thing laid at its box of art-manifest.js (as petPicture lays it),
+ * drawn once into a canvas — the game draws one sprite. Until the pictures load, or if a thing fails to, the bird flies
+ * as it is; the egg and the chick leave it to the glider.
  */
 let flierTicket = 0;
 
@@ -153,8 +175,10 @@ export function useFlier(alias, stageId, items = {}) {
   const ticket = ++flierTicket;
   const name = petFlyer(stageId);
   if (!name || !hasArt(name) || typeof Image === 'undefined') { setSprite(alias, null); return; }
+  const look = WORN_IN_FLIGHT(items.look) ? items.look : null;
+  const whole = dressedName(name, look);
   const layout = PET_LAYOUT[name] ?? {};
-  const worn = Object.values(items).filter(item => WORN_IN_FLIGHT(item) && Object.hasOwn(layout, item) && hasArt(`gift-${item}`));
+  const worn = !whole && look && Object.hasOwn(layout, look) && hasArt(`gift-${look}`) ? [look] : [];
   const load = n => new Promise((ok, no) => {
     const img = new Image();
     img.decoding = 'async';
@@ -164,7 +188,7 @@ export function useFlier(alias, stageId, items = {}) {
   });
   const current = () => ticket === flierTicket;
   setSprite(alias, null); // until it has loaded, the game draws its own
-  load(name).then(body => {
+  (whole && hasArt(whole) ? load(whole).catch(() => load(name)) : load(name)).then(body => {
     if (!current()) return;
     if (!worn.length || typeof document === 'undefined') { setSprite(alias, body); return; }
     Promise.allSettled(worn.map(item => load(`gift-${item}`))).then(results => {

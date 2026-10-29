@@ -11,6 +11,13 @@ export const COMMAND = Object.freeze({
   WRIST: 'wrist',     // 5.29: движение запястья (Флексия, Экстензия набора UBI4) — кисть стоит, но мышцы работают
 });
 
+/**
+ * The gesture picture of a two-channel command (`gesture-<id>`, ui/art-manifest.js), the same in every set (29.10): the
+ * fist for closing, the palm for opening, the coactivation for A + B. In the set of the task «close» is wrist flexion —
+ * a picture of a wrist, while a card of two channels asks to squeeze.
+ */
+export const COMMAND_PICTURE = Object.freeze({ close: 'fist', open: 'open', switch: 'coact', rest: 'rest' });
+
 export const COMMAND_NAME = {
   rest: 'Покой', close: 'Сжатие', open: 'Раскрытие', switch: 'Коактивация', wrist: 'Запястье',
 };
