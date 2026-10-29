@@ -78,3 +78,27 @@ test('ТЗ блок плана: free play is one round, a run that already fille
   assert.deepEqual(playThrough(app), [1]);
   assert.equal(app.state.runs.length, 1);
 });
+
+test('ТЗ блок плана (Red Team): «✕» in the middle of round 2 shows the results of the rounds already played, not home', () => {
+  store.clear();
+  const app = new App(el('main'));
+  app.profile.onboarded = true;
+  app.updateSettings({ scheme: 'threshold' });
+  app.profile.days[dayKey()] = { seconds: 0, runs: 0, checkin: { pain: 0, fatigue: 0, action: 'go' } };
+  const plan = app.dailyPlan();
+  plan.items = [{ game: 'safe', level: 1, done: false, retention: false }];
+  app.go('play', { game: 'safe', level: 1, plan: true });
+  button(app.screen, 'Старт').on.click();
+  let now = 1000;
+  for (let i = 0; i < 300 * 60 && app.screen.name === 'play' && app.screen.blockState().rounds < 2; i++) {
+    now += 1000 / 60;
+    const session = app.screen.session();
+    if (session.runner.intent) app.emulator.setTarget(toEmulatorTarget(session.game.autopilot(session.runner.intent, session.hand)));
+    app.screen.tick(now, 1 / 60);
+  }
+  assert.equal(app.screen.blockState().rounds, 2, 'round 2 started');
+  const close = nodes(app.screen.node).find(x => x.tag === 'button' && x.attrs['aria-label'] === 'Выйти');
+  close.on.click();
+  assert.equal(app.screen.name, 'results', 'the played round is shown');
+  assert.equal(app.state.runs.length, 1);
+});

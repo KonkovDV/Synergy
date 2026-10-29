@@ -206,7 +206,9 @@ class Bridge:
                 text = json.dumps(pk)
                 if len(text.encode()) > MAX_PAYLOAD: continue
                 for w in list(self.clients):
-                    try: w.write(self.encode(text))
+                    try:  # a client that stops reading is dropped, as for frames (no unbounded buffer)
+                        if w.transport.get_write_buffer_size() > MAX_BUFFER: raise ConnectionError('client stopped reading')
+                        w.write(self.encode(text))
                     except Exception: self.clients.discard(w); w.close()
             try:  # a source error is reported, not fatal: the pump is the bridge
                 frame = self.source.frame(time.monotonic() - start, self.intent)
