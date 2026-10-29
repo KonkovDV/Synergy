@@ -310,8 +310,10 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     // First focus after the screen is mounted (5.11): focusing «Старт» while building it was undone by the heading.
     get focus() { return phase === 'intro' ? overlay.querySelector('.btn.primary') : null; },
     onHidden: pause,
-    /** 6.0 — the block of this plan exercise so far: rounds played and seconds of active play. */
-    get block() { return { rounds: block.rounds, activeS: block.activeS }; },
+    /** 6.0 — the block of this plan exercise so far: rounds played and seconds of active play (a function: app.screen is a copy). */
+    blockState: () => ({ rounds: block.rounds, activeS: block.activeS, phase }),
+    /** The running session (tests drive its autopilot through the on-screen emulator). */
+    session: () => session,
     // 6.0 — the time that counts as «gameplay with critical timings» (core/timeshare.js): running, live signal, not a demo.
     running: () => phase === 'running' && !demo && !session.game.done && !session.runner.signalLost,
     /** Back during a run pauses it (a stray gesture must not throw the attempt away); back again leaves. */
