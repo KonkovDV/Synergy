@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "Если вы ссылаетесь на этот проект, используйте эти метаданные."
 title: "Синергия: мобильная игра-тренажёр управления бионическим протезом по ЭМГ"
-version: 5.32.0
-date-released: 2026-10-23
+version: 6.0.0
+date-released: 2026-10-29
 authors:
   - name: "Команда SYNERGY"
 license-url: "LICENSE"
