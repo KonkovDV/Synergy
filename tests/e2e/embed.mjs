@@ -37,7 +37,8 @@ try {
   const ready = (await messages()).find(x => x.type === 'synergy:ready');
   // 5.30: «Две руки» is in the list too, and ready names the gesture set and its class order (the СППР stream's order).
   check('ready says the onboarding comes first and lists the games', ready && ready.onboarded === false && ready.games.map(g => g.id).join() === 'grip,flight,rhythm,safe,duo,check'
-    && ready.gestures?.set === 'synergy' && ready.gestures.classes?.[0] === 'rest', JSON.stringify(ready));
+    // 6.0: the default set is the task's СПППР dictionary (neutral is the game's «rest», class 0)
+    && ready.gestures?.set === 'tz' && ready.gestures.classes?.[0] === 'rest' && ready.gestures.classes?.length === 7, JSON.stringify(ready));
   const frame = page.frameLocator('#game');
   await page.waitForTimeout(600); // «Дальше» ignores a tap in the first 300 ms of a page (the double-tap guard)
   await frame.getByRole('button', { name: 'Дальше' }).click(); await page.waitForTimeout(600);
