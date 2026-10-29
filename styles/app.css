@@ -258,6 +258,8 @@ button { font: inherit; color: inherit }
 /* 6.0 — feedback after testing */
 .survey-item { display: grid; gap: 6px; margin: 10px 0 }
 .survey-item p { margin: 0 }
+.survey-item .segmented { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) }
+.survey-item .seg { min-width: 0; padding-left: 4px; padding-right: 4px }
 .field { display: grid; gap: 6px; margin-top: 10px }
 .field textarea { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--card); color: var(--text); resize: vertical; min-height: 88px }
 /* 6.0 — missions of a session */
