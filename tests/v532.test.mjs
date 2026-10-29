@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.32 — the live trace of both channels (the sensor graph of the prosthesis app), its cleanliness against the number
 // of the results, and the four states in the words of the chosen scheme.
 import test from 'node:test';

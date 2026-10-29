@@ -150,7 +150,7 @@ const FINGERS = [ // index, middle, ring, little: x offset, length (× palm widt
  * 5.32 — soft 3D: a carbon shell with a sheen, lighter knuckles and tips, a mint light on the palm that grows with the
  * grip force (`glow`), a hairline rim. The geometry is the same as before: the games and their tests see the same hand.
  */
-export function drawHand(ctx, { x, y, size, pose, skin = 'graphite', angle = 0, mirror = false, glow: lit = 0, sleeve = true, wrist = 0 }) {
+export function drawHand(ctx, { x, y, size, pose, skin = 'graphite', angle = 0, mirror = false, glow: lit = 0, sleeve = true, wrist = 0, roll = 0, dev = 0 }) {
   const c = SKIN_COLORS[skin] ?? SKIN_COLORS.graphite;
   const s = size, flat = COLORS.hc;
   const shade = (tone, x0, x1) => (flat ? tone : linear(ctx, x0, 0, x1, 0, [[0, mix(tone, '#ffffff', 0.3)], [0.45, tone], [1, mix(tone, '#000000', 0.32)]], tone));
@@ -171,6 +171,27 @@ export function drawHand(ctx, { x, y, size, pose, skin = 'graphite', angle = 0, 
     ctx.beginPath(); ctx.arc(0, -0.1 * s, 0.78 * s, -Math.PI / 2 - dir * 0.25, -Math.PI / 2 + dir * 0.45, dir < 0); ctx.stroke();
     const end = -Math.PI / 2 + dir * 0.45, ex = Math.cos(end) * 0.78 * s, ey = -0.1 * s + Math.sin(end) * 0.78 * s;
     ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - dir * 0.16 * s, ey - 0.06 * s); ctx.moveTo(ex, ey); ctx.lineTo(ex - dir * 0.02 * s, ey + 0.16 * s); ctx.stroke();
+  }
+  // 6.0 — the states of the task's СПППР. Deviation (adduction +1 toward the little finger, abduction −1 toward the thumb)
+  // tilts the hand in the picture's plane with a short arrow at the fingertips; pronation (+1) and supination (−1) turn
+  // the forearm — the palm narrows as seen edge-on and an arrow circles the wrist. Signs, not anatomy (the cue says it).
+  if (dev) {
+    const d = Math.max(-1, Math.min(1, dev));
+    ctx.rotate(0.42 * d);
+    ctx.strokeStyle = c.glow; ctx.lineWidth = 0.07 * s; ctx.lineCap = 'round';
+    const r = 1.55 * s, from = -Math.PI / 2 - d * 0.05, to = -Math.PI / 2 + d * 0.32;
+    ctx.beginPath(); ctx.arc(0, 0, r, from, to, d < 0); ctx.stroke();
+    const ex = Math.cos(to) * r, ey = Math.sin(to) * r;
+    ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - d * 0.17 * s, ey - 0.07 * s); ctx.moveTo(ex, ey); ctx.lineTo(ex - d * 0.05 * s, ey + 0.16 * s); ctx.stroke();
+  }
+  if (roll) {
+    const d = Math.max(-1, Math.min(1, roll));
+    ctx.strokeStyle = c.glow; ctx.lineWidth = 0.07 * s; ctx.lineCap = 'round';
+    const rx = 0.62 * s, ry = 0.2 * s, cy = -0.02 * s, start = d > 0 ? Math.PI * 0.15 : Math.PI * 0.85, end = d > 0 ? Math.PI * 1.75 : -Math.PI * 0.75;
+    ctx.beginPath(); ctx.ellipse(0, cy, rx, ry, 0, start, end, d < 0); ctx.stroke();
+    const ex = Math.cos(end) * rx, ey = cy + Math.sin(end) * ry;
+    ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - d * 0.15 * s, ey - 0.1 * s); ctx.moveTo(ex, ey); ctx.lineTo(ex - d * 0.16 * s, ey + 0.08 * s); ctx.stroke();
+    ctx.scale(1 - 0.28 * Math.abs(d), 1);
   }
   // Fingers behind the palm edge: a shaded segment, a lighter knuckle, a pad at the tip.
   FINGERS.forEach((f, i) => {

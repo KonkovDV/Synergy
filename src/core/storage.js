@@ -43,6 +43,14 @@ export const DEFAULT_SETTINGS = {
   gripSwitch: GRIP_SWITCH.defaultMode, // open — как в протезах «Моторики»: раскрыть до конца и снова B; co — коактивация (5.23)
   bothOn: BOTH_ON.defaultMode, // 5.32: второй канал позже первого — кисть стоит (hold) или идёт первая команда (first)
   holdOpenS: GRIP_SWITCH.holdDefaultS, // удержание повторного раскрытия для смены хвата («peak length» в Motorica Start)
+  // 6.0 — параметры сигнала из ТЗ (Поток 1): время удержания, подавление ложных срабатываний, мёртвая зона порога,
+  // сглаживание, ограничение скачков, мёртвая зона пропорционального выхода (config.js SIGNAL)
+  holdMs: SIGNAL.holdMs,
+  refractoryMs: SIGNAL.refractoryMs,
+  hysteresis: SIGNAL.hysteresis,
+  smoothingMs: SIGNAL.smoothingMs,
+  slewPerS: SIGNAL.slewPerS,
+  deadZone: SIGNAL.deadZone,
   // Training
   adaptive: true,           // адаптивная сложность внутри упражнения
   fadedFeedback: true,      // затухающие подсказки: опытный игрок видит шкалу не в каждой попытке
@@ -87,6 +95,7 @@ export const SETTINGS_RULES = {
   sensitivity: range(SETTINGS_RANGES.sensitivity.min, SETTINGS_RANGES.sensitivity.max),
   sensitivityB: range(SETTINGS_RANGES.sensitivity.min, SETTINGS_RANGES.sensitivity.max),
   coThreshold: range(SETTINGS_RANGES.coThreshold.min, SETTINGS_RANGES.coThreshold.max),
+  ...Object.fromEntries(['holdMs', 'refractoryMs', 'hysteresis', 'smoothingMs', 'slewPerS', 'deadZone'].map(k => [k, range(SETTINGS_RANGES[k].min, SETTINGS_RANGES[k].max)])), // 6.0
   realism: range(SETTINGS_RANGES.realism.min, SETTINGS_RANGES.realism.max),
   weeklyGoal: v => Number.isInteger(v) && v >= SETTINGS_RANGES.weeklyGoal.min && v <= SETTINGS_RANGES.weeklyGoal.max,
   textScale: oneOf(...TEXT_SCALES),
@@ -188,6 +197,22 @@ function cleanDays(days) {
   }));
 }
 
+/**
+ * 6.0 — the СПППР stream of a run (core/spppr.js `summary`): known counters only, each a bounded number or null. A backup
+ * is untrusted: a field it invents is dropped, a string or a huge number is not kept.
+ */
+const STREAM_FIELDS = { packets: 1e7, rejected: 1e7, stale: 1e7, gaps: 1e6, forgiven: 1e7, reboots: 1e4, rateHz: 1000, jitterMs: 10000, maxGapMs: 3.6e6, meanConfidence: 100, coactivation: 100 };
+export function cleanStream(s) {
+  if (!isObject(s)) return null;
+  const out = {};
+  for (const [k, max] of Object.entries(STREAM_FIELDS)) {
+    const v = s[k];
+    if (v === null || v === undefined) continue;
+    if (Number.isFinite(v) && v >= 0 && v <= max) out[k] = v;
+  }
+  return Number.isFinite(out.packets) ? out : null;
+}
+
 function validRun(r) {
   return isObject(r) && typeof r.game === 'string' && Number.isInteger(r.level) && Number.isFinite(r.score)
     && (r.at === undefined || (typeof r.at === 'string' && !Number.isNaN(Date.parse(r.at))))
@@ -260,6 +285,7 @@ export function parseState(raw, catalog = null) {
     if (r.gestureSet !== undefined && !(GESTURE_SET_IDS.includes(r.gestureSet) && r.gestureSet !== 'synergy')) { const { gestureSet, ...rest } = r; r = rest; } // 5.29: only another known set
     if (r.formWeek !== undefined && !(Number.isInteger(r.formWeek) && r.formWeek >= 0 && r.formWeek < 100000)) { const { formWeek, ...rest } = r; r = rest; } // parallel form of the skill check: a week index
     if (r.signalIssues !== undefined) { const { signalIssues, ...rest } = r; r = rest; const kept = cleanSignalIssues(signalIssues); if (kept.length) r.signalIssues = kept; } // 5.30
+    if (r.stream !== undefined) { const { stream, ...rest } = r; r = rest; const kept = cleanStream(stream); if (kept) r.stream = kept; } // 6.0
     if (isObject(r.details)) {
       const details = { ...r.details };
       let dropped = false;

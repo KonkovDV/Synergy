@@ -94,11 +94,19 @@ export function signalMeter(app) {
   const chip = h('div', { class: 'meter-chip' }, 'Покой');
   // 5.29: what a recognizer (СППР) saw — the three most probable classes of its stream, in the gesture scheme only.
   const probs = h('p', { class: 'meter-probs', hidden: true });
+  // 6.0 — the joystick of the task's СПППР: x = flexion − extension (A to the left, as the bar of A), y = pronation −
+  // supination, z = abduction − adduction under it; and the stream in one line (rate, jitter, forgiven noise, a pause).
+  const dot = h('b', { class: 'stick-dot' }), zFill = h('b');
+  const stick = h('div', { class: 'meter-stick', hidden: true },
+    h('div', { class: 'stick', 'aria-hidden': 'true', title: 'Джойстик СПППР: сгибание − разгибание, пронация − супинация' }, dot),
+    h('div', { class: 'stick-z', 'aria-hidden': 'true', title: 'Отведение − приведение' }, zFill));
+  const stream = h('p', { class: 'meter-stream', hidden: true });
+  let streamAt = 0, streamBad = false;
   const node = h('div', { class: 'meter', role: 'region', 'aria-label': 'Сигнал датчиков A и B' },
     h('div', { class: 'meter-row' }, h('span', { class: 'meter-label a' }, 'A'), A.node),
     chip,
     h('div', { class: 'meter-row' }, B.node, h('span', { class: 'meter-label b' }, 'B')),
-    probs);
+    probs, stick, stream);
   return {
     node,
     /** The marks follow the sliders (5.11: they stayed where the meter was built). */
@@ -120,8 +128,36 @@ export function signalMeter(app) {
       if (probs.textContent !== top) { probs.textContent = top; probs.hidden = !top; }
       const cmd = intent.valid ? intent.command : 'lost';
       if (chip.dataset.cmd !== cmd) chip.dataset.cmd = cmd; // no attribute write per frame (5.11: ~1.6 mutations a frame)
+      const axes = intent.valid ? intent.axes : null;
+      if (stick.hidden !== !axes) stick.hidden = !axes;
+      if (axes) {
+        dot.style.transform = `translate(${Math.round(-axes.x * 20)}px, ${Math.round(-axes.y * 20)}px)`;
+        dot.classList.toggle('on', intent.command !== 'rest');
+        zFill.style.left = axes.z < 0 ? `${50 + axes.z * 50}%` : '50%';
+        zFill.style.width = `${Math.abs(axes.z) * 50}%`;
+      }
+      const now = performance.now();
+      const bad = intent.link === 'inertia';
+      if (now - streamAt > 500 || bad !== streamBad) {
+        streamAt = now; streamBad = bad;
+        const line = streamLine(app.sppprDecoder?.(), intent);
+        if (stream.textContent !== line) { stream.textContent = line; stream.hidden = !line; }
+        stream.classList.toggle('bad', bad);
+      }
     },
   };
+}
+
+/**
+ * 6.0 — the СПППР stream in one line: packets a second, the jitter, the forgiven noise, refused packets; while no packet
+ * comes for more than 200 ms — that the speed fades (the task's inertia), not that the person stopped.
+ */
+export function streamLine(decoder, intent = null) {
+  if (!decoder || !decoder.stats.accepted) return '';
+  if (intent?.link === 'inertia') return `Пакеты не приходят ${intent.ageMs ?? ''} мс — скорость гаснет плавно`;
+  const { rateHz, jitterMs } = decoder.timing();
+  const st = decoder.stats;
+  return [`СПППР ${rateHz ?? '—'} пак/с`, `джиттер ${jitterMs ?? '—'} мс`, `прощено шумов ${st.forgiven}`, st.rejected ? `отклонено ${st.rejected}` : null].filter(Boolean).join(' · ');
 }
 
 /**

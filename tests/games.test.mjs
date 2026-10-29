@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Headless playthroughs: the autopilot drives the *realistic* emulator through the full pipeline.
 // Every game × level × scheme must be winnable (≥ 2★), and a passive player must not win.
 import test from 'node:test';

@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.30 — meetup of 21.10.2026 (docs/TASK.md, «Митап»): controls under the hand that taps them, two prostheses, response
 // within the prosthesis's ≈150 ms. Each test fails on 5.29.
 import test from 'node:test';

@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Unit tests of the pure domain: signal pipeline, hand model, calibration, progress, storage, bridge parsing.
 import test from 'node:test';
 import assert from 'node:assert/strict';

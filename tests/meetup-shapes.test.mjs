@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.31 follow-up — the meetup graphs (F7) are arbitrary units with a rest offset, not the 0…1 emulator.
 // The shapes are synthetic (tests/fixtures/meetup-shapes.mjs). Nothing here is a recording from Motorica.
 import test from 'node:test';

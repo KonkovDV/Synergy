@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Red Team: untrusted inputs must never lock the user out. A backup file is hostile until proven otherwise:
 // every profile field with a wrong type falls back to its default and the screens' domain calls still work.
 import test from 'node:test';

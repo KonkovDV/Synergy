@@ -26,6 +26,14 @@ export const SIGNAL = {
   gestureMinConfidence: 0.6,
   gestureStableMs: 90,      // a gesture must persist this long before it becomes a command
   thresholdIntensity: 0.6,  // fixed intensity of the threshold (two-button) scheme
+  // 6.0 — the configurable parameters the task names. Threshold mode: «порог активации» (onThreshold, per channel),
+  // «время удержания» (holdMs), «подавление ложных срабатываний» (refractoryMs), «dead-zone» (hysteresis: the band under
+  // the threshold where a channel keeps its state). Proportional mode: «сглаживание» (smoothingMs), «ограничение резких
+  // скачков» (slewPerS) and the dead zone of the output (deadZone). Defaults keep the response well inside 100 ms.
+  holdMs: 15,               // a channel switches on after staying above its threshold this long: a one-frame spike does not
+  refractoryMs: 60,         // after switching off, a channel cannot switch on again for this long: no chatter, no double trigger
+  deadZone: 0.03,           // proportional output: |A − B| below this is zero (rest in the middle), above it rises from zero
+  slewPerS: 12,             // proportional output changes by at most this much a second (full range in ≈ 85 ms): no jumps
 };
 
 /**
@@ -37,8 +45,39 @@ export const GESTURE_CONFUSION = {
   pairs: [['pinch', 'key', 0.35], ['point', 'thumb', 0.30], ['fist', 'key', 0.15], ['fist', 'thumb', 0.10],
     // 5.29, the UBI4 set: classes that share muscles or a thumb position. Our model for the emulator, not Motorica's data:
     // wrist and finger flexors lie in one forearm compartment, the extensors in the other.
-    ['pinch', 'thumbflex', 0.30], ['fist', 'wristflex', 0.25], ['open', 'wristext', 0.25], ['indication', 'open', 0.15]],
+    ['pinch', 'thumbflex', 0.30], ['fist', 'wristflex', 0.25], ['open', 'wristext', 0.25], ['indication', 'open', 0.15],
+    // 6.0, the set of the task (СПППР): muscles the movements share. A deviation is a flexor and an extensor of one side
+    // together (adduction: FCU + ECU; abduction: FCR + ECRL), pronator teres starts with the flexors, the supinator lies
+    // in the extensor compartment. Our model for the emulator — not data of Motorica's recognizer.
+    ['flexion', 'adduction', 0.30], ['extension', 'abduction', 0.30], ['flexion', 'abduction', 0.15], ['extension', 'adduction', 0.15],
+    ['pronation', 'flexion', 0.20], ['supination', 'extension', 0.20], ['pronation', 'supination', 0.08]],
   other: 0.02,
+};
+
+/**
+ * 6.0 — the СПППР stream of the task (28.10.2026): {"timestamp_ms": MCU timer, "dist": {7 states}} (core/spppr.js).
+ * All times are on the MCU clock (differences of timestamp_ms), except `linkLostMs`, which is the phone's view of a silent
+ * link. Values are the game's choice, not Motorica firmware settings.
+ */
+export const SPPPR = {
+  lossMs: 200,        // the task: no packet for longer → the speed fades (inertia), the game does not freeze
+  inertiaTauMs: 120,  // time constant of that fade
+  linkLostMs: 1500,   // a silent link for this long (phone time) → «сигнал потерян», the exercise waits as for the channels
+  smoothingMs: 45,    // EMA of the probabilities, α = 1 − e^(−dt/τ) with dt from timestamp_ms: the same at 10 or 100 ms a packet
+  maxDtMs: 250,       // a longer dt (after a gap) counts as this much: one late packet is not a jump
+  deadZone: 0.10,     // |axis| below this is no motion (the axes are differences of probabilities, −1…1)
+  enter: 0.18,        // the dominant axis must reach this to become a command…
+  exit: 0.10,         // …and stays one down to this (hysteresis)
+  dwellMs: 50,        // a new direction must hold this long on the MCU clock: one wrong packet is forgiven
+  rampMs: 120,        // speed ramps up after a new direction (Simon et al. 2011, a decision-based velocity ramp)…
+  rampFloor: 0.4,     // …from this share
+  extrapolateMs: 100, // between packets the axes go on along their slope at most this far (no jerk at 10–100+ ms a packet)
+  maxSlope: 8,        // axis units per second the extrapolation may use
+  uncertainMargin: 0.15, // top-1 minus top-2 below this → «не уверен» on the screen
+  sumTolerance: 0.02, // Σ dist outside 1 ± this → the packet is refused (hard contract)
+  rebootBackMs: 1000, // timestamp_ms went back by more → the MCU restarted (its timer counts from power-on)
+  clockWindow: 64,    // packets in the clock offset estimate (lower envelope of arrival − timestamp)
+  maxChars: 1024,     // a packet is ~170 bytes
 };
 
 export const HAND = {
@@ -172,6 +211,13 @@ export const SETTINGS_RANGES = {
   gameSpeed: { min: 0.6, max: 1, step: 0.05 },
   weeklyGoal: { min: 2, max: 7, step: 1 },
   audioOffsetMs: { min: -100, max: 300, step: 10 }, // «Синхронизация звука»: Bluetooth adds 100–300 ms that outputLatency may not report
+  // 6.0 — the signal parameters of the task (SIGNAL): each has a slider in «Чувствительность → Параметры сигнала».
+  holdMs: { min: 0, max: 300, step: 5 },
+  refractoryMs: { min: 0, max: 400, step: 10 },
+  hysteresis: { min: 0.02, max: 0.15, step: 0.01 },
+  smoothingMs: { min: 10, max: 150, step: 5 },
+  slewPerS: { min: 2, max: 20, step: 1 },
+  deadZone: { min: 0, max: 0.2, step: 0.01 },
 };
 export const TEXT_SCALES = [1, 1.15, 1.3];
 

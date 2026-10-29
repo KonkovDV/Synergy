@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Scenarios of docs/SCENARIOS.md that had no automated check («—» in the table), named by their number.
 import test from 'node:test';
 import assert from 'node:assert/strict';

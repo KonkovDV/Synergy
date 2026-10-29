@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.17 — the game, the evidence of a build and the release files: a new best compares the player with themselves
 // only; the grown Firebird flies in «Полёт»; the numbers of the README come from docs/evidence.json; the release
 // binaries are built, never tracked.

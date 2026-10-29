@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Novice model (reaction delay, force noise, lapses, noisy sensor): a crude stand-in for people until
 // the playtest — it caught the threshold-scheme overshoot that the all-seeing bot never had.
 import test from 'node:test';

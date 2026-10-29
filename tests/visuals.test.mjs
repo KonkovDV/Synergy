@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.32 — the game field in the brand's style (docs/GAME_VISUALS.md): every game draws in every look, the effects
 // survive a stand-in canvas, the static layer is painted once, a held note stops on the hit line, sparkles do not
 // touch the game's own random sequence.

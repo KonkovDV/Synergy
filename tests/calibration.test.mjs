@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Co-adaptive calibration (PLAN B.3): the rest baseline follows slow sensor drift in confirmed rest only,
 // the applied shift is bounded, a big drift or a channel stuck «on» asks for recalibration.
 import test from 'node:test';

@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.16 — the team's illustrations in the product (ui/pictures.js, public/art/, tools/import-art.py): the catalogue is
 // the files, every thing of the app that has a place for a picture has one, the Firebird wears its gifts where the
 // pose leaves room, the build carries the pictures offline, the APK gets the launcher icon and the splash.
