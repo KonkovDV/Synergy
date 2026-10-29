@@ -56,6 +56,8 @@
 
 **Приёмка:** `npm test` — 0 упали; `npm run test:tz` — OK; `node tools/gesture-drill.mjs` — OK; ворота `--draft` — без новых ошибок; `docs/TZ_COMPLIANCE.md` — каждая строка ТЗ со ссылкой на тест.
 
+**Статус (6.0.0, 29.10.2026):** T.1–T.13 и T.15 — ✅ (тесты в `docs/TZ_COMPLIANCE.md`); T.14 — документы ✅, скринкаст снимает команда. Дальше: телефоны и TalkBack (PLAN 0.2), реальный МК при доступе, игра с двумерной целью по джойстику (TAC) — кандидат 6.1.
+
 ### Сессия «До 28.10» (B.2–B.4 прошлого плана выполнены в 5.4.0: питч-кит, музыка и Мио, метки схем)
 
 #### B.1 Первый настоящий прогон CI (S)
@@ -335,6 +337,7 @@ npm run pack                             # zip + проверка распако
 2. `src/input/bridge.js` → `CLASS_ORDER` (если индексы классов эмулятора идут в другом порядке), `GESTURE_ALIASES` (синонимы; id и русские имена принимаются сами).
 3. `src/config.js` → `HAND.twoChannelGrips` (если меняются хваты протеза); `GESTURE_CONFUSION` (пары похожих жестов; несуществующие отбрасываются сами).
 4. `src/games/grip.js` → `OBJECTS[*].grip` для предметов, если хватов больше нет.
+4а. `src/render/bionic.js` → `grips` и `light`: картинка кисти на каждый хват набора (с 26.10; учебная замена ждёт это напоминание).
 5. `lab/lab7.py` и `bridge/ws_bridge.py` → `GESTURES` в том же порядке (ворота сверяют) и профили синтетики `lab7.PROFILES`.
 6. `npm run drill:gestures`, `npm test`, `node tools/check-submission.mjs --draft`.
 7. `MEMORY.md` → `Набор жестов организатора: id, …`; `docs/GLOSSARY.md`, `docs/TASK.md` (статус «из задачи»), `docs/JURY_STRATEGY.md` §1–2 и §5 (убрать «гипотеза» — ворота потребуют).

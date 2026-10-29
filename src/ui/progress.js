@@ -144,7 +144,8 @@ function confusionTable(conf) {
     const v = conf.cells[conf.rows[ri]]?.[conf.cols[ci - 1]] ?? 0;
     return v ? `heat h${Math.min(4, 1 + Math.floor(3.99 * v / max))}` : '';
   };
-  return dataTable('Нужен жест (строка) → распознан как (столбец), секунды', ['', ...conf.cols.map(c => name(c).slice(0, 4))], rows, heat);
+  // 6.0: the corner header names the rows (axe «empty-table-header»: a header cell without text says nothing to a screen reader)
+  return dataTable('Нужен жест (строка) → распознан как (столбец), секунды', ['Нужен', ...conf.cols.map(c => name(c).slice(0, 4))], rows, heat);
 }
 
 /**
