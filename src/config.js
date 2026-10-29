@@ -4,7 +4,7 @@ import { CLOSING_GESTURES } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '5.32.0',
+  version: '6.0.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
