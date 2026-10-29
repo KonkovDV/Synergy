@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Frame-rate guard (PLAN B.6): degrade once after a sustained slow stretch, never on a single hitch.
 import test from 'node:test';
 import assert from 'node:assert/strict';

@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Flow rules of the screens as pure functions (5.10): where the results lead, and the hands-free hold.
 import test from 'node:test';
 import assert from 'node:assert/strict';

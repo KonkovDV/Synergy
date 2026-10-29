@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.29 — the prosthesis's own switch-on thresholds. Motorica Start (public branch kmm_ubi4_integrationV3, 20.10.2026)
 // appended `getLatestThresholds()` → [open, close] 0…255 to the game service, on the scale of the snapshot levels.
 // A host that passes them makes each channel of the game switch on at the same signal level as the hand (docs/RESEARCH.md §18).

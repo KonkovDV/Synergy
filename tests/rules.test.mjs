@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // docs/GAME_RULES.md describes the product that is in the code (5.13, the idea of the team's sample: a rules document
 // whose constants table is checked by a test). Every constant row, every example and every catalog row is checked;
 // a new numeric constant of the game rules without a row fails too.

@@ -145,7 +145,7 @@ export function gestureIcon(gesture, skin = 'icon', size = 44, mirror = false) {
   const canvas = h('canvas', { width: size * 2, height: size * 2, class: 'gesture-icon', 'aria-hidden': 'true' });
   const ctx = canvas.getContext('2d');
   ctx.scale(2, 2);
-  drawHand(ctx, { x: size / 2, y: size * 0.95, size: size * 0.42, pose: gesture.pose, wrist: gesture.wrist ?? 0, skin, sleeve: false, mirror });
+  drawHand(ctx, { x: size / 2, y: size * 0.95, size: size * 0.42, pose: gesture.pose, wrist: gesture.wrist ?? 0, roll: gesture.roll ?? 0, dev: gesture.dev ?? 0, skin, sleeve: false, mirror });
   return canvas;
 }
 

@@ -16,6 +16,7 @@ import { CHECKIN_ACTION, needsCheckin, safetyOutdated, checkinLight, electrodesO
 import { exportState, importState } from './core/storage.js';
 import { buildShowcaseState } from './core/showcase.js';
 import { EmgEmulator } from './input/emulator.js';
+import { OnScreenEmulator } from './input/spppr-source.js';
 import { BridgeSource, trustedMessageSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard, setPadMode } from './ui/controls.js';
@@ -89,7 +90,9 @@ export class App {
   constructor(root) {
     this.root = root;
     this.store = new Store(safeStorage(), { catalog: CATALOG });
-    this.emulator = new EmgEmulator({ realism: this.settings.realism, seed: Date.now() % 100000 });
+    // 6.0: the pads, the keys and the autopilot drive this one; in the gesture scheme of the task's set it speaks the
+    // СПППР stream (JSON packets with the MCU's time through the decoder), otherwise the EMG envelopes as before.
+    this.emulator = new OnScreenEmulator({ realism: this.settings.realism, seed: Date.now() % 100000 });
     // 5.30: the second arm of «Две руки» on the on-screen emulator (the left hand is `emulator`, the right one this).
     this.emulator2 = new EmgEmulator({ realism: this.settings.realism, seed: (Date.now() + 7919) % 100000 });
     this.bridge = null;
@@ -471,7 +474,14 @@ export class App {
     const s = this.settings;
     const calibration = demo || this.sensorsPaused() ? this.state.calibrations.touch : this.calibration();
     const restTracker = adaptRest ? new RestTracker(calibration, { onThreshold: Math.max(...this.switchOn(demo)) }) : null;
-    return new SignalPipeline({ scheme: s.scheme, calibration, params: { onThreshold: s.sensitivity, onThresholdB: s.sensitivityB, coThreshold: s.coThreshold, bothOn: s.bothOn, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
+    return new SignalPipeline({ scheme: s.scheme, calibration, params: { ...this.signalParams(), bothOn: s.bothOn, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
+  }
+
+  /** The person's signal parameters (Настройки → Чувствительность): thresholds and, since 6.0, the parameters of the task. */
+  signalParams() {
+    const s = this.settings;
+    return { onThreshold: s.sensitivity, onThresholdB: s.sensitivityB, coThreshold: s.coThreshold,
+      holdMs: s.holdMs, refractoryMs: s.refractoryMs, hysteresis: s.hysteresis, smoothingMs: s.smoothingMs, slewPerS: s.slewPerS, deadZone: s.deadZone };
   }
 
   /** The grip switches the way the person's prosthesis does it (Настройки → «Смена хвата»). */
@@ -516,6 +526,7 @@ export class App {
       : new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.liveFrames(demo), emulator: this.emulator, autopilot: demo,
         quality: live === 'bridge' && !demo ? this.qualityMonitor(this.calibration()) : null });
     const armPose = pose && !demo && live === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
+    this.sppprDecoder(demo)?.resetStats(); // 6.0: the stream's counters of this exercise (the run keeps them)
     return { id: game, level, retention, demo, plan, quick: !!quick && !demo, pose: armPose, game: instance, hand: runner.hand, runner, entry: GAME_BY_ID[game], scheme,
       ...(game === 'check' && !demo ? { formWeek: week } : {}) };
   }
@@ -529,7 +540,7 @@ export class App {
     const touch = demo || this.liveSource() === 'touch';
     const emulators = { left: this.emulator, right: this.emulator2 };
     const calibration = side => (touch ? this.state.calibrations.touch : this.state.calibrations[`bridge-${side}`]);
-    const params = { onThreshold: this.settings.sensitivity, onThresholdB: this.settings.sensitivityB, coThreshold: this.settings.coThreshold, prosthesisThresholds: null };
+    const params = { ...this.signalParams(), prosthesisThresholds: null };
     const pipelines = { left: new SignalPipeline({ scheme, calibration: calibration('left'), params }), right: new SignalPipeline({ scheme, calibration: calibration('right'), params }) };
     if (!touch) this.signalSource(false); // builds the external source if it is not there yet
     // Read through `this.bridge` every frame: a host's first frame may rebuild the source (applySource).
@@ -546,6 +557,15 @@ export class App {
     return calibration?.rest && calibration?.max ? new SignalQualityMonitor({ calibration, onThreshold: Math.max(...this.switchOn()) }) : null;
   }
 
+  /**
+   * 6.0 — the decoder of the СПППР stream in use, or null: the external one (a packet of the task came through the bridge)
+   * or the on-screen emulator's (the gesture scheme of the task's set).
+   */
+  sppprDecoder(demo = false) {
+    if (!demo && this.liveSource() === 'bridge') return this.bridge?.spppr ?? null;
+    return this.emulator.usesStream?.() || (this.settings.scheme === 'gesture' && GESTURE_SET.id === 'tz') ? this.emulator.decoder ?? null : null;
+  }
+
   /** Faded feedback: share of trials with live feedback from this game's recent skill (all trials when off). */
   guidance(game) {
     if (!this.settings.fadedFeedback) return 1;
@@ -558,6 +578,9 @@ export class App {
   finishSession(session) {
     const r = session.game.result();
     const signalIssues = session.demo ? [] : runSignalIssues(session.runner);
+    // 6.0: what the СПППР stream was like during the exercise (rate, jitter, gaps, forgiven noise) — for the report.
+    const decoder = session.scheme === 'gesture' ? this.sppprDecoder(session.demo) : null;
+    const stream = decoder && decoder.stats.accepted ? decoder.summary() : null;
     const run = {
       id: crypto.randomUUID?.() ?? String(Date.now()), at: new Date().toISOString(),
       game: session.id, level: session.level, levelCount: session.entry.Game.levels.length,
@@ -571,7 +594,7 @@ export class App {
       ...(this.settings.prostheses === 'two' && !session.game.constructor.bimanual ? { side: this.settings.side } : {}),
       ...(Number.isInteger(session.formWeek) ? { formWeek: session.formWeek } : {}),
       // 5.30: what was wrong with the signal for 3 s or more — the specialist sees contact problems next to the results.
-      ...(signalIssues.length ? { signalIssues } : {}), ...r,
+      ...(signalIssues.length ? { signalIssues } : {}), ...(stream ? { stream } : {}), ...r,
     };
     const replay = session.game.replay?.() ?? null; // shown on the results screen, never saved
     if (session.demo) return { run, report: null, planBonus: 0, replay };

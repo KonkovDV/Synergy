@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // The submission gate is itself tested (PLAN B.8): a temp copy of the repository passes, then each planted
 // mistake — missing APK, version mismatch, overstated claim, gesture set out of sync — makes it exit 1.
 // The copy runs the gate with --no-tests (the gate runs this suite, this test runs the gate).
@@ -131,7 +132,10 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['manifest declares a medical app', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"games",', '"games", "medical",')), 'категория «medical»'],
       ['PWA locked to portrait', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"display"', '"orientation": "portrait",\n  "display"')), 'WCAG 1.3.4'],
       ['APK locked to portrait', () => edit(dir, 'android/AndroidManifest.xml', s => s.replace('android:exported="true"', 'android:exported="true"\n            android:screenOrientation="portrait"')), 'AndroidManifest.xml: ориентация'],
-      ['gesture set published, docs still say «гипотеза»', () => edit(dir, 'MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, thumb')), 'назван гипотезой'],
+      // 6.0 — the set of the task is published (MEMORY.md): a document that still calls the set a hypothesis, or a
+      // published line that differs from vocabulary.js, fails the gate.
+      ['gesture set published, docs still say «гипотеза»', () => edit(dir, 'docs/TASK.md', s => `${s}\n| «7 жестов» | состав — гипотеза команды |\n`), 'назван гипотезой'],
+      ['published set differs from vocabulary.js', () => edit(dir, 'MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, thumb')), 'набор организатора в MEMORY.md'],
     ];
     for (const [name, plant, message] of cases) {
       plant();
