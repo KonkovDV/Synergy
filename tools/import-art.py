@@ -424,7 +424,11 @@ def write_catalogue(manifest: dict):
                              "hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)")
     manifest["layout"] = dict(sorted(manifest.get("layout", {}).items()))
     MANIFEST_LAYOUT.update(manifest["layout"])
+    # 29.10: where a hand generated holding a thing holds it (tools/import-generated.py --regen; render/bionic.js drawHeld)
+    if manifest.get("holds"):
+        manifest["holds"] = dict(sorted(manifest["holds"].items()))
     write(OUT / "manifest.json", (json.dumps(manifest, ensure_ascii=False, indent=1) + "\n").encode())
+    holds = "".join(f"  '{k}': [{', '.join(str(x) for x in v)}],\n" for k, v in manifest.get("holds", {}).items())
     entries = ",\n".join(f"  '{k}': [{v['w']}, {v['h']}, {1 if v['alpha'] else 0}]" for k, v in manifest["items"].items())
     boxes = ",\n".join(f"  '{k}': {{ {', '.join(f'{i}: {b}' for i, b in v.items())} }}" if v else f"  '{k}': {{}}" for k, v in manifest["layout"].items())
     write(ROOT / "src" / "ui" / "art-manifest.js", (
@@ -433,7 +437,10 @@ def write_catalogue(manifest: dict):
         f"export const ART_BYTES = {manifest['total_bytes']};\n"
         "// What the Firebird wears, per picture: item → [centre x %, centre y %, width %, rotation°]. A missing item —\n"
         "// the pose covers its slot (the star above the head, the book on the chest) or the stage has not opened it.\n"
-        f"export const PET_LAYOUT = Object.freeze({{\n{boxes},\n}});\n").encode())
+        f"export const PET_LAYOUT = Object.freeze({{\n{boxes},\n}});\n"
+        "// A hand generated holding a thing (hold-*): [thing x, thing y from the arm's axis and the top, picture w, h], in\n"
+        "// heights of the hanging hand pictures (render/bionic.js drawHeld).\n"
+        f"export const HOLD_LAYOUT = Object.freeze({{\n{holds}}});\n").encode())
 
 
 def main():

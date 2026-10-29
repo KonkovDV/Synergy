@@ -8,6 +8,7 @@
 // 5.16: the team's illustrations come first (ui/pictures.js, public/art/); these drawings are the fallback for a
 // picture that is missing or fails to load, and the pieces the pictures do not cover (light trails).
 import { picture, petPicture } from './pictures.js';
+import { outfitPlaces } from '../core/pet.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 let seq = 0;
@@ -358,15 +359,16 @@ function plume(x, y, len, width, angle, bend, fill) {
  * Жар-птица (5.12) — the pet the player raises from an egg: egg → chick → fledgling → young → firebird. Plumage in the
  * brand gradient (green → teal → blue → violet) with the warm «fire» of the folk tale (coral and amber crest, eye spots
  * on the tail). Moods: fed (trained today — happy eyes), waiting (round eyes), rest (asleep, a rest day). Never sad.
- * 5.13: `items` — what it wears (slot → item id, see core/pet.js), drawn at the anchors of each stage (the sample's
+ * 5.13: `items` — what it wears (`{ nest, look }`, see core/pet.js), drawn at the anchors of each stage (the sample's
  * slot anchors); `alive` — a short idle (breathing, a blink, the tail swaying) that stops by itself within 5 s
  * (WCAG 2.2.2); `play` — a one-shot animation of PET_ANIMATIONS. Every motion is off with «Меньше движения».
  * 5.16: the bird is the team's picture of its stage and mood (`pose` — wave, read, star for the young and grown
- * bird), what it wears is laid over it at the boxes of art-manifest.js; this drawing is the fallback.
+ * bird); 29.10: in its look it is one whole picture, laid over only until that picture exists; this drawing is the fallback.
  */
 export function firebird(stage = 'egg', mood = 'waiting', size = 96, { items = {}, alive = false, play = null, pose = null } = {}) {
   const cls = `firebird firebird-${stage} firebird-${mood}${alive ? ' alive' : ''}${play ? ` anim-${play}` : ''}`;
-  const drawing = () => firebirdDrawing(stage, mood, size, { items, alive, play });
+  // 29.10: asleep, the bird has taken its look off (ui/pictures.js) — the drawing too
+  const drawing = () => firebirdDrawing(stage, mood, size, { items: mood === 'rest' ? { ...items, look: null } : items, alive, play });
   return petPicture(stage, mood, size, { items, pose, cls, fallback: drawing }) ?? drawing();
 }
 
@@ -460,7 +462,7 @@ function firebirdDrawing(stage, mood, size, { items = {}, alive = false, play = 
       gloss(id, 51, 50, 6.5, 4, -28),
       face(60, 61, 0.88)];
   }
-  const worn = petItemsArt(id, stage, items);
+  const worn = petItemsArt(id, stage, outfitPlaces(items));
   // The bird moves as one (with what it wears); the ground, the nest and its things stay.
   const bird = s('g', { class: 'fb-bird' }, [behind, worn.headBack, body, worn.headFront, worn.chest].flat(4));
   svg.append(...[light(id, 2.2), defs, worn.defs, ground, worn.nestBack, bird, worn.nestFront, zz, sparkles].flat(4));

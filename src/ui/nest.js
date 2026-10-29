@@ -8,7 +8,7 @@ import { firebird, badgeArt, trails, achievementArt, giftArt, skinArt, sectionAr
 import { artBackground } from './pictures.js';
 import { touchableBird } from './petcard.js';
 import { bottomNav, segmented } from './widgets.js';
-import { petState, petStageIndex, petName, PET_SLOTS, PET_ITEMS, itemUnlocked, slotOpen, wornItems, equipItem } from '../core/pet.js';
+import { petState, petStageIndex, petName, PET_SLOTS, PET_ITEMS, PET_PLACES, itemUnlocked, placeOpen, wornItems, equipItem } from '../core/pet.js';
 import { PET } from '../config.js';
 import { trainingDays, dayKey, ACHIEVEMENTS, SKINS, skinUnlocked, daysSinceTraining } from '../core/progress.js';
 import { drawHand } from '../render/draw.js';
@@ -61,17 +61,20 @@ export function nestScreen(app) {
     })),
     h('p', { class: 'note' }, `Растёт от дней с тренировкой: сейчас ${count(days, FORMS.days)}. День отдыха и пропуск рост не отнимают.`));
 
-  // What it wears (5.13): one choice per open slot among the earned items; the rest says which achievement brings it.
+  // What it wears (5.13; 29.10 — the nest and one look, each a whole picture): the earned things of each choice; a look
+  // whose place the stage has not opened yet says when it will; nothing earned yet says how things come.
   const outfit = h('section', { class: 'card outfit', 'data-tour': 'nest.outfit' }, h('h2', { class: 'with-art' }, sectionArt('gift', 32), 'Наряды'),
     ...PET_SLOTS.map(slot => {
       const earned = PET_ITEMS.filter(i => i.slot === slot.id && itemUnlocked(p, i));
-      const from = PET.stages.find(st => st.id === slot.from)?.name;
+      const ready = earned.filter(i => placeOpen(i, pet.stage.id)), waiting = earned.filter(i => !placeOpen(i, pet.stage.id));
+      const stageName = i => PET.stages.find(st => st.id === PET_PLACES[i.place])?.name;
       return h('div', { class: 'outfit-slot' }, h('p', { class: 'outfit-label' }, slot.name),
-        !slotOpen(slot.id, pet.stage.id) ? h('p', { class: 'note' }, `Откроется на стадии «${from}».${earned.length ? ` Уже ждёт: ${earned.map(i => i.name).join(', ')}.` : ''}`)
-          : earned.length ? segmented([{ value: '', label: 'Без' }, ...earned.map(i => ({ value: i.id, label: i.name, art: () => giftArt(i.id, 36) }))], p.pet?.[slot.id] ?? '',
-            v => { equipItem(p, slot.id, v || null); app.save(); app.go('nest'); }, `Наряд: ${slot.name.toLowerCase()}`)
-            : h('p', { class: 'note' }, 'Пока пусто — подарки приходят за достижения.'));
-    }));
+        ready.length ? segmented([{ value: '', label: 'Без' }, ...ready.map(i => ({ value: i.id, label: i.name, art: () => giftArt(i.id, 36) }))], worn[slot.id] ?? '',
+          v => { equipItem(p, slot.id, v || null); app.save(); app.go('nest'); }, `Наряд: ${slot.name.toLowerCase()}`)
+          : h('p', { class: 'note' }, 'Пока пусто — подарки приходят за достижения.'),
+        waiting.length ? h('p', { class: 'note' }, `Уже ждут: ${waiting.map(i => `${i.name} — со стадии «${stageName(i)}»`).join(', ')}.`) : null);
+    }),
+    h('p', { class: 'note' }, 'Птица надевает одну вещь: в ней она нарисована целиком.'));
 
   // Gifts and achievements as a collection (the sample's album): what is earned shows its date and its gift; what is
   // not yet earned says how — a promise in words, never a lock that blames.

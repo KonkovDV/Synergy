@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as config from '../src/config.js';
 import { levelThreshold, playerLevel, starsFor, sessionRules, ACHIEVEMENTS, SKINS } from '../src/core/progress.js';
-import { petStageIndex, PET_ITEMS, PET_SLOTS } from '../src/core/pet.js';
+import { petStageIndex, PET_ITEMS, PLACE_NAMES } from '../src/core/pet.js';
 import { guidanceFor } from '../src/core/guidance.js';
 import { missionXp } from '../src/core/missions.js';
 import { checkInAdvice } from '../src/core/wellbeing.js';
@@ -71,7 +71,7 @@ test('rules: achievements, skins and the Firebird\'s gifts are listed as in the 
   const gifts = table('Наряды и гнездо (5.13)');
   assert.deepEqual(gifts.map(r => r[0]), PET_ITEMS.map(i => i.name));
   PET_ITEMS.forEach((item, i) => {
-    assert.equal(gifts[i][1], PET_SLOTS.find(s => s.id === item.slot).name, item.id);
+    assert.equal(gifts[i][1], item.place === 'nest' ? 'Гнездо' : PLACE_NAMES[item.place], item.id);
     assert.equal(gifts[i][2], `«${ACHIEVEMENTS.find(a => a.id === item.achievement).name}»`, item.id);
   });
 });
