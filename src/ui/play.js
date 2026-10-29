@@ -11,11 +11,11 @@ import { clearTints } from '../render/sprites.js';
 import { gameArt, mio } from './art.js';
 import { useFlier, loadSprites, roomPictures } from './pictures.js';
 import { petStageIndex, wornItems } from '../core/pet.js';
-import { PET } from '../config.js';
+import { PET, SESSION } from '../config.js';
 import { LiveAnnouncer } from '../core/announce.js';
 import { MusicPlayer, offsetClock } from '../core/music.js';
 import { audioClock, playMusic } from '../services/audio.js';
-import { freePlayCaution } from '../core/wellbeing.js';
+import { freePlayCaution, adviseStop } from '../core/wellbeing.js';
 import { secondsToday, dayKey, trainingDays } from '../core/progress.js';
 import { HoldConfirm } from '../core/handsfree.js';
 import { howFor } from '../games/registry.js';
@@ -36,6 +36,11 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: offsetClock(audioClock, s.audioOffsetMs), play: playMusic }) : null; };
   let music = musicFor(session);
   let phase = 'intro', countdown = 0, confirm = new HoldConfirm(s.dwellS), doneAt = 0, lastScore = -1, lastCount = 0, lastNow = null, outcome = null;
+  // 6.0 — an exercise of the daily plan is a block (task of 28.10: 60–80 % of the time is gameplay with critical timings):
+  // rounds of the same level follow one another after a 3-2-1, until SESSION.blockS of active play or SESSION.maxRounds.
+  // Each round is a run of its own (progress and the report stay per run); the results show the last one and the block.
+  const block = { rounds: 1, activeS: 0, outcomes: [] };
+  const blockable = plan && !demo && !session.entry.assessment && !session.game.constructor.bimanual;
   const confirmS = s.dwellS;
   const entry = session.entry;
   // The live source, not the saved one: on a skin day the saved «Внешний» stays, but the emulator gives the signal.
@@ -213,8 +218,27 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
 
   // The run is saved the moment the game ends (5.10): until then it was saved only after the 0.9 s pause, and a
   // back, ✕ or Esc in that pause threw a finished exercise away. Results follow after the pause.
-  function finishNow() { outcome = app.finishSession(session); }
-  function showResults() { phase = 'leaving'; app.go('results', { ...outcome, plan, demo, pose }); }
+  function finishNow() { outcome = app.finishSession(session); block.outcomes.push(outcome); block.activeS += outcome.run.durationS ?? 0; }
+  function showResults() {
+    phase = 'leaving';
+    const blockInfo = block.outcomes.length > 1 ? { rounds: block.outcomes.length, activeS: Math.round(block.activeS), meanScore: Math.round(block.outcomes.reduce((s0, o) => s0 + o.run.score, 0) / block.outcomes.length), reports: block.outcomes.map(o => o.report).filter(Boolean) } : null;
+    const planBonus = block.outcomes.reduce((s0, o) => s0 + (o.planBonus ?? 0), 0); // round 1 completed the plan item
+    app.go('results', { ...outcome, planBonus, plan, demo, pose, ...(blockInfo ? { block: blockInfo } : {}) });
+  }
+  /** Another round of the block, unless the block is long enough, the round limit is reached or fatigue is advised. */
+  function nextRound() {
+    if (!blockable || block.activeS >= SESSION.blockS || block.rounds >= SESSION.maxRounds) return false;
+    if (adviseStop(app.runsToday(), secondsToday(app.profile, dayKey()), app.rules.softCapMin, app.state.runs)) return false;
+    music?.update(0, 1, false);
+    block.rounds++;
+    session = app.createSession({ game, level, retention, demo, plan: false, pose, quick }); // the plan item is done by round 1
+    music = musicFor(session);
+    lastScore = -1; outcome = null;
+    session.game.paused = true;
+    phase = 'countdown'; countdown = SESSION.roundCountdownS; lastCount = 0;
+    app.say(`Раунд ${block.rounds}`, { interrupt: true });
+    return true;
+  }
 
   // Countdown: the scene under a veil, the number in a round badge whose ring runs out with the second.
   // 5.32: a glass badge with the brand's glow, the ring in the brand gradient, the number in Unbounded.
@@ -258,7 +282,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     node.classList.toggle('lost', lost);
     // The countdown goes to the live hint too: a screen-reader user without the app's own voice hears it (5.10).
     const hintText = lost ? lostSignalHint(app.bridge?.status)
-      : phase === 'countdown' ? `Старт через ${Math.max(1, Math.ceil(countdown))}… расслабьтесь`
+      : phase === 'countdown' ? `${block.rounds > 1 ? `Раунд ${block.rounds} · ` : ''}Старт через ${Math.max(1, Math.ceil(countdown))}… расслабьтесь`
       : retention && phase === 'running' ? 'Без подсказки: доверьтесь ощущениям' : session.game.hint;
     if (hint.textContent !== hintText) hint.textContent = hintText;
     // Screen reader and voice: the latest hint once it holds, not every flip (the voice says the countdown itself).
@@ -271,7 +295,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     bar.style.width = `${Math.round(hud.progress * 100)}%`;
     if (hud.score !== lastScore) { scoreEl.textContent = retention && !session.game.done ? '—' : String(hud.score); lastScore = hud.score; }
     if (session.game.done && phase === 'running') { phase = 'done'; doneAt = now; finishNow(); }
-    if (phase === 'done' && now - doneAt > 900) showResults();
+    if (phase === 'done' && now - doneAt > 900 && !nextRound()) showResults();
     const frameS = lastNow === null ? dt : (now - lastNow) / 1000; // real frame time: the loop's dt is clamped
     lastNow = now;
     if (phase === 'running' && app.fps.update(frameS)) { toast('Упростили графику для плавности'); resize(); }
@@ -286,6 +310,10 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     // First focus after the screen is mounted (5.11): focusing «Старт» while building it was undone by the heading.
     get focus() { return phase === 'intro' ? overlay.querySelector('.btn.primary') : null; },
     onHidden: pause,
+    /** 6.0 — the block of this plan exercise so far: rounds played and seconds of active play. */
+    get block() { return { rounds: block.rounds, activeS: block.activeS }; },
+    // 6.0 — the time that counts as «gameplay with critical timings» (core/timeshare.js): running, live signal, not a demo.
+    running: () => phase === 'running' && !demo && !session.game.done && !session.runner.signalLost,
     /** Back during a run pauses it (a stray gesture must not throw the attempt away); back again leaves. */
     onBack() { if (phase === 'running') pause(); else if (phase !== 'leaving') exit(); return true; },
     onBridgeStatus: updateBridge,

@@ -287,7 +287,9 @@ export function settingsScreen(app, { back = null } = {}) {
         h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
         h('p', { class: 'note' }, `Возрастная категория: ${APP.ageRating} (436-ФЗ). Детям — с родителем.`),
         h('p', { class: 'note' }, 'В разработке использовались ИИ-инструменты. Перечень функций и отчёт о проверке лежат в репозитории: docs/AI_USAGE.md.'),
-        h('button', { class: 'btn ghost', 'data-return': 'faq', onclick: () => app.go('faq', { from: 'settings' }) }, 'Вопросы и ответы'))),
+        h('button', { class: 'btn ghost', 'data-return': 'faq', onclick: () => app.go('faq', { from: 'settings' }) }, 'Вопросы и ответы'),
+        // 6.0 — feedback after testing (task of 28.10): SUS, NASA-TLX, questions of the game; exported by the person
+        h('button', { class: 'btn ghost', 'data-return': 'feedback', onclick: () => app.go('feedback', { from: 'settings' }) }, 'Отзыв о тестировании'))),
     bottomNav(app, 'settings'));
 
   // Back from a sub-screen (calibration, sound sync, tutorial): its section is open and focus is on the button that

@@ -4,10 +4,11 @@ import { h, toast } from './dom.js';
 import { gameArt, badgeArt, starRow, firebird, evolution, achievementArt, giftArt, skinArt, sectionArt } from './art.js';
 import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, PET_SLOTS } from '../core/pet.js';
 import { missionText } from '../core/missions.js';
+import { questText } from '../core/quests.js';
 import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
 import { SKILL_NAME, skillKeys, GESTURE_BY_ID } from '../core/vocabulary.js';
-import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest, sessionTopUp } from '../core/progress.js';
+import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest, sessionTopUp, mergeReports } from '../core/progress.js';
 import { RestMotion, restMotionAllowed } from '../core/restmotion.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS, checkinLight } from '../core/wellbeing.js';
@@ -55,6 +56,8 @@ function rewardList(report) {
   const goal = report.mission;
   return [
     ...(goal?.completed ? [{ art: 'trophy', text: `Цель выполнена: ${missionText(goal.mission, PLAN_CATALOG).title} · +${goal.xp} XP` }] : []),
+    // 6.0 — a mission of the session done by this exercise
+    ...(report.quests ?? []).map(q => ({ art: 'done', text: `Миссия выполнена: ${questText(q).title} · +${Math.round(q.xp)} XP` })),
     // 5.16: the medal of that achievement, the gift itself and the hand in the new look (the badge stands in).
     ...report.achievements.map(id => ({ art: 'medal', pic: () => achievementArt(id, true, 32), text: `Достижение: ${ACHIEVEMENTS.find(a => a.id === id)?.name ?? id}` })),
     ...(report.items ?? []).map(id => ({ art: 'gift', pic: () => giftArt(id, 32), text: `Подарок Жар-птице: ${PET_ITEM_BY_ID[id]?.name ?? id}` })),
@@ -203,7 +206,9 @@ function flightReplayCard(replay) {
     h('p', { class: 'note' }, `${replaySummary(replay)} Линия — высота птицы; отрезки — кольца: зелёные пройдены, жёлтые — мимо.`));
 }
 
-export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote = null, plan = false, demo = false, pose = null, replay = null }) {
+export function resultsScreen(app, { run, report: lastReport, planBonus = 0, calibrationNote = null, plan = false, demo = false, pose = null, replay = null, block = null }) {
+  // 6.0 — a block of rounds (ui/play.js): the rewards of every round, and one line about the block itself.
+  const report = block ? mergeReports(block.reports) ?? lastReport : lastReport;
   const g = GAME_BY_ID[run.game];
   const advice = coachFeedback(run.game, run, app.state.runs);
   const next = plan && !demo ? app.nextPlanItem() : null;
@@ -290,7 +295,8 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       h('p', { class: 'big-score' }, run.score, h('small', {}, ' / 100')),
       // 5.17 — a new best of this level, compared with oneself; a weaker run is not compared at all.
       best?.record ? h('p', { class: 'record' }, badgeArt('star', 20), `Лучший результат уровня · было ${best.previous}`) : null,
-      report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus + (report.mission?.xp ?? 0)} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel} игры` : ''}`)
+      block ? h('p', { class: 'note block-line' }, `Блок: ${count(block.rounds, FORMS.rounds)} · ${block.activeS} с активной игры · средний счёт ${block.meanScore}`) : null,
+      report ? h('p', { class: 'xp-gain' }, `+${report.xp + planBonus + (report.mission?.xp ?? 0) + Math.round((report.quests ?? []).reduce((s, q) => s + q.xp, 0))} XP${planBonus ? ' (план дня выполнен!)' : ''}${report.unlockedLevel ? ` · открыт уровень ${report.unlockedLevel} игры` : ''}`)
         : h('p', { class: 'note' }, 'Так играет автопилот. Демо не влияет на прогресс.'),
       petCard,
       rewards.length ? h('ul', { class: 'rewards', 'aria-label': 'Награды' }, ...rewards.map(r => h('li', {}, r.pic?.() ?? badgeArt(r.art, 24), r.text))) : null,
@@ -299,7 +305,9 @@ export function resultsScreen(app, { run, report, planBonus = 0, calibrationNote
       calibrationCard,
       planDone ? h('div', { class: 'card celebrate tinted' }, h('b', { class: 'with-art' }, badgeArt('trophy', 30), 'Тренировка дня выполнена'), h('p', {}, 'Отличная работа! День отдыха серию не прерывает.'),
         topUp ? h('p', { class: 'note' }, `Сегодня активной игры — ${topUp.minutes ? count(topUp.minutes, FORMS.minutes) : 'меньше минуты'}. Обычно хватает ${SESSION.activeMin[0]}–${SESSION.activeMin[1]} минут в день: если рука не устала, можно ещё одно упражнение.`) : null,
-        topUp ? h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: topUp.game, level: topUp.level }) }, `Ещё одно: ${GAME_BY_ID[topUp.game]?.title ?? topUp.game}`) : null) : null,
+        topUp ? h('button', { class: 'btn ghost', onclick: () => app.go('play', { game: topUp.game, level: topUp.level }) }, `Ещё одно: ${GAME_BY_ID[topUp.game]?.title ?? topUp.game}`) : null,
+        // 6.0 — after a few training days, once: an offer to leave feedback (task of 28.10), never a modal
+        trainingDays(app.profile) >= 3 && !(app.profile.feedback?.length) && !app.showcase ? h('button', { class: 'btn ghost', onclick: () => app.go('feedback', { from: 'home' }) }, 'Оставить отзыв о тестировании') : null) : null,
       stopAdvice ? h('div', { class: 'card warn-card' }, h('b', { class: 'with-art' }, badgeArt('moon', 28), 'Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
       effortCard,
       assessmentCard,

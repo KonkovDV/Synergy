@@ -5,6 +5,7 @@ import { count, FORMS } from './format.js';
 import { SKILL, ACTIVE_GESTURE_IDS } from './vocabulary.js';
 import { emptyOutfit, autoEquip, itemsFor } from './pet.js';
 import { advanceMission } from './missions.js';
+import { advanceQuests } from './quests.js';
 import { primerMastered } from './primer.js';
 
 /** Session rules for the audience: a child trains with a parent — shorter plan, rest and daily cap. */
@@ -82,6 +83,8 @@ export function createProfile() {
     skin: 'graphite',
     pet: emptyOutfit(),                         // what the Firebird wears: slot → item id (5.13)
     mission: null,                              // the goal the player took (core/missions.js), or null
+    quests: { id: '', lastAt: '', games: [], xp: 0, items: [] }, // 6.0: missions of the current session (core/quests.js)
+    feedback: [],                               // 6.0: «Отзыв о тестировании» — SUS, NASA-TLX, questions of the game (core/survey.js)
     missionPass: null,                          // goals set aside this week, and whether the week should be easier or harder (5.25)
     primer: {},                                 // «Азбука протеза»: deckId → { seen: [cardId], best, at } (5.15)
     plan: null,
@@ -177,7 +180,7 @@ export function weekOutlookText(status, options) {
  * Demo (autopilot) runs never change progress.
  */
 export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION.weeklyGoalDefault } = {}) {
-  if (run.demo) return { xp: 0, levelUp: false, achievements: [], unlockedLevel: null, skins: [], items: [], mission: null };
+  if (run.demo) return { xp: 0, levelUp: false, achievements: [], unlockedLevel: null, skins: [], items: [], mission: null, quests: [] };
   const before = playerLevel(profile.xp);
   const gp = { ...gameProgress(profile, run.game) };
   gp.stars = { ...gp.stars, [run.level]: Math.max(gp.stars[run.level] ?? 0, run.stars) };
@@ -202,10 +205,33 @@ export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION
   };
   // The goal the player took (5.13): its reward is part of this run's level-up, so it is added before the level.
   const mission = advanceMission(profile, run, today);
+  // 6.0 — the missions of this session: a small reward each, added before the level like the goal's.
+  const q = advanceQuests(profile.quests, run, run.at ?? new Date().toISOString());
+  profile.quests = q.quests; profile.xp += q.xp;
   const after = playerLevel(profile.xp);
   const skins = SKINS.filter(s => s.level && s.level > before.level && s.level <= after.level).map(s => s.id);
   const achievements = unlockAchievements(profile, run, { weekly: weeklyStatus(profile, weeklyGoal, today) }, today);
-  return { xp, levelUp: after.level > before.level, level: after.level, achievements, unlockedLevel, skins, items: itemsFor(achievements).map(i => i.id), mission };
+  return { xp, levelUp: after.level > before.level, level: after.level, achievements, unlockedLevel, skins, items: itemsFor(achievements).map(i => i.id), mission,
+    quests: q.completed.map(i => ({ ...i, xp: q.completed.length ? q.xp / q.completed.length : 0 })) };
+}
+
+/**
+ * 6.0 — the reports of the rounds of one block (ui/play.js), as one: XP added up, every achievement, gift, look and
+ * mission of any round, the goal's step of the last round unless an earlier round completed it.
+ */
+export function mergeReports(reports) {
+  const list = (reports ?? []).filter(Boolean);
+  if (list.length < 2) return list[0] ?? null;
+  const last = list[list.length - 1];
+  return {
+    ...last,
+    xp: list.reduce((s, r) => s + (r.xp ?? 0), 0),
+    levelUp: list.some(r => r.levelUp),
+    achievements: list.flatMap(r => r.achievements ?? []), items: list.flatMap(r => r.items ?? []), skins: list.flatMap(r => r.skins ?? []),
+    unlockedLevel: list.reduce((m, r) => Math.max(m, r.unlockedLevel ?? 0), 0) || null,
+    mission: list.find(r => r.mission?.completed)?.mission ?? last.mission ?? null,
+    quests: list.flatMap(r => r.quests ?? []),
+  };
 }
 
 /** New achievements of this moment; the Firebird's items they earn go on into empty slots (5.13). */

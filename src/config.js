@@ -106,6 +106,13 @@ export const SESSION = {
   // 5.30 — the meetup of 21.10.2026: «5–10 минут активной игры за раз». The plan is 3–6 min for a beginner (measured by
   // the novice bot: 20–100 s an exercise); under the lower bound the results offer one more exercise, never press it.
   activeMin: [5, 10],
+  // 6.0 — an exercise of the daily plan is a block of rounds of one level (task of 28.10: 60–80 % of the time with critical
+  // timings): short levels («Сейф» 6–12 s for a beginner, level 1 of the others 20–30 s) are played again after a short
+  // count-in until blockS of active play, at most maxRounds rounds (a new code, new rings, new notes each time). The
+  // no-hint probe too: more trials make its number steadier. Free play and the skill check stay one round.
+  blockS: 75,
+  maxRounds: 10,
+  roundCountdownS: 2,
 };
 
 /** Child mode (with a parent): shorter plan, shorter rest, lower daily cap. */
@@ -302,6 +309,20 @@ export const MISSIONS = {
   maxTarget: 3,     // runs a goal may ask for
   xpPerStep: 20,    // reward = xpPerStep × target, so ≤ 60 XP (the whole daily plan gives 60)
 };
+
+/**
+ * 6.0 — missions of a session (core/quests.js; task of 28.10: «1–3 локальные цели на игровую сессию из пула ≥ 10 типов»).
+ * A session ends after `sessionGapMin` without an exercise or at midnight. 1 mission until secondFromDay training days, 2
+ * until thirdFromDay, then 3; the reward of three is 45 XP — under the bonus of the daily plan (60).
+ */
+export const QUESTS = { sessionGapMin: 30, secondFromDay: 3, thirdFromDay: 10, xp: 15 };
+
+/**
+ * 6.0 — the time of a session (core/timeshare.js; task: «60–80 % времени геймплея — с критически важными таймингами
+ * управления, 20–40 % — другие механики»). `timed` — an exercise running with live signal; `other` — menus, the nest,
+ * results, the 3-2-1, the primer; `rest` between exercises is the muscles' pause, kept apart. An idle screen counts ≤ idleCapS.
+ */
+export const TIME_SHARE = { target: [0.6, 0.8], idleCapS: 90 };
 
 export const STARS = [50, 70, 88]; // score thresholds for 1, 2, 3 stars
 
