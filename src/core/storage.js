@@ -1,4 +1,6 @@
 // Versioned local persistence. Never throws to the UI; corrupt data is backed up, not overwritten.
+import { cleanQuests } from './quests.js';
+import { cleanSurveys } from './survey.js';
 import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES, ARM_POSES, LOCK, GRIP_SWITCH, BOTH_ON } from '../config.js';
 
 const POSE_IDS = ARM_POSES.map(p => p.id);
@@ -193,6 +195,8 @@ function cleanDays(days) {
     const { checkin, everyday, restMotion, ...rest } = d;
     const kept = motion(restMotion);
     // 5.14 — «дело дня» is a self-report: only a known task id is kept (a backup is untrusted input).
+    // 6.0 — the time of the day by kind (core/timeshare.js): numbers or nothing
+    for (const key of ['timedS', 'otherS', 'restS']) if (rest[key] !== undefined) rest[key] = Math.min(86400, count(rest[key]));
     return [k, { ...rest, seconds: count(d.seconds), runs: count(d.runs), ...(isObject(checkin) ? { checkin } : {}), ...(validEverydayId(everyday) ? { everyday } : {}), ...(kept ? { restMotion: kept } : {}) }];
   }));
 }
@@ -260,6 +264,8 @@ export function parseState(raw, catalog = null) {
   if (!SKINS.some(s => s.id === profile.skin)) profile.skin = base.profile.skin;
   profile.pet = cleanOutfit(profile.pet);
   profile.primer = cleanPrimer(profile.primer); // 5.15 — known decks and cards only, a bounded result
+  profile.quests = cleanQuests(profile.quests); // 6.0 — missions of a session: known types and targets only
+  profile.feedback = cleanSurveys(profile.feedback); // 6.0 — the person's answers after testing: known items, bounded text
   // 5.15 — the safety rules read: 1 … current (a copy from a newer app counts as the current; nonsense as version 1).
   profile.safetySeen = Number.isInteger(profile.safetySeen) && profile.safetySeen >= 1 ? Math.min(profile.safetySeen, SAFETY_VERSION) : 1;
   // Only known settings with the expected type and an allowed value survive (a backup file is untrusted input).

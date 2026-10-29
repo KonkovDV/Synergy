@@ -14,6 +14,7 @@ import { goalsScreen } from './goals.js';
 import { nestScreen } from './nest.js';
 import { faqScreen } from './faq.js';
 import { primerScreen } from './primer.js';
+import { feedbackScreen } from './feedback.js';
 
 export const SCREENS = {
   home: homeScreen,
@@ -34,4 +35,5 @@ export const SCREENS = {
   nest: nestScreen,
   faq: faqScreen,
   primer: primerScreen,
+  feedback: feedbackScreen,
 };

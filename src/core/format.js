@@ -42,4 +42,5 @@ export const FORMS = {
   records: ['запись', 'записи', 'записей'],
   ringsOf: ['кольца', 'колец', 'колец'], // after «из»: из 1 кольца, из 2 колец, из 5 колец
   times: ['раз', 'раза', 'раз'],
+  rounds: ['раунд', 'раунда', 'раундов'], // 6.0: rounds of a block of the daily plan
 };
