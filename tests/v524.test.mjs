@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.24 — the gesture scheme selects a grip by the gesture. Co-contraction, the lock and the grip
 // switch are two-channel laws, so the settings screen does not offer them there.
 import test from 'node:test';

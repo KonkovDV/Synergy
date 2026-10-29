@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.15: the embedding kit for every stack of the case (the team's sample gives each platform a guide, an example and an
 // honest «how verified»; its scene bridge adds the «ready» handshake).
 import test from 'node:test';

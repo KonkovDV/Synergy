@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Procedural music of «Ритм» (PLAN 2.13): deterministic, in key, on the beat, quieter than the effects;
 // the player schedules each event to be HEARD at its game time (lookahead, output latency, pause/resume).
 import test from 'node:test';

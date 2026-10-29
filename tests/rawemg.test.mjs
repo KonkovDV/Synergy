@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // T6 (external audit 18.10.2026): a negative EMG value used to be taken by its modulus (`Math.abs`) of the last
 // frame — a silent choice. The contract is an envelope ≥ 0; a negative sample means raw (bipolar) EMG, which needs
 // an envelope over all samples, not the modulus of whichever sample happened to be last when the game looked.

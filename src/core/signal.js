@@ -24,6 +24,15 @@ export function readFrame(f) {
   if (finite(f.effort)) frame.effort = clamp(f.effort);
   // 5.29: the recognizer's probability per class of the set (СППР), only to show it — decisions use gesture/confidence.
   if (Array.isArray(f.probs) && f.probs.length === GESTURE_CLASS_ORDER.length && f.probs.every(p => finite(p) && p >= 0 && p <= 1.5)) frame.probs = f.probs;
+  // 6.0 — a frame of the СПППР decoder (core/spppr.js): already smoothed on the MCU clock and debounced, with the joystick.
+  if (f.stable === true && frame.gesture) {
+    frame.stable = true;
+    frame.uncertain = !!f.uncertain;
+    if (f.axes && typeof f.axes === 'object') frame.axes = Object.fromEntries(['x', 'y', 'z'].map(k => [k, finite(f.axes[k]) ? clamp(f.axes[k], -1, 1) : 0]));
+    if (finite(f.coact)) frame.coact = clamp(f.coact);
+    if (f.link === 'ok' || f.link === 'inertia') frame.link = f.link;
+    if (finite(f.ageMs) && f.ageMs >= 0) frame.ageMs = Math.round(f.ageMs);
+  }
   return frame;
 }
 
@@ -97,6 +106,9 @@ export class SignalPipeline {
   reset() {
     this.a = 0; this.b = 0;
     this.aOn = false; this.bOn = false; this.lead = null;
+    // 6.0: time above the threshold before a channel turns on (holdMs) and when it last turned off (refractoryMs)
+    this.aboveSince = [null, null]; this.offSince = [-Infinity, -Infinity];
+    this.out = { level: 0, intensity: 0, t: null }; // the slew-limited proportional output
     this.aHighSince = null; this.bHighSince = null;
     this.lastRaw = null; this.lastFrame = null; this.lastValidAt = -Infinity; this.lastT = null;
     this.stableGesture = 'rest'; this.pendingGesture = 'rest'; this.pendingSince = 0;
@@ -113,6 +125,7 @@ export class SignalPipeline {
     }
     if (now - this.lastValidAt > this.params.frameTimeoutMs) {
       this.a = 0; this.b = 0; this.aOn = false; this.bOn = false; this.lead = null;
+      this.aboveSince = [null, null]; this.out = { level: 0, intensity: 0, t: null };
       this.aHighSince = null; this.bHighSince = null;
       // 5.27 — after a dropout the gesture starts from rest. The last gesture before the loss stayed «stable» and was
       // executed for gestureStableMs once the signal came back: «Ладонь» shown, «Кулак» closing the hand.
@@ -125,7 +138,8 @@ export class SignalPipeline {
 
   ingest(frame, now) {
     const dt = this.lastT === null ? 0.02 : Math.min(0.1, (frame.t - this.lastT) / 1000);
-    const k = 1 - Math.exp(-dt / (this.params.smoothingMs / 1000));
+    // 6.0: a frame of the СПППР decoder is already smoothed on the MCU clock — a second smoothing would only add lag.
+    const k = frame.stable ? 1 : 1 - Math.exp(-dt / (this.params.smoothingMs / 1000));
     this.restTracker?.update([frame.a, frame.b], [this.aOn, this.bOn], dt);
     this.a += (normalize(frame.a, 0, this.calibration) - this.a) * k;
     this.b += (normalize(frame.b, 1, this.calibration) - this.b) * k;
@@ -152,8 +166,18 @@ export class SignalPipeline {
     const on = this.channelThresholds();
     this.on = on;
     const off = on.map(x => offThreshold(x, { hysteresis, hysteresisMinRatio }));
-    this.aOn = this.aOn ? this.a >= off[0] : this.a >= on[0];
-    this.bOn = this.bOn ? this.b >= off[1] : this.b >= on[1];
+    // 6.0 — «время удержания» and «подавление ложных срабатываний»: a channel turns on after holdMs above its threshold
+    // and not sooner than refractoryMs after it turned off; it turns off at once under its switch-off level (the dead
+    // band between the two is the hysteresis).
+    const { holdMs = 0, refractoryMs = 0 } = this.params;
+    const step = (isOn, v, ch) => {
+      if (isOn) { if (v >= off[ch]) return true; this.offSince[ch] = t; this.aboveSince[ch] = null; return false; }
+      if (v < on[ch] || t - this.offSince[ch] < refractoryMs) { this.aboveSince[ch] = null; return false; }
+      this.aboveSince[ch] ??= t;
+      return t - this.aboveSince[ch] >= holdMs;
+    };
+    this.aOn = step(this.aOn, this.a, 0);
+    this.bOn = step(this.bOn, this.b, 1);
     // 5.32 — which channel came first. Alone it leads; when both are on, the first keeps the lead (both in one frame —
     // no lead); when the leader goes off, the one still on takes over (Momo's FIRST_OVER does the same).
     if (this.aOn !== this.bOn) this.lead = this.aOn ? 'a' : 'b';
@@ -168,6 +192,12 @@ export class SignalPipeline {
   }
 
   updateGesture(frame, t) {
+    if (frame.stable) {
+      // 6.0: the decoder already applied hysteresis and a dwell on the MCU clock (single wrong packets are forgiven there).
+      this.stableGesture = frame.gesture; this.pendingGesture = frame.gesture; this.pendingSince = t;
+      this.uncertain = !!frame.uncertain; this.confidence = frame.confidence; this.probs = frame.probs ?? null;
+      return;
+    }
     const candidate = frame.confidence >= this.params.gestureMinConfidence ? frame.gesture : 'rest';
     this.uncertain = candidate !== frame.gesture;
     if (candidate !== this.pendingGesture) { this.pendingGesture = candidate; this.pendingSince = t; }
@@ -209,10 +239,26 @@ export class SignalPipeline {
       : command === COMMAND.OPEN ? this.b
       : Math.min(this.a, this.b);
     const diff = this.a - this.b;
+    // 6.0: the dead zone of the proportional output rises from zero at its edge (no step at |A − B| = deadZone)
+    const dz = this.params.deadZone ?? 0;
     const level = proportional
-      ? (Math.abs(diff) < 0.03 ? 0 : clamp(diff, -1, 1))
+      ? Math.sign(diff) * clamp((Math.abs(diff) - dz) / (1 - dz))
       : command === COMMAND.CLOSE ? fixed : command === COMMAND.OPEN ? -fixed : 0;
-    return { command, intensity, level };
+    return proportional ? { command, ...this.slew(level, intensity) } : { command, intensity, level };
+  }
+
+  /**
+   * 6.0 — «ограничение резких скачков» of the proportional output: level and intensity change by at most slewPerS a
+   * second (the frame times of the source decide). A drop to rest is not slowed: letting go must stop the hand at once.
+   */
+  slew(level, intensity) {
+    const t = this.lastT ?? 0, rate = this.params.slewPerS;
+    if (!Number.isFinite(rate) || rate <= 0 || this.out.t === null) { this.out = { level, intensity, t }; return { level, intensity }; }
+    const max = rate * Math.max(0, Math.min(0.1, (t - this.out.t) / 1000));
+    const toward = (from, to) => from + clamp(to - from, -max, max);
+    const out = { level: toward(this.out.level, level), intensity: intensity === 0 ? 0 : toward(this.out.intensity, intensity), t };
+    this.out = out;
+    return { level: out.level, intensity: out.intensity };
   }
 
   fromGesture() {
@@ -224,6 +270,9 @@ export class SignalPipeline {
     const intensity = command === COMMAND.REST ? 0 : clamp(effort);
     const level = command === COMMAND.CLOSE ? intensity : command === COMMAND.OPEN ? -intensity : 0;
     return { command, intensity, level, gesture: gesture.id, confidence: this.confidence ?? 1, uncertain: !!this.uncertain, relaxed: command === COMMAND.REST,
-      ...(this.probs ? { probs: this.probs } : {}) };
+      ...(this.probs ? { probs: this.probs } : {}),
+      // 6.0 — the СПППР joystick (x = flexion − extension, y = pronation − supination, z = abduction − adduction) and
+      // how much the antagonists work together; `link` — 'inertia' while the speed fades after a silent 200 ms.
+      ...(frame.axes ? { axes: frame.axes } : {}), ...(frame.coact !== undefined ? { coact: frame.coact } : {}), ...(frame.link ? { link: frame.link, ageMs: frame.ageMs ?? 0 } : {}) };
   }
 }

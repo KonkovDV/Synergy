@@ -79,7 +79,7 @@ export function assessmentTrials(scheme, onThreshold, seed = ASSESS.seed) {
         order.push(bag.splice(i, 1)[0]);
       }
     }
-    return order.map(g => ({ gesture: g, name: GESTURE_BY_ID[g].name, pose: GESTURE_BY_ID[g].pose, wrist: GESTURE_BY_ID[g].wrist ?? 0 }));
+    return order.map(g => ({ gesture: g, name: GESTURE_BY_ID[g].name, pose: GESTURE_BY_ID[g].pose, wrist: GESTURE_BY_ID[g].wrist ?? 0, roll: GESTURE_BY_ID[g].roll ?? 0, dev: GESTURE_BY_ID[g].dev ?? 0 }));
   }
   if (scheme === SCHEME.THRESHOLD) {
     const commands = ['close', 'open', 'switch', 'close', 'open', 'switch'];
@@ -291,7 +291,7 @@ export class AssessmentGame extends Game {
     const hx = x0 + cw * 0.3, cy = y0 + ch * 0.5, hy = y0 + ch * 0.82, size = ch * 0.26, rr = ch * 0.4;
     const k = clamp01(t.hold / holdOf(t));
     if (deco) glow(ctx, hx, cy, rr * 1.1, BRAND.mint, 0.25 + 0.5 * k);
-    drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, wrist: t.wrist ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
+    drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, wrist: t.wrist ?? 0, roll: t.roll ?? 0, dev: t.dev ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
     holdRing(ctx, hx, cy, rr, k, 6);
     // Text between the hold ring and the force gauge; «Сжатие · 30 % · широко» goes on two lines (5.8: it ran off the card).
     const showGauge = t.band && this.scheme === SCHEME.PROPORTIONAL;

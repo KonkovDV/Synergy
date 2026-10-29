@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.23 — the grip switches the way the person's prosthesis does it. Motorica's: the hand fully open, the opening
 // signal let go and given again for longer than «peak length»; co-contraction there is the lock (the Motorica Start
 // manual, docs/RESEARCH.md §14). Other hands switch by co-contraction.

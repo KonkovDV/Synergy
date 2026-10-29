@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.27 — the role-by-role audit of 21.10.2026 (docs/AUDIT.md §33): an offline launch by a host's address, the
 // calibration judged against rest noise, the electrical safety of home-made sensors.
 import test from 'node:test';

@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.20 — proportional tracking «ramp → hold → release» in «Полёт», and «покой в движении» on the rest with sensors.
 import test from 'node:test';
 import assert from 'node:assert/strict';

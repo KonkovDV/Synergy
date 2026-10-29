@@ -10,7 +10,7 @@ import { defaultCalibration, thresholdShares } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
 import { bleSupported } from '../input/ble.js';
-import { createTwoChannelPads } from './controls.js';
+import { createTwoChannelPads, createGesturePads } from './controls.js';
 import { picture, artUrl, hasArt } from './pictures.js';
 import { fmtOffset } from './audiosync.js';
 import { hashPin, pinConfirmed, pinGateScreen } from './pin.js';
@@ -121,7 +121,24 @@ export function settingsScreen(app, { back = null } = {}) {
       h('div', { class: 'row' }, h('span', {}, 'Второй канал позже первого'),
         segmented([{ value: 'hold', label: 'Кисть стоит', sub: 'как раньше' }, { value: 'first', label: 'Первая команда', sub: 'со слов «Моторики»' }], s.bothOn ?? BOTH_ON.defaultMode, pickBoth, 'Второй канал включился позже первого')),
       bothNote,
+      signalParamsBox(),
     ];
+  };
+
+  // 6.0 — the parameters the task names for the two channels (Поток 1), each with its own slider. Folded: the defaults
+  // keep the response under 100 ms, a prosthetist tunes them for a person's noisy or weak signal.
+  const signalParamsBox = () => {
+    const ms = v => `${Math.round(v)}\u00a0мс`;
+    const tune = (key, label, format, note) => [sliderRow(label, { ...R[key], value: s[key], format, onInput: v => { app.updateSettings({ [key]: key === 'hysteresis' || key === 'deadZone' ? Math.round(v * 100) / 100 : v }); refreshPreview(); } }), h('p', { class: 'note' }, note)];
+    return h('details', { class: 'fold signal-params' }, h('summary', {}, 'Параметры сигнала (ТЗ)'),
+      h('p', { class: 'note' }, 'Пороговый режим: превышение порога — действие. Канал A — сжатие, канал B — раскрытие, A+B — блокировка или смена хвата, нет сигнала — кисть держит. Пропорциональный: сила сигнала — скорость и сила кисти.'),
+      ...tune('holdMs', 'Время удержания над порогом', ms, 'Канал включается, только если сигнал держится выше порога это время: короткий всплеск не срабатывает.'),
+      ...tune('refractoryMs', 'Подавление ложных срабатываний', ms, 'После выключения канал не включится снова раньше этого времени: нет дребезга и двойных срабатываний.'),
+      ...tune('hysteresis', 'Мёртвая зона порога', pct, 'Полоса ниже порога, где канал сохраняет состояние: сигнал у самой линии не мигает «вкл/выкл».'),
+      ...tune('smoothingMs', 'Сглаживание', ms, 'Постоянная времени сглаживания огибающей. Больше — ровнее, но позже отклик.'),
+      ...tune('slewPerS', 'Ограничение скачков', v => `${Math.round(v)}\u00a0/с`, 'Насколько быстро может меняться пропорциональный выход: резкий скачок сигнала не дёргает кисть.'),
+      ...tune('deadZone', 'Мёртвая зона пропорционального выхода', pct, 'Разница A и B меньше этой доли — покой посередине; выше — выход растёт от нуля, без ступеньки.'),
+      h('p', { class: 'note' }, `По умолчанию отклик от первого кадра сокращения до команды — не больше 100 мс (ТЗ), сейчас удержание ${Math.round(s.holdMs)} мс.`));
   };
 
   const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'new-password', placeholder: '4–6 цифр', 'aria-label': 'Новый PIN родителя' });
@@ -147,7 +164,8 @@ export function settingsScreen(app, { back = null } = {}) {
       return h('p', { class: 'note' }, `Набор жестов «${GESTURE_SET.name}» задало приложение, которое открыло игру.`);
     }
     return h('div', { class: 'gesture-set' },
-      segmented(GESTURE_SET_IDS.map(id => ({ value: id, label: GESTURE_SETS[id].name, sub: GESTURE_SETS[id].short })), GESTURE_SET.id, v => {
+      // 6.0: the slide's hypothesis (spr8) is superseded by the task's set — offered only to whoever is still on it.
+      segmented(GESTURE_SET_IDS.filter(id => id !== 'spr8' || GESTURE_SET.id === 'spr8').map(id => ({ value: id, label: GESTURE_SETS[id].name, sub: GESTURE_SETS[id].short })), GESTURE_SET.id, v => {
         if (v === GESTURE_SET.id) return;
         if (!saveGestureSet(v)) { toast('Не удалось сохранить выбор: хранилище браузера недоступно'); return; }
         toast(`Набор жестов «${GESTURE_SETS[v].name}»: перезапускаем игру`);
@@ -156,6 +174,13 @@ export function settingsScreen(app, { back = null } = {}) {
       h('p', { class: 'note' }, `Сейчас: ${GESTURE_SET.source}. Прежние упражнения сохраняются; в отчёте видно, в каком наборе каждое.`));
   }
 
+  // 6.0 — the СПППР stream of the task, live: the counters and the last packet as it came (the hard contract is visible).
+  const tzStream = s.scheme === 'gesture' && GESTURE_SET.id === 'tz';
+  const lastPacket = h('pre', { class: 'stream-packet', 'aria-label': 'Последний пакет СПППР' }, '—');
+  const streamBox = tzStream ? h('div', { class: 'stream-box' },
+    h('p', { class: 'note' }, 'Пакет ТЗ: {"timestamp_ms": время микроконтроллера, "dist": вероятности 7 состояний}. Скорость считается только по разнице timestamp_ms; джиттер сглаживается, пауза > 200 мс плавно гасит скорость, одиночный шум прощается.'),
+    lastPacket) : null;
+  let streamAt = 0;
   const node = h('div', { class: 'screen settings' },
     h('main', { class: 'scroll' },
       h('h1', {}, 'Настройки'),
@@ -200,7 +225,9 @@ export function settingsScreen(app, { back = null } = {}) {
         h('p', { class: 'note' }, 'Проверка вживую — напрягите мышцы или используйте площадки ниже:'),
         meter.node,
         trace?.node,
+        streamBox,
         s.source === 'touch' && s.scheme !== 'gesture' ? createTwoChannelPads(app.emulator) : null,
+        s.source === 'touch' && tzStream ? createGesturePads(app.emulator, { mirror: !!s.mirrorHint }) : null,
         h('div', { class: 'row-actions' },
           h('button', { class: 'btn ghost', 'data-return': 'calibration', onclick: () => app.go('calibration') }, 'Калибровка датчиков'),
           h('button', { class: 'btn ghost', 'data-return': 'tutorial', onclick: () => app.go('tutorial', { from: 'settings' }) }, 'Первые шаги (обучение)')),
@@ -256,7 +283,7 @@ export function settingsScreen(app, { back = null } = {}) {
           ? h('button', { class: 'btn ghost', onclick: () => { if (confirm('Вернуть данные, которые были до последнего сброса? Текущие данные заменятся.')) { try { app.undoReset(); toast('Данные до сброса возвращены', 'good'); app.go('home'); } catch (e) { toast(e.message, 'bad'); } } } }, 'Вернуть данные до сброса') : null,
         h('button', { class: 'btn danger', disabled: !!app.showcase, onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве? Копия останется до следующего сброса: вернуть — здесь же, в «Данных»; сбросить ещё раз — удалить без следа.')) { app.resetProgress(); toast('Прогресс удалён. Вернуть: Настройки → Данные'); app.go('onboarding'); } } }, 'Сбросить прогресс')),
       section('О приложении',
-        h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ. Два канала: пороговый и пропорциональный режимы. Семь жестов — состав до публикации набора, имена описывают позу в игре.`),
+        h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ. Два канала: пороговый и пропорциональный режимы. Поток СПППР: семь состояний из ТЗ 28.10 (нейтраль, сгибание, разгибание, пронация, супинация, приведение, отведение).`),
         h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
         h('p', { class: 'note' }, `Возрастная категория: ${APP.ageRating} (436-ФЗ). Детям — с родителем.`),
         h('p', { class: 'note' }, 'В разработке использовались ИИ-инструменты. Перечень функций и отчёт о проверке лежат в репозитории: docs/AI_USAGE.md.'),
@@ -274,6 +301,12 @@ export function settingsScreen(app, { back = null } = {}) {
       const intent = preview.pipeline.process(preview.source?.sample(now) ?? null, now);
       meter.update(intent);
       trace?.update(intent, now);
+      if (streamBox && now - streamAt > 500) {
+        streamAt = now;
+        const decoder = app.sppprDecoder();
+        const text = decoder?.lastText ? JSON.stringify(JSON.parse(decoder.lastText), null, 1).replace(/\n\s*/g, ' ') : '—';
+        if (lastPacket.textContent !== text) lastPacket.textContent = text;
+      }
     },
     onBridgeStatus(st) { status.textContent = `Статус: ${BRIDGE_STATUS[st] ?? st}`; },
     onThresholds() { refreshPreview(); },

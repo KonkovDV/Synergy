@@ -1,7 +1,7 @@
 """Red Team tests of the WebSocket bridge (standard library only): python -m unittest bridge/test_ws_bridge.py"""
 import asyncio, base64, os, struct, sys, unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ws_bridge import Bridge, origin_allowed, clean_intent, MAX_PAYLOAD
+from ws_bridge import Bridge, origin_allowed, clean_intent, is_task_packet, GESTURES, MAX_PAYLOAD
 
 
 class Silent:
@@ -83,7 +83,8 @@ class HardeningTest(unittest.TestCase):
     def test_intent_is_cleaned(self):
         self.assertEqual(clean_intent({'type': 'intent', 'effort': None, 'gesture': 'nope', 'a': 7, 'b': float('nan')}),
                          {'type': 'intent', 'gesture': None, 'effort': 0.6, 'a': 1.0, 'b': 0.0})
-        self.assertEqual(clean_intent({'gesture': 'pinch', 'effort': 0.4})['gesture'], 'pinch')
+        self.assertEqual(clean_intent({'gesture': 'pronation', 'effort': 0.4})['gesture'], 'pronation')
+        self.assertEqual(GESTURES[0], 'rest', 'the task numbers neutral 0; the game calls it rest')
 
     def test_a_failing_source_does_not_stop_the_pump(self):
         class Broken:
@@ -124,6 +125,32 @@ class HardeningTest(unittest.TestCase):
         alive, sent = asyncio.run(run())
         self.assertTrue(alive, 'a 70 KB line used to crash the encoder and close the bridge')
         self.assertTrue(sent and all(len(p) < 4200 for p in sent), 'later frames still go out, the big one does not')
+
+    def test_task_packets_go_out_once_in_order(self):
+        # 6.0 — the packet of the task carries the MCU time: the bridge forwards it as it came, never resends it
+        pk = lambda t, f: {'timestamp_ms': t, 'dist': {'neutral': 1 - f, 'flexion': f, 'extension': 0, 'pronation': 0, 'supination': 0, 'adduction': 0, 'abduction': 0}}
+        self.assertTrue(is_task_packet(pk(1, 0.5)))
+        self.assertFalse(is_task_packet({'a': 0.1, 'b': 0.2}))
+        self.assertFalse(is_task_packet({'timestamp_ms': 1, 'dist': [0.1]}))
+        class Queue:
+            def __init__(self): self.q = [pk(1720000000123, 0.65), pk(1720000000143, 0.70)]
+            def packets(self): out, self.q = self.q, []; return out
+            def frame(self, _t, _intent): return None
+        class Writer:
+            def __init__(self): self.sent = []; self.transport = self
+            def get_write_buffer_size(self): return 0
+            def write(self, data): self.sent.append(data)
+            def close(self): pass
+        async def run():
+            bridge = Bridge(Queue(), hz=200)
+            client = Writer(); bridge.clients.add(client)
+            task = asyncio.create_task(bridge.pump())
+            await asyncio.sleep(0.05)
+            task.cancel()
+            return client.sent
+        sent = asyncio.run(run())
+        self.assertEqual(len(sent), 2, 'each packet once')
+        self.assertIn(b'1720000000123', sent[0]); self.assertIn(b'1720000000143', sent[1])
 
 if __name__ == '__main__':
     unittest.main()

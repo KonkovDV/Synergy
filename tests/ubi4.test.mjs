@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.29, third pass — the UBI4 gesture set of Motorica Start in the game (docs/RESEARCH.md §19, docs/AUDIT.md §37).
 // Facts below are read from the public branch kmm_ubi4_integrationV3 of Motorica Start (20.10.2026): assets/config.json
 // (GESTURES_ID, GESTURE_SEQUENCE, GESTURES_VP) — numbers and joint names only, nothing copied. The whole suite also runs
@@ -28,15 +29,15 @@ test('UBI4 set: selected by the address, then the settings, then the test enviro
   const env = (search = '', stored = null, envSet = undefined) => ({
     location: { search }, localStorage: { getItem: k => (k === GESTURE_SET_KEY ? stored : null), setItem() {} }, process: { env: { SYNERGY_GESTURE_SET: envSet } },
   });
-  assert.deepEqual(GESTURE_SET_IDS, ['synergy', 'ubi4', 'spr8']);
-  assert.equal(DEFAULT_GESTURE_SET, 'synergy', 'the default stays ours until the task names its set (PLAN C.3)');
+  assert.deepEqual(GESTURE_SET_IDS, ['tz', 'synergy', 'ubi4', 'spr8']);
+  assert.equal(DEFAULT_GESTURE_SET, 'tz', '6.0: the default is the set of the published task (docs/TASK.md, «ТЗ 28.10»)');
   assert.equal(selectedGestureSet(env('?gestures=ubi4', 'synergy')), 'ubi4');
   assert.equal(gestureSetSource(env('?gestures=ubi4')), 'address');
   assert.equal(selectedGestureSet(env('', 'ubi4')), 'ubi4');
   assert.equal(gestureSetSource(env('', 'ubi4')), 'settings');
   assert.equal(selectedGestureSet(env('', null, 'ubi4')), 'ubi4');
-  assert.equal(selectedGestureSet(env('?gestures=constructor', '__proto__', 'x')), 'synergy', 'unknown values are ignored');
-  assert.equal(selectedGestureSet({ get location() { throw new Error('blocked'); }, get localStorage() { throw new Error('blocked'); } }), 'synergy');
+  assert.equal(selectedGestureSet(env('?gestures=constructor', '__proto__', 'x')), 'tz', 'unknown values are ignored');
+  assert.equal(selectedGestureSet({ get location() { throw new Error('blocked'); }, get localStorage() { throw new Error('blocked'); } }), 'tz');
   const saved = {};
   const store = { localStorage: { setItem: (k, v) => { saved[k] = v; } } };
   assert.equal(saveGestureSet('ubi4', store), true); assert.equal(saved[GESTURE_SET_KEY], 'ubi4');

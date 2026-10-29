@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.32 — mirror hint (off by default) and the prosthetist's cubes and rings inside «Мастерская».
 import test from 'node:test';
 import assert from 'node:assert/strict';

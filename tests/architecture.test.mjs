@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Architecture fitness function: the layer rules of docs/ARCHITECTURE.md, checked on every import.
 // core — domain (only config and core); input — signal sources; games — core, render, config;
 // render — procedural drawing; services — core, render, config; ui and app.js — may use everything.

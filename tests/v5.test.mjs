@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // v5 domain: adaptive difficulty, wellbeing, tutorial, analytics, skill check, backups, BLE lines, PIN, report safety.
 import test from 'node:test';
 import assert from 'node:assert/strict';

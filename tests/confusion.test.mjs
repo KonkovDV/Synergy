@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Realistic classifier errors (PLAN B.5): similar gestures are confused more often, weak effort errs more.
 import test from 'node:test';
 import assert from 'node:assert/strict';

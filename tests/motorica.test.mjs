@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Motorica Start game control, contract v1 (5.21): the snapshot Motorica Start hands to its own game, Motorica Kart
 // (github.com/HakerFromRussia-XD/1_game_stk — GameControlSnapshot, IGameControlService, motorica_game_control.cpp).
 import test from 'node:test';

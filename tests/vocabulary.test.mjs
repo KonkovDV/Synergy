@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // The gesture set lives in one file (src/core/vocabulary.js). Every other reference to a gesture —
 // objects of «Мастерская», two-channel grips, bridge synonyms, the skill check, the tutorial, «Сейф»
 // prompts — must point to an existing id. tools/gesture-drill.mjs swaps a gesture and reruns the suite.

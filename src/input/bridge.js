@@ -6,6 +6,7 @@
 // All parsing lives in parseExternal(): the only place to touch when the emulator format is published.
 import { GESTURES, GESTURE_BY_ID, GESTURE_CLASS_ORDER, GESTURE_SETS } from '../core/vocabulary.js';
 import { SIDES, sideOf, otherSide } from '../core/hands.js';
+import { SppprDecoder, isSppprPacket } from '../core/spppr.js';
 
 /**
  * Class index → gesture id. The active set's numbering (vocabulary.js: UBI4 — config.json of Motorica Start), else the
@@ -161,6 +162,9 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
     const text = data.trim();
     if (text.startsWith('{')) { try { data = JSON.parse(text); } catch { return null; } }
   }
+  // 6.0 — the packet of the task's СПППР ({timestamp_ms, dist}): not a frame but a sample of a stream with its own clock.
+  // It goes to the decoder whole (core/spppr.js checks the contract and counts what it refuses).
+  if (isSppprPacket(data)) return { spppr: data };
   if (data && typeof data === 'object' && !Array.isArray(data)) {
     const both = data.sides && typeof data.sides === 'object' ? data.sides : data;
     if (isObj(both.left) || isObj(both.right)) {
@@ -310,10 +314,20 @@ export class BridgeSource {
     this.onMessage = e => { if ((e.data?.type === 'synergy-frame' || e.data?.type === 'synergy-thresholds') && trustedMessageSource(e, window, this.hostOrigin)) this.feed(e.data); };
   }
 
-  /** Stamps local arrival time, so remote clocks never matter. A negative value switches to the raw-EMG envelope. */
+  /**
+   * Stamps local arrival time, so remote clocks never matter — except the packet of the task's СПППР: its time is the MCU's
+   * (`timestamp_ms`) and the decoder computes every speed from it; the arrival only places it on the phone's timeline.
+   * A negative value switches to the raw-EMG envelope.
+   */
   feed(msg) {
     const parsed = parseExternal(msg, this.map);
     if (!parsed) return false;
+    if (parsed.spppr) {
+      this.spppr ??= new SppprDecoder();
+      const ok = this.spppr.push(parsed.spppr, this.clock());
+      if (ok) { this.received++; this.sppprAt = this.clock(); if (this.status !== 'streaming') this.setStatus('streaming'); }
+      return ok;
+    }
     // 5.30: both prostheses in one message — each goes to its own stream.
     if (parsed.pair) return SIDES.map(side => (parsed.pair[side] ? this.take(parsed.pair[side]) : false)).some(Boolean);
     return this.take(parsed);
@@ -405,7 +419,9 @@ export class BridgeSource {
    * The frame that drives the exercise. Two prostheses: the leading side's (an untagged stream counts only while no side
    * has spoken). One: the newest of the untagged stream and the sides, the prosthesis's own side first when both arms talk.
    */
-  sample() {
+  sample(now = this.clock()) {
+    // 6.0: while the СПППР stream speaks, it is the source (the decoder extrapolates between packets and fades the speed)
+    if (this.spppr && this.sppprAt !== undefined) { const f = this.spppr.frame(now); if (f) return f; }
     const { side = 'right', two = false } = this.lead() ?? {};
     const sided = this.receivedBySide.left + this.receivedBySide.right > 0;
     if (two) return this.bySide[side] ?? (sided ? null : this.latest);

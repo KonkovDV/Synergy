@@ -1,7 +1,7 @@
-"""Seven-gesture synthetic EMG lab: 4-channel raw sEMG → band-pass → time-domain features → LDA.
+"""Seven-state synthetic EMG lab: 4-channel raw sEMG → band-pass → time-domain features → LDA.
 Extends the team's v3 pipeline (signals.py: Preprocessor, features) from 5 classes to the
-7 gestures of the game (rest + 6 active, as Omni Hand recognizes up to six phantom gestures).
-Synthetic data only — never a patient model.
+7 states of the СПППР in the organizers' task of 28.10.2026 (neutral + 6 wrist movements; the game calls neutral
+'rest'). Synthetic data only — never a patient model.
 Do not fit this classifier on the Skillfactory/Motorica cuff set: those sensors are optomyography, not EMG,
 and a retest after the cuff is taken off and put back on was not published (docs/RESEARCH.md §16)."""
 import numpy as np
@@ -10,16 +10,21 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from signals import Preprocessor, features
 
-GESTURES = ('rest', 'fist', 'open', 'pinch', 'point', 'key', 'thumb')
-# Relative amplitude on 4 forearm sites [flexor, extensor, radial, ulnar] per gesture (synthetic).
+GESTURES = ('rest', 'flexion', 'extension', 'pronation', 'supination', 'adduction', 'abduction')
+# The wire names of the task's packet (`dist` keys): the game's 'rest' is the task's 'neutral'.
+WIRE = ('neutral', 'flexion', 'extension', 'pronation', 'supination', 'adduction', 'abduction')
+# Relative amplitude on 4 forearm sites [volar (flexors), dorsal (extensors), radial, ulnar] per state (synthetic).
+# 6.0 — shaped by the anatomy, not measured: flexion — FCR, FCU, FDS on the volar side; extension — ECRL/ECRB, EDC, ECU
+# dorsally; pronation — pronator teres (volar, radial); supination — supinator (deep, dorsal-radial); a deviation needs
+# its flexor and extensor together (adduction: FCU + ECU on the ulnar side; abduction: FCR + ECRL on the radial side).
 PROFILES = np.array([
-    [.01, .01, .01, .01],   # rest
-    [1.0, .15, .55, .35],   # fist
-    [.12, 1.0, .25, .45],   # open
-    [.55, .30, 1.0, .15],   # pinch
-    [.35, .75, .20, 1.0],   # point
-    [.75, .20, .30, .95],   # key
-    [.20, .55, .95, .70],   # thumb
+    [.01, .01, .01, .01],   # rest (neutral)
+    [1.0, .12, .45, .45],   # flexion
+    [.12, 1.0, .45, .40],   # extension
+    [.55, .10, .85, .20],   # pronation
+    [.10, .60, .55, .15],   # supination
+    [.45, .45, .10, 1.0],   # adduction (ulnar deviation)
+    [.45, .45, 1.0, .10],   # abduction (radial deviation)
 ])
 
 
@@ -86,3 +91,12 @@ class Classifier7:
         return {'gesture': str(self.model.classes_[i]), 'confidence': float(p[i]),
                 'probs': {str(c): round(float(q), 4) for c, q in zip(self.model.classes_, p)},
                 'a': float(rms[0]), 'b': float(rms[1]), 'effort': float(np.max(rms))}
+
+    def packet(self, window, timestamp_ms):
+        """6.0 — the same decision as the packet of the task: {"timestamp_ms": MCU time, "dist": {7 wire names}}."""
+        p = self.model.predict_proba([features(window)])[0]
+        by = {str(c): float(q) for c, q in zip(self.model.classes_, p)}
+        dist = {w: round(by.get(g, 0.0), 4) for g, w in zip(GESTURES, WIRE)}
+        top = max(dist, key=dist.get)
+        dist[top] = round(dist[top] + 1 - sum(dist.values()), 4)  # rounding never moves the sum off 1
+        return {'timestamp_ms': int(timestamp_ms), 'dist': dist}

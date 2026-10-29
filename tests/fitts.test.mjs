@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Fitts' law block of «Проверка навыка» (PLAN B.4): proportional scheme only, fixed D × W set,
 // throughput = mean(ID / MT) with the dwell excluded from MT. Bot ≥ novice > idle.
 import test from 'node:test';

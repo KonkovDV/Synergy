@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // Web Bluetooth source with a fake device (5.10, architecture review C4): a failed first connection must leave no
 // listener behind — it started a reconnect loop on a later disconnect that nothing could stop.
 import test from 'node:test';

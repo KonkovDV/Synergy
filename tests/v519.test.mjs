@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.19 — the field protocol is counted by the app itself (docs/USABILITY_PROTOCOL.md): the specialist report carries
 // the numbers of H1–H3 and H5, a quick start is marked on its run, results without a session do not pass the gate.
 import test from 'node:test';

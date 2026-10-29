@@ -109,7 +109,7 @@ const UBI4 = {
 
 /**
  * 5.31 — the third hypothesis for «7 жестов»: the states on the meetup slide «СППР» (22.10.2026, docs/MEETUP_PLAN.md F8).
- * Not the published task and not the default. Grab closes; extension opens (slide «4 состояния» shows that pose open);
+ * Not the published task and not the default; 6.0 keeps it for old addresses, the task's set is TZ below. Grab closes; extension opens (slide «4 состояния» shows that pose open);
  * the other five move the wrist and do not change the grip. `roll` 1 — pronation, −1 — supination (a sign, like `wrist`).
  */
 const SPR8 = {
@@ -129,8 +129,36 @@ const SPR8 = {
   ],
 };
 
-/** Every set, by id (no prototype: ids come from settings and addresses). */
-export const GESTURE_SETS = Object.assign(Object.create(null), { synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
+/**
+ * 6.0 — THE PUBLISHED SET: the gesture dictionary of the СПППР from the organizers' task of 28.10.2026 (docs/TASK.md,
+ * «ТЗ 28.10»): 0 Neutral, 1 Flexion, 2 Extension, 3 Pronation, 4 Supination, 5 Adduction, 6 Abduction. classOrder is the
+ * task's numbering; `wire` — the key of the class in the packet's `dist` (core/spppr.js reads them from here, not from a
+ * copy). The task builds the training on two antagonists — flexors and extensors — and forms the joystick vector as
+ * flexion − extension, so flexion is the closing channel and extension the opening one (as on the meetup slide «4
+ * состояния»: «флексия — канал закрытия, экстензия — канал открытия»). The other four move the wrist: the hand stands.
+ * `axis` — [joystick axis, sign]: x = flexion − extension, y = pronation − supination, z = abduction − adduction.
+ * `dev` — radial (−1, abduction) or ulnar (+1, adduction) deviation; `roll` — pronation (+1) or supination (−1).
+ */
+const TZ = {
+  id: 'tz', name: 'СПППР (ТЗ)', short: '7 состояний · СПППР', size: 7,
+  text: 'Поток вероятностей СПППР по ТЗ: нейтраль и шесть движений кисти. Сгибание закрывает кисть, разгибание раскрывает, сила — разность их вероятностей.',
+  source: 'ТЗ организаторов 28.10.2026: словарь жестов кисти СПППР',
+  classOrder: ['rest', 'flexion', 'extension', 'pronation', 'supination', 'adduction', 'abduction'],
+  gestures: [
+    { id: 'rest',       wire: 'neutral',    motorica: 'Neutral',    name: 'Нейтраль',   command: 'rest',  grip: null,   pose: [0.25, 0.2, 0.25, 0.3, 0.35], wrist: 0,  roll: 0,  dev: 0,  axis: null,     introducedAt: null, cue: 'Расслабьте кисть и предплечье — базовое положение', use: 'Покой между движениями: протез держит то, что взял' },
+    { id: 'flexion',    wire: 'flexion',    motorica: 'Flexion',    name: 'Сгибание',   command: 'close', grip: 'fist', pose: [0.55, 0.5, 0.55, 0.6, 0.65], wrist: 1,  roll: 0,  dev: 0,  axis: ['x', 1],  introducedAt: 1, cue: 'Согните кисть к ладони — работают сгибатели', use: 'Канал сгибателей: кисть протеза закрывается, сила — от уверенности' },
+    { id: 'extension',  wire: 'extension',  motorica: 'Extension',  name: 'Разгибание', command: 'open',  grip: null,   pose: [0, 0, 0, 0, 0],             wrist: -1, roll: 0,  dev: 0,  axis: ['x', -1], introducedAt: 1, cue: 'Разогните кисть к тыльной стороне — работают разгибатели', use: 'Канал разгибателей: кисть раскрывается и отпускает предмет' },
+    { id: 'pronation',  wire: 'pronation',  motorica: 'Pronation',  name: 'Пронация',   command: 'wrist', grip: null,   pose: [0.3, 0.25, 0.3, 0.35, 0.4], wrist: 0,  roll: 1,  dev: 0,  axis: ['y', 1],  introducedAt: 2, cue: 'Поверните ладонь вниз, не сжимая пальцы', use: 'Поворот ладонью вниз: налить, перевернуть, повернуть ключ' },
+    { id: 'supination', wire: 'supination', motorica: 'Supination', name: 'Супинация',  command: 'wrist', grip: null,   pose: [0.2, 0.15, 0.2, 0.25, 0.3], wrist: 0,  roll: -1, dev: 0,  axis: ['y', -1], introducedAt: 3, cue: 'Поверните ладонь вверх, не сжимая пальцы', use: 'Поворот ладонью вверх: взять монету с ладони, принять сдачу' },
+    { id: 'adduction',  wire: 'adduction',  motorica: 'Adduction',  name: 'Приведение', command: 'wrist', grip: null,   pose: [0.25, 0.2, 0.25, 0.3, 0.35], wrist: 0,  roll: 0,  dev: 1,  axis: ['z', -1], introducedAt: 4, cue: 'Отведите кисть в сторону мизинца (локтевое отведение)', use: 'Наклон кисти к мизинцу: смахнуть крошки, повернуть руль' },
+    { id: 'abduction',  wire: 'abduction',  motorica: 'Abduction',  name: 'Отведение',  command: 'wrist', grip: null,   pose: [0.25, 0.2, 0.25, 0.3, 0.35], wrist: 0,  roll: 0,  dev: -1, axis: ['z', 1],  introducedAt: 5, cue: 'Отведите кисть в сторону большого пальца (лучевое отведение)', use: 'Наклон кисти к большому пальцу: поднять крышку, молоток' },
+  ],
+};
+
+/** Every set, by id (no prototype: ids come from settings and addresses). The published set first. */
+export const GESTURE_SETS = Object.assign(Object.create(null), { tz: TZ, synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
+/** 6.0 — the wire contract of the СПППР stream is fixed by the task, whatever set the game speaks (core/spppr.js). */
+export const SPPPR_SET = TZ;
 /** The set of this page load: id, name, short, text, size, source. */
 export const GESTURE_SET = Object.freeze((({ gestures, ...meta }) => meta)(GESTURE_SETS[selectedGestureSet()]));
 export const GESTURES = GESTURE_SETS[GESTURE_SET.id].gestures;

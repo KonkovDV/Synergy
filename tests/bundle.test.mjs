@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // The unit tests import only the domain; this bundles the whole app (UI included) the way `npm run build`
 // does, so a syntax error or an import of a missing export anywhere in src/ fails `npm test`.
 import test from 'node:test';

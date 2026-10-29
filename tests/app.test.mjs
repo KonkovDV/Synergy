@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // App state flows headless (5.10): the composition root with minimal browser stubs — no screen is rendered
 // (e2e covers screens), but what the App does to the store, the plan and the signal source is checked here.
 import test from 'node:test';

@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.14: the nest and the welcome back, the celebration ladder, week to week, «дело дня», «Спросить Мио», the prosthesis
 // lock in «Первые шаги», embedding into the customer's app, the report period — and the SOTA checks taken from the
 // team's sample: a content linter (no blaming words), property tests on seeded random input, links between documents.

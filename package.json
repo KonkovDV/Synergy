@@ -19,7 +19,9 @@
     "e2e:a11y": "node tests/e2e/v5.mjs",
     "e2e:embed": "node tests/e2e/embed.mjs",
     "verify:embed": "sh tools/verify-embed.sh",
-    "check:supply-chain": "node tools/supply-chain.mjs"
+    "check:supply-chain": "node tools/supply-chain.mjs",
+    "test:tz": "node tools/tz-play.mjs",
+    "emulator:spppr": "node tools/spppr-emulator.mjs"
   },
   "devDependencies": {
     "axe-core": "4.14.0",

@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.18 — a start in one tap, a check that knows its error, the workshop replay (its outcome: tests/feel.test.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';

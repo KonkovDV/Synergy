@@ -240,6 +240,22 @@ button { font: inherit; color: inherit }
 /* 5.29: the wrist gestures of the UBI4 set — the muscles work, the hand stands; the recognizer's stream under the chip. */
 .meter-chip[data-cmd="wrist"] { box-shadow: inset 0 0 0 2px var(--violet) }
 .meter-probs { grid-column: 1 / -1; margin: 0; text-align: center; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums }
+/* 6.0 — the joystick of the СПППР (x = flexion − extension, y = pronation − supination; z under it) and the stream line */
+.meter-stick { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 10px }
+.meter-stick[hidden] { display: none }
+.stick { position: relative; width: 48px; height: 48px; border-radius: 12px; background: var(--track); flex: none }
+.stick::before, .stick::after { content: ''; position: absolute; background: var(--line-strong) }
+.stick::before { left: 50%; top: 6px; bottom: 6px; width: 1px }
+.stick::after { top: 50%; left: 6px; right: 6px; height: 1px }
+.stick-dot { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--muted); z-index: 1 }
+.stick-dot.on { background: var(--accent-ink) }
+.stick-z { position: relative; width: 48px; height: 8px; border-radius: 99px; background: var(--track); overflow: hidden; flex: none }
+.stick-z b { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; background: var(--violet) }
+.meter-stream { grid-column: 1 / -1; margin: 0; text-align: center; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums }
+.meter-stream.bad { color: var(--warn-ink); font-weight: 700 }
+@media (prefers-reduced-motion: reduce) { .stick-dot { transition: none } }
+.stream-box { display: grid; gap: 6px; margin: 8px 0 }
+.stream-packet { margin: 0; padding: 8px 10px; border-radius: 12px; background: var(--card2); color: var(--text); font: 0.75rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere }
 
 /* Emulator pads. */
 .controls { padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); background: var(--bg2) }
@@ -274,7 +290,7 @@ button { font: inherit; color: inherit }
 .bridge-panel:has(.signal-quality.bad) > small { display: none }
 @media (max-width: 340px), (orientation: landscape) and (max-height: 400px) { .signal-quality .quality-tip { display: none } }
 /* 5.30 — the recognizer's top three is a teaching aid: on a short screen the pads need the room (the chip says the gesture) */
-@media (max-height: 600px) { .meter-probs { display: none } }
+@media (max-height: 600px) { .meter-probs, .meter-stream { display: none } }
 /* 5.30 — seven gestures (UBI4) in a short landscape column: four rows of pads with pictures do not fit 320 px; the names stay */
 @media (orientation: landscape) and (max-height: 400px) {
   .play-screen .pads.gestures[data-many] .gesture-icon { display: none }

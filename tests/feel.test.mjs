@@ -1,3 +1,4 @@
+import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
 // 5.17 — game feel: feedback supports and never punishes (docs/GAME_DESIGN.md, «5.17 — ощущение игры»). A success is felt at
 // least as clearly as a mistake, a pulse stays short, a run ends with one sound, a near miss is told without a reward,
 // and «Меньше движения» stills what moves for no reason.

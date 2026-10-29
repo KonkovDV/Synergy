@@ -2,12 +2,16 @@
 
 Use it to plug ANY emulator or sensor into the game (Settings → Источник → Внешний → ws://host:8765):
   python3 bridge/ws_bridge.py --demo            scripted two-channel pattern (no input needed)
-  python3 bridge/ws_bridge.py --demo-gestures   scripted cycle through the 7 gestures
+  python3 bridge/ws_bridge.py --demo-gestures   scripted cycle through the 7 states of the СПППР (task of 28.10)
   some_emulator | python3 bridge/ws_bridge.py --stdin
-                                                one frame per line: "a b", "a,b" or JSON {"a":..,"b":..,"gesture":..}
+                                                one frame per line: "a b", "a,b" or JSON {"a":..,"b":..,"gesture":..};
+                                                a packet of the task {"timestamp_ms":..,"dist":{..}} is forwarded once,
+                                                as it came (6.0: node tools/spppr-emulator.mjs | … --stdin)
   python3 bridge/ws_bridge.py --lab             4-ch raw synthetic EMG → filter → features → LDA (7 gestures);
                                                 the on-screen pads of the game choose what to synthesize
                                                 (needs numpy/scipy/scikit-learn: pip install -r lab/requirements.txt)
+  python3 bridge/ws_bridge.py --lab --spppr     the same lab, but each decision is the packet of the task
+                                                {"timestamp_ms": MCU time, "dist": {7 states}}
 Frames: {"a": 0..1, "b": 0..1, "gesture"?: id, "confidence"?: 0..1, "effort"?: 0..1} at 50 Hz.
 
 Security (EMG is health data): a web page from another site must not read the stream (cross-site WebSocket
@@ -17,6 +21,7 @@ at start (ws://host:port/?token=…) or an explicit --allow-origin. A peer from 
 token, with or without an Origin header (5.10: a LAN process without Origin read the stream freely).
 """
 import argparse, asyncio, base64, hashlib, json, math, secrets, struct, sys, threading, time
+from collections import deque
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
 
@@ -47,7 +52,9 @@ def clean_intent(msg):
     num = lambda v, d: max(0.0, min(1.0, float(v))) if isinstance(v, (int, float)) and not isinstance(v, bool) and v == v else d
     gesture = msg.get('gesture') if msg.get('gesture') in GESTURES else None
     return {'type': 'intent', 'gesture': gesture, 'effort': num(msg.get('effort'), 0.6), 'a': num(msg.get('a'), 0.0), 'b': num(msg.get('b'), 0.0)}
-GESTURES = ['rest', 'fist', 'open', 'pinch', 'point', 'key', 'thumb']
+# 6.0 — the 7 states of the СПППР (task of 28.10.2026), in the class order of src/core/vocabulary.js (the gate checks it).
+GESTURES = ['rest', 'flexion', 'extension', 'pronation', 'supination', 'adduction', 'abduction']
+CLOSING, OPENING = 'flexion', 'extension'  # the flexors close the hand, the extensors open it
 
 
 class DemoSource:
@@ -66,12 +73,22 @@ class GestureDemoSource:
     def frame(self, t, _intent):
         i = int(t // 2) % (len(GESTURES) * 2)
         g = GESTURES[i // 2] if i % 2 else 'rest'
-        return {'a': 0.6 if g not in ('rest', 'open') else 0.02, 'b': 0.6 if g == 'open' else 0.02, 'gesture': g, 'confidence': 0.9, 'effort': 0.6 if g != 'rest' else 0}
+        return {'a': 0.6 if g == CLOSING else 0.02, 'b': 0.6 if g == OPENING else 0.02, 'gesture': g, 'confidence': 0.9, 'effort': 0.6 if g != 'rest' else 0}
+
+
+def is_task_packet(msg):
+    """6.0 — the packet of the task: {"timestamp_ms": .., "dist": {..}}. Its time is the MCU's, so it is never resent."""
+    return isinstance(msg, dict) and 'timestamp_ms' in msg and isinstance(msg.get('dist'), dict)
 
 
 class StdinSource:
+    """One frame per line. A frame is resent at the bridge's rate (the game's watchdog wants a stream), a packet of
+    the task is queued and forwarded exactly once, in order: its timestamp is the MCU's, a copy would be a duplicate."""
+    MAX_QUEUE = 512
+
     def __init__(self):
         self.latest = None
+        self.queue = deque(maxlen=self.MAX_QUEUE)
         threading.Thread(target=self._read, daemon=True).start()
 
     def _read(self):
@@ -80,17 +97,26 @@ class StdinSource:
             if not line:
                 continue
             try:
-                self.latest = json.loads(line) if line[0] in '{[' else {'a': float(line.replace(',', ' ').split()[0]), 'b': float(line.replace(',', ' ').split()[1])}
+                msg = json.loads(line) if line[0] in '{[' else {'a': float(line.replace(',', ' ').split()[0]), 'b': float(line.replace(',', ' ').split()[1])}
             except (ValueError, IndexError):
-                pass
+                continue
+            if is_task_packet(msg): self.queue.append(msg)
+            else: self.latest = msg
+
+    def packets(self):
+        out = []
+        while self.queue: out.append(self.queue.popleft())
+        return out
 
     def frame(self, _t, _intent):
         return self.latest
 
 
 class LabSource:
-    """Raw-EMG lab: the game sends {"type":"intent","gesture":..,"effort":..} or {"a":..,"b":..}."""
-    def __init__(self):
+    """Raw-EMG lab: the game sends {"type":"intent","gesture":..,"effort":..} or {"a":..,"b":..}.
+    With spppr=True each decision goes out as the packet of the task (MCU time from the bridge's start)."""
+    def __init__(self, spppr=False):
+        self.spppr = spppr
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lab'))
         from lab7 import Emulator7, Classifier7
         from signals import Preprocessor
@@ -102,10 +128,11 @@ class LabSource:
         gesture, effort = intent.get('gesture'), float(intent.get('effort', 0.6))
         if not gesture:  # two-channel pads → nearest gesture
             a, b = float(intent.get('a', 0)), float(intent.get('b', 0))
-            gesture, effort = ('fist', a) if a > b and a > .12 else ('open', b) if b > .12 else ('rest', 0)
+            gesture, effort = (CLOSING, a) if a > b and a > .12 else (OPENING, b) if b > .12 else ('rest', 0)
         window = self.pre.push(self.emu.read(gesture, max(0.0, min(1.0, effort)), n=20))
         if len(window) < 100:
             return None
+        if self.spppr: return self.clf.packet(window, 1000 + _t * 1000)
         return {k: (round(v, 4) if isinstance(v, float) else v) for k, v in self.clf.predict(window).items()}
 
 
@@ -174,6 +201,13 @@ class Bridge:
     async def pump(self):
         start = time.monotonic()
         while True:
+            # 6.0: packets of the task go out as they came, in order, once each (StdinSource.packets)
+            for pk in (self.source.packets() if hasattr(self.source, 'packets') else []):
+                text = json.dumps(pk)
+                if len(text.encode()) > MAX_PAYLOAD: continue
+                for w in list(self.clients):
+                    try: w.write(self.encode(text))
+                    except Exception: self.clients.discard(w); w.close()
             try:  # a source error is reported, not fatal: the pump is the bridge
                 frame = self.source.frame(time.monotonic() - start, self.intent)
             except Exception as e:
@@ -196,7 +230,8 @@ class Bridge:
                         w.write(packet)
                     except Exception:
                         self.clients.discard(w); w.close()
-            await asyncio.sleep(1 / self.hz)
+            # a queue of task packets is drained every 5 ms: the jitter of the emulator is its own, not the bridge's
+            await asyncio.sleep(0.005 if hasattr(self.source, 'packets') else 1 / self.hz)
 
 
 async def main():
@@ -204,6 +239,7 @@ async def main():
     mode = p.add_mutually_exclusive_group(required=True)
     mode.add_argument('--demo', action='store_true'); mode.add_argument('--demo-gestures', action='store_true')
     mode.add_argument('--stdin', action='store_true'); mode.add_argument('--lab', action='store_true')
+    p.add_argument('--spppr', action='store_true', help='с --lab: решения как пакеты ТЗ {"timestamp_ms", "dist"}')
     p.add_argument('--host', default='127.0.0.1', help='0.0.0.0 — доступ с телефона в той же сети')
     p.add_argument('--port', type=int, default=8765)
     p.add_argument('--allow-origin', action='append', default=[], metavar='ORIGIN',
@@ -211,7 +247,7 @@ async def main():
     a = p.parse_args()
     if a.host not in ('127.0.0.1', 'localhost', '::1'):
         print('ВНИМАНИЕ: мост доступен всем устройствам сети. Только доверенная Wi-Fi, не публичная сеть; без авторизации и шифрования.', flush=True)
-    source = DemoSource() if a.demo else GestureDemoSource() if a.demo_gestures else StdinSource() if a.stdin else LabSource()
+    source = DemoSource() if a.demo else GestureDemoSource() if a.demo_gestures else StdinSource() if a.stdin else LabSource(spppr=a.spppr)
     bridge = Bridge(source, token=secrets.token_urlsafe(9), allowed=a.allow_origin)
     server = await asyncio.start_server(bridge.handle, a.host, a.port)
     print(f'Synergy bridge: ws://{a.host}:{a.port}  (Ctrl+C — стоп)', flush=True)
