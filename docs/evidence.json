@@ -1,24 +1,24 @@
 {
- "version": "5.32.0",
- "generated": "2026-10-27T14:57:20.566Z",
+ "version": "6.0.0",
+ "generated": "2026-10-29T10:26:20.486Z",
  "tests": {
-  "total": 435,
+  "total": 474,
   "failed": 0,
-  "at": "2026-10-27T14:57:20.565Z",
-  "platform": "win32 10.0.26200",
-  "node": "v24.11.0"
+  "at": "2026-10-29T10:26:20.485Z",
+  "platform": "linux 6.18.44-fc-v185",
+  "node": "v22.22.0"
  },
  "a11y": {
   "light": 33,
   "dark": 10,
   "violations": 0,
   "errors": 0,
-  "browser": "156.0.8078.4",
+  "browser": "153.0.8010.12",
   "axe": "4.14.0",
-  "source": "a9af2c22eb64f14f",
-  "at": "2026-10-27T14:55:46.998Z",
-  "platform": "win32 10.0.26200",
-  "node": "v24.11.0"
+  "source": "4a6b291c53ed1b66",
+  "at": "2026-10-29T10:02:41.152Z",
+  "platform": "linux 6.18.44-fc-v185",
+  "node": "v22.22.0"
  },
  "layout": {
   "states": 76,
@@ -27,39 +27,26 @@
   "combinations": 1824,
   "findings": 0,
   "errors": 0,
-  "seconds": 1048,
-  "source": "a9af2c22eb64f14f",
-  "at": "2026-10-27T14:54:27.977Z",
-  "platform": "win32 10.0.26200",
-  "node": "v24.11.0"
+  "seconds": 1210,
+  "source": "4a6b291c53ed1b66",
+  "at": "2026-10-29T10:24:13.996Z",
+  "platform": "linux 6.18.44-fc-v185",
+  "node": "v22.22.0"
  },
  "apk": {
-  "file": "release/Synergy-5.32.0.apk",
-  "bytes": 3738371,
-  "kb": 3651,
-  "sha256": "12273a4bd100782555c1567fa12d24ee4e81715b5f6199f7331f14d7bed2562a"
+  "file": "release/Synergy-6.0.0.apk",
+  "bytes": 3755635,
+  "kb": 3668,
+  "sha256": "d632bf3994fd99fb53fd5e6cbb5c4e98626789070084d0a12c1f4a27b56598e8"
  },
  "html": {
   "file": "release/synergy-standalone.html",
-  "bytes": 4839663,
-  "kb": 4726,
-  "sha256": "68a5a87fe4aecc50af69c5bec0dca1a60f48cea42ef2bdb20182415b58480234"
+  "bytes": 4892225,
+  "kb": 4778,
+  "sha256": "d432f063c73e5ee19b4d6947971050acb756555cdf3693608690a4077eec2891"
  },
  "art": {
   "pictures": 183,
   "bytes": 3069094
- },
- "soak": {
-  "seconds": 900,
-  "runs": 29,
-  "errors": 0,
-  "frames": 57271,
-  "growthMb": 1.5,
-  "heap0": 3385304,
-  "heap1": 4950272,
-  "source": "ad564572534318e4",
-  "at": "2026-10-23T05:54:56.747Z",
-  "platform": "win32 10.0.26200",
-  "node": "v24.11.0"
  }
 }
