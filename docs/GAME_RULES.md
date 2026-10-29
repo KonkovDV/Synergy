@@ -220,6 +220,9 @@
 | Отпускание в «Мастерской», с | `4` | `src/config.js:SESSION.releaseS` |
 | Покой не наступил — пропуск задания, с | `8` | `src/config.js:SESSION.restGiveUpS` |
 | Активная игра за раз (митап 21.10.2026), мин: ниже нижней границы после плана предлагается ещё одно упражнение | `[5, 10]` | `src/config.js:SESSION.activeMin` |
+| Блок упражнения плана (ТЗ 28.10: 60–80 % времени — игра с таймингом), с активной игры: короткий уровень играется снова после «3-2-1» | `75` | `src/config.js:SESSION.blockS` |
+| Раундов в блоке, не больше (свободная игра и проверка навыка — один раунд) | `10` | `src/config.js:SESSION.maxRounds` |
+| Отсчёт перед следующим раундом блока, с | `2` | `src/config.js:SESSION.roundCountdownS` |
 | Детский режим: упражнений в плане | `2` | `src/config.js:CHILD.planExercises` |
 | Детский режим: отдых, с | `15` | `src/config.js:CHILD.restBetweenExercisesS` |
 | Детский режим: лимит дня, мин | `20` | `src/config.js:CHILD.dailySoftCapMin` |

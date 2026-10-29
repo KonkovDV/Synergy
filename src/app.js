@@ -12,6 +12,9 @@ import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessi
 import { missionOffers } from './core/missions.js';
 import { guidanceFor } from './core/guidance.js';
 import { FpsGuard } from './core/fps.js';
+import { timeKind, addTime } from './core/timeshare.js';
+import { ensureQuests } from './core/quests.js';
+import { streamsSpppr } from './input/spppr-source.js';
 import { CHECKIN_ACTION, needsCheckin, safetyOutdated, checkinLight, electrodesOff, painStopDuring, PAIN_STOP_TEXT } from './core/wellbeing.js';
 import { exportState, importState } from './core/storage.js';
 import { buildShowcaseState } from './core/showcase.js';
@@ -117,8 +120,8 @@ export class App {
     document.addEventListener('focusin', e => keepFocusVisible(e.target));
     // A double tap must not land on the next screen (5.11): the second tap after «Отдых 20 с → Ритм» hit «Пропустить
     // отдых», after «Начать» it chose a pain level. Touch only — a mouse or keyboard click is deliberate.
-    root.addEventListener('pointerdown', e => { this.lastPointer = e.pointerType; }, true);
-    root.addEventListener('keydown', () => { this.lastPointer = 'keyboard'; }, true);
+    root.addEventListener('pointerdown', e => { this.lastPointer = e.pointerType; this.lastInputAt = performance.now(); }, true);
+    root.addEventListener('keydown', () => { this.lastPointer = 'keyboard'; this.lastInputAt = performance.now(); }, true);
     root.addEventListener('click', e => {
       if (this.lastPointer === 'touch' && performance.now() - (this.mountedAt ?? 0) < TAP_GUARD_MS) { e.preventDefault(); e.stopImmediatePropagation(); }
     }, true);
@@ -527,6 +530,7 @@ export class App {
         quality: live === 'bridge' && !demo ? this.qualityMonitor(this.calibration()) : null });
     const armPose = pose && !demo && live === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
     this.sppprDecoder(demo)?.resetStats(); // 6.0: the stream's counters of this exercise (the run keeps them)
+    if (!demo) this.sessionQuests(); // 6.0: a session's missions exist before its first exercise ends
     return { id: game, level, retention, demo, plan, quick: !!quick && !demo, pose: armPose, game: instance, hand: runner.hand, runner, entry: GAME_BY_ID[game], scheme,
       ...(game === 'check' && !demo ? { formWeek: week } : {}) };
   }
@@ -707,6 +711,35 @@ export class App {
       h('button', { class: 'btn ghost small', onclick: () => { this.exitShowcase(); this.go('home'); } }, 'Выйти'));
   }
 
+  /**
+   * 6.0 — the time of the day by kind (core/timeshare.js): exercise with live signal vs everything else, for the 60–80 %
+   * of the task; kept in the day record, saved every 30 s. The showcase and the onboarding are not the person's training.
+   */
+  trackTime(today, dt) {
+    if (this.showcase || !this.profile.onboarded || !this.screen) return;
+    const kind = timeKind(this.screen.name, !!this.screen.running?.());
+    const idleS = (performance.now() - (this.lastInputAt ?? this.mountedAt ?? 0)) / 1000;
+    const before = this.profile.days[today];
+    const after = addTime(before ?? { seconds: 0, runs: 0 }, kind, dt, kind === 'timed' ? 0 : idleS);
+    if (after === before || (before === undefined && after.timedS === undefined && after.otherS === undefined && after.restS === undefined)) return;
+    this.profile.days[today] = after;
+    if (performance.now() - (this.timeSavedAt ?? 0) > 30000) { this.timeSavedAt = performance.now(); this.save(); }
+  }
+
+  /**
+   * 6.0 — the missions of the current session (core/quests.js): drawn when a session starts (another day, or 30 min
+   * without an exercise), from the person's scheme, skills and games; kept in the profile.
+   */
+  sessionQuests() {
+    if (this.showcase) return this.profile.quests;
+    const runs = this.state.runs.filter(r => !r.demo);
+    const ctx = { scheme: this.settings.scheme, skills: skillProfile(runs), trainingDays: trainingDays(this.profile), light: checkinLight(this.checkin()),
+      child: this.settings.audience === 'child', stream: this.settings.scheme === 'gesture' && streamsSpppr() };
+    const next = ensureQuests(this.profile.quests, ctx);
+    if (next !== this.profile.quests) { this.profile.quests = next; this.save(); }
+    return next;
+  }
+
   /** Tells a bidirectional lab what the on-screen pads ask for (only when it changes). */
   forwardIntent() {
     if (!this.bridge) return;
@@ -722,6 +755,7 @@ export class App {
     this.lastTime = now;
     this.forwardIntent();
     try { this.screen?.tick?.(now, dt); } catch (e) { console.error(e); toast('Ошибка кадра: ' + e.message, 'bad'); this.screen.tick = null; }
+    this.trackTime(today, dt);
     requestAnimationFrame(t => this.frame(t));
   }
 }

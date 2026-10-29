@@ -13,6 +13,8 @@ import { touchableBird } from './petcard.js';
 import { petState, petName, wornItems } from '../core/pet.js';
 import { everydayTask, validEverydayId } from '../core/everyday.js';
 import { missionText, missionXp } from '../core/missions.js';
+import { questText } from '../core/quests.js';
+import { QUESTS } from '../config.js';
 import { PLAN_CATALOG } from '../games/registry.js';
 import { SESSION } from '../config.js';
 
@@ -192,7 +194,16 @@ export function homeScreen(app) {
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ scheduleOffer: 'opened' }); app.go('settings', { back: 'habit' }); } }, 'Выбрать дни и время'),
       h('button', { class: 'btn ghost', onclick: () => { app.updateSettings({ scheduleOffer: 'later' }); app.go('home'); } }, 'Не сейчас'))) : null;
-  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, petCard, everydayCard, checkCard, rhythmCard, ...duoCards, tipCard, games), bottomNav(app, 'home')) };
+  // 6.0 — missions of this session (core/quests.js): 1–3, drawn from the weakest skills; done ones keep their tick.
+  const quests = p.onboarded && !app.showcase ? app.sessionQuests() : p.quests;
+  const questCard = quests?.items?.length ? h('section', { class: 'card quests', 'aria-labelledby': 'quests-title' },
+    h('h2', { id: 'quests-title', class: 'with-art' }, sectionArt('goal', 28), 'Миссии сессии'),
+    h('ul', { class: 'quest-list' }, ...quests.items.map(item => {
+      const t = questText(item);
+      return h('li', { class: item.done ? 'done' : '' }, h('b', { class: item.done ? 'with-art' : null }, item.done ? sectionArt('done', 20) : null, item.done ? h('span', { class: 'sr-only' }, 'Выполнено: ') : null, t.title), h('small', {}, t.why));
+    })),
+    h('p', { class: 'note' }, `${quests.items.filter(i => i.done).length} из ${quests.items.length} · за каждую +${QUESTS.xp} XP. Новые — в следующей сессии.`)) : null;
+  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, questCard, petCard, everydayCard, checkCard, rhythmCard, ...duoCards, tipCard, games), bottomNav(app, 'home')) };
 }
 
 export function levelsScreen(app, { game }) {
