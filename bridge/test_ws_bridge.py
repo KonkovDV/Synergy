@@ -150,6 +150,18 @@ class HardeningTest(unittest.TestCase):
             return client.sent
         sent = asyncio.run(run())
         self.assertEqual(len(sent), 2, 'each packet once')
+        # a client that stopped reading is dropped (6.0, Red Team: the packet loop had no buffer check)
+        class Stuck(Writer):
+            def get_write_buffer_size(self): return 1 << 30
+        async def stuck():
+            bridge = Bridge(Queue(), hz=200)
+            client = Stuck(); bridge.clients.add(client)
+            task = asyncio.create_task(bridge.pump())
+            await asyncio.sleep(0.05)
+            task.cancel()
+            return client.sent, client in bridge.clients
+        stuck_sent, kept = asyncio.run(stuck())
+        self.assertEqual((stuck_sent, kept), ([], False))
         self.assertIn(b'1720000000123', sent[0]); self.assertIn(b'1720000000143', sent[1])
 
 if __name__ == '__main__':

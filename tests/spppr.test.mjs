@@ -249,3 +249,24 @@ test('ТЗ отклик: from the first packet of a contraction to the command �
   for (let i = 0; i < 20 && at === null; i++) { d.push(packet(ts += 20, { flexion: 0.8 }), ts); if (d.frame(ts).gesture === 'flexion') at = ts - start; }
   assert.ok(at !== null && at <= 150, `${at} ms`);
 });
+
+test('ТЗ управление только сигналом: «старт» и «дальше» без касания — сгибание, удержанное на потоке СПППР, после нейтрали', async () => {
+  const { HoldConfirm } = await import('../src/core/handsfree.js');
+  const emu = new OnScreenEmulator({ realism: 0.5, seed: 4 });
+  const pipe = new SignalPipeline({ scheme: 'gesture' });
+  const confirm = new HoldConfirm(1);
+  let fired = null;
+  emu.setTarget({ gesture: 'rest', effort: 0, a: 0, b: 0 });
+  for (let t = 0; t < 800; t += 16) confirm.update(pipe.process(emu.sample(t), t), 0.016);
+  emu.setTarget({ gesture: 'flexion', effort: 0.7, a: 0, b: 0 });
+  for (let t = 800; t < 3000 && fired === null; t += 16) if (confirm.update(pipe.process(emu.sample(t), t), 0.016)) fired = t - 800;
+  assert.ok(fired !== null && fired < 1500, `fired after ${fired} ms of flexion`);
+  // extension or a wrist movement never confirms
+  const other = new HoldConfirm(1);
+  emu.setTarget({ gesture: 'rest', effort: 0, a: 0, b: 0 });
+  for (let t = 3000; t < 3800; t += 16) other.update(pipe.process(emu.sample(t), t), 0.016);
+  emu.setTarget({ gesture: 'pronation', effort: 0.8, a: 0, b: 0 });
+  let wrong = false;
+  for (let t = 3800; t < 6000; t += 16) wrong ||= other.update(pipe.process(emu.sample(t), t), 0.016);
+  assert.equal(wrong, false);
+});

@@ -212,7 +212,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
 
   // Back to where the exercise came from: the plan and the skill check start on home, free play on the levels.
   function exit() {
-    if (outcome) { showResults(); return; } // finished: the saved run is shown, not thrown away
+    // finished: the saved run is shown, not thrown away; 6.0 — also the rounds of a block already played
+    if (outcome || block.outcomes.length) { outcome ??= block.outcomes.at(-1); showResults(); return; }
     app.go(plan || game === 'check' ? 'home' : 'levels', { game });
   }
 

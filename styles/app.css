@@ -302,7 +302,7 @@ button { font: inherit; color: inherit }
 .bridge-panel:has(.signal-quality.bad) > small { display: none }
 @media (max-width: 340px), (orientation: landscape) and (max-height: 400px) { .signal-quality .quality-tip { display: none } }
 /* 5.30 — the recognizer's top three is a teaching aid: on a short screen the pads need the room (the chip says the gesture) */
-@media (max-height: 600px) { .meter-probs, .meter-stream { display: none } }
+@media (max-height: 600px) { .meter-probs, .meter-stream, .meter-stick { display: none } } /* 6.0: the joystick too — the chip and the A/B bars carry it */
 /* 5.30 — seven gestures (UBI4) in a short landscape column: four rows of pads with pictures do not fit 320 px; the names stay */
 @media (orientation: landscape) and (max-height: 400px) {
   .play-screen .pads.gestures[data-many] .gesture-icon { display: none }
