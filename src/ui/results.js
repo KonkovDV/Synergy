@@ -2,7 +2,7 @@
 import { count, fmtNum, fmtPct, fmtFixed, FORMS, isGamePercent } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { gameArt, badgeArt, starRow, firebird, evolution, achievementArt, giftArt, skinArt, sectionArt } from './art.js';
-import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, PET_SLOTS } from '../core/pet.js';
+import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, PET_PLACES, PLACE_NAMES } from '../core/pet.js';
 import { missionText } from '../core/missions.js';
 import { questText } from '../core/quests.js';
 import { skillBar, handsFreeText } from './widgets.js';
@@ -230,14 +230,14 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
     // 5.14 — a new stage is the one «macro» moment (core/pet.js CELEBRATION): the growth ceremony, the stage's
     // character, and the place for things it opens. Everything else stays a small reaction of the bird.
     const from = grown ? PET.stages[PET.stages.findIndex(st => st.id === grown.id) - 1] : null;
-    const opened = grown ? PET_SLOTS.find(sl => sl.from === grown.id) : null;
+    const opened = grown ? Object.keys(PET_PLACES).find(place => PET_PLACES[place] === grown.id && place !== 'beside') : null;
     return h('section', { class: `card pet-moment${grown ? ' grown' : ''}`, role: 'status' },
       // 5.16: a goal reached — the grown bird holds up its star (the pose gives way to what it wears on the head).
       grown && from ? evolution(from.id, grown.id, 112, { items })
         : h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, 'fed', 96, { items, play, pose: report.mission?.completed ? 'star' : null })),
       h('div', {}, h('p', {}, h('b', {}, words)),
         grown ? h('p', { class: 'nest-character' }, grown.character) : null,
-        opened ? h('p', { class: 'note' }, `Открылось место для наряда: «${opened.name}».`) : null));
+        opened ? h('p', { class: 'note' }, `Открылось место для наряда: «${PLACE_NAMES[opened]}».`) : null));
   })() : null;
   const ring = h('i', { class: 'confirm-ring' });
   const today = dayKey();

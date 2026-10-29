@@ -220,11 +220,11 @@ test('primer: the best result is kept, a retake never lowers it; reading gives n
   assert.equal(trainingDays(p), 0, 'the bird grows from training days only');
 });
 
-test('primer: every check right once → «Знаток протеза» and the gift «Азбука» in an empty nest', () => {
+test('primer: every check right once → «Знаток протеза» and the gift «Азбука» as an empty look', () => {
   const p = createProfile();
   const ach = ACHIEVEMENTS.find(a => a.id === 'primer');
   const gift = PET_ITEMS.find(i => i.achievement === 'primer');
-  assert.ok(ach && gift && gift.slot === 'nest');
+  assert.ok(ach && gift && gift.slot === 'look' && gift.place === 'beside');
   for (const [k, d] of PRIMER.entries()) {
     for (const c of d.cards) markSeen(p, d.id, c.id);
     recordCheck(p, d.id, d.check().map(q => q.answer), '2026-10-19');
@@ -232,11 +232,11 @@ test('primer: every check right once → «Знаток протеза» and the
     assert.deepEqual(fresh.includes('primer'), k === PRIMER.length - 1, `after ${d.id}`);
   }
   assert.ok(primerMastered(p));
-  assert.equal(p.pet.nest, 'book');
-  const q = createProfile(); q.pet.nest = 'twigs'; q.achievements = {};
+  assert.equal(p.pet.look, 'book');
+  const q = createProfile(); q.pet.look = 'bow'; q.achievements = { tutorial: '2026-10-19' };
   for (const d of PRIMER) { for (const c of d.cards) markSeen(q, d.id, c.id); recordCheck(q, d.id, d.check().map(x => x.answer), '2026-10-19'); }
   unlockAchievements(q, null, {}, '2026-10-19');
-  assert.equal(q.pet.nest, 'twigs', 'the player\'s choice is not replaced');
+  assert.equal(q.pet.look, 'bow', 'the player\'s choice is not replaced');
 });
 
 test('primer: a backup is untrusted — known topics and cards, a bounded result, a real day; a round trip keeps it', () => {

@@ -8,8 +8,8 @@ import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
 import { COLORS, text, textWidth, scaledPx, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
 import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
-import { drawBionic, bionicTip, bionicHolds, bionicGraspShift, bionicAspect, skinTint, workshopPlace } from '../render/bionic.js';
-import { drawSprite, spriteAspect } from '../render/sprites.js';
+import { drawBionic, drawHeld, bionicTip, bionicHolds, bionicGraspShift, bionicAspect, skinTint, workshopPlace } from '../render/bionic.js';
+import { sprite, spriteMeta, drawSprite, spriteAspect } from '../render/sprites.js';
 
 /** The first of these grips the gesture set has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by «Щипок»). */
 /** A grip the set actually has; a set without «щепоть» takes the power grip (the СППР set of the meetup, 5.31). */
@@ -346,7 +346,7 @@ export class GripGame extends Game {
     }
     pill(ctx, 'корзина', bx, by + s * 0.42, deco);
     const startX = w * 0.42;
-    let ox = startX, oy = objY, handX = startX;
+    let ox = startX, oy = objY, handX = startX, holding = null;
     if (o) {
       if (o.phase === 'arrive') ox = startX + o.x * w;
       if (o.phase === 'carry' || o.phase === 'release' || (o.phase === 'done' && o.delivered)) {
@@ -358,7 +358,11 @@ export class GripGame extends Game {
       const lift = Math.max(0, objY - oy) / (s * 0.8);
       if (deco && !(o.phase === 'done' && o.delivered)) softShadow(ctx, ox, beltY + 2, s * 0.42 * (1 - 0.3 * Math.min(1, lift)), s * 0.09, 0.28 * (1 - 0.6 * Math.min(1, lift)));
       const squeeze = o.phase !== 'arrive' && hand.inContact ? hand.force : 0;
-      if (!(o.phase === 'done' && o.failed === 'timeout')) drawObject(ctx, o, ox, oy, s, squeeze);
+      // 29.10: held, the hand and the thing are one generated picture (drawHeld below); hot tea keeps its drawn tilt
+      holding = deco && !o.hot && (o.phase === 'carry' || (o.phase === 'grasp' && hand.inContact)) && heldPicture(o, this.skin);
+      if (!holding && !(o.phase === 'done' && o.failed === 'timeout')) drawObject(ctx, o, ox, oy, s, squeeze);
+      // in the basket: its front wall is in front of the thing (it was drawn over the crate)
+      if (o.phase === 'done' && o.delivered) drawBasket(ctx, bx, by, s, deco, 0);
       // 5.17 — the sparks belong to the delivery, not to the mistake (feedback after a good try teaches more); a crushed
       // thing stays a still drawing.
       if (o.phase === 'done' && o.delivered && !o.bursted) { o.bursted = true; this.burst(ox, oy, COLORS.good, 12, 140, 260, 0.6); }
@@ -378,7 +382,8 @@ export class GripGame extends Game {
     }
     // a pinch or a key holds the thing between the thumb and the index, right of the picture's centre (26.10)
     const aspect = bionicAspect('hang'), drawX = handX - (this.mirror ? -1 : 1) * (aspect ? bionicGraspShift(held) * ht / aspect : 0);
-    if (!usePicture || !drawBionic(ctx, drawX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0, ...held })) {
+    if (holding) drawHeld(ctx, holding, ox, oy, ht, { mirror: this.mirror, tint: sprite(`${holding}-obj`) ? skinTint(this.skin) : null, armTo: 0 });
+    else if (!usePicture || !drawBionic(ctx, drawX, handTop, ht, pose, { kind: 'hang', mirror: this.mirror, tint: deco ? skinTint(this.skin) : null, lit: deco ? hand.force : 0, armTo: 0, ...held })) {
       drawHand(ctx, { x: handX, y: hy, size: s, pose, skin: this.skin, angle: Math.PI, glow: hand.force, mirror: this.mirror });
     }
     // Force gauge (hidden in the retention probe).
@@ -411,6 +416,18 @@ export class GripGame extends Game {
     this.renderParticles(ctx);
     if (this.flash?.t > 0) text(ctx, this.flash.text, w / 2, Math.max(52, h * 0.16), { size: 19, weight: 800, color: this.flash.color, outline: true, display: true, maxWidth: w - 24 }); // under the «1 / 6» counter
   }
+}
+
+/**
+ * The generated picture of the hand holding this thing (`hold-<thing>`, docs/GAME_VISUALS.md §12) when it has loaded,
+ * else null. The shell takes a skin's colour only where the thing is cut out of the picture (`…-obj`, laid back
+ * untinted); a thing as pale as the shell (the egg, the cup) has no cut-out, so a coloured skin keeps the hand and the
+ * thing as two pictures rather than tint the egg — the plain skin, near white, shows the whole picture as it is.
+ */
+function heldPicture(o, skin) {
+  const name = `hold-${o.art ?? o.kind}`;
+  if (!sprite(name) || !spriteMeta(name)) return null;
+  return sprite(`${name}-obj`) || !skin || skin === 'graphite' ? name : null;
 }
 
 /** The static workshop (5.32): the wall with the brand's glows, light trails and a dot grid; the graphite bench. */

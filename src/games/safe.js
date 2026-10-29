@@ -4,7 +4,7 @@
 // (Kristoffersen et al. 2020, 25 able-bodied participants: about 51 % more separated patterns after game training;
 // the 2021 study with limb-absent users found no consistent gain, so this is a design idea, not a promise).
 import { SESSION } from '../config.js';
-import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT } from './base.js';
+import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT, cardPicture } from './base.js';
 import { blindBlock } from '../core/guidance.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURES, GESTURES } from '../core/vocabulary.js';
 import { COLORS, text, textWidth, wrapLines, circle, fillRound, roundRect, drawHand, drawLamp, holdRing, panel, backdrop, scene, lookKey } from '../render/draw.js';
@@ -255,9 +255,9 @@ export class SafeGame extends Game {
         // The words sit between the hold ring and the card edge: a fixed column ran into the ring on a narrow phone.
         const ringR = ch * 0.42, ringRight = px + ringR + 4, tx = (ringRight + x0 + cw) / 2, tMax = x0 + cw - ringRight - 10;
         if (deco) glow(ctx, px, py, ch * 0.5, BRAND.mint, 0.35);
-        // 5.16: the bionic hand of the illustrations showing the gesture; a two-channel command shows the first
-        // gesture of the vocabulary with that command (closing — the fist, opening — the palm).
-        const pic = card.gesture ?? ACTIVE_GESTURES.find(g => g.command === card.command)?.id;
+        // 5.16: the bionic hand of the illustrations showing the gesture; a two-channel command shows its picture
+        // (closing — the fist, opening — the palm, 29.10: A + B — the coactivation).
+        const pic = cardPicture(card);
         if (!pic || !drawSprite(ctx, `gesture-${pic}`, px, py, Math.min(ch * 0.78, cw * 0.4), { sx: this.cueFlip() ? -1 : 1 })) {
           drawHand(ctx, { x: px, y: y0 + ch * 0.82, size, pose: card.pose, wrist: card.wrist ?? 0, roll: card.roll ?? 0, dev: card.dev ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
         }

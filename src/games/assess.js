@@ -11,10 +11,11 @@
 // TP = mean(ID/MT) over completed trials («mean of means»), bits/s; plus path efficiency D / path.
 // Game metrics, not a clinically validated test; compare a person with themselves week to week.
 import { fmtFixed } from '../core/format.js';
-import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT } from './base.js';
+import { Game, ConfusionMeter, clamp01, pct, REST_STUCK_HINT, cardPicture } from './base.js';
 import { SCHEME, COMMAND, GESTURE_BY_ID, COMMAND_NAME, COMMAND_POSE, ACTIVE_GESTURE_IDS } from '../core/vocabulary.js';
 import { COLORS, text, fillRound, drawHand, drawGauge, drawLamp, holdRing, panel, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, glow, glassPlate, cachedLayer } from '../render/fx.js';
+import { drawSprite } from '../render/sprites.js';
 import { createRng } from '../core/rng.js';
 import { reachableBand } from '../core/signal.js';
 import { SESSION } from '../config.js';
@@ -291,7 +292,11 @@ export class AssessmentGame extends Game {
     const hx = x0 + cw * 0.3, cy = y0 + ch * 0.5, hy = y0 + ch * 0.82, size = ch * 0.26, rr = ch * 0.4;
     const k = clamp01(t.hold / holdOf(t));
     if (deco) glow(ctx, hx, cy, rr * 1.1, BRAND.mint, 0.25 + 0.5 * k);
-    drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, wrist: t.wrist ?? 0, roll: t.roll ?? 0, dev: t.dev ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
+    // 29.10: the bionic hand of the illustrations, as on the cards of «Сейф»; the drawn hand until it loads
+    const pic = cardPicture(t);
+    if (!pic || !drawSprite(ctx, `gesture-${pic}`, hx, cy, Math.min(rr * 1.7, cw * 0.36), { sx: this.cueFlip() ? -1 : 1 })) {
+      drawHand(ctx, { x: hx, y: hy, size, pose: t.pose, wrist: t.wrist ?? 0, roll: t.roll ?? 0, dev: t.dev ?? 0, skin: 'icon', sleeve: false, mirror: this.cueFlip() });
+    }
     holdRing(ctx, hx, cy, rr, k, 6);
     // Text between the hold ring and the force gauge; «Сжатие · 30 % · широко» goes on two lines (5.8: it ran off the card).
     const showGauge = t.band && this.scheme === SCHEME.PROPORTIONAL;
