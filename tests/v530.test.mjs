@@ -62,7 +62,9 @@ test('5.30 response: from the first frame of a contraction to the command — wi
   }
   measured.gesture = latency('gesture', { a: 0, b: 0, gesture: 'fist', confidence: 0.9 }, COMMAND.CLOSE);
   for (const [k, ms] of Object.entries(measured)) assert.ok(ms <= 150, `${k}: ${Math.round(ms)} ms`);
-  assert.ok(measured['threshold A 0.6'] <= 70, `a firm contraction is answered in two frames: ${measured['threshold A 0.6']}`);
+  // 6.0: holdMs is 15, so the command is the next frame, not the same one. At 30 Hz that is 33 ms, not 0.
+  assert.ok(measured['threshold A 0.6'] > 0 && measured['threshold A 0.6'] <= 34, `one frame at 30 Hz: ${measured['threshold A 0.6']}`);
+  assert.ok(measured.gesture >= 90 && measured.gesture <= 101, `gesture stability is 90 ms: ${measured.gesture}`);
 });
 
 test('5.30 two prostheses: a frame names its arm, or both arms come at once; a side is not guessed from a number', async () => {
