@@ -240,14 +240,25 @@ test('ТЗ конвейер: flexion closes, extension opens, the wrist states s
   assert.equal(rest.command, COMMAND.REST);
 });
 
-test('ТЗ отклик: from the first packet of a contraction to the command — within 150 ms at 50 packets a second', () => {
-  const d = new SppprDecoder();
-  let ts = 0;
-  for (let i = 0; i < 20; i++) d.push(packet(ts += 20, {}), ts);
-  const start = ts;
-  let at = null;
-  for (let i = 0; i < 20 && at === null; i++) { d.push(packet(ts += 20, { flexion: 0.8 }), ts); if (d.frame(ts).gesture === 'flexion') at = ts - start; }
-  assert.ok(at !== null && at <= 150, `${at} ms`);
+test('ТЗ отклик: from the first packet of a contraction to the command — smoothing and the 50 ms dwell, not the 90 ms debounce', () => {
+  const latency = step => {
+    const d = new SppprDecoder();
+    const pipe = new SignalPipeline({ scheme: 'gesture' });
+    let ts = 0;
+    const tick = () => { ts = Math.round(ts + step); };
+    for (let i = 0; i < 20; i++) { tick(); d.push(packet(ts, {}), ts); const f = d.frame(ts); if (f) pipe.process(f, ts); }
+    const start = ts;
+    for (let i = 0; i < 20; i++) {
+      tick();
+      d.push(packet(ts, { flexion: 0.8 }), ts);
+      if (pipe.process(d.frame(ts), ts).command === COMMAND.CLOSE) return ts - start;
+    }
+    return null;
+  };
+  // The task packet sets frame.stable, so gestureStableMs (90) is not added. What remains is the probability
+  // smoothing and dwellMs on the MCU clock, landed on a packet.
+  assert.equal(latency(20), 80, '50 Hz');
+  assert.equal(latency(1000 / 30), 99, '30 Hz — the 100 ms the documents quote');
 });
 
 test('ТЗ управление только сигналом: «старт» и «дальше» без касания — сгибание, удержанное на потоке СПППР, после нейтрали', async () => {
