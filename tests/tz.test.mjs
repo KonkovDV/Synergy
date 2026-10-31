@@ -7,6 +7,13 @@ import assert from 'node:assert/strict';
 import { playStream } from './stream-helpers.mjs';
 import { createGame } from '../src/games/registry.js';
 
+test('ТЗ «Ритм»: judging waits the task set delay, not the 200 ms of the other sets', async () => {
+  const { RHYTHM_LATENCY_S } = await import('../src/games/rhythm.js');
+  assert.equal(RHYTHM_LATENCY_S.gesture, 0.1);
+  assert.equal(RHYTHM_LATENCY_S.threshold, 0.033);
+  assert.equal(RHYTHM_LATENCY_S.proportional, 0.033);
+});
+
 const GAMES = ['grip', 'flight', 'rhythm', 'safe'];
 const levels = id => createGame(id, { levelNumber: 1, scheme: 'gesture', seed: 1 }).constructor.levels.length;
 
