@@ -254,9 +254,14 @@ export function segmented(options, value, onChange, label = null) {
   return node;
 }
 
-export function sliderRow(label, { min, max, step, value, format = v => v, onInput }) {
-  const out = h('output', {}, format(value));
-  const input = h('input', { type: 'range', min, max, step, value, 'aria-label': label, oninput: e => { const v = Number(e.target.value); out.textContent = format(v); onInput(v); } });
+export function sliderRow(label, { min, max, step, value, format = v => v, onInput, pending = null }) {
+  const out = h('output', {}, pending ?? format(value));
+  const input = h('input', { type: 'range', min, max, step, value, 'aria-label': label, ...(pending != null ? { 'aria-valuetext': pending } : {}), oninput: e => {
+    const v = Number(e.target.value);
+    out.textContent = format(v);
+    input.removeAttribute('aria-valuetext');
+    onInput(v);
+  } });
   return h('label', { class: 'row slider' }, h('span', {}, label, out), input);
 }
 
