@@ -2,7 +2,7 @@
 // rhythm games gave the best EMG challenge in PlayBionic, Prahm et al. 2018).
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
-import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET } from '../core/vocabulary.js';
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { coverScene } from '../render/bionic.js';
@@ -23,9 +23,17 @@ const LEVELS = [
 /** Nominal force bands (default threshold); a game uses them mapped above the user's threshold (`this.bands`). */
 export const BANDS = { 1: [0.18, 0.45], 2: [0.45, 0.7], 3: [0.7, 1.01] };
 const PERFECT_S = 0.1, GOOD_S = 0.22;
-// Input-chain delay compensated in judging: envelope rise + smoothing (two channels),
-// plus classifier window and debounce for gestures (pattern recognition is slower).
-const LATENCY_S = { threshold: 0.08, proportional: 0.08, gesture: 0.2 };
+// The note is drawn on the beat. Judging shifts the onset back by the delay this scheme adds, so a
+// contraction that starts on the beat is not marked early. Two channels: the next frame after holdMs 15,
+// 33 ms at 30 Hz. A gesture: the task set is already debounced (100 ms at 30 Hz); the other sets still
+// wait out their own 90 ms stability on top of the emulator, and 200 ms is the delay those levels were
+// balanced on. Using 200 ms for the task set marked an on-time contraction about 100 ms early.
+const gestureDelayS = GESTURE_SET.id === 'tz' ? 0.1 : 0.2;
+export const RHYTHM_LATENCY_S = { threshold: 0.033, proportional: 0.033, gesture: gestureDelayS };
+// The built-in player. Two channels keep a longer shift than the pipeline delay: the force is still
+// rising after the onset (slewPerS), and the high-threshold bands were balanced on it. Gestures use the
+// same shift as judging, so the player's onset lands on the beat.
+const BOT_SHIFT_S = { threshold: 0.08, proportional: 0.08, gesture: gestureDelayS };
 const LOOKAHEAD_S = 2.2;
 const COUNT_IN_BEATS = 4;
 
@@ -44,7 +52,8 @@ export class RhythmGame extends Game {
   constructor(opts) {
     super(opts);
     this.beat = 60 / this.level.bpm;
-    this.latency = LATENCY_S[this.scheme] * this.speed; // real input delay expressed in (slowed) game time
+    this.latency = RHYTHM_LATENCY_S[this.scheme] * this.speed; // real input delay, in slowed game time
+    this.botShift = BOT_SHIFT_S[this.scheme] * this.speed;
     this.graded = this.scheme !== SCHEME.THRESHOLD;
     this.bands = Object.fromEntries(Object.entries(BANDS).map(([k, b]) => [k, reachableBand(b, this.onThreshold)]));
     this.notes = this.buildChart();
@@ -179,8 +188,8 @@ export class RhythmGame extends Game {
   popup(lane, label, color, hit = false) { this.popups.push({ lane, label, color, t: 0.7, hit }); }
 
   autopilot() {
-    const now = this.time - this.latency;
-    const lead = this.scheme === SCHEME.GESTURE ? 0.19 : 0.06; // anticipate envelope rise / classifier delay
+    const now = this.time - this.botShift;
+    const lead = this.scheme === SCHEME.GESTURE ? 0.19 : 0.06; // anticipate the rise; the hold stays what the levels were balanced on
     const note = this.notes.find(n => (n.state === 'wait' || n.state === 'active') && now >= n.at - lead - 0.02 && now <= n.at + Math.max(n.dur, 0.14));
     if (!note || (note.state === 'active' && now > note.at + Math.max(note.dur, 0.14) - 0.05)) return this.scheme === SCHEME.GESTURE ? { gesture: 'rest', effort: 0 } : { a: 0, b: 0 };
     const level = note.band ? (this.bands[note.band][0] + Math.min(1, this.bands[note.band][1])) / 2 : 0.6;

@@ -597,3 +597,24 @@ test('5.30: «Тренер качества сигнала» — interference on
   app.updateSettings({ source: 'touch' });
   assert.equal(app.createSession({ game: 'grip', level: 1 }).runner.quality, null);
 });
+
+test('6.0: a gesture exercise names its set; two hands do not inherit it; an old blank record stays «Синергия»', async () => {
+  const app = fresh();
+  const { reportCsv, reportHtml } = await import('../src/services/report.js');
+  const { parseState } = await import('../src/core/storage.js');
+  app.updateSettings({ scheme: 'gesture' });
+  const gesture = app.createSession({ game: 'safe', level: 1 });
+  gesture.game.done = true;
+  assert.equal(app.finishSession(gesture).run.gestureSet, 'synergy', 'this suite pins the Синергия set, and the run says so');
+  const duo = app.createSession({ game: 'duo', level: 1 });
+  duo.game.done = true;
+  assert.equal(app.finishSession(duo).run.gestureSet, undefined, '«Две руки» is two channels, even when the settings say gestures');
+  const base = { game: 'safe', level: 1, score: 80, stars: 2, scheme: 'gesture', at: '2026-10-31T10:00:00.000Z' };
+  const kept = parseState(JSON.stringify({ version: 4, runs: [{ ...base, gestureSet: 'synergy' }, { ...base, gestureSet: 'tz' }, { ...base, gestureSet: 'nope' }, base] }));
+  assert.deepEqual(kept.runs.map(r => r.gestureSet), ['synergy', 'tz', undefined, undefined]);
+  const html = reportHtml({ ...app.state, runs: kept.runs });
+  assert.match(html, /набор жестов Синергия/);
+  assert.match(html, /набор жестов СПППР \(ТЗ\)/);
+  const csv = reportCsv({ ...app.state, runs: [base] });
+  assert.match(csv, /;synergy;/);
+});
