@@ -71,6 +71,12 @@ test('ТЗ пропорциональный режим: amplitude = speed and fo
   assert.ok(first.level <= 5 * 0.017 + 1e-9, `one frame after a jump: ${first.level}`);
   const later = feed(s, 1, 0, 232, 500);
   assert.ok(later.level > 0.9, 'and gets there');
+  // The watchdog used to forget the limiter's clock, so the frame that came back jumped to full output.
+  const lost = new SignalPipeline({ scheme: 'proportional', params: { smoothingMs: 1, holdMs: 0, deadZone: 0, slewPerS: 5 } });
+  feed(lost, 0.9, 0, 0, 200);
+  assert.equal(lost.process(null, 600).valid, false, 'silent longer than the watchdog — the signal is lost');
+  const back = lost.process({ t: 620, a: 1, b: 0 }, 620);
+  assert.ok(back.level <= 5 * 0.02 + 1e-6, `the return slews from rest: ${back.level}`);
 });
 
 test('ТЗ сглаживание: a longer smoothing time is a smoother but later response (the setting does what it says)', () => {
