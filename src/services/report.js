@@ -171,6 +171,9 @@ const csvCell = v => {
   return /[;,"\n\r\t]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 };
 
+/** The gesture set of a run. A gesture exercise from before the field existed was the «Синергия» set: a blank now would be read as the task set, which is the default. */
+const recordedGestureSet = r => (r.scheme === 'gesture' ? (GESTURE_SETS[r.gestureSet] ? r.gestureSet : 'synergy') : '');
+
 /** Rows → CSV text with the formula guard of every cell (one separator for every export of the app). */
 export const csvTable = rows => rows.map(row => row.map(csvCell).join(';')).join('\n');
 
@@ -178,7 +181,7 @@ export function reportCsv(state) {
   const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'thresholds', 'gesture_set', 'prosthesis_side', 'arm_pose', 'unreleased', 'rest_missed', 'cross_on', 'spilled', 'clean_close', 'clean_open',
     'stream_rate_hz', 'stream_jitter_ms', 'stream_gaps', 'stream_forgiven', 'stream_rejected', 'stream_confidence', 'stream_coactivation', 'signal_issues'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
-    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', r.gestureSet ?? (r.scheme === 'gesture' ? 'synergy' : ''), r.side ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '', r.details?.crossings ?? '', r.details?.spilled ?? '', r.details?.cleanClose ?? '', r.details?.cleanOpen ?? '',
+    ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', recordedGestureSet(r), r.side ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '', r.details?.crossings ?? '', r.details?.spilled ?? '', r.details?.cleanClose ?? '', r.details?.cleanOpen ?? '',
     r.stream?.rateHz ?? '', r.stream?.jitterMs ?? '', r.stream?.gaps ?? '', r.stream?.forgiven ?? '', r.stream?.rejected ?? '', r.stream?.meanConfidence ?? '', r.stream?.coactivation ?? '', signalIssuesCode(r.signalIssues)]);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
@@ -258,7 +261,7 @@ ${table(['День', 'Боль', 'Усталость', 'Кожа под датч
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки', 'Заметка'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '',
     [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : '',
-      r.details?.crossings ? `второй канал включался ${r.details.crossings}` : '', isGamePercent(r.details?.cleanClose) ? `чистота закрытия ${r.details.cleanClose} %` : '', isGamePercent(r.details?.cleanOpen) ? `чистота открытия ${r.details.cleanOpen} %` : '', r.details?.spilled ? `расплескали чай ${r.details.spilled}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', r.gestureSet ? `набор жестов ${GESTURE_SETS[r.gestureSet]?.name ?? r.gestureSet}` : '', r.side ? `${r.side === 'left' ? 'левый' : 'правый'} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
+      r.details?.crossings ? `второй канал включался ${r.details.crossings}` : '', isGamePercent(r.details?.cleanClose) ? `чистота закрытия ${r.details.cleanClose} %` : '', isGamePercent(r.details?.cleanOpen) ? `чистота открытия ${r.details.cleanOpen} %` : '', r.details?.spilled ? `расплескали чай ${r.details.spilled}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', recordedGestureSet(r) ? `набор жестов ${GESTURE_SETS[recordedGestureSet(r)].name}` : '', r.side ? `${r.side === 'left' ? 'левый' : 'правый'} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
 <p class="muted">«Не отпустили» и «покой не получился» — игровая статистика, не оценка тонуса и не диагноз.</p>
 ${quality.length ? `<h2>Качество сигнала с датчиков</h2>
 ${table(['Что мешало', 'Упражнений', 'Секунд всего', 'Последний раз', 'Что подсказала игра'], quality.map(q => [QUALITY_TIPS[q.id].title, q.runs, q.seconds, ruDate(q.last), QUALITY_TIPS[q.id].tip]))}

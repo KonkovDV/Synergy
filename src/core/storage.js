@@ -288,7 +288,7 @@ export function parseState(raw, catalog = null) {
     if (r.quick !== true) { const { quick, ...rest } = r; r = rest; } // 5.19: only a real quick start; a backup must not invent them
     if (r.thresholds !== undefined && r.thresholds !== 'prosthesis') { const { thresholds, ...rest } = r; r = rest; } // 5.29: one known value
     if (r.side !== undefined && r.side !== 'left' && r.side !== 'right') { const { side, ...rest } = r; r = rest; } // 5.30: which arm, of two
-    if (r.gestureSet !== undefined && !(GESTURE_SET_IDS.includes(r.gestureSet) && r.gestureSet !== 'synergy')) { const { gestureSet, ...rest } = r; r = rest; } // 5.29: only another known set
+    if (r.gestureSet !== undefined && !GESTURE_SET_IDS.includes(r.gestureSet)) { const { gestureSet, ...rest } = r; r = rest; } // a known set, including «Синергия»; anything else is dropped
     if (r.formWeek !== undefined && !(Number.isInteger(r.formWeek) && r.formWeek >= 0 && r.formWeek < 100000)) { const { formWeek, ...rest } = r; r = rest; } // parallel form of the skill check: a week index
     if (r.signalIssues !== undefined) { const { signalIssues, ...rest } = r; r = rest; const kept = cleanSignalIssues(signalIssues); if (kept.length) r.signalIssues = kept; } // 5.30
     if (r.stream !== undefined) { const { stream, ...rest } = r; r = rest; const kept = cleanStream(stream); if (kept) r.stream = kept; } // 6.0

@@ -592,8 +592,10 @@ export class App {
       retention: session.retention, demo: session.demo, plan: !!session.plan, ...(session.quick ? { quick: true } : {}), ...(session.pose ? { pose: session.pose.id } : {}),
       // 5.29: the channels switched on at the prosthesis's thresholds — a weekly check is compared like with like.
       ...(session.runner.pipeline.params.prosthesisThresholds ? { thresholds: 'prosthesis' } : {}),
-      // 5.29: a gesture run of the UBI4 set says so — its gestures and its skill check differ from the Синергия set.
-      ...(this.settings.scheme === 'gesture' && GESTURE_SET.id !== 'synergy' ? { gestureSet: GESTURE_SET.id } : {}),
+      // The set this exercise actually used. «Две руки» is two channels even when the settings say gestures, so the
+      // label follows the exercise. Every set is named, including «Синергия»: a blank used to mean that set, and a
+      // specialist would now read a blank as the task set, which is the default.
+      ...(session.scheme === 'gesture' ? { gestureSet: GESTURE_SET.id } : {}),
       // 5.30: with two prostheses the report says which arm did the exercise.
       ...(this.settings.prostheses === 'two' && !session.game.constructor.bimanual ? { side: this.settings.side } : {}),
       ...(Number.isInteger(session.formWeek) ? { formWeek: session.formWeek } : {}),

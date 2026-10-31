@@ -8,7 +8,7 @@ import { BionicHand } from '../src/core/hand.js';
 import { restIntent } from '../src/core/signal.js';
 import { COMMAND } from '../src/core/vocabulary.js';
 import { COLORS } from '../src/render/draw.js';
-import { rhythmLayout } from '../src/games/rhythm.js';
+import { rhythmLayout, RHYTHM_LATENCY_S } from '../src/games/rhythm.js';
 import { play } from './helpers.mjs';
 
 // 5.23 — the default grip switch is Motorica's (open again at full opening); hands that switch by co-contraction too.
@@ -95,6 +95,21 @@ test('flight: the hint says where the next ring is — eyes-free play (voice, sc
   const ring = game.track[0], diff = ring.alt - game.alt;
   const want = Math.abs(diff) <= game.tol * 0.8 ? /на вашей высоте/ : diff > 0 ? /Кольцо выше/ : /Кольцо ниже/;
   assert.match(game.hint, want, `ring ${ring.alt.toFixed(2)}, glider ${game.alt.toFixed(2)}: «${game.hint}»`);
+});
+
+test('rhythm: a contraction that arrives one pipeline delay after the beat is on time', () => {
+  const game = createGame('rhythm', { levelNumber: 1, scheme: 'threshold', seed: 3 });
+  const note = game.notes.find(n => n.lane === 'a');
+  assert.ok(note, 'level 1 has a close-channel note');
+  const hand = new BionicHand();
+  const rest = restIntent('threshold', true);
+  const close = { ...rest, command: COMMAND.CLOSE, aOn: true, a: 0.6, bOn: false, b: 0, intensity: 0.6, relaxed: false };
+  const dt = 1 / 120;
+  const arrive = note.at + RHYTHM_LATENCY_S.threshold;
+  while (game.time + dt < arrive - 1e-9) game.update(dt, rest, hand);
+  game.update(arrive - game.time, close, hand);
+  assert.equal(note.state, 'active', 'the delayed onset still meets the note');
+  assert.ok(note.onsetErr <= 1 / 60, `on-time error ${note.onsetErr} s (the old 80 ms shift marked this early)`);
 });
 
 test('rhythm: a note is drawn on the hit line exactly at its beat (the input delay is compensated once, in judging)', () => {
