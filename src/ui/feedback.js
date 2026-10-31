@@ -37,7 +37,7 @@ export function feedbackScreen(app, { from = 'settings' } = {}) {
         h('section', { class: 'card' }, h('h2', {}, 'Удобство (SUS)'), h('p', { class: 'note' }, '1 — совсем не согласен, 5 — полностью согласен.'),
           ...SUS_ITEMS.map((q, i) => h('div', { class: 'survey-item' }, h('p', {}, `${i + 1}. ${q}`), segmented(LIKERT, null, v => { draft.sus[i] = v; }, q)))),
         h('section', { class: 'card' }, h('h2', {}, 'Нагрузка (NASA-TLX)'), h('p', { class: 'note' }, '0 — очень низкая, 10 — очень высокая. Передвиньте ползунок, чтобы ответить; нетронутый не считается.'),
-          ...TLX_ITEMS.map(t => sliderRow(t.text, { min: 0, max: 10, step: 1, value: 5, format: v => `${v} из 10`, onInput: v => { draft.tlx[t.id] = v; } }))),
+          ...TLX_ITEMS.map(t => sliderRow(t.text, { min: 0, max: 10, step: 1, value: 5, pending: 'не отвечено', format: v => `${v} из 10`, onInput: v => { draft.tlx[t.id] = v; } }))),
         h('section', { class: 'card' }, h('h2', {}, 'Об игре'),
           ...GAME_ITEMS.map(t => h('div', { class: 'survey-item' }, h('p', {}, t.text), segmented(LIKERT, null, v => { draft.game[t.id] = v; }, t.text))),
           h('label', { class: 'field', for: 'fb-text' }, h('span', {}, 'Свободный отзыв'), text)),
@@ -46,6 +46,6 @@ export function feedbackScreen(app, { from = 'settings' } = {}) {
           h('button', { class: 'btn ghost', disabled: !list().length, onclick: exportJson }, 'Сохранить отзывы — JSON'),
           h('button', { class: 'btn ghost', disabled: !list().length, onclick: exportCsv }, 'Сохранить отзывы — CSV')),
         saved,
-        h('p', { class: 'note' }, 'SUS и NASA-TLX — стандартные опросники удобства и нагрузки. Это мнение пользователя, а не клиническая шкала.'))),
+        h('p', { class: 'note' }, 'SUS — стандартный опросник удобства. Нагрузка — четыре шкалы NASA-TLX, без взвешивания и без шкал «время» и «успешность». Это мнение пользователя, а не клиническая шкала.'))),
   };
 }

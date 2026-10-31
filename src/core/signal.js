@@ -125,7 +125,9 @@ export class SignalPipeline {
     }
     if (now - this.lastValidAt > this.params.frameTimeoutMs) {
       this.a = 0; this.b = 0; this.aOn = false; this.bOn = false; this.lead = null;
-      this.aboveSince = [null, null]; this.out = { level: 0, intensity: 0, t: null };
+      this.aboveSince = [null, null];
+      // Keep the clock. t: null disarms the slew limiter, so the first frame back jumped to full output.
+      this.out = { level: 0, intensity: 0, t: now };
       this.aHighSince = null; this.bHighSince = null;
       // 5.27 — after a dropout the gesture starts from rest. The last gesture before the loss stayed «stable» and was
       // executed for gestureStableMs once the signal came back: «Ладонь» shown, «Кулак» closing the hand.

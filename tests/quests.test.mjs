@@ -144,3 +144,30 @@ test('ТЗ обратная связь: SUS is scored the standard way, NASA-TLX
   const state = emptyState(); state.profile.feedback = [s, { at: 'bad' }];
   assert.equal(parseState(JSON.stringify(state)).profile.feedback.length, 1);
 });
+
+test('ТЗ обратная связь: an untouched load slider is not an answer of 5', async () => {
+  const noop = () => {};
+  globalThis.Node = class Node {};
+  const el = tag => {
+    const node = Object.assign(new Node(), { tag, attrs: {}, kids: [], dataset: {}, textContent: '', style: { setProperty: noop }, classList: { add: noop, toggle: noop, remove: noop } });
+    return new Proxy(node, { get(t, k) {
+      if (k in t) return t[k];
+      if (k === 'append') return (...c) => { t.kids.push(...c); };
+      if (k === 'appendChild') return c => { t.kids.push(c); return c; };
+      if (k === 'replaceChildren') return (...c) => { t.kids = c; };
+      if (k === 'setAttribute') return (a, v) => { t.attrs[a] = v; };
+      if (k === 'removeAttribute') return a => { delete t.attrs[a]; };
+      if (typeof k === 'string' && (k === 'addEventListener' || k === 'removeEventListener' || k === 'focus' || k === 'remove')) return noop;
+      return undefined;
+    } });
+  };
+  globalThis.document = { createElement: el, createElementNS: () => el('svg'), createTextNode: t => Object.assign(new Node(), { textContent: String(t) }), body: el('body'), getElementById: () => null };
+  const { feedbackScreen } = await import('../src/ui/feedback.js');
+  const app = { profile: { feedback: [] }, settings: { scheme: 'proportional' }, save: noop, go: noop };
+  const texts = [];
+  const walk = n => { if (!n || typeof n !== 'object') return; if (typeof n.textContent === 'string') texts.push(n.textContent); for (const c of n.kids ?? []) walk(c); };
+  walk(feedbackScreen(app).node);
+  const text = texts.join('\n');
+  assert.match(text, /не отвечено/);
+  assert.equal(text.includes('5 из 10'), false, 'the thumb sits in the middle, the screen does not call that an answer');
+});
