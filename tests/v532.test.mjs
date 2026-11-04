@@ -125,6 +125,36 @@ test('5.32 both on: a co-contraction is still a co-contraction; one frame for bo
   assert.equal(lost.lead, null, 'a lost signal forgets the leader');
 });
 
+test('Q&A 04.11 both on: the sport mode — the later channel takes over; when it lets go, the first one leads again', () => {
+  const run = () => {
+    const p = new SignalPipeline({ scheme: 'proportional', params: { bothOn: 'latest' } });
+    return [
+      hold(p, { a: 0.6, b: 0 }, 600).command,          // A alone
+      hold(p, { a: 0.6, b: 0.5 }, 600, 616).command,   // B later — not a co-contraction: B takes over
+      hold(p, { a: 0.6, b: 0 }, 600, 1232).command,    // B lets go, A is still on
+      hold(p, { a: 0, b: 0 }, 600, 1848).command,      // both off
+    ];
+  };
+  assert.deepEqual(run(), [COMMAND.CLOSE, COMMAND.OPEN, COMMAND.CLOSE, COMMAND.REST]);
+  const p = new SignalPipeline({ scheme: 'proportional', params: { bothOn: 'latest' } });
+  hold(p, { a: 0, b: 0.6 }, 600);
+  const late = hold(p, { a: 0.4, b: 0.6 }, 300, 616);
+  assert.equal(late.command, COMMAND.CLOSE, 'A came later: even a weaker A takes over');
+  assert.equal(late.intensity, late.a, 'speed follows the channel in control');
+  const co = new SignalPipeline({ scheme: 'threshold', params: { bothOn: 'latest' } });
+  assert.equal(hold(co, { a: 0.7, b: 0.7 }, 200).command, COMMAND.SWITCH, 'a co-contraction is still a co-contraction');
+  const q = new SignalPipeline({ scheme: 'proportional', params: { bothOn: 'latest', coThreshold: 0.9 } });
+  assert.equal(hold(q, { a: 0.5, b: 0.5 }, 300).command, COMMAND.REST, 'both in one frame: nobody is later');
+  const lost = new SignalPipeline({ scheme: 'proportional', params: { bothOn: 'latest' } });
+  hold(lost, { a: 0.6, b: 0 }, 300);
+  lost.process(null, 1000);
+  assert.equal(lost.latest, null, 'a lost signal forgets who came last');
+  assert.equal(parseState(JSON.stringify({ version: 4, settings: { bothOn: 'latest' } })).settings.bothOn, 'latest');
+  assert.match(bothOnText('latest'), /спортивный режим/);
+  assert.match(bothOnText('first'), /классический режим/);
+  assert.match(fourStates({ gripSwitch: 'open', bothOn: 'latest' })[3].action, /переходит на вторую команду/);
+});
+
 test('5.32 both on: the setting is saved, checked on import and said in words', () => {
   assert.equal(parseState(JSON.stringify({ version: 4, settings: { bothOn: 'first' } })).settings.bothOn, 'first');
   assert.equal(parseState(JSON.stringify({ version: 4, settings: { bothOn: 'race' } })).settings.bothOn, 'hold', 'an unknown law from a backup is dropped');

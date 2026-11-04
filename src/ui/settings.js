@@ -108,7 +108,7 @@ export function settingsScreen(app, { back = null } = {}) {
     const coNote = h('p', { class: 'note', hidden: s.gripSwitch === 'open' }, 'Сейчас хват меняет коактивация A+B. В протезах «Моторики» хват меняет повторное раскрытие, а A+B — блокировка. Время удержания появится, если выбрать «Снова раскрыть».');
     if (s.gripSwitch !== 'open') hold.hidden = true;
     const pick = v => { app.updateSettings({ gripSwitch: v }); hold.hidden = v !== 'open'; openNote.hidden = v !== 'open'; coNote.hidden = v === 'open'; paintStates(); };
-    // 5.32 — the second channel later than the first: the hand stands or goes on with the first command (BOTH_ON).
+    // 5.32 — the second channel later than the first: the hand stands, goes on with the first command or takes the later one (BOTH_ON).
     const bothNote = h('p', { class: 'note' }, bothOnText(s.bothOn));
     const pickBoth = v => { app.updateSettings({ bothOn: v }); bothNote.textContent = bothOnText(v); paintStates(); refreshPreview(); };
     return [
@@ -119,7 +119,7 @@ export function settingsScreen(app, { back = null } = {}) {
         segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, pick, 'Смена хвата')),
       hold, openNote, coNote,
       h('div', { class: 'row' }, h('span', {}, 'Второй канал позже первого'),
-        segmented([{ value: 'hold', label: 'Кисть стоит', sub: 'как раньше' }, { value: 'first', label: 'Первая команда', sub: 'со слов «Моторики»' }], s.bothOn ?? BOTH_ON.defaultMode, pickBoth, 'Второй канал включился позже первого')),
+        segmented([{ value: 'hold', label: 'Кисть стоит', sub: 'как раньше' }, { value: 'first', label: 'Первая команда', sub: 'классический режим' }, { value: 'latest', label: 'Вторая команда', sub: 'спортивный режим' }], s.bothOn ?? BOTH_ON.defaultMode, pickBoth, 'Второй канал включился позже первого')),
       bothNote,
       signalParamsBox(),
     ];

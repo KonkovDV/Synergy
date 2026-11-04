@@ -259,6 +259,9 @@ test('ТЗ отклик: from the first packet of a contraction to the command �
   // smoothing and dwellMs on the MCU clock, landed on a packet.
   assert.equal(latency(20), 80, '50 Hz');
   assert.equal(latency(1000 / 30), 99, '30 Hz — the 100 ms the documents quote');
+  // Q&A of the organizers (04.11.2026): the СПППР sends at 10 Hz with up to 100 ms of its own delay. dwellMs is confirmed
+  // only by the next packet, so forgiving one wrong packet costs a whole interval here (LIMITS.md).
+  assert.equal(latency(100), 200, '10 Hz — the rate the organizers named: two packets');
 });
 
 test('ТЗ управление только сигналом: «старт» и «дальше» без касания — сгибание, удержанное на потоке СПППР, после нейтрали', async () => {
