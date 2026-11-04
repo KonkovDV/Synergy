@@ -180,7 +180,11 @@ await page.evaluate(() => window.Synergy.useTouch());
 
 // 5.8 — back: the browser/PWA back gesture pauses a running game, a second back leaves it; Esc goes back too.
 await go('play', { game: 'grip', level: 1, demo: true }); await wait(300);
-await page.getByRole('button', { name: 'Старт' }).click(); await wait(4200);
+await page.getByRole('button', { name: 'Старт' }).click(); await wait(300);
+// Back during the 3 s countdown leaves the exercise (play.js onBack), so wait for the run itself: a slow CI runner did not
+// finish the countdown in a fixed 4.2 s (CI run 41830263834), and the check failed on a correct app.
+await page.waitForFunction(() => !/Старт через/.test(document.body.innerText), null, { timeout: 20000 }).catch(() => errors.push('the countdown did not end in 20 s'));
+await wait(300);
 await page.goBack(); await wait(300);
 if (!(await page.getByRole('heading', { name: 'Пауза' }).count())) errors.push('back during a run did not pause it');
 await page.goBack(); await wait(300);
