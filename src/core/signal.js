@@ -105,7 +105,7 @@ export class SignalPipeline {
 
   reset() {
     this.a = 0; this.b = 0;
-    this.aOn = false; this.bOn = false; this.lead = null;
+    this.aOn = false; this.bOn = false; this.lead = null; this.latest = null;
     // 6.0: time above the threshold before a channel turns on (holdMs) and when it last turned off (refractoryMs)
     this.aboveSince = [null, null]; this.offSince = [-Infinity, -Infinity];
     this.out = { level: 0, intensity: 0, t: null }; // the slew-limited proportional output
@@ -124,7 +124,7 @@ export class SignalPipeline {
       if (fresh) this.ingest(frame, now);
     }
     if (now - this.lastValidAt > this.params.frameTimeoutMs) {
-      this.a = 0; this.b = 0; this.aOn = false; this.bOn = false; this.lead = null;
+      this.a = 0; this.b = 0; this.aOn = false; this.bOn = false; this.lead = null; this.latest = null;
       this.aboveSince = [null, null];
       // Keep the clock. t: null disarms the slew limiter, so the first frame back jumped to full output.
       this.out = { level: 0, intensity: 0, t: now };
@@ -178,8 +178,16 @@ export class SignalPipeline {
       this.aboveSince[ch] ??= t;
       return t - this.aboveSince[ch] >= holdMs;
     };
+    const wasA = this.aOn, wasB = this.bOn;
     this.aOn = step(this.aOn, this.a, 0);
     this.bOn = step(this.bOn, this.b, 1);
+    // Q&A 04.11.2026 — which channel switched on last (the sport mode of the prosthesis: the later signal takes over).
+    // Both in one frame — nobody is later; both off — forgotten.
+    const upA = this.aOn && !wasA, upB = this.bOn && !wasB;
+    if (upA !== upB) this.latest = upA ? 'a' : 'b';
+    else if (upA && upB) this.latest = null;
+    if (!this.aOn && !this.bOn) this.latest = null;
+    else if (this.aOn !== this.bOn) this.latest = this.aOn ? 'a' : 'b';
     // 5.32 — which channel came first. Alone it leads; when both are on, the first keeps the lead (both in one frame —
     // no lead); when the leader goes off, the one still on takes over (Momo's FIRST_OVER does the same).
     if (this.aOn !== this.bOn) this.lead = this.aOn ? 'a' : 'b';
@@ -232,8 +240,10 @@ export class SignalPipeline {
     if (co) command = COMMAND.SWITCH;
     else if (this.aOn && !this.bOn) command = COMMAND.CLOSE;
     else if (this.bOn && !this.aOn) command = COMMAND.OPEN;
-    // Both on, not a co-contraction: the hand stands ('hold') or goes on with the first command ('first', BOTH_ON).
+    // Both on, not a co-contraction: the hand stands ('hold'), goes on with the first command ('first', the classic mode
+    // of the Q&A of 04.11.2026) or takes the later one ('latest', the sport mode) — BOTH_ON.
     else if (this.aOn && this.bOn && this.params.bothOn === 'first' && this.lead) command = this.lead === 'a' ? COMMAND.CLOSE : COMMAND.OPEN;
+    else if (this.aOn && this.bOn && this.params.bothOn === 'latest' && this.latest) command = this.latest === 'a' ? COMMAND.CLOSE : COMMAND.OPEN;
     const fixed = this.params.thresholdIntensity;
     const intensity = command === COMMAND.REST ? 0
       : !proportional ? fixed
