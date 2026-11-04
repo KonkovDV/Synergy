@@ -27,8 +27,8 @@ One landscape image, 3:2. A sheet of 8 pictures in a grid of 4 columns × 2 rows
 3) EXTENSION — seen from the side like the previous one; the hand bent backwards at the wrist about fifty degrees towards the back of the hand, the fingers straight; a curved arrow along the bend, pointing back and down.
 4) PRONATION — the forearm lying horizontally and pointing to the right, seen from the side; the palm faces down to the floor; a curved arrow wraps around the wrist and shows the palm turning down.
 5) SUPINATION — like the previous one, but the palm faces up to the ceiling, as if a coin lay on it; a curved arrow wraps around the wrist the other way and shows the palm turning up.
-6) ADDUCTION — the hand upright, palm facing the viewer, tilted sideways at the wrist about thirty degrees towards the little finger, to the viewer's right; a short curved arrow beside the fingertips points to the right.
-7) ABDUCTION — like the previous one, but tilted towards the thumb, to the viewer's left; a short curved arrow beside the fingertips points to the left.
+6) ADDUCTION — the hand upright, palm facing the viewer, tilted sideways at the wrist about thirty degrees towards the little finger, to the viewer's left (a right hand facing the viewer has its thumb on the viewer's right); a short curved arrow beside the fingertips points to the left.
+7) ABDUCTION — like the previous one, but tilted towards the thumb, to the viewer's right; a short curved arrow beside the fingertips points to the right.
 8) COACTIVATION — the hand upright, palm facing the viewer, clenched into a firm fist; two thin glowing rings around the forearm socket just below the wrist band, one coral (#FF7A45) and one sky blue (#5AC8FA), both lit; no arrow.
 Soft 3D clay render, rounded geometric shapes, studio lighting from the top left, clean and friendly, high detail. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark.
 ```

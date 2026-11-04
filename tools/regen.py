@@ -119,9 +119,10 @@ GESTURE_CELLS = [
     ("supination", "SUPINATION — like the previous one, but the palm faces up to the ceiling, as if a coin lay on it; a curved arrow "
                    "wraps around the wrist the other way and shows the palm turning up"),
     ("adduction", "ADDUCTION — the hand upright, palm facing the viewer, tilted sideways at the wrist about thirty degrees towards the "
-                  "little finger, to the viewer's right; a short curved arrow beside the fingertips points to the right"),
-    ("abduction", "ABDUCTION — like the previous one, but tilted towards the thumb, to the viewer's left; a short curved arrow beside "
-                  "the fingertips points to the left"),
+                  "little finger, to the viewer's left (a right hand facing the viewer has its thumb on the viewer's right); a short "
+                  "curved arrow beside the fingertips points to the left"),
+    ("abduction", "ABDUCTION — like the previous one, but tilted towards the thumb, to the viewer's right; a short curved arrow beside "
+                  "the fingertips points to the right"),
     ("coact", "COACTIVATION — the hand upright, palm facing the viewer, clenched into a firm fist; two thin glowing rings around the "
               "forearm socket just below the wrist band, one coral (#FF7A45) and one sky blue (#5AC8FA), both lit; no arrow"),
 ]
