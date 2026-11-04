@@ -602,10 +602,12 @@ test('6.0: a gesture exercise names its set; two hands do not inherit it; an old
   const app = fresh();
   const { reportCsv, reportHtml } = await import('../src/services/report.js');
   const { parseState } = await import('../src/core/storage.js');
+  const { GESTURE_SET } = await import('../src/core/vocabulary.js');
   app.updateSettings({ scheme: 'gesture' });
   const gesture = app.createSession({ game: 'safe', level: 1 });
   gesture.game.done = true;
-  assert.equal(app.finishSession(gesture).run.gestureSet, 'synergy', 'this suite pins the Синергия set, and the run says so');
+  // The run names the set the suite runs on: «Синергия» under `npm test` (tests/pin-set.mjs), UBI4 under `npm run test:ubi4`.
+  assert.equal(app.finishSession(gesture).run.gestureSet, GESTURE_SET.id, 'the run names the active gesture set');
   const duo = app.createSession({ game: 'duo', level: 1 });
   duo.game.done = true;
   assert.equal(app.finishSession(duo).run.gestureSet, undefined, '«Две руки» is two channels, even when the settings say gestures');
