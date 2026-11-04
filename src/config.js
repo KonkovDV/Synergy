@@ -256,8 +256,12 @@ export const GRIP_SWITCH = { defaultMode: 'open', holdDefaultS: 1, minS: 0.1, ma
  * command goes on while its channel stays on; the later one is not executed. That is how Motorica's expert described
  * the prosthesis at the meetup («выполнит первую пришедшую команду») and Momo's FIRST_OVER policy (hcilab, MIT). Which
  * law a given hand follows is the prosthetist's word, so the default stays 'hold'.
+ * Q&A of the organizers (04.11.2026) named the modes of the prosthesis: classic — the first signal keeps control until it
+ * drops under its threshold, the second does not take over ('first'); sport — the second may take over before the first
+ * is done ('latest'). Both above the thresholds may also lock the hand when the lock is on (here: the co-contraction and
+ * LOCK). They add that the game follows the task, so these are settings, not a new default.
  */
-export const BOTH_ON = { modes: ['hold', 'first'], defaultMode: 'hold' };
+export const BOTH_ON = { modes: ['hold', 'first', 'latest'], defaultMode: 'hold' };
 
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 
