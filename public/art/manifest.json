@@ -339,33 +339,33 @@
   "gesture-abduction": {
    "w": 256,
    "h": 256,
-   "bytes": 11040,
+   "bytes": 8320,
    "alpha": true,
-   "sha256": "b351e4713ba9dd3334ad259058c92f383298cb72463145be1db61fa4bc53d42c",
+   "sha256": "8e4b016cda645b58508c8e3e65c731df4bcbe634743b3c624eb452d2b39e38b0",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-adduction": {
    "w": 256,
    "h": 256,
-   "bytes": 11668,
+   "bytes": 8876,
    "alpha": true,
-   "sha256": "9f13b939f80fb68be261928190c1288d0edc8737ecdff473d3016d1e7bc7a933",
+   "sha256": "a75fbbd2bf303aa0e3a1123b5aab232ee22f11da5c2b586896f435e84f90ffa2",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-coact": {
    "w": 256,
    "h": 256,
-   "bytes": 10352,
+   "bytes": 7500,
    "alpha": true,
-   "sha256": "a03733d747bdb289119a0f31c0a3cadbd0724391e0f387759393c8bccb05297b",
+   "sha256": "9bc9ba87155c5d1d718bb8b8829b1197fbcf57cc5611ee0332a28a5ff06de40b",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-extension": {
    "w": 256,
    "h": 256,
-   "bytes": 9550,
+   "bytes": 7174,
    "alpha": true,
-   "sha256": "a61a45a3778e70663905e466ecad6f1c28b0f71f91a820b0019569c83d828ae6",
+   "sha256": "967a0be51fc517783f3676698faf36edc97eb2247ab9307067fd97b8bc924aa0",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-fist": {
@@ -379,9 +379,9 @@
   "gesture-flexion": {
    "w": 256,
    "h": 256,
-   "bytes": 12140,
+   "bytes": 9112,
    "alpha": true,
-   "sha256": "be8257e3d3fea0f77c3c5944c4871aff93c7a30095aa492941794eb9712a3f2f",
+   "sha256": "0b7b82449e99aac3e8f4f88e9e4e28b98d8eeda3665fe75e70fab23860704420",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-indication": {
@@ -427,25 +427,25 @@
   "gesture-pronation": {
    "w": 256,
    "h": 256,
-   "bytes": 9042,
+   "bytes": 6748,
    "alpha": true,
-   "sha256": "b2cf9f88ea373902f2dc4a4cdf8b5c1e031d0dad5bdc46b1adb920589f0734b3",
+   "sha256": "ecafee388537fcc615a96e9d0a7fbf5bf068c02b6e4918d174a4e47f1770dd8f",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-rest": {
    "w": 256,
    "h": 256,
-   "bytes": 10438,
+   "bytes": 7780,
    "alpha": true,
-   "sha256": "bb86998e10ebfddea8e4a0da0fbbc7ea031ad407775db0481a912068ee3c8631",
+   "sha256": "d2dd879875e803a6b383796b65ed4fdb343a77d21f04125668668ecb21d87ffd",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-supination": {
    "w": 256,
    "h": 256,
-   "bytes": 9912,
+   "bytes": 7410,
    "alpha": true,
-   "sha256": "e7780141b3c8cc1dfdf7a280545d833217cfa7313c186b40048c71bfcc8e55bd",
+   "sha256": "874955091f4dc63a05c237ffbd15d69c130b0c938dfc11b5b9ded559fd479bc5",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-thumb": {
@@ -667,177 +667,177 @@
   "hold-apple": {
    "w": 477,
    "h": 807,
-   "bytes": 55832,
+   "bytes": 38306,
    "alpha": true,
-   "sha256": "89fe6d746dff8950feaec5cc19c90805409b847039e8fb05e713084e2e0aafae",
+   "sha256": "95a6833be551fcfa454086827e20545bf6eba3bff7a6128c43c9c99dcfb34858",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-apple-obj": {
    "w": 477,
    "h": 807,
-   "bytes": 14448,
+   "bytes": 8226,
    "alpha": true,
-   "sha256": "67c276b30ef8e0854d62cb91c60cf2f8289d46ca5f1ef04c25e40992eb729fd2",
+   "sha256": "3eeb167633d9b5bf25d2285c5b3197deaa63e155e50cdd333d35ae29ea12b16d",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-berry": {
    "w": 414,
    "h": 819,
-   "bytes": 54248,
+   "bytes": 39716,
    "alpha": true,
-   "sha256": "0ebc021e7df3bab5cc404e6966d5e7b9fd9cd65ebfdd22c7bb951234c71e46eb",
+   "sha256": "4716c9fad066e446284acfc3b753ce3fd3e233a1f00efb4a84a7f0d7c075f08e",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-berry-obj": {
    "w": 414,
    "h": 819,
-   "bytes": 7098,
+   "bytes": 5266,
    "alpha": true,
-   "sha256": "1b32071a4a1c50a20d9547fd7197133c5545fdfd4c5a89cbbfc67b3d56ad1207",
+   "sha256": "c5b94fc69b9ee5b76ee52b6183e1070a4d5e4de409eeeb6ea58e34263f98bcd8",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-can": {
    "w": 473,
    "h": 827,
-   "bytes": 50388,
+   "bytes": 35166,
    "alpha": true,
-   "sha256": "7c49aaafe5770ec4c2a8b78752e41ffbe2e2bbff580dfdcc1d14731d4f602b9d",
+   "sha256": "994e40af70e5df0f78b4a25c884b2f610e20878dfd80e7ca887f5f1d5e1a5ff5",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-can-obj": {
    "w": 473,
    "h": 827,
-   "bytes": 9862,
+   "bytes": 6102,
    "alpha": true,
-   "sha256": "8a17bd6db5905ac9c01c9ff103665229774538d41a59d5d544802c1b4e800ec5",
+   "sha256": "8d8ba9e7a1b61b4b9ffaaf643733dbed9485d5785dcb519da32899e53d82dfa9",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-card": {
    "w": 479,
    "h": 851,
-   "bytes": 36878,
+   "bytes": 25218,
    "alpha": true,
-   "sha256": "a4387a6aa68f4caac593b66fd54915960c9c95f905c2d580e81025164e5202c2",
+   "sha256": "8e7894e2331fb762a0427511566392b768254b6e443b74182350e4dc987d7159",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-card-obj": {
    "w": 479,
    "h": 851,
-   "bytes": 8122,
+   "bytes": 5912,
    "alpha": true,
-   "sha256": "2234c4542b266df5da3def3c4916611d8aebfa4fafab1672c9e732fe45f5adda",
+   "sha256": "45fcc1ef579cbbb79e8edbc143b1cfa6703511ad942482b4dead2eff7648f34d",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-coin": {
    "w": 444,
    "h": 819,
-   "bytes": 52676,
+   "bytes": 38632,
    "alpha": true,
-   "sha256": "9d251ffb6f31790fc50f6ca6ca43e94668948210a55cfe8e0a6c4d897de098be",
+   "sha256": "afb51b687049744c433125c08ed81bb7e2d5fb9c292b4d2a6bfce3437e36e53d",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-coin-obj": {
    "w": 444,
    "h": 819,
-   "bytes": 6144,
+   "bytes": 4512,
    "alpha": true,
-   "sha256": "fff3fd0b50eb9df49b0b920e5cd98a56c1c5ade24e1fd988c8f8076a22749647",
+   "sha256": "a811bcb07e65cd283cf775f30e28af5478405d7ca41989cbf4a559b85731cb42",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-cube": {
    "w": 483,
    "h": 792,
-   "bytes": 44662,
+   "bytes": 31794,
    "alpha": true,
-   "sha256": "1aa3cf11eac5d7f7741da634e5a546c638c14902b916b0ef6752cc96c3eec0cf",
+   "sha256": "e3a06037ee975b3fa77f70d5c04e67b54e042ffe29e75479e5313de5daded676",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-cube-obj": {
    "w": 483,
    "h": 792,
-   "bytes": 4902,
+   "bytes": 3246,
    "alpha": true,
-   "sha256": "316ba2f18ff1c1931733e5263aed16bab5a94ab9225cff7d8337f15e03083af5",
+   "sha256": "1371182207c188a511fef8192c3dd6ecde63d3c8710c626d0c1034120abb73c6",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-cup": {
    "w": 477,
    "h": 827,
-   "bytes": 48342,
+   "bytes": 33698,
    "alpha": true,
-   "sha256": "3620edf3d360ca350d0348c278e5586eed88ffa2322cd129881053bcc7ca1906",
+   "sha256": "fe6159cc053b90100c5e1201d5bba20ad8ad26161b3faf066d73666f85872f55",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-cup-obj": {
    "w": 477,
    "h": 827,
-   "bytes": 3820,
+   "bytes": 2602,
    "alpha": true,
-   "sha256": "b0db29446afb1d7563ea926e91b55608398c3d1117018e02f5bf341f88b285bc",
+   "sha256": "080c67f89446d4783dc85b55e67f4b32763621179e73085e4478cc0d2c073bf3",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-dumbbell": {
    "w": 450,
    "h": 880,
-   "bytes": 50888,
+   "bytes": 34082,
    "alpha": true,
-   "sha256": "7bb5f21564e3b82cca2a8d15f017a6f09df9dc57061a86d97f5465e881409257",
+   "sha256": "e76d02785d53bf2842a8f409c03570fb9cc7a6bea67b213e4009736d0332a7ea",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-egg": {
    "w": 466,
    "h": 792,
-   "bytes": 46774,
+   "bytes": 32364,
    "alpha": true,
-   "sha256": "7a03c82992ca85de5c63f2abc28735c23f8f8c1baae4c546fd1412bd19d8b4e1",
+   "sha256": "615b49e74cc027d9f362049e06f7f416ebb74f2a0dbbc6fa22379437b49ae0a6",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-key": {
    "w": 372,
    "h": 822,
-   "bytes": 41904,
+   "bytes": 29998,
    "alpha": true,
-   "sha256": "5fa1db60a09aae9c27ed587ea1538470b5b830416a9e20a070409d2f4c7673cb",
+   "sha256": "44b9a7bc286e764e3c97f9cbe9914b34fd9f7e7231f8de35886d281b8cc1718a",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-key-obj": {
    "w": 372,
    "h": 822,
-   "bytes": 8712,
+   "bytes": 6452,
    "alpha": true,
-   "sha256": "33e5597b1402a5bf9bb288d498f50427129a2d1e8ef1e5c85d64becf20671556",
+   "sha256": "876074f9486a33ba10a31b0d00e257970e5be5085477b142b0ca55235a5bf9d4",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-ring": {
    "w": 441,
    "h": 819,
-   "bytes": 53410,
+   "bytes": 39014,
    "alpha": true,
-   "sha256": "a9c2bf2ee024c9289c5fb44f6ccef27fe31f643220a262f1e38c05874dc3c775",
+   "sha256": "d47d1285d939e39b68c88a334ec5c202bded3ff3c3918e81dd2eb9e113df1611",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-ring-obj": {
    "w": 441,
    "h": 819,
-   "bytes": 10174,
+   "bytes": 7402,
    "alpha": true,
-   "sha256": "c5605007c7cc07aa66f59b6a77f4818bcb0637378cc3787be5fafadbf8bdb6d9",
+   "sha256": "7096f076386f4a990307c96ecf28af9226fa8b8e24df918beda519b84e40e3c2",
    "source": "daa680a123573b47426ee5283cc118baa045f42dfbed1d1538704348b96ac8a3"
   },
   "hold-sponge": {
    "w": 462,
    "h": 800,
-   "bytes": 60850,
+   "bytes": 38462,
    "alpha": true,
-   "sha256": "d94522b0ed4832f8c1c303c0f54229bb0a54d156d8add23de157357324b75adf",
+   "sha256": "bf77724e7bd0b862083d6252923a967bf6a05b0218145788d9d69374f0815ca5",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "hold-sponge-obj": {
    "w": 462,
    "h": 800,
-   "bytes": 21088,
+   "bytes": 10498,
    "alpha": true,
-   "sha256": "6591e67612b863c2b608167bd530c35cfaf02b91f6030534adc9312fc22c8816",
+   "sha256": "fb345dba1243a595c315eee54fca8ceae9c5bfa664d1b59dbf5f47fcc05b22d5",
    "source": "2e7f4e42fd6bde1fbf025f0794b8fb8b55120cdcf64543791dec467ad97f0e66"
   },
   "ico-access": {
@@ -1964,7 +1964,7 @@
   ],
   "splash": "android/res/drawable-xxhdpi/splash_bird.png"
  },
- "total_bytes": 4748514,
+ "total_bytes": 4512738,
  "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)",
  "layout": {
   "pet-chick-happy": {

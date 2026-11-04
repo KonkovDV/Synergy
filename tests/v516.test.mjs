@@ -254,7 +254,9 @@ test('build: dist/ carries the pictures and precaches them; the one-file build i
   const inline = JSON.parse(one.match(/window\.SYNERGY_ART=(\{.*?\});<\/script>/s)[1]);
   assert.deepEqual(Object.keys(inline).sort(), Object.keys(ART).sort());
   assert.ok(Object.values(inline).every(u => u.startsWith('data:image/webp;base64,')));
-  assert.ok(Buffer.byteLength(one) < 6 * 1024 * 1024, 'the one-file build stays under 6 MB (the archive limit is 30 MB)');
+  // 04.11: the first queue of whole pictures (≤ 1.5 MB, tools/regen.py) adds ~2 MB of base64 here; 26.10 the archive was ~20 MB
+  // with 1.9 MB of pictures and a picture lands in it ~4.3 times, so +1.5 MB → ~26.5 MB, still under the 30 MB limit.
+  assert.ok(Buffer.byteLength(one) < 7 * 1024 * 1024, 'the one-file build stays under 7 MB (the archive limit is 30 MB)');
 });
 
 // 5.16, found on Windows: a PowerShell round trip read a UTF-8 file as Windows-1251 and wrote it back — the title of
