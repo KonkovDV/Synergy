@@ -189,3 +189,19 @@
 | `ios/` | SwiftUI + WKWebView: `SynergyNative` с теми же методами, что у Android (`speak`, `stop`, `haptic`, `share`, `print`, `nightMode`), `LaunchRequest` | новый нативный метод — в обеих оболочках, тест сверяет списки |
 
 **Почему так.** Набор жестов выбирается до загрузки модулей, потому что из него выводятся константы во многих модулях (позы, легенда, путаницы, хваты): переключение перезагружает страницу, и в памяти никогда нет двух наборов. Два протеза — это две стороны одного источника, а не два источника: хост «Моторики» держит одно соединение, а протез сам знает свою сторону. Тренер качества сигнала стоит в `GameRunner`, а не в экране: его видят и тесты, и запись упражнения.
+
+### v6.1 — ответы организаторов 04.11
+
+| Где | Что | Точка расширения |
+|---|---|---|
+| `core/vocabulary.js` | `TZ2` — те же объекты жестов набора ТЗ (нейтраль, сгибание, разгибание); `SPPPR_SETS` — наборы, чьи классы — словари СПППР | новый словарь СПППР — ещё один набор в `SPPPR_SETS` |
+| `core/spppr.js` | `SPPPR_DICTIONARIES` (из `SPPPR_SETS`), строгий разбор по словарю, `stats.classes`, `dictionaryName()`, `dictionaryNote()` | — |
+| `input/spppr-emulator.js` | словарь устройства `classes`: маска `known` на производство, утечку, сбой и шум | — |
+| `core/channeluse.js` | `ChannelUse` (входы в команды A, B, коактивацию; секунды), `channelBalance()` (перекос `CHANNEL_BALANCE.dominance`), `balanceByGame()`, `cleanUses()` | — |
+| `games/runner.js` | `GameRunner.uses`, `DuoRunner.sideUses` — счёт, пока упражнение идёт; одно место для всех игр | — |
+| `games/safe.js` | `dealBalanced()` для схем с каналами, `dealFree()` (раздача 6.0.0) для схемы жестов | — |
+| `games/flight.js` | строгое чередование колец сторон; сторона рампы и волны по зерну; `mirrorAlt()` | — |
+| `input/bridge.js` | `{ hello }` в `parseExternal`, `BridgeSource.listens`; `sendIntent()` — доставка намерения на соединение | — |
+| `ui/play.js` | `bridgeControls()` — площадки под внешним источником только для источника, который их читает | — |
+| `services/host.js` | `side`, `thresholds` в `parseLaunch`; `channelsMessage()`, поле `channels` в `synergy:result` | новый ключ запуска — шаблон в трёх местах (страница, `MainActivity.launchQuery`, `LaunchRequest`), тест сверяет |
+
