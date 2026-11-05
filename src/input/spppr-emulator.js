@@ -4,13 +4,15 @@
 //   • packets every 10–100+ ms (jitter), delivered in bursts when the radio stalls, rarely out of order;
 //   • lost packets and dropouts longer than 200 ms;
 //   • classification errors: single wrong packets and the confusions of movements that share muscles (config.js);
-//   • the rise and fall of a contraction: the probability of a class grows over ~70 ms and fades over ~110 ms.
+//   • the rise and fall of a contraction: the probability of a class grows over ~70 ms and fades over ~110 ms;
+//   • its dictionary (Q&A of 04.11, answer 22): the seven states, or «2 gestures + neutral» — then a packet holds three
+//     keys, and a movement outside them is not recognized at all (neutral), not even by a wrong packet.
 // The target comes from the on-screen pads, the keyboard or a game's autopilot — the same {gesture, effort} or {a, b} as
 // EmgEmulator. Deterministic for a seed. The game reads it through EmulatorDriver (spppr-driver.js: the one line to
 // replace with the MCU's driver).
 import { SPPPR, GESTURE_CONFUSION } from '../config.js';
 import { SPPPR_SET, GESTURE_BY_ID, COMMAND } from '../core/vocabulary.js';
-import { SPPPR_WIRE, sppprPacket } from '../core/spppr.js';
+import { SPPPR_WIRE, sppprPacket, sppprDictionary } from '../core/spppr.js';
 import { createRng } from '../core/rng.js';
 
 const IDS = SPPPR_SET.classOrder;
@@ -63,11 +65,17 @@ export class SppprEmulator {
    * @param {number} [o.seed]
    * @param {number} [o.bootMs] the MCU timer at the first packet (it counts from the device's start)
    * @param {object} [o.profile] overrides of streamProfile
+   * @param {number} [o.classes] the device's dictionary: 7 (the task's states) or 3 («2 gestures + neutral»)
    */
-  constructor({ realism = 0.5, seed = 11, bootMs = null, profile = {} } = {}) {
+  constructor({ realism = 0.5, seed = 11, bootMs = null, profile = {}, classes = SPPPR_WIRE.length } = {}) {
     this.rng = createRng(seed);
     this.overrides = profile;
     this.realism = realism;
+    const dictionary = sppprDictionary(classes);
+    this.classes = dictionary.length;
+    /** Class index → the device recognizes it. The rest never get a probability: no production, leak, glitch or noise. */
+    this.known = SPPPR_WIRE.map(key => dictionary.includes(key));
+    this.confusion = CONFUSION.map(row => row.map((w, j) => (this.known[j] ? w : 0)));
     this.level = new Array(N).fill(0); // how strongly each class is being produced now (0…1)
     this.want = new Array(N).fill(0);
     this.bootMs = bootMs ?? Math.round(this.rng.range(3000, 90000)); // a device switched on a while ago
@@ -97,7 +105,7 @@ export class SppprEmulator {
     const g = this.target.gesture;
     if (g && g !== 'rest') {
       const i = index(g) > 0 ? index(g) : index(taskClassOf(g));
-      if (i > 0) want[i] = level(this.target.effort ?? 0.6);
+      if (i > 0 && this.known[i]) want[i] = level(this.target.effort ?? 0.6);
     } else if (!g) {
       if ((this.target.a ?? 0) > 0.02) want[CLOSE] = level(this.target.a);
       if ((this.target.b ?? 0) > 0.02) want[OPEN] = level(this.target.b);
@@ -134,7 +142,7 @@ export class SppprEmulator {
     if (P.dropoutEvery && at >= this.dropoutUntil && rng() < (dt / 1000) / P.dropoutEvery) this.dropoutUntil = at + rng.range(...P.dropoutMs);
     if (at < this.dropoutUntil || rng() < P.loss) return; // lost on the way
     if (P.stallEvery && at >= this.stallUntil && rng() < (dt / 1000) / P.stallEvery) this.stallUntil = at + rng.range(...P.stallMs);
-    const text = rng() < P.malformed ? this.broken(this.mcuAt(at)) : JSON.stringify(sppprPacket(this.mcuAt(at), this.distribution(dt / 1000)));
+    const text = rng() < P.malformed ? this.broken(this.mcuAt(at)) : JSON.stringify(sppprPacket(this.mcuAt(at), this.distribution(dt / 1000), this.classes));
     const latency = P.latencyMs + (P.latencyJitterMs ? -Math.log(Math.max(1e-6, rng())) * P.latencyJitterMs : 0);
     let arrive = Math.max(at + latency, at < this.stallUntil ? this.stallUntil : 0);
     if (rng() < P.reorder && this.inFlight.length) arrive = Math.max(at, this.inFlight[this.inFlight.length - 1].at - 1);
@@ -159,23 +167,27 @@ export class SppprEmulator {
     let used = 0;
     for (let i = 1; i < N; i++) {
       if (this.level[i] < 0.005) continue;
-      const leak = CONFUSION[i].map(w => w * 0.12 * this.level[i] * (0.5 + this.realism));
+      const leak = this.confusion[i].map(w => w * 0.12 * this.level[i] * (0.5 + this.realism));
       const own = this.level[i] - leak.reduce((s, v) => s + v, 0) * 0.5;
       p[i] += Math.max(0, own);
       leak.forEach((v, j) => { p[j] += v * 0.5; });
       used += this.level[i];
     }
-    // single wrong packets: most of the mass jumps to a partner of the class held (or anywhere from neutral)
+    // single wrong packets: most of the mass jumps to a partner of the class held (or anywhere from neutral) — a partner the
+    // device knows; a held class with none (a dictionary of one movement) is never mistaken
     const held = this.level.reduce((best, v, i) => (i && v > (this.level[best] ?? 0) ? i : best), 0);
     if (P.glitchPerS && rng() < P.glitchPerS * dtS * (held ? 1 : 0.4)) {
-      const row = held ? CONFUSION[held] : IDS.map((_, j) => (j ? 1 : 0));
-      const j = pick(row, rng());
-      const m = rng.range(0.5, 0.8);
-      for (let i = 0; i < N; i++) p[i] *= 1 - m;
-      p[j] += m;
-      used = Math.max(used, m);
+      const row = held ? this.confusion[held] : IDS.map((_, j) => (j && this.known[j] ? 1 : 0));
+      const u = rng();
+      if (row.some(w => w > 0)) {
+        const j = pick(row, u);
+        const m = rng.range(0.5, 0.8);
+        for (let i = 0; i < N; i++) p[i] *= 1 - m;
+        p[j] += m;
+        used = Math.max(used, m);
+      }
     }
-    for (let i = 1; i < N; i++) p[i] = Math.max(0, p[i] + P.noise * rng.gauss() * (0.3 + p[i]));
+    for (let i = 1; i < N; i++) if (this.known[i]) p[i] = Math.max(0, p[i] + P.noise * rng.gauss() * (0.3 + p[i]));
     const active = p.reduce((s, v, i) => s + (i ? v : 0), 0);
     p[0] = Math.max(0.005, 1 - active);
     const sum = p.reduce((s, v) => s + v, 0);

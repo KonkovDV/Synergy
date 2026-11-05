@@ -4,12 +4,13 @@
 //   node tools/spppr-emulator.mjs | python3 bridge/ws_bridge.py --stdin      → Настройки → Источник → Внешний
 // or save a recording:  node tools/spppr-emulator.mjs --fast --seconds 30 > stream.ndjson
 // Options: --realism 0..1 (0.5)  --seed N  --seconds S (endless)  --fast (no real-time pacing)
-//          --script cycle|flexion,extension,… (cycle: every state 2 s, neutral between)  --effort 0..1 (0.7)
+//          --classes 7|3 (the device's dictionary: the task's seven states, or «2 gestures + neutral» — Q&A of 04.11, № 22)
+//          --script cycle|flexion,extension,… (cycle: every state of the dictionary 2 s, neutral between)  --effort 0..1 (0.7)
 //          --loss 0..1  --malformed 0..1 (broken packets to see the hard contract refuse them)  --reboot-every S
 //          --stats (counters to stderr at the end)
 process.env.SYNERGY_GESTURE_SET ??= 'tz';
 const { SppprEmulator } = await import('../src/input/spppr-emulator.js');
-const { SppprDecoder } = await import('../src/core/spppr.js');
+const { SppprDecoder, SPPPR_DICTIONARIES, SPPPR_WIRE } = await import('../src/core/spppr.js');
 const { SPPPR_SET } = await import('../src/core/vocabulary.js');
 
 const args = process.argv.slice(2);
@@ -22,13 +23,18 @@ const profile = {};
 if (opt('loss') !== undefined) profile.loss = Number(opt('loss'));
 if (opt('malformed') !== undefined) profile.malformed = Number(opt('malformed'));
 if (opt('reboot-every') !== undefined) profile.rebootEvery = Number(opt('reboot-every'));
-const emu = new SppprEmulator({ realism, seed: Number(opt('seed', Date.now() % 100000)), profile });
+const sizes = SPPPR_DICTIONARIES.map(d => d.length);
+const classes = Number(opt('classes', SPPPR_WIRE.length));
+if (!sizes.includes(classes)) { console.error(`--classes: ${opt('classes')} — словарь СПППР бывает ${sizes.join(' или ')} классов`); process.exit(2); }
+const emu = new SppprEmulator({ realism, seed: Number(opt('seed', Date.now() % 100000)), profile, classes });
 const seconds = opt('seconds') === undefined ? Infinity : Number(opt('seconds'));
 const effort = Number(opt('effort', 0.7));
-const states = SPPPR_SET.classOrder.filter(id => id !== 'rest');
+// The states this device recognizes (its dictionary), as the game names them.
+const known = SPPPR_SET.classOrder.filter((id, i) => emu.known[i]);
+const states = known.filter(id => id !== 'rest');
 const script = opt('script', 'cycle');
 const plan = script === 'cycle' ? states : script.split(',').map(s => s.trim()).filter(Boolean);
-for (const s of plan) if (!SPPPR_SET.classOrder.includes(s)) { console.error(`неизвестное состояние: ${s} (есть: ${SPPPR_SET.classOrder.join(', ')})`); process.exit(2); }
+for (const s of plan) if (!known.includes(s)) { console.error(`состояние ${s} не из словаря устройства (${classes} классов: ${known.join(', ')})`); process.exit(2); }
 const check = new SppprDecoder(); // what a receiver would make of it — for --stats
 
 /** Every state 2 s, then neutral 1 s (the person relaxes between movements). */
@@ -67,5 +73,6 @@ function readHelp() {
   return `СПППР-эмулятор (ТЗ 28.10.2026): пакеты {"timestamp_ms", "dist"} по одному в строке.
   node tools/spppr-emulator.mjs | python3 bridge/ws_bridge.py --stdin
   --realism 0..1  --seed N  --seconds S  --fast  --script cycle|flexion,extension  --effort 0..1
+  --classes 7|3 (словарь: семь состояний или «2 жеста + нейтраль»)
   --loss 0..1  --malformed 0..1  --reboot-every S  --stats`;
 }

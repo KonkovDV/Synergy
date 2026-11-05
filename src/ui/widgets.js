@@ -1,7 +1,8 @@
 // Reusable UI pieces (DRY): bottom navigation, live signal meter, form rows.
 import { h, longestWord } from './dom.js';
 import { fmtSec } from '../core/format.js';
-import { COMMAND_NAME, GESTURE_BY_ID, twoChannelControls, GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
+import { COMMAND_NAME, GESTURE_BY_ID, twoChannelControls, GESTURE_CLASS_ORDER, GESTURE_SET } from '../core/vocabulary.js';
+import { dictionaryNote } from '../core/spppr.js';
 import { mio } from './art.js';
 import { SignalTrace, traceSummary } from '../core/signaltrace.js';
 import { SIGNAL_TRACE } from '../config.js';
@@ -150,14 +151,16 @@ export function signalMeter(app) {
 
 /**
  * 6.0 — the СПППР stream in one line: packets a second, the jitter, the forgiven noise, refused packets; while no packet
- * comes for more than 200 ms — that the speed fades (the task's inertia), not that the person stopped.
+ * comes for more than 200 ms — that the speed fades (the task's inertia), not that the person stopped. 04.11: a stream of
+ * fewer classes than the game's set (a «2 жеста» СПППР under the seven) says which set fits it (core/spppr.js).
  */
 export function streamLine(decoder, intent = null) {
   if (!decoder || !decoder.stats.accepted) return '';
   if (intent?.link === 'inertia') return `Пакеты не приходят ${intent.ageMs ?? ''} мс — скорость гаснет плавно`;
   const { rateHz, jitterMs } = decoder.timing();
   const st = decoder.stats;
-  return [`СПППР ${rateHz ?? '—'} пак/с`, `джиттер ${jitterMs ?? '—'} мс`, `прощено шумов ${st.forgiven}`, st.rejected ? `отклонено ${st.rejected}` : null].filter(Boolean).join(' · ');
+  return [`СПППР ${rateHz ?? '—'} пак/с`, `джиттер ${jitterMs ?? '—'} мс`, `прощено шумов ${st.forgiven}`, st.rejected ? `отклонено ${st.rejected}` : null,
+    dictionaryNote(st.classes, GESTURE_SET.id)].filter(Boolean).join(' · ');
 }
 
 /**

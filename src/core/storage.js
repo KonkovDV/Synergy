@@ -9,6 +9,7 @@ import { defaultCalibration } from './signal.js';
 import { SCHEME, GESTURE_BY_ID } from './vocabulary.js';
 import { GESTURE_SET_IDS } from './gesture-set.js';
 import { cleanSignalIssues } from './signalquality.js';
+import { SPPPR_DICTIONARIES } from './spppr.js';
 import { cleanOutfit } from './pet.js';
 import { validMission, cleanMissionPass } from './missions.js';
 import { validTourState } from './tours.js';
@@ -206,6 +207,8 @@ function cleanDays(days) {
  * is untrusted: a field it invents is dropped, a string or a huge number is not kept.
  */
 const STREAM_FIELDS = { packets: 1e7, rejected: 1e7, stale: 1e7, gaps: 1e6, forgiven: 1e7, reboots: 1e4, rateHz: 1000, jitterMs: 10000, maxGapMs: 3.6e6, meanConfidence: 100, coactivation: 100 };
+/** 04.11 — the dictionary of the stream: the size of one of the СПППР's dictionaries (3 or 7, Q&A answer 22), no other. */
+const STREAM_CLASSES = SPPPR_DICTIONARIES.map(d => d.length);
 export function cleanStream(s) {
   if (!isObject(s)) return null;
   const out = {};
@@ -214,6 +217,7 @@ export function cleanStream(s) {
     if (v === null || v === undefined) continue;
     if (Number.isFinite(v) && v >= 0 && v <= max) out[k] = v;
   }
+  if (STREAM_CLASSES.includes(s.classes)) out.classes = s.classes;
   return Number.isFinite(out.packets) ? out : null;
 }
 

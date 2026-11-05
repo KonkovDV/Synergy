@@ -4,7 +4,7 @@ import './pin-tz.mjs'; // 6.0: the published set (tests/pin-tz.mjs)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseSppprPacket, sppprPacket, McuClock, SppprDecoder, SPPPR_WIRE, SPPPR_ERRORS } from '../src/core/spppr.js';
+import { parseSppprPacket, sppprPacket, McuClock, SppprDecoder, SPPPR_WIRE, SPPPR_ERRORS, SPPPR_DICTIONARIES } from '../src/core/spppr.js';
 import { SppprEmulator, EmulatorDriver, streamProfile } from '../src/input/spppr-emulator.js';
 import { createSppprDriver } from '../src/input/spppr-driver.js';
 import { SppprSource, OnScreenEmulator } from '../src/input/spppr-source.js';
@@ -56,6 +56,118 @@ test('ТЗ контракт жёсткий: a broken packet is refused with its 
   // within the tolerance a rounding of the sender is taken and normalized
   const ok = parseSppprPacket(JSON.stringify({ timestamp_ms: 2, dist: { ...dist(), neutral: 0.995 } }));
   assert.equal(ok.ok, true); assert.ok(Math.abs(ok.p.reduce((s, v) => s + v, 0) - 1) < 1e-12);
+});
+
+// Q&A of the organizers (04.11.2026), answer 22: a СПППР has «2 gestures + neutral» or «6 gestures + neutral». Which two
+// is not said (question К.1 of PLAN.md); the task trains the antagonists and builds the joystick on flexion − extension.
+const PAIR = { neutral: 0.2, flexion: 0.7, extension: 0.1 };
+test('ответ № 22 (04.11): «2 жеста + нейтраль» — exactly neutral, flexion and extension is the second dictionary; the contract stays hard', () => {
+  assert.deepEqual(SPPPR_DICTIONARIES, [['neutral', 'flexion', 'extension'], SPPPR_WIRE], 'the smaller dictionary first; both in the task\'s class order');
+  const pair = parseSppprPacket(JSON.stringify({ timestamp_ms: 7, dist: PAIR }));
+  assert.equal(pair.ok, true);
+  assert.equal(pair.classes, 3);
+  assert.deepEqual(pair.p.map(v => Math.round(v * 1000) / 1000), [0.2, 0.7, 0.1, 0, 0, 0, 0], 'the classes the СПППР does not know are 0, in the task\'s order');
+  assert.equal(parseSppprPacket(TZ_EXAMPLE).classes, 7);
+  // Strict in each dictionary: a key set that is neither is refused, the first key it lacks is named.
+  const refused = [
+    [{ neutral: 0.3, flexion: 0.7 }, 'missing', 'extension'],
+    [{ flexion: 0.6, extension: 0.4 }, 'missing', 'neutral'],
+    [{ neutral: 0.4, flexion: 0.3, pronation: 0.3 }, 'missing', 'extension'],
+    [{ ...PAIR, pronation: 0 }, 'missing', 'supination'],
+    [{ ...PAIR, grab: 0 }, 'unknown', 'grab'],
+    [{ neutral: 0.5, flexion: 0.5, extension: 0.5 }, 'sum', undefined],
+    [{ ...PAIR, flexion: 1.2 }, 'value', 'flexion'],
+  ];
+  for (const [d, error, detail] of refused) {
+    const r = parseSppprPacket(JSON.stringify({ timestamp_ms: 7, dist: d }));
+    assert.deepEqual([r.ok, r.error, r.detail], [false, error, detail], JSON.stringify(d));
+  }
+  // The emulator and the documents write either dictionary in the task's order.
+  assert.deepEqual(JSON.parse(JSON.stringify(sppprPacket(9, [0.2, 0.7, 0.1, 0, 0, 0, 0], 3))), { timestamp_ms: 9, dist: PAIR });
+  assert.deepEqual(Object.keys(sppprPacket(9, [1, 0, 0, 0, 0, 0, 0]).dist), SPPPR_WIRE);
+});
+
+test('ответ № 22: the decoder on a two-gesture stream — flexion closes, extension opens, both cancel; the summary names the dictionary', () => {
+  const d = new SppprDecoder();
+  let ts = 30000;
+  const feed = (over, n = 12) => { for (let i = 0; i < n; i++) { const flex = over.flexion ?? 0, ext = over.extension ?? 0; d.push(JSON.stringify({ timestamp_ms: ts += 20, dist: { neutral: 1 - flex - ext, flexion: flex, extension: ext } }), ts); } return d.frame(ts); };
+  assert.equal(feed({ flexion: 0.8 }).gesture, 'flexion');
+  const open = feed({ extension: 0.8 });
+  assert.equal(open.gesture, 'extension');
+  assert.deepEqual([open.axes.y, open.axes.z], [0, 0], 'no wrist rotation or deviation in a dictionary without them');
+  const both = feed({ flexion: 0.45, extension: 0.45 });
+  assert.equal(both.gesture, 'rest'); assert.ok(both.coact > 0.4, 'co-activation shows');
+  assert.equal(d.stats.rejected, 0);
+  assert.equal(d.summary().classes, 3, 'the run record says which СПППР it was');
+  d.push(packet(ts += 20, { flexion: 0.8 }), ts);
+  assert.equal(d.summary().classes, 7, 'the dictionary of the last packet taken');
+});
+
+test('ответ № 22: the emulator as a two-gesture СПППР writes exactly three keys — a wrist movement it cannot tell is neutral', () => {
+  const emu = new SppprEmulator({ realism: 1, seed: 6, classes: 3 });
+  const lines = [];
+  for (const [gesture, until] of [['flexion', 4000], ['pronation', 8000], ['extension', 12000]]) {
+    emu.setTarget({ gesture, effort: 0.7 });
+    for (let now = until - 4000; now < until; now += 16) lines.push(...emu.pump(now).map(x => ({ ...x, gesture })));
+  }
+  const parsed = lines.map(l => ({ ...parseSppprPacket(l.text), gesture: l.gesture, keys: Object.keys(JSON.parse(l.text).dist).join() }));
+  assert.ok(parsed.length > 300);
+  assert.ok(parsed.every(p => p.ok && p.classes === 3 && p.keys === 'neutral,flexion,extension'), 'every line is the second dictionary, in order');
+  const top = p => SPPPR_WIRE[p.p.indexOf(Math.max(...p.p))];
+  const mostly = (g, wire) => { const of = parsed.filter(p => p.gesture === g).slice(10); return of.filter(p => top(p) === wire).length / of.length; };
+  assert.ok(mostly('flexion', 'flexion') > 0.8 && mostly('extension', 'extension') > 0.8, 'the two movements come through');
+  assert.ok(mostly('pronation', 'neutral') > 0.8, 'pronation is not in its dictionary');
+  const full = new SppprEmulator({ seed: 6 });
+  full.setTarget({ gesture: 'pronation', effort: 0.7 });
+  const sent = [];
+  for (let now = 0; now < 2000; now += 16) sent.push(...full.pump(now));
+  assert.ok(sent.every(x => Object.keys(JSON.parse(x.text).dist).join() === SPPPR_WIRE.join()), 'by default the device has all seven');
+  assert.ok(sent.slice(20).filter(x => parseSppprPacket(x.text).p[3] > 0.5).length > sent.length / 2, 'and tells pronation');
+});
+
+test('ответ № 22: a run keeps the dictionary of its stream — the report and the CSV say which СПППР it was; a backup cannot invent one', async () => {
+  const { emptyState, parseState } = await import('../src/core/storage.js');
+  const { reportCsv, reportHtml } = await import('../src/services/report.js');
+  const run = (classes, minute) => ({ id: `r${minute}`, at: `2026-11-04T10:${String(minute).padStart(2, '0')}:00.000Z`, game: 'grip', level: 1, levelCount: 10, scheme: 'gesture', source: 'touch', gestureSet: 'tz', score: 80, stars: 2, durationS: 60, skills: {},
+    stream: { packets: 900, rejected: 0, stale: 0, gaps: 1, forgiven: 3, reboots: 0, rateHz: 49.6, jitterMs: 4.1, maxGapMs: 230, meanConfidence: 71, coactivation: 6, classes } });
+  const state = emptyState();
+  state.runs = [run(3, 1), run(7, 2), run(9, 3), run('3', 4), run(5, 5)];
+  const clean = parseState(JSON.stringify(state));
+  assert.deepEqual(clean.runs.map(r => r.stream.classes), [3, 7, undefined, undefined, undefined], 'a size of no dictionary of the contract is not kept');
+  const [head, ...rows] = reportCsv(clean).split('\n');
+  assert.match(head, /stream_coactivation;stream_classes;signal_issues$/, 'signal quality stays the last column');
+  const at = head.split(';').indexOf('stream_classes');
+  assert.deepEqual(rows.map(r => r.split(';')[at]), ['3', '7', '', '', '']);
+  const html = reportHtml(clean, id => id);
+  assert.match(html, /Словарь потока/);
+  assert.match(html, /2 жеста \+ нейтраль/);
+  assert.match(html, /6 жестов \+ нейтраль/);
+});
+
+test('ответ № 22: one wording of the dictionaries; a stream of fewer classes than the game\'s set names the set that fits it', async () => {
+  const { dictionaryName, dictionaryNote } = await import('../src/core/spppr.js');
+  assert.equal(dictionaryName(3), '2 жеста + нейтраль');
+  assert.equal(dictionaryName(7), '6 жестов + нейтраль');
+  assert.equal(dictionaryName(5), null, 'no such dictionary');
+  assert.equal(dictionaryNote(3, 'tz'), 'поток: 2 жеста + нейтраль — нужен набор «СПППР · 2 жеста»', 'the game would wait for movements that never come');
+  for (const [classes, set] of [[7, 'tz'], [3, 'tz2'], [7, 'tz2'], [null, 'tz'], [3, 'synergy'], [3, 'ubi4']]) {
+    assert.equal(dictionaryNote(classes, set), null, `${classes} classes under ${set}: nothing to say`);
+  }
+});
+
+test('ответ № 22: the emulator program writes the second dictionary with --classes 3 and refuses another size', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const run = (...args) => spawnSync(process.execPath, ['tools/spppr-emulator.mjs', '--fast', '--seconds', '4', '--seed', '3', ...args], { encoding: 'utf8' });
+  const ok = run('--classes', '3');
+  assert.equal(ok.status, 0, ok.stderr);
+  const lines = ok.stdout.trim().split('\n');
+  assert.ok(lines.length > 100);
+  assert.ok(lines.every(l => { const p = parseSppprPacket(l); return p.ok && p.classes === 3; }));
+  const wrong = run('--classes', '5');
+  assert.equal(wrong.status, 2);
+  assert.match(wrong.stderr, /3 или 7/);
+  const script = run('--classes', '3', '--script', 'pronation');
+  assert.equal(script.status, 2, 'a state outside the dictionary is refused, not sent as neutral');
 });
 
 test('ТЗ Delta Time: speed and smoothness come only from timestamp_ms — the same packets with any arrival jitter decode the same', () => {

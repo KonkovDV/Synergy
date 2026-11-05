@@ -24,6 +24,7 @@
 | Требование ТЗ | Что сделано | Где | Проверка |
 |---|---|---|---|
 | Словарь: Neutral, Flexion, Extension, Pronation, Supination, Adduction, Abduction (0–6) | набор `tz` по умолчанию; сгибание закрывает кисть, разгибание раскрывает, четыре движения запястья кисть не двигают; пиктограммы с отклонением и ротацией | `src/core/vocabulary.js`, `src/render/draw.js` | `tests/spppr.test.mjs` «ТЗ словарь» |
+| Два словаря СПППР: «6 жестов + нейтраль» и «2 жеста + нейтраль» (ответы 04.11, № 22–23) | пакет с ровно тремя ключами (`neutral`, `flexion`, `extension`) — второй словарь, строгий так же; набор «СПППР · 2 жеста» (`tz2`): все игры, обучение и проверка на двух жестах; словарь — в записи, CSV и отчёте | `src/core/spppr.js` `SPPPR_DICTIONARIES`, `src/core/vocabulary.js` `TZ2` | `tests/spppr.test.mjs` «ответ № 22», `tests/tz2.test.mjs`, `npm run test:tz` (оба словаря) |
 | Формат `{"timestamp_ms", "dist"}`, контракт жёсткий | строгий разбор: нет класса, лишний класс, NaN, вне 0…1, Σ ≠ 1 ± 0,02, время не целое — пакет отклонён с причиной и учтён | `src/core/spppr.js` `parseSppprPacket` | `tests/spppr.test.mjs` «контракт жёсткий» |
 | `timestamp_ms` — таймер МК, не часы телефона | dt — только разность `timestamp_ms`; повтор и опоздавший пакет отбрасываются; откат > 1 с — перезапуск МК | `McuClock`, `SppprDecoder.push` | «Delta Time», «часы МК» |
 | Softmax: плавно, доли вероятностей; вектор = flexion − extension | оси x = flexion − extension, y = pronation − supination, z = abduction − adduction; сила — величина оси за мёртвой зоной | `SppprDecoder`, `axesOf` | «Softmax», «мышцы-антагонисты» |
@@ -35,7 +36,7 @@
 | Эмулятор JSON-потока: ошибки, потери, джиттер | часы МК со старта устройства, интервалы 10–160 мс, пачки после «замирания» радио, потери, обрывы > 200 мс, одиночные и «анатомические» ошибки, перезапуск МК, битые пакеты (CLI) | `src/input/spppr-emulator.js`, `tools/spppr-emulator.mjs` | «эмулятор», детерминирован по зерну |
 | Замена на драйвер МК одной строкой | `createSppprDriver` — единственная строка кода; драйверы WebSocket, Web Serial, BLE NUS, хост | `src/input/spppr-driver.js`, `src/input/spppr-drivers.js` | «одна строка» |
 | Любой транспорт | пакет ТЗ через WebSocket-мост, `postMessage`, `window.Synergy.feed`, Android `pushFrame` идёт в тот же декодер; мост `--stdin` пересылает пакеты по одному | `src/input/bridge.js`, `bridge/ws_bridge.py` | «транспорт», `bridge/test_ws_bridge.py` |
-| Игры на потоке | все уровни четырёх игр в трёх схемах на потоке с джиттером и потерями — не меньше 2★ для автопилота; модель новичка проходит 1-й уровень | `tests/stream-helpers.mjs` | `tests/tz.test.mjs`, `npm run test:tz` (204 прохождения) |
+| Игры на потоке | все уровни четырёх игр в трёх схемах на потоке с джиттером и потерями — не меньше 2★ для автопилота; модель новичка проходит 1-й уровень; так же на словаре «2 жеста + нейтраль» | `tests/stream-helpers.mjs`, `tools/tz-play.mjs` | `tests/tz.test.mjs`, `tests/tz2.test.mjs`, `npm run test:tz` (2 × 204 прохождения, в CI) |
 
 ## Обучение, мотивация, удержание
 
