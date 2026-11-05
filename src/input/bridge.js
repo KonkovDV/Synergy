@@ -165,6 +165,9 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   // 6.0 — the packet of the task's СПППР ({timestamp_ms, dist}): not a frame but a sample of a stream with its own clock.
   // It goes to the decoder whole (core/spppr.js checks the contract and counts what it refuses).
   if (isSppprPacket(data)) return { spppr: data };
+  // 6.1 — a source that reads the pads of the game says so on connect (bridge/ws_bridge.py --lab). Not a frame. Only such a
+  // source gets the pads under an external signal: with real EMG no multi-touch (Q&A of 04.11, answer 13).
+  if (isObj(data) && data.type === 'bridge-hello') return { hello: { intents: data.intents === true } };
   if (data && typeof data === 'object' && !Array.isArray(data)) {
     const both = data.sides && typeof data.sides === 'object' ? data.sides : data;
     if (isObj(both.left) || isObj(both.right)) {
@@ -307,6 +310,8 @@ export class BridgeSource {
     this.onThresholds = onThresholds;
     this.received = 0;
     this.unknownLabel = null;
+    this.listens = false;  // 6.1: the source reads the pads (it said «bridge-hello» with intents) — the lab's remote
+    this.lastIntent = null; // 6.1: the intent this connection delivered (sendIntent)
     this.raw = false;      // raw bipolar EMG detected → envelope (EnvelopeFilter)
     this.envelope = null;
     this.status = 'idle';
@@ -322,6 +327,11 @@ export class BridgeSource {
   feed(msg) {
     const parsed = parseExternal(msg, this.map);
     if (!parsed) return false;
+    if (parsed.hello) {
+      // The screens hear it through the status they already follow, and show or hide the remote.
+      if (parsed.hello.intents !== this.listens) { this.listens = parsed.hello.intents; this.setStatus(this.status); }
+      return false;
+    }
     if (parsed.spppr) {
       this.spppr ??= new SppprDecoder();
       const ok = this.spppr.push(parsed.spppr, this.clock());
@@ -378,10 +388,12 @@ export class BridgeSource {
     let socket;
     try { socket = new WebSocket(this.url); } catch { this.setStatus('error'); return; }
     this.socket = socket;
-    socket.onopen = () => { clearTimeout(this.openTimer); this.everOpen = true; this.retryMs = 500; this.setStatus('waiting'); };
+    socket.onopen = () => { clearTimeout(this.openTimer); this.everOpen = true; this.retryMs = 500; this.connectionChanged(); this.setStatus('waiting'); };
     socket.onmessage = e => this.feed(e.data);
     socket.onclose = () => {
       clearTimeout(this.openTimer);
+      this.listens = false; // a bridge that comes back says again whether it reads the pads
+      this.connectionChanged();
       if (this.stopped) return;
       this.setStatus(this.everOpen ? 'reconnecting' : 'unreachable');
       this.timer = setTimeout(() => this.connect(), this.retryMs);
@@ -393,10 +405,27 @@ export class BridgeSource {
     this.openTimer = setTimeout(() => { if (socket.readyState === 0) socket.onerror?.(); }, CONNECT_TIMEOUT_MS);
   }
 
-  /** Lets a bidirectional lab (bridge/ws_bridge.py --lab) know what the pads ask for. */
+  /** Lets a bidirectional lab (bridge/ws_bridge.py --lab) know what the pads ask for. True when it went out. */
   send(obj) {
-    if (this.socket?.readyState === 1) this.socket.send(JSON.stringify(obj));
+    if (this.socket?.readyState !== 1) return false;
+    this.socket.send(JSON.stringify(obj));
+    return true;
   }
+
+  /**
+   * What the pads ask for, once per change — per connection (6.1). The connection remembers what it delivered: an intent
+   * sent while the socket was still connecting used to be lost and marked as sent, and a pad held across a reconnect
+   * never reached the lab again. True when it went out.
+   */
+  sendIntent(intent) {
+    const text = JSON.stringify(intent);
+    if (text === this.lastIntent || !this.send(intent)) return false;
+    this.lastIntent = text;
+    return true;
+  }
+
+  /** A socket opened or closed: the next intent goes out whatever was delivered before. */
+  connectionChanged() { this.lastIntent = null; }
 
   stop() {
     this.stopped = true;
