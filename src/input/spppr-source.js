@@ -4,7 +4,7 @@
 // the target goes to the СПППР stream (JSON text through the decoder, as from the prosthesis); in the two-channel schemes
 // to the EMG envelope emulator, as before.
 import { SppprDecoder } from '../core/spppr.js';
-import { GESTURE_SET, SPPPR_SET } from '../core/vocabulary.js';
+import { STREAM_DICTIONARY } from '../core/vocabulary.js';
 import { EmgEmulator } from './emulator.js';
 import { createSppprDriver } from './spppr-driver.js';
 
@@ -34,13 +34,16 @@ export class SppprSource {
   get stats() { return this.decoder.stats; }
 }
 
-/** The task's set speaks the СПППР stream; another set keeps the frames of EmgEmulator (its own classes). */
-export const streamsSpppr = () => GESTURE_SET.id === SPPPR_SET.id;
+/** The sets of the СПППР (tz, tz2) speak its stream; another set keeps the frames of EmgEmulator (its own classes). */
+export const streamsSpppr = () => STREAM_DICTIONARY !== null;
 
 export class OnScreenEmulator {
-  constructor({ realism = 0.5, seed = 7, driver = null } = {}) {
+  /** @param {{realism?: number, seed?: number, driver?: object, profile?: object}} [o] profile — overrides of the stream (tests: { hz: 10 }) */
+  constructor({ realism = 0.5, seed = 7, driver = null, profile = {} } = {}) {
     this.emg = new EmgEmulator({ realism, seed });
-    this.stream = new SppprSource({ driver: driver ?? createSppprDriver({ realism, seed: seed + 1 }) });
+    // The emulator speaks the dictionary of the set (tz — the seven states, tz2 — the pair of 04.11); a driver of the MCU
+    // brings whatever the prosthesis sends and ignores these options.
+    this.stream = new SppprSource({ driver: driver ?? createSppprDriver({ realism, seed: seed + 1, profile: { variant: STREAM_DICTIONARY ?? 'full', ...profile } }) });
   }
   get target() { return this.emg.target; }
   get realism() { return this.emg.realism; }

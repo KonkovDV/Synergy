@@ -3,9 +3,10 @@
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, signalTraceView, BRIDGE_STATUS, icon } from './widgets.js';
-import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS } from '../core/vocabulary.js';
+import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS, STREAM_DICTIONARY } from '../core/vocabulary.js';
 import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
 import { CalibrationRecorder, CALIBRATION_STEPS, thresholdForRest, shownRippleIssues } from '../core/calibration.js';
+import { dictionaryAdvice } from '../core/spppr.js';
 import { defaultCalibration, thresholdShares } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
@@ -175,11 +176,14 @@ export function settingsScreen(app, { back = null } = {}) {
   }
 
   // 6.0 — the СПППР stream of the task, live: the counters and the last packet as it came (the hard contract is visible).
-  const tzStream = s.scheme === 'gesture' && GESTURE_SET.id === 'tz';
+  const tzStream = s.scheme === 'gesture' && !!STREAM_DICTIONARY;
   const lastPacket = h('pre', { class: 'stream-packet', 'aria-label': 'Последний пакет СПППР' }, '—');
+  // Answers of 04.11 (№ 22): a СПППР sends 6 movements + neutral or 2 + neutral. The panel names what the stream speaks
+  // and, when it is not the dictionary of the set, which set fits it — a game must not ask for a state that never comes.
+  const dictionaryNote = h('p', { class: 'note', 'aria-live': 'polite' });
   const streamBox = tzStream ? h('div', { class: 'stream-box' },
-    h('p', { class: 'note' }, 'Пакет ТЗ: {"timestamp_ms": время микроконтроллера, "dist": вероятности 7 состояний}. Скорость считается только по разнице timestamp_ms; джиттер сглаживается, пауза > 200 мс плавно гасит скорость, одиночный шум прощается.'),
-    lastPacket) : null;
+    h('p', { class: 'note' }, `Пакет ТЗ: {"timestamp_ms": время микроконтроллера, "dist": вероятности ${STREAM_DICTIONARY === 'pair' ? '3 состояний — нейтраль, сгибание, разгибание' : '7 состояний'}}. Скорость считается только по разнице timestamp_ms; джиттер сглаживается, пауза > 200 мс плавно гасит скорость, одиночный шум прощается.`),
+    lastPacket, dictionaryNote) : null;
   let streamAt = 0;
   const node = h('div', { class: 'screen settings' },
     h('main', { class: 'scroll' },
@@ -308,6 +312,8 @@ export function settingsScreen(app, { back = null } = {}) {
         const decoder = app.sppprDecoder();
         const text = decoder?.lastText ? JSON.stringify(JSON.parse(decoder.lastText), null, 1).replace(/\n\s*/g, ' ') : '—';
         if (lastPacket.textContent !== text) lastPacket.textContent = text;
+        const note = dictionaryAdvice(decoder?.stats.variant ?? null, STREAM_DICTIONARY);
+        if (dictionaryNote.textContent !== note) dictionaryNote.textContent = note;
       }
     },
     onBridgeStatus(st) { status.textContent = `Статус: ${BRIDGE_STATUS[st] ?? st}`; },
