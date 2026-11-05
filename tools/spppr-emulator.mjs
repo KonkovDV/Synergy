@@ -4,12 +4,13 @@
 //   node tools/spppr-emulator.mjs | python3 bridge/ws_bridge.py --stdin      → Настройки → Источник → Внешний
 // or save a recording:  node tools/spppr-emulator.mjs --fast --seconds 30 > stream.ndjson
 // Options: --realism 0..1 (0.5)  --seed N  --seconds S (endless)  --fast (no real-time pacing)
+//          --rate 50|10 (packets a second; 10 — the rate the organizers named, Q&A of 04.11, answer 24)
 //          --classes 7|3 (the device's dictionary: the task's seven states, or «2 gestures + neutral» — Q&A of 04.11, № 22)
 //          --script cycle|flexion,extension,… (cycle: every state of the dictionary 2 s, neutral between)  --effort 0..1 (0.7)
 //          --loss 0..1  --malformed 0..1 (broken packets to see the hard contract refuse them)  --reboot-every S
 //          --stats (counters to stderr at the end)
 process.env.SYNERGY_GESTURE_SET ??= 'tz';
-const { SppprEmulator } = await import('../src/input/spppr-emulator.js');
+const { SppprEmulator, STREAM_RATES_HZ } = await import('../src/input/spppr-emulator.js');
 const { SppprDecoder, SPPPR_DICTIONARIES, SPPPR_WIRE } = await import('../src/core/spppr.js');
 const { SPPPR_SET } = await import('../src/core/vocabulary.js');
 
@@ -26,7 +27,9 @@ if (opt('reboot-every') !== undefined) profile.rebootEvery = Number(opt('reboot-
 const sizes = SPPPR_DICTIONARIES.map(d => d.length);
 const classes = Number(opt('classes', SPPPR_WIRE.length));
 if (!sizes.includes(classes)) { console.error(`--classes: ${opt('classes')} — словарь СПППР бывает ${sizes.join(' или ')} классов`); process.exit(2); }
-const emu = new SppprEmulator({ realism, seed: Number(opt('seed', Date.now() % 100000)), profile, classes });
+const rateHz = Number(opt('rate', STREAM_RATES_HZ[0]));
+if (!STREAM_RATES_HZ.includes(rateHz)) { console.error(`--rate: ${opt('rate')} — эмулятор шлёт ${STREAM_RATES_HZ.join(' или ')} пакетов в секунду`); process.exit(2); }
+const emu = new SppprEmulator({ realism, seed: Number(opt('seed', Date.now() % 100000)), profile, classes, rateHz });
 const seconds = opt('seconds') === undefined ? Infinity : Number(opt('seconds'));
 const effort = Number(opt('effort', 0.7));
 // The states this device recognizes (its dictionary), as the game names them.

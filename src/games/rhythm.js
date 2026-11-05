@@ -2,12 +2,13 @@
 // rhythm games gave the best EMG challenge in PlayBionic, Prahm et al. 2018).
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
-import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET, SPPPR_SETS } from '../core/vocabulary.js';
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { coverScene } from '../render/bionic.js';
 import { musicPattern } from '../core/music.js';
 import { reachableBand } from '../core/signal.js';
+import { SPPPR } from '../config.js';
 
 const LEVELS = [
   { bpm: 72, beats: 28, every: 2, holdChance: 0, bands: [2], both: false },
@@ -28,8 +29,35 @@ const PERFECT_S = 0.1, GOOD_S = 0.22;
 // 33 ms at 30 Hz. A gesture: the task set is already debounced (100 ms at 30 Hz); the other sets still
 // wait out their own 90 ms stability on top of the emulator, and 200 ms is the delay those levels were
 // balanced on. Using 200 ms for the task set marked an on-time contraction about 100 ms early.
-const gestureDelayS = GESTURE_SET.id === 'tz' ? 0.1 : 0.2;
+// 6.2: both dictionaries of the task (tz and «2 жеста», tz2) go through the decoder; 6.1 compared with 'tz' only, so
+// tz2 waited 200 ms and its player was marked 100 ms early (the built-in player hid it by starting as late).
+const gestureDelayS = SPPPR_SETS.some(set => set.id === GESTURE_SET.id) ? 0.1 : 0.2;
 export const RHYTHM_LATENCY_S = { threshold: 0.033, proportional: 0.033, gesture: gestureDelayS };
+
+/**
+ * 6.2 — the delay of one event of the СПППР stream, in seconds of real time between the movement and the step that saw
+ * its command. The decoder dates the command by the MCU clock (`since`, the first packet of the run of raw packets that
+ * became it), so the dwell — confirmed by the next packet, a whole 100 ms at 10 Hz — is taken back exactly. What remains is estimated:
+ * the movement began about half a packet before the first packet that showed it, and the classifier's probability
+ * needs `riseMs` to reach the decoder's threshold. Null for a frame without a date (two channels, the other sets).
+ */
+export function streamEventLag(intent, now = intent?.t, params = SPPPR) {
+  if (!Number.isFinite(intent?.since) || !Number.isFinite(now)) return null;
+  return (Math.max(0, now - intent.since) + (intent.packetMs ?? 0) / 2 + params.riseMs) / 1000;
+}
+
+/**
+ * How long a note waits for a dated onset before it counts as passed: the dwell landed on this stream's packets, half
+ * a packet, one packet more for a wrong packet forgiven inside the movement, and the rise — the delay an onset on time
+ * may be seen with. Never shorter than the scheme's fixed delay, so a 50 Hz stream (the levels were balanced on it)
+ * waits as before. Null without a packet period.
+ */
+export function streamWaitLag(intent, params = SPPPR) {
+  const p = intent?.packetMs;
+  if (!Number.isFinite(intent?.since) || !Number.isFinite(p) || p <= 0) return null;
+  const confirm = p * Math.max(1, Math.ceil(params.dwellMs / p));
+  return Math.max(RHYTHM_LATENCY_S.gesture, (confirm + p / 2 + p + params.riseMs) / 1000);
+}
 // The built-in player. Two channels keep a longer shift than the pipeline delay: the force is still
 // rising after the onset (slewPerS), and the high-threshold bands were balanced on it. Gestures use the
 // same shift as judging, so the player's onset lands on the beat.
@@ -102,12 +130,17 @@ export class RhythmGame extends Game {
   }
 
   step(dt, intent) {
-    const now = this.time - this.latency;
+    // 6.2: a dated command of the СПППР stream is judged where the movement began, and a note waits as long as this
+    // stream takes to show an onset on time; other frames keep the fixed delay of the scheme (RHYTHM_LATENCY_S).
+    const wait = streamWaitLag(intent);
+    const now = wait === null ? this.time - this.latency : this.time - wait * this.speed;
+    const lag = streamEventLag(intent);
+    const at = lag === null ? now : this.time - lag * this.speed;
     while (this.nextBeat * this.beat <= this.time && this.nextBeat * this.beat < this.total) { this.emit('beat', { strong: this.nextBeat % 4 === 0 }); this.nextBeat++; }
     const state = this.laneState(intent);
     for (const lane of ['a', 'b', 'both']) {
-      if (state[lane] && !this.lane[lane]) this.onset(lane, now);
-      if (!state[lane] && this.lane[lane]) this.release(lane, now);
+      if (state[lane] && !this.lane[lane]) this.onset(lane, at);
+      if (!state[lane] && this.lane[lane]) this.release(lane, at);
     }
     this.lane = state;
     for (const n of this.notes) {

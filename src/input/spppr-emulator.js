@@ -10,7 +10,7 @@
 // The target comes from the on-screen pads, the keyboard or a game's autopilot — the same {gesture, effort} or {a, b} as
 // EmgEmulator. Deterministic for a seed. The game reads it through EmulatorDriver (spppr-driver.js: the one line to
 // replace with the MCU's driver).
-import { SPPPR, GESTURE_CONFUSION } from '../config.js';
+import { SPPPR, GESTURE_CONFUSION, STREAM_RATES_HZ } from '../config.js';
 import { SPPPR_SET, GESTURE_BY_ID, COMMAND } from '../core/vocabulary.js';
 import { SPPPR_WIRE, sppprPacket, sppprDictionary } from '../core/spppr.js';
 import { createRng } from '../core/rng.js';
@@ -21,16 +21,21 @@ const index = id => IDS.indexOf(id);
 const by = cmd => SPPPR_SET.gestures.find(g => g.command === cmd)?.id;
 const CLOSE = index(by(COMMAND.CLOSE)), OPEN = index(by(COMMAND.OPEN));
 
+/** 6.2 — the packet rates the emulator offers (config.js): 50 Hz by default, 10 Hz — the organizers' (answer 24). */
+export { STREAM_RATES_HZ };
+
 /**
- * How a stream behaves at a «realism» of 0…1 (the slider of the settings). 0 — an ideal 50 Hz stream; 0.5 — a phone and a
- * BLE link on a good day; 1 — a bad day. Every number can be overridden (tools/spppr-emulator.mjs flags, tests).
+ * How a stream behaves at a «realism» of 0…1 (the slider of the settings). 0 — an ideal stream; 0.5 — a phone and a
+ * BLE link on a good day; 1 — a bad day. `rateHz` — packets a second (STREAM_RATES_HZ). Every number can be overridden
+ * (tools/spppr-emulator.mjs flags, tests).
  */
-export function streamProfile(realism = 0.5) {
+export function streamProfile(realism = 0.5, rateHz = STREAM_RATES_HZ[0]) {
   const r = Math.max(0, Math.min(1, realism));
+  const periodMs = 1000 / (STREAM_RATES_HZ.includes(rateHz) ? rateHz : STREAM_RATES_HZ[0]);
   return {
-    periodMs: 20,                  // the MCU sends at 50 Hz…
+    periodMs,                      // the MCU sends at 50 Hz (or 10)…
     spread: 0.45 * r,              // …with a log-normal spread of the interval
-    minMs: 10, maxMs: 40 + 100 * r, // the task: from 10 to 100+ ms
+    minMs: 10, maxMs: Math.max(40, periodMs) + 100 * r, // the task: from 10 to 100+ ms (at 10 Hz: 100 to 200)
     longEvery: r ? 4 / r : 0,      // seconds between rare long intervals (100–160 ms)
     latencyMs: 6, latencyJitterMs: 14 * r, // radio and OS: a base delay and an exponential tail
     stallEvery: r ? 12 / r : 0,    // seconds between radio stalls: packets wait and arrive together
@@ -66,10 +71,12 @@ export class SppprEmulator {
    * @param {number} [o.bootMs] the MCU timer at the first packet (it counts from the device's start)
    * @param {object} [o.profile] overrides of streamProfile
    * @param {number} [o.classes] the device's dictionary: 7 (the task's states) or 3 («2 gestures + neutral»)
+   * @param {number} [o.rateHz] packets a second: 50 or 10 (6.2, STREAM_RATES_HZ)
    */
-  constructor({ realism = 0.5, seed = 11, bootMs = null, profile = {}, classes = SPPPR_WIRE.length } = {}) {
+  constructor({ realism = 0.5, seed = 11, bootMs = null, profile = {}, classes = SPPPR_WIRE.length, rateHz = STREAM_RATES_HZ[0] } = {}) {
     this.rng = createRng(seed);
     this.overrides = profile;
+    this._rateHz = rateHz;
     this.realism = realism;
     const dictionary = sppprDictionary(classes);
     this.classes = dictionary.length;
@@ -77,6 +84,7 @@ export class SppprEmulator {
     this.known = SPPPR_WIRE.map(key => dictionary.includes(key));
     this.confusion = CONFUSION.map(row => row.map((w, j) => (this.known[j] ? w : 0)));
     this.level = new Array(N).fill(0); // how strongly each class is being produced now (0…1)
+    this.levelAt = null;               // phone time the level was advanced to (6.2: by the pump, not by the packet)
     this.want = new Array(N).fill(0);
     this.bootMs = bootMs ?? Math.round(this.rng.range(3000, 90000)); // a device switched on a while ago
     this.t0 = null;        // phone time of the MCU's first packet
@@ -91,7 +99,10 @@ export class SppprEmulator {
   }
 
   get realism() { return this._realism; }
-  set realism(v) { this._realism = v; this.profile = { ...streamProfile(v), ...this.overrides }; }
+  set realism(v) { this._realism = v; this.profile = { ...streamProfile(v, this._rateHz), ...this.overrides }; }
+  /** 6.2 — the packet rate (the stream panel): the next interval already follows it, the MCU timer goes on. */
+  get rateHz() { return this._rateHz; }
+  set rateHz(v) { this._rateHz = v; this.realism = this._realism; }
 
   /**
    * What the person does: a gesture of the active set (or of the task's) with an effort, or two channels {a, b} — the
@@ -124,16 +135,28 @@ export class SppprEmulator {
     if (this.t0 === null) { this.t0 = now; this.nextSend = now; }
     if (this.nextSend < now - 500) this.nextSend = now - 500;
     while (this.nextSend <= now) this.send(this.nextSend);
+    this.advanceTo(now);
     const out = [];
     while (this.inFlight.length && this.inFlight[0].at <= now) out.push(this.inFlight.shift());
     return out;
+  }
+
+  /**
+   * 6.2 — the muscles follow the target on the pump's clock: a target set after the last pump acts from that pump on.
+   * Until 6.2 each packet advanced the level over its whole interval, so at 10 Hz the first packet of a movement carried
+   * 100 ms of a contraction that began in the last frame — the stream showed a movement before it could have started.
+   */
+  advanceTo(t) {
+    if (this.levelAt === null || t < this.levelAt) { this.levelAt = t; return; }
+    this.advance((t - this.levelAt) / 1000);
+    this.levelAt = t;
   }
 
   send(at) {
     const P = this.profile, rng = this.rng;
     const dt = this.lastSend === null ? P.periodMs : at - this.lastSend;
     this.lastSend = at;
-    this.advance(dt / 1000);
+    this.advanceTo(at);
     // the next interval: log-normal around the period, rarely a long one
     let next = Math.max(P.minMs, Math.min(P.maxMs, P.periodMs * Math.exp(P.spread * rng.gauss())));
     if (P.longEvery && rng() < (dt / 1000) / P.longEvery) next = rng.range(100, 160);
@@ -173,17 +196,19 @@ export class SppprEmulator {
       leak.forEach((v, j) => { p[j] += v * 0.5; });
       used += this.level[i];
     }
-    // single wrong packets: most of the mass jumps to a partner of the class held (or anywhere from neutral) — a partner the
-    // device knows; a held class with none (a dictionary of one movement) is never mistaken
+    // single wrong packets: most of the mass jumps to a partner of the class held (or anywhere from neutral). 6.2: the
+    // partner is drawn from the whole row of the task's seven states, and one the device does not know becomes neutral —
+    // a 3-class СПППР loses the movement there rather than swapping it for the antagonist (in 6.1 every wrong packet of
+    // «2 жеста» while a movement was held went to the antagonist; with seven classes that is 3 % of them).
     const held = this.level.reduce((best, v, i) => (i && v > (this.level[best] ?? 0) ? i : best), 0);
     if (P.glitchPerS && rng() < P.glitchPerS * dtS * (held ? 1 : 0.4)) {
-      const row = held ? this.confusion[held] : IDS.map((_, j) => (j && this.known[j] ? 1 : 0));
+      const row = held ? CONFUSION[held] : IDS.map((_, j) => (j && this.known[j] ? 1 : 0));
       const u = rng();
       if (row.some(w => w > 0)) {
         const j = pick(row, u);
         const m = rng.range(0.5, 0.8);
         for (let i = 0; i < N; i++) p[i] *= 1 - m;
-        p[j] += m;
+        if (this.known[j]) p[j] += m; // else the mass stays with neutral (it is 1 − the rest below)
         used = Math.max(used, m);
       }
     }
@@ -223,7 +248,7 @@ function pick(weights, u) {
 
 /**
  * The emulator as a driver of the stream (the same shape as the MCU's drivers in spppr-drivers.js): `start(onPacket)`,
- * `poll(now)` delivers what has arrived, `setTarget` and `realism` reach the emulator, `stop()`.
+ * `poll(now)` delivers what has arrived, `setTarget`, `realism` and (6.2) `rateHz` reach the emulator, `stop()`.
  */
 export class EmulatorDriver {
   constructor(emulator) { this.emulator = emulator; this.onPacket = null; this.kind = 'emulator'; }
@@ -234,4 +259,6 @@ export class EmulatorDriver {
   get target() { return this.emulator.target; }
   set realism(v) { this.emulator.realism = v; }
   get realism() { return this.emulator.realism; }
+  set rateHz(v) { this.emulator.rateHz = v; }
+  get rateHz() { return this.emulator.rateHz; }
 }

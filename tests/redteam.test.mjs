@@ -67,6 +67,7 @@ test('red team: settings out of their range or enum fall back to the default (RT
       assert.ok(s.gameSpeed >= 0.6 && s.gameSpeed <= 1 && s.dwellS >= HANDS_FREE.minS && s.dwellS <= HANDS_FREE.maxS, why);
       assert.ok(s.sensitivity >= 0.1 && s.sensitivity <= 0.45 && s.coThreshold >= 0.25 && s.coThreshold <= 0.7 && s.realism >= 0 && s.realism <= 1, why);
       assert.ok(Number.isInteger(s.weeklyGoal) && s.weeklyGoal >= 2 && s.weeklyGoal <= 7, why);
+      assert.ok([50, 10].includes(s.streamRateHz), why); // 6.2: the packet rate of the СПППР emulator
       assert.match(s.reminder, /^\d\d:\d\d$/, why);
       assert.ok(s.name.length <= 24 && s.wsUrl.length <= 200 && !/^javascript:/i.test(s.wsUrl), why);
       assert.ok(Number.isFinite(s.pinLock.fails) && Number.isFinite(s.pinLock.until), why);

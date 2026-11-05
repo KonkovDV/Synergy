@@ -20,7 +20,7 @@ import { dayKey } from '../core/progress.js';
 import { MAX_BACKUP_BYTES } from '../core/storage.js';
 import { ELECTRICAL_SAFETY } from '../core/wellbeing.js';
 import { fourStates, bothOnText } from '../core/fourstates.js';
-import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK, GRIP_SWITCH, BOTH_ON } from '../config.js';
+import { APP, HANDS_FREE, SETTINGS_RANGES as R, TEXT_SCALES, CHILD, PET, LOCK, GRIP_SWITCH, BOTH_ON, STREAM_RATES_HZ } from '../config.js';
 
 const pct = v => fmtPct(Math.round(v * 100));
 /** Section glyph and its tile tint (5.12): the sections are told apart at a glance, the title stays the name. */
@@ -180,9 +180,16 @@ export function settingsScreen(app, { back = null } = {}) {
   // 04.11 — for both its dictionaries: the seven states and «2 жеста + нейтраль» (Q&A of the organizers, answer 22).
   const tzStream = s.scheme === 'gesture' && streamsSpppr();
   const lastPacket = h('pre', { class: 'stream-packet', 'aria-label': 'Последний пакет СПППР' }, '—');
+  // 6.2 — the packet rate of the on-screen emulator: 50 Hz, or the 10 Hz the organizers named (Q&A of 04.11, answer 24).
+  // An external source sends at its own rate, so the row is for the emulator only.
+  const rateBox = tzStream ? h('div', { class: 'stream-rate', hidden: s.source !== 'touch' },
+    h('div', { class: 'row' }, h('span', {}, 'Частота пакетов'),
+      segmented(STREAM_RATES_HZ.map(hz => ({ value: hz, label: `${hz} Гц`, sub: hz === STREAM_RATES_HZ[0] ? 'по умолчанию' : 'как у «Моторики»' })), s.streamRateHz,
+        v => app.updateSettings({ streamRateHz: v }), 'Частота пакетов эмулятора СПППР')),
+    h('p', { class: 'note' }, 'На 10 Гц жест подтверждает следующий пакет, через 100 мс. «Ритм» судит удар по часам микроконтроллера — по пакету, в котором движение началось.')) : null;
   const streamBox = tzStream ? h('div', { class: 'stream-box' },
     h('p', { class: 'note' }, `Пакет ТЗ: {"timestamp_ms": время микроконтроллера, "dist": вероятности — ${dictionaryName(GESTURE_CLASS_ORDER.length)}}. Скорость считается только по разнице timestamp_ms; джиттер сглаживается, пауза > 200 мс плавно гасит скорость, одиночный шум прощается.`),
-    lastPacket) : null;
+    rateBox, lastPacket) : null;
   let streamAt = 0;
   const node = h('div', { class: 'screen settings' },
     h('main', { class: 'scroll' },
@@ -210,7 +217,7 @@ export function settingsScreen(app, { back = null } = {}) {
           segmented([{ value: 'yes', label: 'Есть' }, { value: 'waiting', label: 'Жду протез', sub: 'учусь заранее' }], s.prosthesis, v => app.updateSettings({ prosthesis: v }), 'Протез уже есть?'))),
       section('Источник сигнала',
         segmented([{ value: 'touch', label: 'Эмулятор на экране', sub: 'без датчиков' }, { value: 'bridge', label: 'Внешний', sub: 'эмулятор / датчики / протез' }], s.source, v => {
-          app.updateSettings({ source: v }); bridgeBox.hidden = v !== 'bridge'; refreshPreview();
+          app.updateSettings({ source: v }); bridgeBox.hidden = v !== 'bridge'; if (rateBox) rateBox.hidden = v !== 'touch'; refreshPreview();
         }, 'Источник сигнала'),
         bridgeBox,
         sliderRow('Реалистичность эмулятора', { ...R.realism, value: s.realism, format: v => v < 0.2 ? 'чистый сигнал' : v < 0.7 ? 'как у датчика' : 'шумно', onInput: v => app.updateSettings({ realism: v }) })),

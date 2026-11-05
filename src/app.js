@@ -95,7 +95,7 @@ export class App {
     this.store = new Store(safeStorage(), { catalog: CATALOG });
     // 6.0: the pads, the keys and the autopilot drive this one; in the gesture scheme of the task's set it speaks the
     // СПППР stream (JSON packets with the MCU's time through the decoder), otherwise the EMG envelopes as before.
-    this.emulator = new OnScreenEmulator({ realism: this.settings.realism, seed: Date.now() % 100000 });
+    this.emulator = new OnScreenEmulator({ realism: this.settings.realism, seed: Date.now() % 100000, rateHz: this.settings.streamRateHz });
     // 5.30: the second arm of «Две руки» on the on-screen emulator (the left hand is `emulator`, the right one this).
     this.emulator2 = new EmgEmulator({ realism: this.settings.realism, seed: (Date.now() + 7919) % 100000 });
     this.bridge = null;
@@ -196,6 +196,7 @@ export class App {
     if (patch.wsUrl !== undefined || patch.source === 'touch') this.hostFed = false; // the person chose the source
     Object.assign(this.settings, patch);
     this.emulator.realism = this.settings.realism; this.emulator2.realism = this.settings.realism;
+    this.emulator.rateHz = this.settings.streamRateHz; // 6.2: 50 or 10 packets a second (the stream panel)
     this.applyPresentation();
     if (patch.source !== undefined || patch.wsUrl !== undefined || before !== this.settings.source) this.applySource();
     clearTimeout(this.saveTimer);
@@ -209,6 +210,7 @@ export class App {
    */
   refreshFromState() {
     this.emulator.realism = this.settings.realism;
+    this.emulator.rateHz = this.settings.streamRateHz;
     this.applyPresentation();
     this.applySource({ force: false });
   }

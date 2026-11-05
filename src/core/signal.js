@@ -4,10 +4,13 @@ import { SIGNAL, PROSTHESIS_THRESHOLDS, BOTH_ON } from '../config.js';
 import { COMMAND, SCHEME, GESTURE_BY_ID, GESTURE_CLASS_ORDER } from './vocabulary.js';
 
 export const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
+/** A command dated longer ago than this is a stale date (6.2): «Ритм» judges it by the fixed delay instead. */
+const SINCE_MAX_MS = 5000;
 
 /**
  * SignalFrame — one sample from any source (on-screen emulator, organizers' emulator, prosthesis).
  * { t: ms, a: number ≥ 0, b: number ≥ 0, gesture?: id, confidence?: 0..1, effort?: 0..1 }
+ * A frame of the СПППР decoder (stable: true) also carries the joystick, the link state and (6.2) `since`/`packetMs`.
  * Returns a clean copy or null when the frame must be ignored.
  */
 export function readFrame(f) {
@@ -32,6 +35,12 @@ export function readFrame(f) {
     if (finite(f.coact)) frame.coact = clamp(f.coact);
     if (f.link === 'ok' || f.link === 'inertia') frame.link = f.link;
     if (finite(f.ageMs) && f.ageMs >= 0) frame.ageMs = Math.round(f.ageMs);
+    // 6.2: when the command started (the phone clock, dated by the MCU's) and the packet period. A date from the future
+    // is the frame's own time; one older than SINCE_MAX_MS or a period outside 1…1000 ms is not taken.
+    if (finite(f.since) && f.since >= f.t - SINCE_MAX_MS) {
+      frame.since = Math.min(f.since, f.t);
+      if (finite(f.packetMs) && f.packetMs >= 1 && f.packetMs <= 1000) frame.packetMs = f.packetMs;
+    }
   }
   return frame;
 }
@@ -285,6 +294,9 @@ export class SignalPipeline {
       ...(this.probs ? { probs: this.probs } : {}),
       // 6.0 — the СПППР joystick (x = flexion − extension, y = pronation − supination, z = abduction − adduction) and
       // how much the antagonists work together; `link` — 'inertia' while the speed fades after a silent 200 ms.
-      ...(frame.axes ? { axes: frame.axes } : {}), ...(frame.coact !== undefined ? { coact: frame.coact } : {}), ...(frame.link ? { link: frame.link, ageMs: frame.ageMs ?? 0 } : {}) };
+      ...(frame.axes ? { axes: frame.axes } : {}), ...(frame.coact !== undefined ? { coact: frame.coact } : {}), ...(frame.link ? { link: frame.link, ageMs: frame.ageMs ?? 0 } : {}),
+      // 6.2 — when the decoder's current command started (phone ms, dated by the MCU clock) and the packet period:
+      // «Ритм» judges the movement there, not when the dwell confirmed it.
+      ...(Number.isFinite(frame.since) ? { since: frame.since, packetMs: frame.packetMs ?? null } : {}) };
   }
 }

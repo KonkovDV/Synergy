@@ -353,6 +353,11 @@ const STATES = [
   ['gesture-play', async p => { await p.evaluate(() => window.Synergy.go('settings')); await p.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click(); await go(p, 'play', { game: 'safe', level: 5 }); }],
   ['gesture-running', async p => { await go(p, 'play', { game: 'safe', level: 5, demo: true }); await p.getByRole('button', { name: 'Старт' }).click(); await p.waitForTimeout(3600); }],
   ['gesture-tutorial', async p => go(p, 'tutorial')],
+  // 6.2 — «Чувствительность» in the gesture scheme of the task's set: the СПППР panel with the packet rate (10 Гц chosen).
+  ['settings-stream', async p => {
+    await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click();
+    await p.getByRole('radiogroup', { name: 'Частота пакетов эмулятора СПППР' }).getByRole('radio', { name: /10 Гц/ }).click();
+  }],
   // 5.20.1 — a skin day with sensors chosen: the longest advice (skin + moderate pain), then the day on the emulator.
   ['checkin-skin-pain', async p => {
     await p.evaluate(() => window.Synergy.useBridge(''));

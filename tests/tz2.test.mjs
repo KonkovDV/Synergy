@@ -51,3 +51,28 @@ test('ответ № 23: the novice model finishes level 1 of every game on the 
     assert.ok(result.stars >= 1, `${id}: ${result.stars}★ ${result.score}`);
   }
 });
+
+test('6.2: «Ритм» on «2 жеста» waits the delay of the task set (100 ms), not the 200 ms of the sets without a decoder', async () => {
+  // 6.1 compared the set with 'tz' only: tz2 waited 200 ms and an onset on time was marked about 100 ms early.
+  const { RHYTHM_LATENCY_S } = await import('../src/games/rhythm.js');
+  assert.equal(RHYTHM_LATENCY_S.gesture, 0.1);
+});
+
+test('6.2: a two-gesture СПППР loses a movement on a wrong packet — it does not swap flexion for its antagonist', async () => {
+  // A three-class recognizer that meets a window the seven-class one would call adduction says flexion or neutral, not
+  // extension. In 6.1 every wrong packet while flexion was held went to extension (3 % of them do with seven classes).
+  const { SppprEmulator } = await import('../src/input/spppr-emulator.js');
+  const emu = new SppprEmulator({ realism: 0.5, seed: 9, classes: 3, rateHz: 10, profile: { glitchPerS: 4 } });
+  emu.setTarget({ gesture: 'flexion', effort: 0.7 });
+  let packets = 0, swapped = 0, lost = 0;
+  for (let t = 0; t < 30000; t += 16) for (const { text } of emu.pump(t)) {
+    if (t < 500) continue;
+    const d = JSON.parse(text).dist;
+    packets++;
+    if (d.extension > d.flexion) swapped++;
+    if (d.neutral > d.flexion) lost++;
+  }
+  assert.ok(packets > 250);
+  assert.ok(lost > packets * 0.15, `${lost} of ${packets} packets lost the movement (about 40 % of packets are wrong here)`);
+  assert.ok(swapped <= packets * 0.03, `${swapped} of ${packets} packets swapped flexion for extension`);
+});

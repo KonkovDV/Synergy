@@ -69,6 +69,9 @@ export const SPPPR = {
   enter: 0.18,        // the dominant axis must reach this to become a command…
   exit: 0.10,         // …and stays one down to this (hysteresis)
   dwellMs: 50,        // a new direction must hold this long on the MCU clock: one wrong packet is forgiven
+  riseMs: 0,          // 6.2: «Ритм» dates a command this much before its first packet, beyond half a packet — the stream's own
+                      // rise of a probability to `enter`. 0 keeps the judging the levels were balanced on: an onset on the
+                      // beat is judged ≈ 45–55 ms late on the emulator at any rate, as at 30–50 Hz before. Real СПППР — К.2
   rampMs: 120,        // speed ramps up after a new direction (Simon et al. 2011, a decision-based velocity ramp)…
   rampFloor: 0.4,     // …from this share
   extrapolateMs: 100, // between packets the axes go on along their slope at most this far (no jerk at 10–100+ ms a packet)
@@ -79,6 +82,12 @@ export const SPPPR = {
   clockWindow: 64,    // packets in the clock offset estimate (lower envelope of arrival − timestamp)
   maxChars: 1024,     // a packet is ~170 bytes
 };
+
+/**
+ * 6.2 — the packet rates of the on-screen СПППР emulator (the stream panel, `tools/spppr-emulator.mjs --rate`): 50 Hz, the
+ * default the levels were balanced on, and 10 Hz — the rate the organizers named for their stream (Q&A of 04.11, № 24).
+ */
+export const STREAM_RATES_HZ = Object.freeze([50, 10]);
 
 export const HAND = {
   closeSpeed: 2.4,          // closure units / s at intensity 1 (proportional speed)

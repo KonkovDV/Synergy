@@ -38,15 +38,23 @@ export class SppprSource {
 export const streamsSpppr = () => SPPPR_SETS.some(set => set.id === GESTURE_SET.id);
 
 export class OnScreenEmulator {
-  /** The pads stand in for a СПППР of the dictionary the person chose: three classes for «2 жеста», else seven. */
-  constructor({ realism = 0.5, seed = 7, driver = null } = {}) {
+  /** The pads stand in for a СПППР of the dictionary the person chose: three classes for «2 жеста», else seven.
+   *  rateHz — packets a second of that СПППР (6.2: 50, or the 10 the organizers named). */
+  constructor({ realism = 0.5, seed = 7, driver = null, rateHz = undefined } = {}) {
     this.emg = new EmgEmulator({ realism, seed });
     const classes = streamsSpppr() ? GESTURE_CLASS_ORDER.length : undefined;
-    this.stream = new SppprSource({ driver: driver ?? createSppprDriver({ realism, seed: seed + 1, classes }) });
+    this.stream = new SppprSource({ driver: driver ?? createSppprDriver({ realism, seed: seed + 1, classes, rateHz }) });
   }
   get target() { return this.emg.target; }
   get realism() { return this.emg.realism; }
   set realism(v) { this.emg.realism = v; if ('realism' in this.stream.driver) this.stream.driver.realism = v; }
+  get rateHz() { return this.stream.driver.rateHz ?? null; }
+  /** Another rate is another stream: its counters (rate, jitter, forgiven noise) start again — set in the settings only. */
+  set rateHz(v) {
+    if (!('rateHz' in this.stream.driver) || this.stream.driver.rateHz === v) return;
+    this.stream.driver.rateHz = v;
+    this.stream.decoder.resetStats();
+  }
   setTarget(t) { this.emg.setTarget(t); this.stream.driver.setTarget?.({ ...this.emg.target }); }
   /** The gesture scheme (a target with a gesture) of the task's set goes through the stream. */
   usesStream() { return streamsSpppr() && this.emg.target.gesture != null; }

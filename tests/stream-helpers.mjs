@@ -11,9 +11,9 @@ function mulberry(seed) {
   return () => { s = (s + 0x6D2B79F5) >>> 0; let x = Math.imul(s ^ (s >>> 15), s | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
 }
 
-export function playStream(id, { scheme = 'gesture', levelNumber = 1, realism = 0.5, seed = 3, novice = false, maxS = 300 } = {}) {
+export function playStream(id, { scheme = 'gesture', levelNumber = 1, realism = 0.5, seed = 3, novice = false, maxS = 300, rateHz = undefined } = {}) {
   const game = createGame(id, { levelNumber, scheme, seed });
-  const emu = new OnScreenEmulator({ realism, seed });
+  const emu = new OnScreenEmulator({ realism, seed, rateHz }); // 6.2: rateHz — 50 (default) or 10, the organizers' rate
   const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme }), hand: new BionicHand(), source: emu, emulator: emu, autopilot: !novice });
   const rng = mulberry(seed * 7919);
   const gauss = () => Math.sqrt(-2 * Math.log(Math.max(1e-9, rng()))) * Math.cos(2 * Math.PI * rng());
