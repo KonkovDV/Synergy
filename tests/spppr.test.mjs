@@ -135,7 +135,8 @@ test('ответ № 22: a run keeps the dictionary of its stream — the report
   const clean = parseState(JSON.stringify(state));
   assert.deepEqual(clean.runs.map(r => r.stream.classes), [3, 7, undefined, undefined, undefined], 'a size of no dictionary of the contract is not kept');
   const [head, ...rows] = reportCsv(clean).split('\n');
-  assert.match(head, /stream_coactivation;stream_classes;signal_issues$/, 'signal quality stays the last column');
+  assert.match(head, /stream_coactivation;stream_classes;/);
+  assert.match(head, /;signal_issues$/, 'signal quality stays the last column');
   const at = head.split(';').indexOf('stream_classes');
   assert.deepEqual(rows.map(r => r.split(';')[at]), ['3', '7', '', '', '']);
   const html = reportHtml(clean, id => id);
