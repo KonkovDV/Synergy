@@ -4,7 +4,7 @@
 
 ## За три минуты
 
-1. Android: `release/Synergy-6.0.0.apk` — устанавливаемая сборка. Подписана отладочным ключом машины, на которой её собрали. В git бинарников нет: их собирает `tools/build-apk.sh`.
+1. Android: `release/Synergy-6.1.0.apk` — устанавливаемая сборка. Подписана отладочным ключом машины, на которой её собрали. В git бинарников нет: их собирает `tools/build-apk.sh`.
 2. iPhone и iPad: `ios/` — сборка на Mac (`ios/README.md`).
 3. Компьютер: `release/synergy-standalone.html` — та же игра одним файлом, интернет не нужен. Это проверка на столе, та же программа, что внутри APK.
 4. В приложении: «Дальше» → «Дальше» → «Пропустить обучение» → «Настройки» → «Данные» → «Демо-профиль для презентации». Затем «Мастерская».
@@ -38,7 +38,7 @@
 
 | Что требует ТЗ | Где |
 |---|---|
-| Готовое приложение или сборка | `release/Synergy-6.0.0.apk` (собирает `sh tools/build-apk.sh`), `release/synergy-standalone.html`, `ios/` |
+| Готовое приложение или сборка | `release/Synergy-6.1.0.apk` (собирает `sh tools/build-apk.sh`), `release/synergy-standalone.html`, `ios/` |
 | Скринкаст с комментариями | снимает команда по `docs/PITCH.md` (в репозиторий видео не кладём) |
 | Техническая документация | `README.md`, `docs/ARCHITECTURE.md`, `docs/INTEGRATION.md`, `docs/TZ_COMPLIANCE.md` |
 | Отчёт о верификации ИИ-фич | `docs/AI_USAGE.md` (перечень, план, отчёт), `docs/PROMPT_TZ.md` |
