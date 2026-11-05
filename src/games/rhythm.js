@@ -2,7 +2,7 @@
 // rhythm games gave the best EMG challenge in PlayBionic, Prahm et al. 2018).
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
-import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, STREAM_DICTIONARY } from '../core/vocabulary.js';
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { coverScene } from '../render/bionic.js';
@@ -28,7 +28,7 @@ const PERFECT_S = 0.1, GOOD_S = 0.22;
 // 33 ms at 30 Hz. A gesture: the task set is already debounced (100 ms at 30 Hz); the other sets still
 // wait out their own 90 ms stability on top of the emulator, and 200 ms is the delay those levels were
 // balanced on. Using 200 ms for the task set marked an on-time contraction about 100 ms early.
-const gestureDelayS = GESTURE_SET.id === 'tz' ? 0.1 : 0.2;
+const gestureDelayS = STREAM_DICTIONARY ? 0.1 : 0.2; // the СПППР sets (tz, tz2) are debounced by the decoder
 export const RHYTHM_LATENCY_S = { threshold: 0.033, proportional: 0.033, gesture: gestureDelayS };
 // The built-in player. Two channels keep a longer shift than the pipeline delay: the force is still
 // rising after the onset (slewPerS), and the high-threshold bands were balanced on it. Gestures use the

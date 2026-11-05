@@ -5,8 +5,9 @@
 // (SYNERGY_GESTURE_SET — the whole suite runs on each set), then the default.
 
 /** Known sets; the definitions are in vocabulary.js. */
-// 6.0: the set of the published task (tz) is the default; the others stay for hosts and old addresses.
-export const GESTURE_SET_IDS = Object.freeze(['tz', 'synergy', 'ubi4', 'spr8']);
+// 6.0: the set of the published task (tz) is the default; the others stay for hosts and old addresses. tz2 — the СПППР
+// «2 жеста + нейтраль» of the organizers' answers of 04.11 (№ 22).
+export const GESTURE_SET_IDS = Object.freeze(['tz', 'tz2', 'synergy', 'ubi4', 'spr8']);
 export const DEFAULT_GESTURE_SET = 'tz';
 /** localStorage key of the person's choice. */
 export const GESTURE_SET_KEY = 'synergy.gestureSet';

@@ -24,6 +24,7 @@
 | Требование ТЗ | Что сделано | Где | Проверка |
 |---|---|---|---|
 | Словарь: Neutral, Flexion, Extension, Pronation, Supination, Adduction, Abduction (0–6) | набор `tz` по умолчанию; сгибание закрывает кисть, разгибание раскрывает, четыре движения запястья кисть не двигают; пиктограммы с отклонением и ротацией | `src/core/vocabulary.js`, `src/render/draw.js` | `tests/spppr.test.mjs` «ТЗ словарь» |
+| Два варианта СПППР: «6 жестов + нейтраль» и «2 жеста + нейтраль» (ответы 04.11, № 22) | ровно два словаря `dist`: семь ключей или `neutral`, `flexion`, `extension`; набор `tz2` под поток из трёх ключей; эмулятор и CLI шлют оба (`--variant pair`); панель потока называет словарь и подходящий набор | `src/core/spppr.js` `SPPPR_VARIANTS`, `src/core/vocabulary.js` | `tests/spppr.test.mjs` «№ 22», `tests/tz2.test.mjs`, `npm run test:tz` |
 | Формат `{"timestamp_ms", "dist"}`, контракт жёсткий | строгий разбор: нет класса, лишний класс, NaN, вне 0…1, Σ ≠ 1 ± 0,02, время не целое — пакет отклонён с причиной и учтён | `src/core/spppr.js` `parseSppprPacket` | `tests/spppr.test.mjs` «контракт жёсткий» |
 | `timestamp_ms` — таймер МК, не часы телефона | dt — только разность `timestamp_ms`; повтор и опоздавший пакет отбрасываются; откат > 1 с — перезапуск МК | `McuClock`, `SppprDecoder.push` | «Delta Time», «часы МК» |
 | Softmax: плавно, доли вероятностей; вектор = flexion − extension | оси x = flexion − extension, y = pronation − supination, z = abduction − adduction; сила — величина оси за мёртвой зоной | `SppprDecoder`, `axesOf` | «Softmax», «мышцы-антагонисты» |

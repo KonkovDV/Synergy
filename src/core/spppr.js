@@ -9,11 +9,20 @@
 //              is forgiven; between packets the axes go on along their slope (jitter 10–100+ ms without jerks); after
 //              200 ms without a packet the speed fades (inertia), much later the link counts as lost.
 import { SPPPR } from '../config.js';
-import { SPPPR_SET, GESTURE_BY_ID, GESTURE_CLASS_ORDER, CLOSING_GESTURES, OPENING_GESTURE, COMMAND } from './vocabulary.js';
+import { SPPPR_SET, GESTURE_SETS, GESTURE_BY_ID, GESTURE_CLASS_ORDER, CLOSING_GESTURES, OPENING_GESTURE, COMMAND } from './vocabulary.js';
 
 const BY_ORDER = SPPPR_SET.classOrder.map(id => SPPPR_SET.gestures.find(g => g.id === id));
 /** The keys of `dist`, in the task's class order (0 neutral … 6 abduction). */
 export const SPPPR_WIRE = Object.freeze(BY_ORDER.map(g => g.wire));
+/**
+ * The two dictionaries a СПППР may send (answers of the organizers 04.11.2026, № 22): «6 жестов + нейтраль» — all seven
+ * keys — and «2 жеста + нейтраль» — the keys of the set tz2 (neutral and the antagonists). A packet speaks one of them
+ * exactly; the states it does not have are zero, so the decoder always works in the task's seven classes.
+ */
+export const SPPPR_VARIANTS = Object.freeze({
+  full: SPPPR_WIRE,
+  pair: Object.freeze(BY_ORDER.filter(g => GESTURE_SETS.tz2.classOrder.includes(g.id)).map(g => g.wire)),
+});
 /** Class index → [axis, sign] (null for neutral). */
 const AXIS = BY_ORDER.map(g => g.axis);
 const AXES = ['x', 'y', 'z'];
@@ -27,9 +36,10 @@ const refuse = (error, detail) => ({ ok: false, error, ...(detail !== undefined 
 
 /**
  * The hard contract of the task. A string (one JSON object) or an already parsed object. Returns
- * { ok: true, ts, p } — p: the seven probabilities in class order, normalized by their sum — or { ok: false, error }.
- * Extra top-level fields are ignored (a later firmware may add a sequence number); an unknown class, a missing class,
- * a value outside 0…1 or a sum outside 1 ± sumTolerance refuse the packet.
+ * { ok: true, ts, p, variant } — p: the seven probabilities in class order, normalized by their sum; variant: 'full' or
+ * 'pair', the dictionary the packet spoke — or { ok: false, error }. Extra top-level fields are ignored (a later firmware
+ * may add a sequence number); an unknown class, a set of keys that is neither dictionary (the first missing key is
+ * named), a value outside 0…1 or a sum outside 1 ± sumTolerance refuse the packet.
  */
 export function parseSppprPacket(input, params = SPPPR) {
   let data = input;
@@ -42,23 +52,28 @@ export function parseSppprPacket(input, params = SPPPR) {
   if (typeof ts !== 'number' || !Number.isSafeInteger(ts) || ts < 0) return refuse('timestamp');
   const dist = data.dist;
   if (!isObj(dist)) return refuse('dist');
-  for (const key of Object.keys(dist)) if (!SPPPR_WIRE.includes(key)) return refuse('unknown', key);
+  const keys = Object.keys(dist);
+  for (const key of keys) if (!SPPPR_WIRE.includes(key)) return refuse('unknown', key);
+  // Which dictionary: exactly the pair's keys, else the full seven (and a missing key of the seven is named).
+  const variant = keys.length === SPPPR_VARIANTS.pair.length && SPPPR_VARIANTS.pair.every(k => Object.hasOwn(dist, k)) ? 'pair' : 'full';
+  const expected = keys.every(k => SPPPR_VARIANTS.pair.includes(k)) ? SPPPR_VARIANTS.pair : SPPPR_WIRE;
+  for (const key of expected) if (!Object.hasOwn(dist, key)) return refuse('missing', key);
   const p = [];
   for (const key of SPPPR_WIRE) {
-    if (!Object.hasOwn(dist, key)) return refuse('missing', key);
+    if (!Object.hasOwn(dist, key)) { p.push(0); continue; } // a state the pair dictionary does not have
     const v = dist[key];
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1) return refuse('value', key);
     p.push(v);
   }
   const sum = p.reduce((s, v) => s + v, 0);
   if (Math.abs(sum - 1) > params.sumTolerance) return refuse('sum');
-  return { ok: true, ts, p: p.map(v => v / sum) };
+  return { ok: true, ts, p: p.map(v => v / sum), variant };
 }
 
-/** A packet of the contract, as the emulator and the documents write it (keys in the task's order). */
-export function sppprPacket(ts, p) {
+/** A packet of the contract, as the emulator and the documents write it (keys in the task's order; the pair — its three). */
+export function sppprPacket(ts, p, variant = 'full') {
   const dist = {};
-  SPPPR_WIRE.forEach((key, i) => { dist[key] = p[i]; });
+  SPPPR_WIRE.forEach((key, i) => { if (SPPPR_VARIANTS[variant].includes(key)) dist[key] = p[i]; });
   return { timestamp_ms: ts, dist };
 }
 
@@ -91,7 +106,7 @@ export class McuClock {
 }
 
 const blankStats = () => ({
-  received: 0, accepted: 0, rejected: 0, stale: 0, reboots: 0, gaps: 0, forgiven: 0, switches: 0,
+  received: 0, accepted: 0, rejected: 0, stale: 0, reboots: 0, gaps: 0, forgiven: 0, switches: 0, variants: { full: 0, pair: 0 }, variant: null,
   errors: Object.fromEntries(SPPPR_ERRORS.map(e => [e, 0])), lastError: null,
   intervals: [], maxGapMs: 0, confidenceSum: 0, confidenceN: 0, coactSum: 0, coactN: 0,
 });
@@ -162,6 +177,7 @@ export class SppprDecoder {
     this.lastArrival = arrival;
     this.lastText = typeof input === 'string' ? input : JSON.stringify(input);
     st.accepted++;
+    st.variants[pk.variant]++; st.variant = pk.variant;
     const top = Math.max(...this.p);
     if (this.dir !== NEUTRAL) { st.confidenceSum += this.p[this.dir]; st.confidenceN++; }
     const [xi, xe] = antagonists();
@@ -259,6 +275,8 @@ export class SppprDecoder {
     const { rateHz, jitterMs } = this.timing();
     return {
       packets: st.accepted, rejected: st.rejected, stale: st.stale, gaps: st.gaps, forgiven: st.forgiven, reboots: st.reboots,
+      // the dictionary of the stream: the one most packets spoke (answers 04.11, № 22)
+      variant: st.accepted ? (st.variants.pair > st.variants.full ? 'pair' : 'full') : null,
       rateHz, jitterMs, maxGapMs: st.maxGapMs,
       meanConfidence: st.confidenceN ? Math.round(100 * st.confidenceSum / st.confidenceN) : null,
       coactivation: st.coactN ? Math.round(100 * st.coactSum / st.coactN) : null,
@@ -286,6 +304,20 @@ function alignedProbs(p) {
   const out = GESTURE_CLASS_ORDER.map(() => 0);
   BY_ORDER.forEach((g, i) => { const at = GESTURE_CLASS_ORDER.indexOf(gestureInSet(i)); if (at >= 0) out[at] += p[i]; });
   return out.map(v => Math.round(1000 * v) / 1000);
+}
+
+/**
+ * What the stream panel says about the dictionary (answers 04.11, № 22): the one the stream speaks and, when the set of the
+ * game expects the other one, what follows. `stream` — 'full' | 'pair' | null (no packet yet); `set` — the dictionary of
+ * the game's set ('full' | 'pair' | null).
+ */
+export function dictionaryAdvice(stream, set) {
+  if (!stream) return '';
+  const name = { full: 'шесть движений и нейтраль', pair: 'два движения и нейтраль' }[stream];
+  if (!set || stream === set) return `СПППР присылает ${name}.`;
+  return stream === 'pair'
+    ? `СПППР присылает ${name}, а набор игры ждёт семь состояний: движений запястья не будет. Выберите набор «${GESTURE_SETS.tz2.name}».`
+    : `СПППР присылает ${name}; набор игры — три состояния, движения запястья игра считает нейтралью. Все семь — в наборе «${SPPPR_SET.name}».`;
 }
 
 /** True when a message is a packet of the task (not necessarily a valid one): the bridge routes it to the decoder. */

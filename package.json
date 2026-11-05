@@ -20,7 +20,7 @@
     "e2e:embed": "node tests/e2e/embed.mjs",
     "verify:embed": "sh tools/verify-embed.sh",
     "check:supply-chain": "node tools/supply-chain.mjs",
-    "test:tz": "node tools/tz-play.mjs",
+    "test:tz": "node tools/tz-play.mjs --set tz && node tools/tz-play.mjs --set tz2",
     "emulator:spppr": "node tools/spppr-emulator.mjs"
   },
   "devDependencies": {

@@ -6,11 +6,13 @@
 // Options: --realism 0..1 (0.5)  --seed N  --seconds S (endless)  --fast (no real-time pacing)
 //          --script cycle|flexion,extension,… (cycle: every state 2 s, neutral between)  --effort 0..1 (0.7)
 //          --loss 0..1  --malformed 0..1 (broken packets to see the hard contract refuse them)  --reboot-every S
+//          --variant full|pair (dist: 6 movements + neutral, or 2 + neutral — the organizers' answers of 04.11, № 22)
+//          --hz N (packets a second, 50 by default; the organizers named 10 Hz, answer № 24)
 //          --stats (counters to stderr at the end)
 process.env.SYNERGY_GESTURE_SET ??= 'tz';
 const { SppprEmulator } = await import('../src/input/spppr-emulator.js');
 const { SppprDecoder } = await import('../src/core/spppr.js');
-const { SPPPR_SET } = await import('../src/core/vocabulary.js');
+const { SPPPR_SET, GESTURE_SETS } = await import('../src/core/vocabulary.js');
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] !== undefined && !args[i + 1].startsWith('--') ? args[i + 1] : fallback; };
@@ -22,10 +24,14 @@ const profile = {};
 if (opt('loss') !== undefined) profile.loss = Number(opt('loss'));
 if (opt('malformed') !== undefined) profile.malformed = Number(opt('malformed'));
 if (opt('reboot-every') !== undefined) profile.rebootEvery = Number(opt('reboot-every'));
+const variant = opt('variant', 'full');
+if (!['full', 'pair'].includes(variant)) { console.error(`--variant full|pair, а не ${variant}`); process.exit(2); }
+profile.variant = variant;
+if (opt('hz') !== undefined) profile.hz = Number(opt('hz'));
 const emu = new SppprEmulator({ realism, seed: Number(opt('seed', Date.now() % 100000)), profile });
 const seconds = opt('seconds') === undefined ? Infinity : Number(opt('seconds'));
 const effort = Number(opt('effort', 0.7));
-const states = SPPPR_SET.classOrder.filter(id => id !== 'rest');
+const states = (variant === 'pair' ? GESTURE_SETS.tz2 : SPPPR_SET).classOrder.filter(id => id !== 'rest');
 const script = opt('script', 'cycle');
 const plan = script === 'cycle' ? states : script.split(',').map(s => s.trim()).filter(Boolean);
 for (const s of plan) if (!SPPPR_SET.classOrder.includes(s)) { console.error(`неизвестное состояние: ${s} (есть: ${SPPPR_SET.classOrder.join(', ')})`); process.exit(2); }
@@ -67,5 +73,5 @@ function readHelp() {
   return `СПППР-эмулятор (ТЗ 28.10.2026): пакеты {"timestamp_ms", "dist"} по одному в строке.
   node tools/spppr-emulator.mjs | python3 bridge/ws_bridge.py --stdin
   --realism 0..1  --seed N  --seconds S  --fast  --script cycle|flexion,extension  --effort 0..1
-  --loss 0..1  --malformed 0..1  --reboot-every S  --stats`;
+  --loss 0..1  --malformed 0..1  --reboot-every S  --variant full|pair  --hz N  --stats`;
 }

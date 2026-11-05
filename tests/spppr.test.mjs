@@ -4,7 +4,7 @@ import './pin-tz.mjs'; // 6.0: the published set (tests/pin-tz.mjs)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseSppprPacket, sppprPacket, McuClock, SppprDecoder, SPPPR_WIRE, SPPPR_ERRORS } from '../src/core/spppr.js';
+import { parseSppprPacket, sppprPacket, McuClock, SppprDecoder, SPPPR_WIRE, SPPPR_ERRORS, SPPPR_VARIANTS } from '../src/core/spppr.js';
 import { SppprEmulator, EmulatorDriver, streamProfile } from '../src/input/spppr-emulator.js';
 import { createSppprDriver } from '../src/input/spppr-driver.js';
 import { SppprSource, OnScreenEmulator } from '../src/input/spppr-source.js';
@@ -56,6 +56,49 @@ test('ТЗ контракт жёсткий: a broken packet is refused with its 
   // within the tolerance a rounding of the sender is taken and normalized
   const ok = parseSppprPacket(JSON.stringify({ timestamp_ms: 2, dist: { ...dist(), neutral: 0.995 } }));
   assert.equal(ok.ok, true); assert.ok(Math.abs(ok.p.reduce((s, v) => s + v, 0) - 1) < 1e-12);
+});
+
+test('ответы 04.11 № 22: «2 жеста + нейтраль» — a packet of exactly neutral, flexion, extension is read; any other subset is refused', () => {
+  assert.deepEqual(SPPPR_VARIANTS.full, SPPPR_WIRE, 'the full dictionary is the task\'s seven states');
+  assert.deepEqual(SPPPR_VARIANTS.pair, ['neutral', 'flexion', 'extension'], 'the pair: the antagonists of the task and neutral');
+  const pair = parseSppprPacket('{"timestamp_ms": 7, "dist": {"neutral": 0.2, "flexion": 0.7, "extension": 0.1}}');
+  assert.equal(pair.ok, true, JSON.stringify(pair));
+  assert.equal(pair.variant, 'pair');
+  assert.deepEqual(pair.p.map(v => Math.round(v * 100) / 100), [0.2, 0.7, 0.1, 0, 0, 0, 0], 'the four wrist states are absent: zero, in the task\'s order');
+  assert.equal(parseSppprPacket(TZ_EXAMPLE).variant, 'full');
+  // still hard: a subset that is neither dictionary, the pair without neutral, the pair with one more class
+  assert.equal(parseSppprPacket(JSON.stringify({ timestamp_ms: 1, dist: { neutral: 0.5, flexion: 0.4, pronation: 0.1 } })).error, 'missing');
+  assert.equal(parseSppprPacket(JSON.stringify({ timestamp_ms: 1, dist: { flexion: 0.6, extension: 0.4 } })).error, 'missing');
+  assert.equal(parseSppprPacket(JSON.stringify({ timestamp_ms: 1, dist: { neutral: 0.4, flexion: 0.4, extension: 0.1, abduction: 0.1 } })).error, 'missing');
+  assert.equal(parseSppprPacket(JSON.stringify({ timestamp_ms: 1, dist: { neutral: 0.5, flexion: 0.4, extension: 0.4 } })).error, 'sum', 'Σ of the three must be 1');
+  assert.deepEqual(JSON.parse(JSON.stringify(sppprPacket(9, [0.2, 0.7, 0.1, 0, 0, 0, 0], 'pair'))), { timestamp_ms: 9, dist: { neutral: 0.2, flexion: 0.7, extension: 0.1 } });
+  // the decoder: the x axis works, the wrist axes stay at zero, the summary names the dictionary the stream spoke
+  const d = new SppprDecoder();
+  let ts = 0;
+  for (let i = 0; i < 20; i++) d.push(JSON.stringify(sppprPacket(ts += 100, [0.15, 0.8, 0.05, 0, 0, 0, 0], 'pair')), ts);
+  const f = d.frame(ts);
+  assert.equal(f.gesture, 'flexion');
+  assert.ok(f.axes.x > 0.6 && f.axes.y === 0 && f.axes.z === 0, JSON.stringify(f.axes));
+  assert.equal(d.summary().variant, 'pair');
+  assert.deepEqual(d.stats.variants, { full: 0, pair: 20 });
+});
+
+test('ответы 04.11 № 22: the emulator speaks either dictionary — «2 + нейтраль» has no wrist state, a wrist movement reads as neutral', () => {
+  const pump = variant => {
+    const emu = new SppprEmulator({ realism: 0.3, seed: 4, profile: { variant } });
+    const out = [];
+    emu.setTarget({ gesture: 'flexion', effort: 0.8 });
+    for (let t = 0; t <= 600; t += 16) out.push(...emu.pump(t));
+    emu.setTarget({ gesture: 'pronation', effort: 0.8 });
+    for (let t = 616; t <= 1400; t += 16) out.push(...emu.pump(t));
+    return out.map(x => JSON.parse(x.text));
+  };
+  const full = pump('full'), pair = pump('pair');
+  assert.ok(full.every(x => Object.keys(x.dist).length === 7));
+  assert.ok(pair.every(x => Object.keys(x.dist).join() === 'neutral,flexion,extension'), JSON.stringify(pair[0]));
+  assert.ok(pair.every(x => parseSppprPacket(x).ok), 'every packet passes the hard contract');
+  assert.ok(pair.slice(0, 20).some(x => x.dist.flexion > 0.5), 'flexion shows');
+  assert.ok(pair.slice(-10).every(x => x.dist.neutral > 0.7), 'pronation is not a state of the pair dictionary: neutral');
 });
 
 test('ТЗ Delta Time: speed and smoothness come only from timestamp_ms — the same packets with any arrival jitter decode the same', () => {
