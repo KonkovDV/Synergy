@@ -6,7 +6,7 @@ import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
 import { SignalQualityMonitor, runSignalIssues } from './core/signalquality.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
-import { GESTURE_SET } from './core/vocabulary.js';
+import { GESTURE_SET, STREAM_DICTIONARY } from './core/vocabulary.js';
 import { controlHand } from './core/hands.js';
 import { recordRun, completePlanItem, buildDailyPlan, lightenPlan, dayKey, sessionRules, unlockAchievements, skillProfile, assessmentStatus, weekIndex, trainingDays, recordDayNote } from './core/progress.js';
 import { missionOffers } from './core/missions.js';
@@ -567,7 +567,7 @@ export class App {
    */
   sppprDecoder(demo = false) {
     if (!demo && this.liveSource() === 'bridge') return this.bridge?.spppr ?? null;
-    return this.emulator.usesStream?.() || (this.settings.scheme === 'gesture' && GESTURE_SET.id === 'tz') ? this.emulator.decoder ?? null : null;
+    return this.emulator.usesStream?.() || (this.settings.scheme === 'gesture' && STREAM_DICTIONARY) ? this.emulator.decoder ?? null : null;
   }
 
   /** Faded feedback: share of trials with live feedback from this game's recent skill (all trials when off). */

@@ -10,7 +10,7 @@
 // replace with the MCU's driver).
 import { SPPPR, GESTURE_CONFUSION } from '../config.js';
 import { SPPPR_SET, GESTURE_BY_ID, COMMAND } from '../core/vocabulary.js';
-import { SPPPR_WIRE, sppprPacket } from '../core/spppr.js';
+import { SPPPR_WIRE, SPPPR_VARIANTS, sppprPacket } from '../core/spppr.js';
 import { createRng } from '../core/rng.js';
 
 const IDS = SPPPR_SET.classOrder;
@@ -18,17 +18,22 @@ const N = IDS.length;
 const index = id => IDS.indexOf(id);
 const by = cmd => SPPPR_SET.gestures.find(g => g.command === cmd)?.id;
 const CLOSE = index(by(COMMAND.CLOSE)), OPEN = index(by(COMMAND.OPEN));
+/** Which classes a dictionary has (answers 04.11, № 22): the pair recognizer knows neutral and the two antagonists only. */
+const HAS = Object.fromEntries(Object.entries(SPPPR_VARIANTS).map(([v, keys]) => [v, SPPPR_WIRE.map(k => keys.includes(k))]));
 
 /**
  * How a stream behaves at a «realism» of 0…1 (the slider of the settings). 0 — an ideal 50 Hz stream; 0.5 — a phone and a
- * BLE link on a good day; 1 — a bad day. Every number can be overridden (tools/spppr-emulator.mjs flags, tests).
+ * BLE link on a good day; 1 — a bad day. `hz` — packets a second (the organizers named 10 Hz on 04.11, answer № 24); the
+ * longest ordinary interval stays under the task's 200 ms, dropouts beyond it are modelled on their own. Every number can be
+ * overridden (tools/spppr-emulator.mjs flags, tests).
  */
-export function streamProfile(realism = 0.5) {
+export function streamProfile(realism = 0.5, hz = 50) {
   const r = Math.max(0, Math.min(1, realism));
+  const periodMs = 1000 / hz;
   return {
-    periodMs: 20,                  // the MCU sends at 50 Hz…
+    periodMs,                      // the MCU sends at `hz`…
     spread: 0.45 * r,              // …with a log-normal spread of the interval
-    minMs: 10, maxMs: 40 + 100 * r, // the task: from 10 to 100+ ms
+    minMs: 10, maxMs: Math.max(40 + 100 * r, 1.2 * periodMs + 60 * r), // the task: from 10 to 100+ ms
     longEvery: r ? 4 / r : 0,      // seconds between rare long intervals (100–160 ms)
     latencyMs: 6, latencyJitterMs: 14 * r, // radio and OS: a base delay and an exponential tail
     stallEvery: r ? 12 / r : 0,    // seconds between radio stalls: packets wait and arrive together
@@ -41,6 +46,7 @@ export function streamProfile(realism = 0.5) {
     noise: 0.035 * r,              // spread of the probabilities
     rebootEvery: 0,                // seconds between MCU restarts (0 — never; the CLI can turn it on)
     malformed: 0,                  // share of broken packets (the CLI shows the hard contract; the game never sends them)
+    variant: 'full',               // the dictionary of dist: 'full' — 6 movements + neutral, 'pair' — 2 + neutral (№ 22)
   };
 }
 
@@ -83,7 +89,7 @@ export class SppprEmulator {
   }
 
   get realism() { return this._realism; }
-  set realism(v) { this._realism = v; this.profile = { ...streamProfile(v), ...this.overrides }; }
+  set realism(v) { this._realism = v; this.profile = { ...streamProfile(v, this.overrides.hz ?? 50), ...this.overrides }; }
 
   /**
    * What the person does: a gesture of the active set (or of the task's) with an effort, or two channels {a, b} — the
@@ -134,7 +140,7 @@ export class SppprEmulator {
     if (P.dropoutEvery && at >= this.dropoutUntil && rng() < (dt / 1000) / P.dropoutEvery) this.dropoutUntil = at + rng.range(...P.dropoutMs);
     if (at < this.dropoutUntil || rng() < P.loss) return; // lost on the way
     if (P.stallEvery && at >= this.stallUntil && rng() < (dt / 1000) / P.stallEvery) this.stallUntil = at + rng.range(...P.stallMs);
-    const text = rng() < P.malformed ? this.broken(this.mcuAt(at)) : JSON.stringify(sppprPacket(this.mcuAt(at), this.distribution(dt / 1000)));
+    const text = rng() < P.malformed ? this.broken(this.mcuAt(at)) : JSON.stringify(sppprPacket(this.mcuAt(at), this.distribution(dt / 1000), P.variant));
     const latency = P.latencyMs + (P.latencyJitterMs ? -Math.log(Math.max(1e-6, rng())) * P.latencyJitterMs : 0);
     let arrive = Math.max(at + latency, at < this.stallUntil ? this.stallUntil : 0);
     if (rng() < P.reorder && this.inFlight.length) arrive = Math.max(at, this.inFlight[this.inFlight.length - 1].at - 1);
@@ -152,9 +158,14 @@ export class SppprEmulator {
     }
   }
 
-  /** The probabilities of one packet: the produced classes, a little leak to their partners, the rest to neutral. */
+  /**
+   * The probabilities of one packet: the produced classes, a little leak to their partners, the rest to neutral. A
+   * recognizer of the pair dictionary has no wrist state: what it does not know reads as neutral, and its rare wrong
+   * packets fall on the classes it has.
+   */
   distribution(dtS) {
     const P = this.profile, rng = this.rng;
+    const has = HAS[P.variant] ?? HAS.full;
     const p = new Array(N).fill(0);
     let used = 0;
     for (let i = 1; i < N; i++) {
@@ -168,14 +179,15 @@ export class SppprEmulator {
     // single wrong packets: most of the mass jumps to a partner of the class held (or anywhere from neutral)
     const held = this.level.reduce((best, v, i) => (i && v > (this.level[best] ?? 0) ? i : best), 0);
     if (P.glitchPerS && rng() < P.glitchPerS * dtS * (held ? 1 : 0.4)) {
-      const row = held ? CONFUSION[held] : IDS.map((_, j) => (j ? 1 : 0));
+      const own = (held ? CONFUSION[held] : IDS.map((_, j) => (j ? 1 : 0))).map((w, j) => (has[j] ? w : 0));
+      const row = own.some(w => w > 0) ? own : IDS.map((_, j) => (j && j !== held && has[j] ? 1 : 0));
       const j = pick(row, rng());
       const m = rng.range(0.5, 0.8);
       for (let i = 0; i < N; i++) p[i] *= 1 - m;
       p[j] += m;
       used = Math.max(used, m);
     }
-    for (let i = 1; i < N; i++) p[i] = Math.max(0, p[i] + P.noise * rng.gauss() * (0.3 + p[i]));
+    for (let i = 1; i < N; i++) p[i] = has[i] ? Math.max(0, p[i] + P.noise * rng.gauss() * (0.3 + p[i])) : 0;
     const active = p.reduce((s, v, i) => s + (i ? v : 0), 0);
     p[0] = Math.max(0.005, 1 - active);
     const sum = p.reduce((s, v) => s + v, 0);

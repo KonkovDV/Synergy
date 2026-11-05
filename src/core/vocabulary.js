@@ -162,13 +162,31 @@ const TZ = {
   ],
 };
 
+/**
+ * 6.0 (answers of the organizers 04.11.2026, № 22) — the СПППР comes in two dictionaries: «6 жестов + нейтраль» (the
+ * task's seven states, above) and «2 жеста + нейтраль». The pair keeps the task's antagonists and their wire keys —
+ * flexion closes, extension opens — and has no wrist state. A set of its own, so a game never asks for a state the
+ * stream cannot send (a host picks it at launch: gestures=tz2). The gestures are the same objects as in TZ.
+ */
+const TZ2 = {
+  id: 'tz2', name: 'СПППР: 2 + нейтраль', short: '3 состояния · СПППР', size: 3,
+  text: 'Поток СПППР из трёх состояний: нейтраль, сгибание и разгибание. Сгибание закрывает кисть, разгибание раскрывает, сила — разность их вероятностей.',
+  source: 'ответы организаторов 04.11.2026 (№ 22): СПППР «2 жеста + нейтраль»',
+  classOrder: ['rest', 'flexion', 'extension'],
+  gestures: TZ.gestures.filter(g => !g.axis || g.axis[0] === 'x'),
+};
+
 /** Every set, by id (no prototype: ids come from settings and addresses). The published set first. */
-export const GESTURE_SETS = Object.assign(Object.create(null), { tz: TZ, synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
+export const GESTURE_SETS = Object.assign(Object.create(null), { tz: TZ, tz2: TZ2, synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
 /** 6.0 — the wire contract of the СПППР stream is fixed by the task, whatever set the game speaks (core/spppr.js). */
 export const SPPPR_SET = TZ;
+/** The sets that speak the СПППР stream, by the dictionary of `dist` they expect: the full seven or the pair (№ 22). */
+export const SPPPR_DICTIONARY = Object.freeze({ tz: 'full', tz2: 'pair' });
 /** The set of this page load: id, name, short, text, size, source. */
 export const GESTURE_SET = Object.freeze((({ gestures, ...meta }) => meta)(GESTURE_SETS[selectedGestureSet()]));
 export const GESTURES = GESTURE_SETS[GESTURE_SET.id].gestures;
+/** The СПППР dictionary this page load speaks ('full' | 'pair'), or null — the set has its own frames (EmgEmulator). */
+export const STREAM_DICTIONARY = SPPPR_DICTIONARY[GESTURE_SET.id] ?? null;
 SCHEME_INFO.gesture.short = GESTURE_SET.short;
 SCHEME_INFO.gesture.text = GESTURE_SET.text;
 

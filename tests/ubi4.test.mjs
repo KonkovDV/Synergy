@@ -29,7 +29,8 @@ test('UBI4 set: selected by the address, then the settings, then the test enviro
   const env = (search = '', stored = null, envSet = undefined) => ({
     location: { search }, localStorage: { getItem: k => (k === GESTURE_SET_KEY ? stored : null), setItem() {} }, process: { env: { SYNERGY_GESTURE_SET: envSet } },
   });
-  assert.deepEqual(GESTURE_SET_IDS, ['tz', 'synergy', 'ubi4', 'spr8']);
+  assert.deepEqual(GESTURE_SET_IDS, ['tz', 'tz2', 'synergy', 'ubi4', 'spr8'], 'tz2 — the СПППР «2 жеста + нейтраль» of the answers of 04.11 (№ 22)');
+  assert.equal(selectedGestureSet(env('?gestures=tz2')), 'tz2', 'a host picks the pair dictionary at launch');
   assert.equal(DEFAULT_GESTURE_SET, 'tz', '6.0: the default is the set of the published task (docs/TASK.md, «ТЗ 28.10»)');
   assert.equal(selectedGestureSet(env('?gestures=ubi4', 'synergy')), 'ubi4');
   assert.equal(gestureSetSource(env('?gestures=ubi4')), 'address');
