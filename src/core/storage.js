@@ -1,7 +1,7 @@
 // Versioned local persistence. Never throws to the UI; corrupt data is backed up, not overwritten.
 import { cleanQuests } from './quests.js';
 import { cleanSurveys } from './survey.js';
-import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES, ARM_POSES, LOCK, GRIP_SWITCH, BOTH_ON } from '../config.js';
+import { APP, SIGNAL, SESSION, HANDS_FREE, SETTINGS_RANGES, TEXT_SCALES, ARM_POSES, LOCK, GRIP_SWITCH, BOTH_ON, STREAM_RATES_HZ } from '../config.js';
 
 const POSE_IDS = ARM_POSES.map(p => p.id);
 import { createProfile, SKINS } from './progress.js';
@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS = {
   sensitivityB: SIGNAL.onThreshold, // порог открытия, канал B: свой, как в приложении протеза (письменные ответы митапа)
   coThreshold: SIGNAL.coThreshold,
   realism: 0.5,             // шум и перекрёстные помехи эмулятора
+  streamRateHz: STREAM_RATES_HZ[0], // 6.2: пакетов в секунду у экранного эмулятора СПППР — 50 или 10 (частота организаторов, ответ № 24)
   sound: true,
   music: true,              // процедурная музыка в «Ритме» (вместе со звуком)
   audioOffsetMs: 0,         // поправка задержки звука, мс (Настройки → «Синхронизация звука»)
@@ -101,6 +102,7 @@ export const SETTINGS_RULES = {
   coThreshold: range(SETTINGS_RANGES.coThreshold.min, SETTINGS_RANGES.coThreshold.max),
   ...Object.fromEntries(['holdMs', 'refractoryMs', 'hysteresis', 'smoothingMs', 'slewPerS', 'deadZone'].map(k => [k, range(SETTINGS_RANGES[k].min, SETTINGS_RANGES[k].max)])), // 6.0
   realism: range(SETTINGS_RANGES.realism.min, SETTINGS_RANGES.realism.max),
+  streamRateHz: oneOf(...STREAM_RATES_HZ),
   weeklyGoal: v => Number.isInteger(v) && v >= SETTINGS_RANGES.weeklyGoal.min && v <= SETTINGS_RANGES.weeklyGoal.max,
   textScale: oneOf(...TEXT_SCALES),
   gameSpeed: range(SETTINGS_RANGES.gameSpeed.min, SETTINGS_RANGES.gameSpeed.max),
