@@ -171,12 +171,12 @@ test('5.30 Android: launch extras and synergy:// links become a checked query of
     const harness = join(dir, 'Harness.java');
     writeFileSync(harness, `package ru.synergy.trainer;
 public class Harness { public static void main(String[] a) {
-  String[][] cases = { {"grip", "2", "ubi4"}, {"duo", null, null}, {"../x", "2", "ubi4"}, {"grip", "100", "evil"}, {null, null, null}, {"check", "0", "synergy"}, {"grip", "3", "spr8"} };
+  String[][] cases = { {"grip", "2", "ubi4"}, {"duo", null, null}, {"../x", "2", "ubi4"}, {"grip", "100", "evil"}, {null, null, null}, {"check", "0", "synergy"}, {"grip", "3", "spr8"}, {"safe", "1", "tz2"} };
   for (String[] c : cases) System.out.println("[" + MainActivity.launchQuery(c[0], c[1], c[2]) + "]"); } }`);
     const built = javac(join(dir, 'classes'), join(dir, 'stubs'), [...walk('android/src'), harness]);
     assert.equal(built.status, 0, built.stderr);
     const run = spawnSync('java', ['-cp', [join(dir, 'stubs'), join(dir, 'classes')].join(process.platform === 'win32' ? ';' : ':'), 'ru.synergy.trainer.Harness'], { encoding: 'utf8' });
-    assert.deepEqual(run.stdout.trim().split(/\r?\n/), ['[?game=grip&level=2&gestures=ubi4&self=1]', '[?game=duo&self=1]', '[?level=2&gestures=ubi4&self=1]', '[?game=grip&self=1]', '[]', '[?game=check&gestures=synergy&self=1]', '[?game=grip&level=3&gestures=spr8&self=1]']);
+    assert.deepEqual(run.stdout.trim().split(/\r?\n/), ['[?game=grip&level=2&gestures=ubi4&self=1]', '[?game=duo&self=1]', '[?level=2&gestures=ubi4&self=1]', '[?game=grip&self=1]', '[]', '[?game=check&gestures=synergy&self=1]', '[?game=grip&level=3&gestures=spr8&self=1]', '[?game=safe&level=1&gestures=tz2&self=1]']);
     const manifest = readFileSync('android/AndroidManifest.xml', 'utf8');
     assert.match(manifest, /android:scheme="synergy" android:host="play"/);
     assert.match(manifest, /android:launchMode="singleTask"/, 'a second link reaches onNewIntent, not a second copy of the game');

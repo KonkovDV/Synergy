@@ -162,10 +162,31 @@ const TZ = {
   ],
 };
 
+/**
+ * 04.11 — the second dictionary of the СПППР. The organizers' Q&A (answer 22, docs/TASK.md): a СПППР is «2 gestures +
+ * neutral» or «6 gestures + neutral», and answer 23 asks every mode to be fully playable. Which two is not said (question
+ * К.1, PLAN.md); the task trains the antagonists and forms the joystick as flexion − extension, so the two are flexion and
+ * extension. These are the very gesture objects of TZ — names, wire keys, axes, pictures — so nothing is said twice.
+ * Its packet's `dist` holds exactly neutral, flexion and extension (core/spppr.js also takes the seven with the wrist at 0).
+ */
+const TZ_PAIR = ['rest', 'flexion', 'extension'];
+const TZ2 = {
+  id: 'tz2', name: 'СПППР · 2 жеста', short: '3 состояния · СПППР', size: 3,
+  text: 'Поток СПППР «2 жеста + нейтраль»: сгибание закрывает кисть, разгибание раскрывает, сила — разность их вероятностей.',
+  source: 'ответы организаторов 04.11.2026 (№ 22): СПППР «2 жеста + нейтраль»',
+  classOrder: TZ_PAIR,
+  gestures: TZ.gestures.filter(g => TZ_PAIR.includes(g.id)),
+};
+
 /** Every set, by id (no prototype: ids come from settings and addresses). The published set first. */
-export const GESTURE_SETS = Object.assign(Object.create(null), { tz: TZ, synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
+export const GESTURE_SETS = Object.assign(Object.create(null), { tz: TZ, tz2: TZ2, synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
 /** 6.0 — the wire contract of the СПППР stream is fixed by the task, whatever set the game speaks (core/spppr.js). */
 export const SPPPR_SET = TZ;
+/**
+ * 04.11 — the sets whose classes are a dictionary of the СПППР (Q&A, answer 22): the seven of the task and its pair. Their
+ * gesture scheme reads the packet stream; the dictionaries of core/spppr.js are their class orders.
+ */
+export const SPPPR_SETS = Object.freeze([TZ, TZ2]);
 /** The set of this page load: id, name, short, text, size, source. */
 export const GESTURE_SET = Object.freeze((({ gestures, ...meta }) => meta)(GESTURE_SETS[selectedGestureSet()]));
 export const GESTURES = GESTURE_SETS[GESTURE_SET.id].gestures;

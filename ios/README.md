@@ -12,7 +12,7 @@
 | «Поделиться» отчётом и копией | скачивание | системное окно «Поделиться» |
 | Печать отчёта специалисту | печать страницы | AirPrint и «Сохранить в PDF» |
 | Подтверждения («Сбросить калибровку?») | да | `UIAlertController` |
-| Ссылка на упражнение | — | `synergy://play?game=grip&level=2&gestures=ubi4` (наборы `synergy`, `ubi4`, `spr8`) |
+| Ссылка на упражнение | — | `synergy://play?game=grip&level=2&gestures=ubi4` (наборы `tz`, `tz2`, `synergy`, `ubi4`, `spr8`) |
 
 Страница обращается к этим возможностям через `window.SynergyNative` — тот же объект, что даёт APK (`android/src/…/MainActivity.java`). В JS нет ветки для iOS: `tests/v530.test.mjs` сверяет, что методы у двух оболочек одни и те же.
 
