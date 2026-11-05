@@ -11,6 +11,8 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { crc32 } from 'node:zlib';
 import { apkSigner } from '../tools/apk-signer.mjs';
+import { APK_SIZE, TEST_COUNT, withApkSize, withTestCount } from '../tools/number-docs.mjs';
+import { withEvidenceNumbers } from '../tools/evidence.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const VERSION = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
@@ -74,7 +76,7 @@ function copyRelease(dir) {
   }
   const ev = JSON.parse(readFileSync(join(root, 'docs/evidence.json'), 'utf8'));
   // No APK of this version recorded anywhere yet (the toolchain could not be fetched): the size the pitch quotes.
-  const quotedKb = Number(readFileSync(join(root, 'docs/PITCH.md'), 'utf8').match(/APK[^\n|]{0,24}?(\d+)\s*КБ/)?.[1] ?? 0);
+  const quotedKb = Number([...readFileSync(join(root, 'docs/PITCH.md'), 'utf8').matchAll(APK_SIZE)][0]?.[1] ?? 0);
   writeFileSync(join(dir, 'release', `Synergy-${VERSION}.apk`), fakeApk('Synergy Debug', ev.apk?.bytes ?? quotedKb * 1024));
   writeFileSync(join(dir, 'release', 'synergy-standalone.html'), '<!doctype html><title>stand-in</title>');
 }
@@ -177,6 +179,30 @@ test('submission gate (5.31): the organizer\'s deck in git is named; tools/pack.
   assert.match(pack, /--filter=blob:limit=10m/, 'no big blob in the history of the archive');
   assert.match(pack, /'!\*\.pptx' '!\*\.mp4'/, 'no deck or video in its working tree');
   assert.match(pack, /-name '\*\.pptx'.*-size \+10M/, 'and the unpacked archive is checked for them');
+});
+
+test('submission numbers (04.11): the writers set exactly the numbers the gate reads', () => {
+  // CI of PR #12 went red: new pictures made the APK 5093 КБ while four documents still said 3668 by hand.
+  const text = [
+    'Тесты: 486 тестов, 486 автотестов; тестовый стенд не число.',
+    'Офлайн: APK 3668 КБ, и ещё раз APK собран: 3668 КБ.',
+    'История: APK 5.30.0 собран на машине команды 22.10.2026: 2123 КБ.', // farther than 24 characters: not a quote
+    '| Офлайн | APK 3668 КБ | `release/` |',
+  ].join('\n');
+  const quoted = (s, re) => [...s.matchAll(re)].map(m => Number(m[1]));
+  assert.deepEqual(quoted(text, APK_SIZE), [3668, 3668, 3668]);
+  const written = withTestCount(withApkSize(text, 5093), 487);
+  assert.deepEqual(quoted(written, APK_SIZE), [5093, 5093, 5093]);
+  assert.deepEqual(quoted(written, TEST_COUNT), [487, 487]);
+  assert.match(written, /487 тестов, 487 автотестов; тестовый стенд/);
+  assert.match(written, /APK собран: 5093 КБ/);
+  assert.match(written, /22\.10\.2026: 2123 КБ/, 'a size farther from «APK» is history, not a quote');
+  for (const [n, word] of [[1, 'тест'], [2, 'теста'], [5, 'тестов'], [11, 'тестов'], [21, 'тест'], [104, 'теста'], [112, 'тестов']]) {
+    assert.equal(withTestCount('всего 486 тестов', n), `всего ${n} ${word}`);
+  }
+  // evidence.mjs writes only what it measured: no APK built, no test run — the documents keep their numbers.
+  assert.equal(withEvidenceNumbers(text, { apk: null, tests: null }), text);
+  assert.equal(withEvidenceNumbers(text, { apk: { kb: 5093 }, tests: { total: 487 } }), written);
 });
 
 test('APK signer: a debug key, the team key and no signature are told apart (Red Team C-1)', () => {

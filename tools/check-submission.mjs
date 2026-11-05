@@ -7,7 +7,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
-import { NUMBER_DOCS, RUN_DOCS } from './number-docs.mjs';
+import { NUMBER_DOCS, RUN_DOCS, TEST_COUNT, APK_SIZE } from './number-docs.mjs';
 import { apkSigner } from './apk-signer.mjs';
 import { checkSupplyChain } from './supply-chain.mjs';
 
@@ -56,8 +56,8 @@ if (runTests) {
 const apkKb = existsSync(apk) ? Math.round(statSync(apk).size / 1024) : null;
 for (const doc of NUMBER_DOCS) {
   const text = read(doc);
-  if (tests !== null) for (const m of text.matchAll(/(\d+)\s+(?:авто)?тест(?:а|ов)?(?![а-яёa-z])/gi)) if (Number(m[1]) !== tests) fail(`${doc}: «${m[0]}», а тестов ${tests}`);
-  for (const m of text.matchAll(/APK[^\n|]{0,24}?(\d+)\s*КБ/g)) if (apkKb !== null && Math.abs(Number(m[1]) - apkKb) > 2) fail(`${doc}: «${m[0]}», а APK ${apkKb} КБ`);
+  if (tests !== null) for (const m of text.matchAll(TEST_COUNT)) if (Number(m[1]) !== tests) fail(`${doc}: «${m[0]}», а тестов ${tests}`);
+  for (const m of text.matchAll(APK_SIZE)) if (apkKb !== null && Math.abs(Number(m[1]) - apkKb) > 2) fail(`${doc}: «${m[0]}», а APK ${apkKb} КБ — node tools/evidence.mjs`);
 }
 
 // 2a. docs/evidence.json (5.17) — one source for the numbers of the README table: this version, this APK, these tests.
