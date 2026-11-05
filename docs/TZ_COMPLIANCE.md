@@ -59,7 +59,7 @@
 
 | Требование ТЗ | Где |
 |---|---|
-| Встраивание в стороннее приложение | основной путь — роутинг (ответы 04.11, № 15): запуск APK явным интентом или `synergy://play`, как Motorica Start запускает свои игры (`docs/INTEGRATION.md`); запасной — WebView/iframe: `docs/embed/README.md`, хосты Web, Kotlin, Swift, Flutter, React Native, Unity; `?embed=1`. Сторона руки и пороги в параметрах запуска и их возврат хосту — вопрос чек-пойнта (`PLAN.md` К.3) |
+| Встраивание в стороннее приложение | основной путь — роутинг (ответы 04.11, № 15): запуск APK явным интентом или `synergy://play`, как Motorica Start запускает свои игры (`docs/INTEGRATION.md`); запасной — WebView/iframe: `docs/embed/README.md`, хосты Web, Kotlin, Swift, Flutter, React Native, Unity; `?embed=1`. С 6.1 запуск несёт руку и пороги протеза (`side`, `closeThreshold`, `openThreshold`), `synergy:result` возвращает пороги упражнения (`channels`) — ответ № 16, ключи наши до ответа на К.3 (`tests/launch.test.mjs`) |
 | Документация интеграции | `docs/INTEGRATION.md` (контракт кадров и пакета СПППР, замена драйвера) |
 | Архитектура, сборка, запуск | `docs/ARCHITECTURE.md`, `README.md` |
 | ИИ: перечень фич, план, отчёт о верификации | `docs/AI_USAGE.md`, `docs/PROMPT_TZ.md` |

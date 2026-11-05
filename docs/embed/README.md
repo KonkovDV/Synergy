@@ -65,7 +65,7 @@
 7. Передавайте сигнал протеза `Synergy.feed` на каждом кадре SDK (20–100 Гц). Первый кадр сам включает источник «Внешний»; WebSocket по сохранённому адресу при запуске хостом не набирается (пока человек сам не введёт адрес в настройках). Если кадры перестали приходить на 300 мс, упражнение замирает: это не ошибка человека.
 8. Кнопку «Назад» отдавайте `Synergy.back()`; на `synergy:close` закрывайте экран «Синергии».
 9. Голос и «Поделиться» отчётом в WebView без Web Speech и загрузок — по желанию: объект `window.SynergyNative` с методами `speak`, `stop`, `haptic`, `share`, `print`, `nightMode`, как в нашем APK (`android/src/ru/synergy/trainer/MainActivity.java`) и приложении для iPhone (`ios/Synergy/NativeBridge.swift`).
-10. Открыть наш APK, а не встраивать (5.30): явный интент `setClassName("ru.synergy.trainer", "ru.synergy.trainer.MainActivity")` с extras `game`, `level`, `gestures` или ссылка `synergy://play?game=…&level=…` (Android и iOS). Значения проверяются по шаблону, лишнее отбрасывается.
+10. Открыть наш APK, а не встраивать (5.30): явный интент `setClassName("ru.synergy.trainer", "ru.synergy.trainer.MainActivity")` с extras `game`, `level`, `gestures` или ссылка `synergy://play?game=…&level=…` (Android и iOS). Значения проверяются по шаблону, лишнее отбрасывается. 6.1: ещё `side` (`left`, `right`) и пороги протеза `closeThreshold`, `openThreshold` (0–255, парой); `synergy:result` возвращает `channels` — где каналы включались в упражнении, в тех же единицах (`docs/INTEGRATION.md`, «Рука и пороги при запуске»).
 
 ## Web (сайт, PWA)
 
