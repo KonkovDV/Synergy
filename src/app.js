@@ -567,7 +567,7 @@ export class App {
    */
   sppprDecoder(demo = false) {
     if (!demo && this.liveSource() === 'bridge') return this.bridge?.spppr ?? null;
-    return this.emulator.usesStream?.() || (this.settings.scheme === 'gesture' && GESTURE_SET.id === 'tz') ? this.emulator.decoder ?? null : null;
+    return this.emulator.usesStream?.() || (this.settings.scheme === 'gesture' && streamsSpppr()) ? this.emulator.decoder ?? null : null;
   }
 
   /** Faded feedback: share of trials with live feedback from this game's recent skill (all trials when off). */

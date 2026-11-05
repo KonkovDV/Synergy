@@ -101,7 +101,7 @@ public class MainActivity extends Activity {
         StringBuilder q = new StringBuilder();
         if (game != null && game.matches("[a-z]{2,16}")) q.append("&game=").append(game);
         if (level != null && level.matches("[1-9][0-9]?")) q.append("&level=").append(level);
-        if (gestures != null && gestures.matches("tz|synergy|ubi4|spr8")) q.append("&gestures=").append(gestures);
+        if (gestures != null && gestures.matches("tz|tz2|synergy|ubi4|spr8")) q.append("&gestures=").append(gestures);
         // self=1: the app opened its own exercise — not a host waiting for «synergy:close» (services/host.js).
         return q.length() == 0 ? "" : "?" + q.substring(1) + "&self=1";
     }

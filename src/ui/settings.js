@@ -3,7 +3,9 @@
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, signalTraceView, BRIDGE_STATUS, icon } from './widgets.js';
-import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS } from '../core/vocabulary.js';
+import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS, GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
+import { dictionaryName } from '../core/spppr.js';
+import { streamsSpppr } from '../input/spppr-source.js';
 import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
 import { CalibrationRecorder, CALIBRATION_STEPS, thresholdForRest, shownRippleIssues } from '../core/calibration.js';
 import { defaultCalibration, thresholdShares } from '../core/signal.js';
@@ -175,10 +177,11 @@ export function settingsScreen(app, { back = null } = {}) {
   }
 
   // 6.0 — the СПППР stream of the task, live: the counters and the last packet as it came (the hard contract is visible).
-  const tzStream = s.scheme === 'gesture' && GESTURE_SET.id === 'tz';
+  // 04.11 — for both its dictionaries: the seven states and «2 жеста + нейтраль» (Q&A of the organizers, answer 22).
+  const tzStream = s.scheme === 'gesture' && streamsSpppr();
   const lastPacket = h('pre', { class: 'stream-packet', 'aria-label': 'Последний пакет СПППР' }, '—');
   const streamBox = tzStream ? h('div', { class: 'stream-box' },
-    h('p', { class: 'note' }, 'Пакет ТЗ: {"timestamp_ms": время микроконтроллера, "dist": вероятности 7 состояний}. Скорость считается только по разнице timestamp_ms; джиттер сглаживается, пауза > 200 мс плавно гасит скорость, одиночный шум прощается.'),
+    h('p', { class: 'note' }, `Пакет ТЗ: {"timestamp_ms": время микроконтроллера, "dist": вероятности — ${dictionaryName(GESTURE_CLASS_ORDER.length)}}. Скорость считается только по разнице timestamp_ms; джиттер сглаживается, пауза > 200 мс плавно гасит скорость, одиночный шум прощается.`),
     lastPacket) : null;
   let streamAt = 0;
   const node = h('div', { class: 'screen settings' },
@@ -283,7 +286,7 @@ export function settingsScreen(app, { back = null } = {}) {
           ? h('button', { class: 'btn ghost', onclick: () => { if (confirm('Вернуть данные, которые были до последнего сброса? Текущие данные заменятся.')) { try { app.undoReset(); toast('Данные до сброса возвращены', 'good'); app.go('home'); } catch (e) { toast(e.message, 'bad'); } } } }, 'Вернуть данные до сброса') : null,
         h('button', { class: 'btn danger', disabled: !!app.showcase, onclick: () => { if (confirm('Удалить весь прогресс на этом устройстве? Копия останется до следующего сброса: вернуть — здесь же, в «Данных»; сбросить ещё раз — удалить без следа.')) { app.resetProgress(); toast('Прогресс удалён. Вернуть: Настройки → Данные'); app.go('onboarding'); } } }, 'Сбросить прогресс')),
       section('О приложении',
-        h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ. Два канала: пороговый и пропорциональный режимы. Поток СПППР: семь состояний из ТЗ 28.10 (нейтраль, сгибание, разгибание, пронация, супинация, приведение, отведение).`),
+        h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ. Два канала: пороговый и пропорциональный режимы. Поток СПППР: семь состояний из ТЗ 28.10 (нейтраль, сгибание, разгибание, пронация, супинация, приведение, отведение) или два жеста и нейтраль — второй словарь из ответов организаторов 04.11.`),
         h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
         h('p', { class: 'note' }, `Возрастная категория: ${APP.ageRating} (436-ФЗ). Детям — с родителем.`),
         h('p', { class: 'note' }, 'В разработке использовались ИИ-инструменты. Перечень функций и отчёт о проверке лежат в репозитории: docs/AI_USAGE.md.'),

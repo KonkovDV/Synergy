@@ -1,6 +1,7 @@
 // СПППР stream of the organizers' task (28.10.2026) — the packet and its decoding. Pure, deterministic, no DOM.
 //   packet:  {"timestamp_ms": <MCU timer, ms since the device started>, "dist": {"neutral": p, "flexion": p, …}}
-//   parseSppprPacket — the hard contract: a packet is taken whole or refused with a reason, never «fixed».
+//   parseSppprPacket — the hard contract: a packet is taken whole or refused with a reason, never «fixed». Its `dist` is
+//              one dictionary of the СПППР exactly: the seven states, or «2 gestures + neutral» (Q&A of 04.11, answer 22).
 //   McuClock — the MCU timer is not the phone's clock. Every dt is a difference of timestamp_ms; the offset to the
 //              phone clock serves only to draw between packets (lower envelope of arrival − timestamp).
 //   SppprDecoder — softmax → joystick. Probabilities are smoothed on MCU time; the axes are differences of probabilities
@@ -9,11 +10,39 @@
 //              is forgiven; between packets the axes go on along their slope (jitter 10–100+ ms without jerks); after
 //              200 ms without a packet the speed fades (inertia), much later the link counts as lost.
 import { SPPPR } from '../config.js';
-import { SPPPR_SET, GESTURE_BY_ID, GESTURE_CLASS_ORDER, CLOSING_GESTURES, OPENING_GESTURE, COMMAND } from './vocabulary.js';
+import { plural } from './format.js';
+import { SPPPR_SET, SPPPR_SETS, GESTURE_BY_ID, GESTURE_CLASS_ORDER, CLOSING_GESTURES, OPENING_GESTURE, COMMAND } from './vocabulary.js';
 
 const BY_ORDER = SPPPR_SET.classOrder.map(id => SPPPR_SET.gestures.find(g => g.id === id));
 /** The keys of `dist`, in the task's class order (0 neutral … 6 abduction). */
 export const SPPPR_WIRE = Object.freeze(BY_ORDER.map(g => g.wire));
+const wireOf = id => BY_ORDER.find(g => g.id === id).wire;
+/**
+ * The dictionaries a СПППР may have (Q&A of 04.11, answer 22), smallest first: the keys a packet's `dist` holds, in the
+ * task's class order — «2 gestures + neutral» (3 classes) and the seven states. From the sets of vocabulary.js.
+ */
+export const SPPPR_DICTIONARIES = Object.freeze(SPPPR_SETS.map(set => Object.freeze(set.classOrder.map(wireOf))).sort((x, y) => x.length - y.length));
+/** The dictionary of `classes` keys (3 or 7); another number is the full one. */
+export const sppprDictionary = classes => SPPPR_DICTIONARIES.find(d => d.length === classes) ?? SPPPR_WIRE;
+
+/** A dictionary in the organizers' words («2 жеста + нейтраль», «6 жестов + нейтраль»); null for a size of none. */
+export function dictionaryName(classes) {
+  if (!SPPPR_DICTIONARIES.some(d => d.length === classes)) return null;
+  const moves = classes - 1;
+  return `${moves} ${plural(moves, ['жест', 'жеста', 'жестов'])} + нейтраль`;
+}
+
+/**
+ * The dictionary of the stream against the set the game speaks. A СПППР that knows fewer classes than the set leaves
+ * the game waiting for movements that never come, so the note names the set of its dictionary. Null when they agree,
+ * before the first packet, or when the game's set is not a dictionary of the СПППР (it maps the classes it lacks).
+ */
+export function dictionaryNote(streamClasses, setId) {
+  const set = SPPPR_SETS.find(s => s.id === setId);
+  if (!set || !dictionaryName(streamClasses) || streamClasses >= set.classOrder.length) return null;
+  const fit = SPPPR_SETS.find(s => s.classOrder.length === streamClasses);
+  return `поток: ${dictionaryName(streamClasses)} — нужен набор «${fit.name}»`;
+}
 /** Class index → [axis, sign] (null for neutral). */
 const AXIS = BY_ORDER.map(g => g.axis);
 const AXES = ['x', 'y', 'z'];
@@ -27,9 +56,12 @@ const refuse = (error, detail) => ({ ok: false, error, ...(detail !== undefined 
 
 /**
  * The hard contract of the task. A string (one JSON object) or an already parsed object. Returns
- * { ok: true, ts, p } — p: the seven probabilities in class order, normalized by their sum — or { ok: false, error }.
- * Extra top-level fields are ignored (a later firmware may add a sequence number); an unknown class, a missing class,
- * a value outside 0…1 or a sum outside 1 ± sumTolerance refuse the packet.
+ * { ok: true, ts, p, classes } — p: the seven probabilities in class order, normalized by their sum, 0 for a class the
+ * packet's dictionary does not have; classes: the size of that dictionary (3 or 7) — or { ok: false, error, detail }.
+ * The keys of `dist` must be exactly one dictionary (SPPPR_DICTIONARIES): a key of none is 'unknown'; otherwise the
+ * smallest dictionary holding every key decides, and the first of its keys the packet lacks is 'missing'. Extra
+ * top-level fields are ignored (a later firmware may add a sequence number); a value outside 0…1 or a sum outside
+ * 1 ± sumTolerance refuse the packet.
  */
 export function parseSppprPacket(input, params = SPPPR) {
   let data = input;
@@ -42,23 +74,29 @@ export function parseSppprPacket(input, params = SPPPR) {
   if (typeof ts !== 'number' || !Number.isSafeInteger(ts) || ts < 0) return refuse('timestamp');
   const dist = data.dist;
   if (!isObj(dist)) return refuse('dist');
-  for (const key of Object.keys(dist)) if (!SPPPR_WIRE.includes(key)) return refuse('unknown', key);
-  const p = [];
-  for (const key of SPPPR_WIRE) {
+  const keys = Object.keys(dist);
+  for (const key of keys) if (!SPPPR_WIRE.includes(key)) return refuse('unknown', key);
+  // The full dictionary holds every known key, so there is always one.
+  const dictionary = SPPPR_DICTIONARIES.find(d => keys.every(k => d.includes(k)));
+  const p = SPPPR_WIRE.map(() => 0);
+  for (const key of dictionary) {
     if (!Object.hasOwn(dist, key)) return refuse('missing', key);
     const v = dist[key];
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1) return refuse('value', key);
-    p.push(v);
+    p[SPPPR_WIRE.indexOf(key)] = v;
   }
   const sum = p.reduce((s, v) => s + v, 0);
   if (Math.abs(sum - 1) > params.sumTolerance) return refuse('sum');
-  return { ok: true, ts, p: p.map(v => v / sum) };
+  return { ok: true, ts, p: p.map(v => v / sum), classes: dictionary.length };
 }
 
-/** A packet of the contract, as the emulator and the documents write it (keys in the task's order). */
-export function sppprPacket(ts, p) {
+/**
+ * A packet of the contract, as the emulator and the documents write it: the keys of the dictionary of `classes` (3 or 7)
+ * in the task's order, p — the seven probabilities in class order.
+ */
+export function sppprPacket(ts, p, classes = SPPPR_WIRE.length) {
   const dist = {};
-  SPPPR_WIRE.forEach((key, i) => { dist[key] = p[i]; });
+  for (const key of sppprDictionary(classes)) dist[key] = p[SPPPR_WIRE.indexOf(key)];
   return { timestamp_ms: ts, dist };
 }
 
@@ -90,10 +128,11 @@ export class McuClock {
   toMcu(local) { return this.offset === null ? null : local - this.offset; }
 }
 
+// classes — the dictionary of the last packet taken (3 or 7), null before the first one.
 const blankStats = () => ({
   received: 0, accepted: 0, rejected: 0, stale: 0, reboots: 0, gaps: 0, forgiven: 0, switches: 0,
   errors: Object.fromEntries(SPPPR_ERRORS.map(e => [e, 0])), lastError: null,
-  intervals: [], maxGapMs: 0, confidenceSum: 0, confidenceN: 0, coactSum: 0, coactN: 0,
+  intervals: [], maxGapMs: 0, confidenceSum: 0, confidenceN: 0, coactSum: 0, coactN: 0, classes: null,
 });
 
 const median = list => { if (!list.length) return null; const s = [...list].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -162,6 +201,7 @@ export class SppprDecoder {
     this.lastArrival = arrival;
     this.lastText = typeof input === 'string' ? input : JSON.stringify(input);
     st.accepted++;
+    st.classes = pk.classes;
     const top = Math.max(...this.p);
     if (this.dir !== NEUTRAL) { st.confidenceSum += this.p[this.dir]; st.confidenceN++; }
     const [xi, xe] = antagonists();
@@ -259,7 +299,7 @@ export class SppprDecoder {
     const { rateHz, jitterMs } = this.timing();
     return {
       packets: st.accepted, rejected: st.rejected, stale: st.stale, gaps: st.gaps, forgiven: st.forgiven, reboots: st.reboots,
-      rateHz, jitterMs, maxGapMs: st.maxGapMs,
+      rateHz, jitterMs, maxGapMs: st.maxGapMs, classes: st.classes,
       meanConfidence: st.confidenceN ? Math.round(100 * st.confidenceSum / st.confidenceN) : null,
       coactivation: st.coactN ? Math.round(100 * st.coactSum / st.coactN) : null,
     };
