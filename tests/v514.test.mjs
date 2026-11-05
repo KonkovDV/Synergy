@@ -117,7 +117,8 @@ test('tutorial: the prosthesis lock — hold A+B as long as the person\'s prosth
 
 test('host: launch parameters are validated; results go only to a host that asked, without health notes', () => {
   const info = id => ({ grip: { levels: 8 }, check: { levels: 1 } }[id] ?? null);
-  assert.deepEqual(parseLaunch('?game=grip&level=3', info), { game: 'grip', level: 3, hostOrigin: null, embed: false, self: false });
+  // 6.1: a launch may also name the arm and the prosthesis thresholds (tests/launch.test.mjs) — absent, they are null
+  assert.deepEqual(parseLaunch('?game=grip&level=3', info), { game: 'grip', level: 3, hostOrigin: null, embed: false, self: false, side: null, thresholds: null });
   assert.equal(parseLaunch('?game=grip&level=99', info).level, 1, 'a level out of range starts at 1');
   assert.equal(parseLaunch('?game=__proto__', info).game, null);
   assert.equal(parseLaunch('?game=nope', info).game, null);

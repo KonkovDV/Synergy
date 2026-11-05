@@ -29,6 +29,12 @@ struct LaunchRequest: Equatable {
     var game: String?
     var level: String?
     var gestures: String?
+    /** 6.1 — what the prosthesis app knows (Q&A of 04.11, answer 16): the arm and the two thresholds, 0–255, both or none. */
+    var side: String?
+    var closeThreshold: String?
+    var openThreshold: String?
+    /** A threshold of Motorica Start: the same pattern as MainActivity.LEVEL_255 and services/host.js. */
+    static let level255 = "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
 
     init() {}
 
@@ -39,11 +45,18 @@ struct LaunchRequest: Equatable {
         game = LaunchRequest.matching(value("game"), "^[a-z]{2,16}$")
         level = LaunchRequest.matching(value("level"), "^[1-9][0-9]?$")
         gestures = LaunchRequest.matching(value("gestures"), "^(tz|tz2|synergy|ubi4|spr8)$")
+        side = LaunchRequest.matching(value("side"), "^(left|right)$")
+        if let close = LaunchRequest.matching(value("closeThreshold"), LaunchRequest.level255),
+           let open = LaunchRequest.matching(value("openThreshold"), LaunchRequest.level255) {
+            closeThreshold = close
+            openThreshold = open
+        }
     }
 
     /** self=1: the app opened its own exercise — not a host waiting for «synergy:close» (services/host.js). */
     var queryItems: [URLQueryItem] {
-        let items = [("game", game), ("level", level), ("gestures", gestures)].compactMap { name, value in
+        let items = [("game", game), ("level", level), ("gestures", gestures), ("side", side),
+                     ("closeThreshold", closeThreshold), ("openThreshold", openThreshold)].compactMap { name, value in
             value.map { URLQueryItem(name: name, value: $0) }
         }
         return items.isEmpty ? [] : items + [URLQueryItem(name: "self", value: "1")]
