@@ -113,6 +113,15 @@ const trace = await page.evaluate(() => { const c = document.querySelector('.tra
 if (!trace?.drawn || !trace.fits || !trace.label) errors.push(`settings: the signal trace is not drawn or does not fit (${JSON.stringify(trace)})`);
 if (!/Чистота за 5/.test(trace?.sum ?? '')) errors.push(`settings: the line under the trace did not count the squeeze (${trace?.sum})`);
 await audit('settings-trace');
+// 6.2 — the СПППР panel in the gesture scheme: the emulator's packet rate; at 10 Гц the stream line under the bars says so.
+await page.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click(); await wait(300);
+await page.evaluate(() => { const d = [...document.querySelectorAll('details.fold')].find(x => x.querySelector('.stream-rate')); if (d) d.open = true; });
+await page.getByRole('radiogroup', { name: 'Частота пакетов эмулятора СПППР' }).getByRole('radio', { name: /10 Гц/ }).click(); await wait(2600);
+const rate = await page.evaluate(() => ({ setting: window.Synergy.state().settings.streamRateHz, line: document.querySelector('.meter-stream')?.textContent ?? '' }));
+if (rate.setting !== 10 || !/СПППР (9|10|11)(\.\d)? пак\/с/.test(rate.line)) errors.push(`settings: the 10 Hz emulator (${JSON.stringify(rate)})`);
+await audit('settings-stream');
+await page.getByRole('radiogroup', { name: 'Частота пакетов эмулятора СПППР' }).getByRole('radio', { name: /50 Гц/ }).click();
+await page.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Пропорц/ }).click(); await wait(300);
 await go('calibration'); await wait(300); await audit('calibration');
 await go('audiosync'); await wait(500); await audit('audiosync'); // no screenshot: the archive is at its size limit (PLAN C.1.61)
 await go('levels', { game: 'grip' }); await wait(300); await audit('levels');

@@ -156,6 +156,9 @@ export class SppprDecoder {
     this.params = { ...SPPPR, ...params };
     this.clock = new McuClock(this.params);
     this.stats = blankStats();
+    // 6.2: the packet period of this MCU (median of recent intervals without the gaps) — it outlives the per-exercise
+    // statistics and a restart: the same device sends at the same rate.
+    this.recent = []; this.packetMs = null;
     this.reset();
   }
 
@@ -164,6 +167,26 @@ export class SppprDecoder {
     this.p = null; this.raw = null; this.axes = { x: 0, y: 0, z: 0 }; this.slope = { x: 0, y: 0, z: 0 };
     this.lastTs = null; this.lastArrival = null; this.lastText = null;
     this.dir = NEUTRAL; this.dirSince = null; this.cand = null; this.candSince = null;
+    // 6.2: the MCU time when the movement of the current command showed up in the stream — the first packet of the run
+    // of raw packets pointing at it (`history`, see datedStart) — not when the dwell confirmed it a packet later (a whole
+    // 100 ms at 10 Hz), nor when the smoothing caught up (≈ 20 ms later at 50 Hz, nothing at 10 Hz: a rate's own lag).
+    this.history = []; this.onsetTs = null;
+  }
+
+  /**
+   * 6.2 — where the run of raw packets of `cls` that ends with the newest packet began (MCU ms). A single packet of
+   * another class inside the run is a forgiven noise, not its start: at 10 Hz the emulator gets one packet in 12–25 of a
+   * held gesture wrong, and such a packet would date a movement a packet or two late. Null when the newest packet is not
+   * of `cls`.
+   */
+  datedStart(cls) {
+    const h = this.history;
+    let start = null;
+    for (let k = h.length - 1; k >= 0; k--) {
+      if (h[k].cls === cls) start = h[k].ts;
+      else if (start === null || !(k > 0 && h[k - 1].cls === cls)) break;
+    }
+    return start;
   }
 
   /** One packet as it arrived: the text (or object) and the phone time of its arrival. True when it was taken. */
@@ -184,6 +207,11 @@ export class SppprDecoder {
       if (st.intervals.length > 128) st.intervals.shift();
       if (dtMs > this.params.lossMs) st.gaps++;
       st.maxGapMs = Math.max(st.maxGapMs, dtMs);
+      if (dtMs <= this.params.lossMs) {
+        this.recent.push(dtMs);
+        if (this.recent.length > 32) this.recent.shift();
+        this.packetMs = median(this.recent);
+      }
     }
     const dt = dtMs === null ? null : Math.min(dtMs, this.params.maxDtMs) / 1000;
     const k = this.p === null ? 1 : 1 - Math.exp(-dt / (this.params.smoothingMs / 1000));
@@ -218,6 +246,8 @@ export class SppprDecoder {
    */
   updateDirection(ts) {
     const smooth = this.choose(this.axes), raw = this.choose(axesOf(this.raw));
+    this.history.push({ ts, cls: raw });
+    if (this.history.length > 16) this.history.shift();
     const candidate = smooth === raw ? smooth : this.dir;
     if (candidate === this.dir) {
       if (this.cand !== null) this.stats.forgiven++;
@@ -230,7 +260,8 @@ export class SppprDecoder {
     }
     if (ts - this.candSince >= this.params.dwellMs) {
       if (candidate !== NEUTRAL) this.stats.switches++;
-      this.dir = candidate; this.dirSince = ts; this.cand = null;
+      // the newest raw packet agrees with the candidate here (a candidate needs it), so its run dates the movement
+      this.dir = candidate; this.dirSince = ts; this.onsetTs = Math.min(this.datedStart(candidate) ?? this.candSince, this.candSince); this.cand = null;
     }
   }
 
@@ -290,6 +321,11 @@ export class SppprDecoder {
       axes: { x: dead(axes.x) * fade, y: dead(axes.y) * fade, z: dead(axes.z) * fade },
       probs: alignedProbs(this.p), stable: true, uncertain: sorted[0] - sorted[1] < P.uncertainMargin,
       coact: Math.min(this.p[xi], this.p[xe]), link: age > P.lossMs ? 'inertia' : 'ok', ageMs: Math.round(age),
+      // 6.2 — when the current command started, on the phone's clock: the MCU time of its first packet plus the clock
+      // offset (the least delayed arrival), so a packet held back by the radio is dated when it was measured. A game
+      // that judges timing («Ритм») dates the movement here; null before the first command and after a lost link.
+      since: this.onsetTs === null || this.clock.offset === null ? null : this.onsetTs + this.clock.offset,
+      packetMs: this.packetMs,
     };
   }
 
