@@ -21,7 +21,8 @@
     "verify:embed": "sh tools/verify-embed.sh",
     "check:supply-chain": "node tools/supply-chain.mjs",
     "test:tz": "node tools/tz-play.mjs",
-    "emulator:spppr": "node tools/spppr-emulator.mjs"
+    "emulator:spppr": "node tools/spppr-emulator.mjs",
+    "screencast": "node tools/screencast.mjs"
   },
   "devDependencies": {
     "axe-core": "4.14.0",
