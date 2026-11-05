@@ -54,6 +54,45 @@ export const REST_GIVE_UP_S = SESSION.restGiveUpS;
  */
 export const FLICKER = { windowS: 0.6, changes: 2 };
 
+/** The gesture scheme's deal, as before 6.1: each digit drawn from the pool, never the one before it again. */
+function dealFree(pool, n, rng) {
+  const code = [];
+  for (let i = 0; i < n; i++) {
+    let p; do { p = rng.pick(pool); } while (pool.length > 1 && p.id === code[i - 1]?.id);
+    code.push(p);
+  }
+  return code;
+}
+
+/**
+ * 05.11 — the deal of the channel schemes (Q&A of 04.11, answer 5: use both channels, none dominating). Until 6.1 each digit
+ * was drawn freely, and the pool holds three ways to close (normal, soft, strong) and two to open: the proportional codes of
+ * levels 4–7 had no opening digit at all (seed 3). Now the code is built: co-activations by their share of the pool
+ * (rounded), the rest split between closing and opening (the odd one by a coin), then ordered — the family with the most
+ * digits left first, ties by chance, never the same digit twice in a row — and each digit drawn within its family.
+ */
+function dealBalanced(pool, n, rng) {
+  const family = cmd => pool.filter(p => p.command === cmd);
+  const fams = { close: family(COMMAND.CLOSE), open: family(COMMAND.OPEN), switch: family(COMMAND.SWITCH) };
+  const left = { switch: Math.round((n * fams.switch.length) / pool.length) };
+  const m = n - left.switch, extra = m % 2 ? (rng() < 0.5 ? 'close' : 'open') : null;
+  left.close = Math.floor(m / 2) + (extra === 'close' ? 1 : 0);
+  left.open = Math.floor(m / 2) + (extra === 'open' ? 1 : 0);
+  const code = [];
+  for (let i = 0; i < n; i++) {
+    const prev = code[i - 1];
+    // A family whose only digit is the previous one cannot come next (in the threshold scheme every family is one digit).
+    const ok = Object.keys(left).filter(k => left[k] > 0 && fams[k].some(p => p.id !== prev?.id));
+    const pickable = ok.length ? ok : Object.keys(left).filter(k => left[k] > 0);
+    const most = Math.max(...pickable.map(k => left[k]));
+    const k = rng.pick(pickable.filter(f => left[f] === most));
+    const choices = fams[k].filter(p => p.id !== prev?.id);
+    code.push(rng.pick(choices.length ? choices : fams[k]));
+    left[k]--;
+  }
+  return code;
+}
+
 export class SafeGame extends Game {
   static id = 'safe';
   static title = 'Сейф';
@@ -66,11 +105,8 @@ export class SafeGame extends Game {
     // Graded prompts sit above the user's switch-on threshold (5.10: «слабо» was unreachable at sensitivity 0.45).
     const pool = PROMPTS[this.scheme].filter(p => p.from <= this.levelNumber)
       .map(p => (this.scheme === SCHEME.PROPORTIONAL && p.command !== COMMAND.SWITCH ? { ...p, band: reachableBand(p.band, this.onThreshold) } : p));
-    this.code = [];
-    for (let i = 0; i < this.level.code; i++) {
-      let p; do { p = this.rng.pick(pool); } while (pool.length > 1 && p.id === this.code[i - 1]?.id);
-      this.code.push({ ...p, state: 'wait' });
-    }
+    this.code = (this.scheme === SCHEME.GESTURE ? dealFree(pool, this.level.code, this.rng) : dealBalanced(pool, this.level.code, this.rng))
+      .map(p => ({ ...p, state: 'wait' }));
     this.index = 0; this.phase = 'rest'; this.restFor = 0; this.restWait = 0; this.holdFor = 0; this.cardTime = 0;
     this.reactions = []; this.wrongTime = 0; this.stats = {};
     this.confusion = new ConfusionMeter();

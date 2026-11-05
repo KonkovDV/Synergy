@@ -22,7 +22,7 @@ globalThis.matchMedia = () => ({ matches: false, addEventListener: noop });
 globalThis.history = { state: null, pushState: noop, back: noop };
 
 const { App } = await import('../src/app.js');
-const { emptyState } = await import('../src/core/storage.js');
+const { emptyState, parseState } = await import('../src/core/storage.js');
 const { dayKey, recordDayNote } = await import('../src/core/progress.js');
 const { calibrationScreen } = await import('../src/ui/settings.js');
 const { tutorialScreen } = await import('../src/ui/tutorial.js');
@@ -619,4 +619,21 @@ test('6.0: a gesture exercise names its set; two hands do not inherit it; an old
   assert.match(html, /набор жестов СПППР \(ТЗ\)/);
   const csv = reportCsv({ ...app.state, runs: [base] });
   assert.match(csv, /;synergy;/);
+});
+
+test('6.1 channel balance (Q&A of 04.11, answer 5): a finished exercise keeps how often A and B started; a backup keeps it', () => {
+  const app = fresh();
+  app.updateSettings({ scheme: 'threshold' });
+  const session = app.createSession({ game: 'flight', level: 1 });
+  let t = 0;
+  const hold = (target, ms) => { app.emulator.setTarget(target); for (const end = t + ms; t < end; t += 20) session.runner.step(t, 0.02); };
+  hold({ a: 0, b: 0 }, 400);
+  for (let i = 0; i < 3; i++) { hold({ a: 0.7, b: 0 }, 400); hold({ a: 0, b: 0 }, 300); hold({ a: 0, b: 0.7 }, 400); hold({ a: 0, b: 0 }, 300); }
+  session.game.done = true;
+  const { run } = app.finishSession(session);
+  assert.equal(run.uses.close, 3, JSON.stringify(run.uses));
+  assert.equal(run.uses.open, 3);
+  assert.ok(run.uses.closeS > 0.6 && run.uses.openS > 0.6);
+  const back = parseState(JSON.stringify(app.state));
+  assert.deepEqual(back.runs.at(-1).uses, run.uses);
 });

@@ -328,6 +328,14 @@ export const QUESTS = { sessionGapMin: 30, secondFromDay: 3, thirdFromDay: 10, x
  */
 export const TIME_SHARE = { target: [0.6, 0.8], idleCapS: 90 };
 
+/**
+ * 05.11 — the balance of the two channels (Q&A of the organizers, 04.11.2026, answer 5: «частоту их использования
+ * сбалансировать, без доминирования одного»; answer 30 names the imbalance among the faults of earlier games). A use is an
+ * entry into «Сжатие» (A) or «Раскрытие» (B) — core/channeluse.js. One channel used `dominance` times as often as the
+ * other dominates; below `minUses` uses of both there is no verdict (2 : 1 of three uses is noise, not a pattern).
+ */
+export const CHANNEL_BALANCE = { minUses: 6, dominance: 2 };
+
 export const STARS = [50, 70, 88]; // score thresholds for 1, 2, 3 stars
 
 export const XP = {
