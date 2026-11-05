@@ -11,6 +11,7 @@ import { SKILL_NAME, skillKeys, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest, sessionTopUp, mergeReports } from '../core/progress.js';
 import { RestMotion, restMotionAllowed } from '../core/restmotion.js';
 import { difficultyLabel } from '../core/adaptive.js';
+import { channelShares } from '../core/channels.js';
 import { adviseStop, EFFORT_LEVELS, checkinLight } from '../core/wellbeing.js';
 import { HoldConfirm } from '../core/handsfree.js';
 import { coachFeedback, coachMood } from './coach.js';
@@ -98,6 +99,16 @@ export function cleanPairText(details) {
   const parts = [line(details?.cleanClose, 'Чистота закрытия'), line(details?.cleanOpen, 'Чистота открытия')].filter(Boolean);
   // 100 % is «the other channel did not rise with the working one», not «no interference» glued to a low number.
   return parts.length ? `${parts.join('. ')}. 100 % — второй канал не поднимался вместе с рабочим. Игровая цифра, не оценка протеза.` : '';
+}
+
+/**
+ * 6.0 (answers 04.11, № 5): how often each channel of Stream 1 switched on, and the share of closing by switch-ons and by
+ * time. Both: holding an object keeps the closing channel on longer in any game of grasping (pure: tests/channels.test.mjs).
+ */
+export function channelText(c) {
+  if (!c) return '';
+  const { byOn, byTime } = channelShares(c);
+  return `Каналы: закрытие (A) включалось ${count(c.onA, FORMS.times)}, открытие (B) — ${count(c.onB, FORMS.times)}. Доля закрытия: по включениям ${byOn} %, по времени ${byTime ?? 0} %.`;
 }
 
 /** The isolation line under the skills (pure: tests/v531.test.mjs). */
@@ -280,6 +291,7 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
   const crossNote = Number.isInteger(d.crossings) ? h('p', { class: 'note' }, crossingsText(d.crossings)) : null;
   const cleanLine = cleanPairText(d);
   const cleanNote = cleanLine ? h('p', { class: 'note' }, cleanLine) : null;
+  const channelNote = run.channels ? h('p', { class: 'note' }, channelText(run.channels)) : null;
   const practiceNote = practiceText(d) ? h('p', { class: 'note' }, practiceText(d)) : null;
   const difficulty = !demo && !d.assessment && !run.retention && Number.isFinite(d.difficulty) && Math.abs(d.difficulty) > 0.2
     ? h('p', { class: 'note' }, `Сложность подстраивалась под вас: ${difficultyLabel(d.difficulty)}.`) : null;
@@ -312,7 +324,7 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
       effortCard,
       assessmentCard,
       replayCard(replay),
-      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote, cleanNote, practiceNote),
+      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote, cleanNote, channelNote, practiceNote),
       h('section', { class: 'card coach' }, h('div', { class: 'coach-head' }, mioAvatar(coachMood({ stars: run.stars, stopAdvice }), 52), h('b', {}, 'Мио советует')), ...advice.map(t => h('p', {}, t))),
       h('div', { class: 'sticky-actions' },
         h('button', { class: 'btn primary big', onclick: primary.go }, primary.label),

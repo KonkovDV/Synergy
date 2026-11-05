@@ -585,6 +585,8 @@ export class App {
     // 6.0: what the СПППР stream was like during the exercise (rate, jitter, gaps, forgiven noise) — for the report.
     const decoder = session.scheme === 'gesture' ? this.sppprDecoder(session.demo) : null;
     const stream = decoder && decoder.stats.accepted ? decoder.summary() : null;
+    // 6.0 (answers 04.11, № 5): how each channel of Stream 1 was used — in the schemes of two channels only.
+    const channels = session.scheme !== 'gesture' ? session.runner.usage?.summary() ?? null : null;
     const run = {
       id: crypto.randomUUID?.() ?? String(Date.now()), at: new Date().toISOString(),
       game: session.id, level: session.level, levelCount: session.entry.Game.levels.length,
@@ -600,7 +602,7 @@ export class App {
       ...(this.settings.prostheses === 'two' && !session.game.constructor.bimanual ? { side: this.settings.side } : {}),
       ...(Number.isInteger(session.formWeek) ? { formWeek: session.formWeek } : {}),
       // 5.30: what was wrong with the signal for 3 s or more — the specialist sees contact problems next to the results.
-      ...(signalIssues.length ? { signalIssues } : {}), ...(stream ? { stream } : {}), ...r,
+      ...(signalIssues.length ? { signalIssues } : {}), ...(stream ? { stream } : {}), ...(channels ? { channels } : {}), ...r,
     };
     const replay = session.game.replay?.() ?? null; // shown on the results screen, never saved
     if (session.demo) return { run, report: null, planBonus: 0, replay };

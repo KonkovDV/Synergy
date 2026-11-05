@@ -1,5 +1,6 @@
 // GameRunner — one training step: source → pipeline → hand → game. Shared by the app loop
 // and the headless tests, so what is tested is exactly what the player runs (DRY).
+import { ChannelUsage } from '../core/channels.js';
 
 export function toEmulatorTarget(t) {
   return t.gesture ? { gesture: t.gesture, effort: t.effort ?? 0.6, a: 0, b: 0 } : { a: t.a ?? 0, b: t.b ?? 0, gesture: null };
@@ -19,6 +20,7 @@ export class GameRunner {
     Object.assign(this, { game, pipeline, hand, source, emulator, autopilot, quality });
     this.intent = null;
     this.signalLost = false;
+    this.usage = new ChannelUsage(); // 6.0 (answers 04.11, № 5): switch-ons and time of each channel while the exercise runs
   }
 
   step(now, dt) {
@@ -27,6 +29,7 @@ export class GameRunner {
     this.quality?.push(frame);
     this.intent = this.pipeline.process(frame, now);
     this.signalLost = !this.intent.valid;
+    if (!this.game.paused) this.usage.add(this.intent, dt);
     this.hand.update(this.intent, dt);
     // No signal → the exercise freezes (not a failure of the user, cf. v3 watchdog).
     // The hand follows real time (control law); only the game world runs at the chosen pace.

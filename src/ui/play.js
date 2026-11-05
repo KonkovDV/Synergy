@@ -18,6 +18,7 @@ import { audioClock, playMusic } from '../services/audio.js';
 import { freePlayCaution, adviseStop } from '../core/wellbeing.js';
 import { secondsToday, dayKey, trainingDays } from '../core/progress.js';
 import { HoldConfirm } from '../core/handsfree.js';
+import { emulatorPads } from '../core/hands.js';
 import { howFor } from '../games/registry.js';
 
 
@@ -93,12 +94,14 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const renderControls = () => {
     if (demo) controls.replaceChildren(h('p', { class: 'pads-note' }, 'Демо: автопилот управляет эмулятором ЭМГ — тот же путь сигнала, что у вас. Результат не сохраняется.'));
     else {
+      // 6.0 (answers 04.11, № 13): pads only for the on-screen emulator and the lab bridge (core/hands.js).
+      const shown = emulatorPads({ demo, bridge: bridgeMode, wsUrl: s.wsUrl });
       // 5.30 — «Две руки»: a pair of pads per arm (keys: left F/D, right J/K); the left arm is `emulator`, the right `emulator2`.
       const duo = session.game.constructor.bimanual;
-      const pads = duo ? createDuoPads(app.emulator, app.emulator2)
+      const pads = shown === 'none' ? null : duo ? createDuoPads(app.emulator, app.emulator2)
         : session.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator, { mirror: !!s.mirrorHint }) : createTwoChannelPads(app.emulator);
-      // In bridge mode the pads stay as a remote for the raw-EMG lab (bridge/ws_bridge.py --lab).
-      controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, qualityInfo, h('small', {}, s.wsUrl ? `Адрес: ${s.wsUrl}. Площадки ниже — пульт лаборатории (--lab).` : 'Кадры приходят от протеза или эмулятора напрямую (без адреса).')), pads] : [pads]));
+      const note = shown === 'lab' ? `Адрес: ${s.wsUrl}. Площадки ниже — пульт лаборатории (--lab).` : 'Сигнал приходит от протеза или приложения: управляют только мышцы, экранных площадок нет.';
+      controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, qualityInfo, h('small', {}, note)), pads] : [pads]).filter(Boolean));
       if (bridgeMode) controls.classList.add('compact');
     }
   };

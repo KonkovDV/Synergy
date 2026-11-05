@@ -10,6 +10,7 @@ import { confusionMatrix, assessmentHistory, completionChange } from '../core/an
 import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS, checkinLight } from '../core/wellbeing.js';
 import { sumTime, timedShare, shareVerdict } from '../core/timeshare.js';
 import { susScore, tlxScore } from '../core/survey.js';
+import { sumChannels, channelShares } from '../core/channels.js';
 import { TIME_SHARE } from '../config.js';
 
 /** 6.0 — the time of the period by kind (core/timeshare.js) and the share of the task's band. */
@@ -179,9 +180,11 @@ export const csvTable = rows => rows.map(row => row.map(csvCell).join(';')).join
 
 export function reportCsv(state) {
   const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'thresholds', 'gesture_set', 'prosthesis_side', 'arm_pose', 'unreleased', 'rest_missed', 'cross_on', 'spilled', 'clean_close', 'clean_open',
+    'channel_on_a', 'channel_on_b', 'channel_time_a_s', 'channel_time_b_s', // 6.0, answers 04.11 № 5
     'stream_rate_hz', 'stream_jitter_ms', 'stream_gaps', 'stream_forgiven', 'stream_rejected', 'stream_confidence', 'stream_coactivation', 'signal_issues'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
     ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', recordedGestureSet(r), r.side ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '', r.details?.crossings ?? '', r.details?.spilled ?? '', r.details?.cleanClose ?? '', r.details?.cleanOpen ?? '',
+    r.channels?.onA ?? '', r.channels?.onB ?? '', r.channels?.timeA ?? '', r.channels?.timeB ?? '',
     r.stream?.rateHz ?? '', r.stream?.jitterMs ?? '', r.stream?.gaps ?? '', r.stream?.forgiven ?? '', r.stream?.rejected ?? '', r.stream?.meanConfidence ?? '', r.stream?.coactivation ?? '', signalIssuesCode(r.signalIssues)]);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
@@ -211,6 +214,8 @@ export function reportHtml(state, gameTitle = id => id, { periodDays = null, tod
   const quality = signalIssueSummary(runs);
   const time = timeShareOf(p, keys);
   const streamRuns = runs.filter(r => r.stream).slice(-10).reverse();
+  const channels = sumChannels(runs); // 6.0, answers 04.11 № 5
+  const shares = channelShares(channels);
   const feedback = (p.feedback ?? []).slice(-5).reverse();
   const name = s.name ? escapeHtml(s.name) : 'пользователь';
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -230,6 +235,10 @@ ${table(['Схема управления', 'Сторона', 'Протез', '�
 ${table(['Игра с таймингом, мин', 'Другие механики, мин', 'Отдых между упражнениями, мин', 'Доля игры с таймингом', 'Ориентир ТЗ'],
   [[time.timedMin, time.otherMin, time.restMin, time.share === null ? 'мало данных' : `${time.share} %`, `${Math.round(TIME_SHARE.target[0] * 100)}–${Math.round(TIME_SHARE.target[1] * 100)} %`]])}
 <p class="muted">«Игра с таймингом» — упражнение идёт и сигнал жив: каждую секунду нужно включиться, переключиться или удержать. «Другие механики» — заставки и итоги, отсчёт, главная, гнездо Жар-птицы, «Азбука», цели. Отдых между упражнениями — пауза для мышц, в долю не входит. Ниже ориентира — занятие больше уходит на меню; выше — меньше пауз, стоит следить за усталостью.</p>
+${channels ? `<h2>Баланс каналов (схемы с двумя каналами)</h2>
+${table(['Упражнений', 'Включений закрытия (A)', 'Включений открытия (B)', 'Доля A по включениям', 'Закрытие включено, с', 'Открытие включено, с', 'Доля A по времени'],
+  [[channels.runs, channels.onA, channels.onB, shares.byOn === null ? '—' : `${shares.byOn} %`, channels.timeA, channels.timeB, shares.byTime === null ? '—' : `${shares.byTime} %`]])}
+<p class="muted">Сколько раз включался каждый канал и сколько секунд был включён, пока шли упражнения. Удержание предмета естественно дольше занимает канал закрытия, поэтому баланс видно по включениям, а время — для контекста. Игровая мера, не оценка протеза.</p>` : ''}
 ${streamRuns.length ? `<h2>Поток СПППР (последние упражнения в режиме жестов)</h2>
 ${table(['Дата', 'Игра', 'Пакетов/с', 'Джиттер, мс', 'Пауз > 200 мс', 'Прощено шумов', 'Отклонено пакетов', 'Уверенность движения, %', 'Сгибатели + разгибатели вместе, %'],
   streamRuns.map(r => [ruDate(r.at), gameTitle(r.game), r.stream.rateHz ?? '—', r.stream.jitterMs ?? '—', r.stream.gaps ?? 0, r.stream.forgiven ?? 0, r.stream.rejected ?? 0, r.stream.meanConfidence ?? '—', r.stream.coactivation ?? '—']))}
