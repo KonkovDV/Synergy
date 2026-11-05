@@ -1,7 +1,8 @@
 // docs/evidence.json — the numbers of a build in one place (5.17, the practice of the team's repositories: Mandat
 // build_evidence.py, RepairFlow attest.py). The e2e scripts leave their summaries in tools/.cache/evidence/; this
 // script adds the tests, the release files and the pictures, writes docs/evidence.json and the README table between
-// <!-- evidence:begin --> and <!-- evidence:end -->. The submission gate checks that the three agree.
+// <!-- evidence:begin --> and <!-- evidence:end -->, and sets the APK size and the test count wherever NUMBER_DOCS quote
+// them (6.0, 04.11). The submission gate checks that they agree.
 // Usage: node tools/evidence.mjs [--no-tests]   (after tools/build-apk.sh, npm run e2e:a11y, npm run audit:layout)
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -9,6 +10,7 @@ import { spawnSync } from 'node:child_process';
 import { release, platform } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { NUMBER_DOCS, withApkSize, withTestCount } from './number-docs.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const cache = join(root, 'tools', '.cache', 'evidence');
@@ -99,7 +101,18 @@ export function readmeBlock(text) {
   return i >= 0 && j > i ? text.slice(i + b.length, j).trim() : null;
 }
 
-/** Writes docs/evidence.json and the README table between the markers. */
+/**
+ * The numbers of the evidence wherever the gate reads them in prose (tools/number-docs.mjs): the APK size, and the test
+ * count once the suite has run. A number not measured (no APK built, no test run) is left as the documents have it.
+ */
+export function withEvidenceNumbers(text, evidence) {
+  let out = text;
+  if (evidence.apk) out = withApkSize(out, evidence.apk.kb);
+  if (evidence.tests?.total) out = withTestCount(out, evidence.tests.total);
+  return out;
+}
+
+/** Writes docs/evidence.json, the README table between the markers and the numbers quoted in NUMBER_DOCS. */
 function publish(evidence) {
   writeFileSync(join(root, 'docs', 'evidence.json'), `${JSON.stringify(evidence, null, 1)}\n`);
   const readme = join(root, 'README.md');
@@ -107,6 +120,10 @@ function publish(evidence) {
   const [b, e] = README_MARKERS;
   if (readmeBlock(text) === null) throw new Error(`README.md: нет маркеров ${b} … ${e}`);
   writeFileSync(readme, text.replace(new RegExp(`${b}[\\s\\S]*?${e}`), `${b}\n${renderTable(evidence)}\n${e}`));
+  for (const doc of NUMBER_DOCS) {
+    const path = join(root, doc), before = readFileSync(path, 'utf8'), after = withEvidenceNumbers(before, evidence);
+    if (after !== before) writeFileSync(path, after);
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
