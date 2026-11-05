@@ -63,18 +63,28 @@ export function tracePhase(t, t0) {
 /**
  * The three numbers of a finished profile, from the running sums (no sample list is kept).
  * nRMSE — root mean square error divided by the height of the ramp; inCorridor — share of time inside the
- * level's own tolerance (not the adapted one); overshoot — how far the hold rose above the target, as a share
- * of the ramp height. `n`, `sse` and `inside` are in seconds (`sse` is the time-weighted sum of squared errors).
+ * level's own tolerance (not the adapted one); overshoot — how far the hold went past the target in the direction of
+ * the ramp (above it on the A side, below it on the B side, 6.1), as a share of the ramp height. `holdPeak` — the
+ * farthest altitude of the hold in that direction. `n`, `sse` and `inside` are in seconds (`sse` is the time-weighted
+ * sum of squared errors).
  */
 export function traceMetrics({ n, sse, inside, holdPeak }, { goal = TRACE.goal, tol }) {
   if (!n) return null;
   const height = Math.abs(goal - TRACE.rest) || 1;
+  const away = Math.sign(goal - TRACE.rest) || 1;
   return {
     nrmse: Math.round(Math.sqrt(sse / n) / height * 1000) / 1000,
     inCorridor: Math.round(inside / n * 100),
-    overshoot: Math.round(Math.max(0, (holdPeak - goal) / height) * 100),
+    overshoot: Math.round(Math.max(0, (away * (holdPeak - goal)) / height) * 100),
   };
 }
+
+/**
+ * 6.1 — the side of the follow segment (Q&A of 04.11, answer 5: both channels, none dominating). Until 6.1 the ramp and
+ * the wave always sat above the middle line: proportional control of A only. The side is drawn per exercise (the game's
+ * seed), the B side is the mirror around the middle — the same height, the same speed, done by the extensors.
+ */
+export const mirrorAlt = (alt, side) => (side > 0 ? alt : 1 - alt);
 
 /** Altitude of the slow wave at game time `t` (the centre outside the segment, so the bird is not asked to jump). */
 export function sineTarget(t, t0, { center = SINE.center, amp = SINE.amp, periodS = SINE.periodS } = {}) {
@@ -135,7 +145,7 @@ export class FlightGame extends Game {
   cue(target) {
     if (!target || target.at - this.time > CUE_AHEAD_S) return this.baseHint;
     if (target.kind === 'trace' || target.kind === 'sine') {
-      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at);
+      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at, target);
       if (Math.abs(want - this.alt) <= this.tol) return 'Держите линию';
       return want > this.alt ? 'Линия выше' : 'Линия ниже';
     }
@@ -147,11 +157,14 @@ export class FlightGame extends Game {
 
   buildTrack() {
     const L = this.level, items = [];
-    let t = 2.0, streamsLeft = L.streams;
+    let t = 2.0, streamsLeft = L.streams, sideRings = 0;
     const streamEvery = L.streams ? Math.floor(L.rings / (L.streams + 1)) : Infinity;
+    // 6.1: one draw per exercise, before the rings (Q&A of 04.11, answer 5) — which side the follow segment takes.
+    const followSide = this.scheme !== SCHEME.THRESHOLD && this.levelNumber >= TRACE.fromLevel ? (this.rng() < 0.5 ? 1 : -1) : 1;
     for (let i = 0; i < L.rings; i++) {
-      // Alternate sides so both channels work; every 4th ring is a relaxation ring at the centre.
-      const side = i % 4 === 3 ? 0 : (i % 2 ? -1 : 1);
+      // Alternate sides so both channels work; every 4th ring is a relaxation ring at the centre. 6.1: the side rings
+      // alternate among themselves — until 6.1 the centre ring took the place of every second low ring (4 up, 2 down).
+      const side = i % 4 === 3 ? 0 : (sideRings++ % 2 ? -1 : 1);
       // A side ring must need activation even at the widest adaptive tolerance (resting must not hit it).
       const offset = Math.max(1.7 * L.tol, this.rng.range(0.35, 1) * L.spread);
       const alt = Math.min(0.96, Math.max(0.04, 0.5 + side * offset));
@@ -159,10 +172,11 @@ export class FlightGame extends Game {
       t += L.gap;
       if (this.scheme !== SCHEME.THRESHOLD && this.levelNumber >= TRACE.fromLevel && i === Math.floor(L.rings / 2) - 1) {
         if (this.levelNumber >= SINE.fromLevel) {
-          items.push({ kind: 'sine', at: t, end: t + SINE_SPAN_S, side: 1, done: false, n: 0, sse: 0, inside: 0 });
+          items.push({ kind: 'sine', at: t, end: t + SINE_SPAN_S, side: followSide, center: mirrorAlt(SINE.center, followSide), amp: followSide * SINE.amp, done: false, n: 0, sse: 0, inside: 0 });
           t += SINE_SPAN_S + 0.8;
         } else {
-          items.push({ kind: 'trace', at: t, end: t + TRACE_SPAN_S, goal: TRACE.goal, side: 1, done: false, n: 0, sse: 0, inside: 0, holdPeak: TRACE.goal });
+          const goal = mirrorAlt(TRACE.goal, followSide);
+          items.push({ kind: 'trace', at: t, end: t + TRACE_SPAN_S, goal, side: followSide, done: false, n: 0, sse: 0, inside: 0, holdPeak: goal });
           t += TRACE_SPAN_S + 0.8;
         }
       }
@@ -196,9 +210,10 @@ export class FlightGame extends Game {
     const target = this.nextTarget();
     // Open interval: at the exact end the profile is already «rest», and that one frame used to count as a miss.
     if (target && (target.kind === 'trace' || target.kind === 'sine') && this.time > target.at && this.time < target.end) {
-      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at);
+      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at, target);
       accumulateFollow(target, want, this.alt, dt, this.level.tol);
-      if (target.kind === 'trace' && tracePhase(this.time, target.at) === 'hold') target.holdPeak = Math.max(target.holdPeak, this.alt);
+      // The farthest point of the hold in the ramp's direction: above on the A side, below on the B side.
+      if (target.kind === 'trace' && tracePhase(this.time, target.at) === 'hold') target.holdPeak = target.side > 0 ? Math.max(target.holdPeak, this.alt) : Math.min(target.holdPeak, this.alt);
     }
     if (target && target.side !== 0 && target.kind !== 'trace' && target.kind !== 'sine') this.separation.add(intent, target.side > 0, dt);
     this.hint = this.cue(target);
@@ -266,7 +281,7 @@ export class FlightGame extends Game {
   autopilot(intent) {
     const target = this.nextTarget();
     const alt = target?.kind === 'trace' ? traceTarget(this.time, target.at, target.goal)
-      : target?.kind === 'sine' ? sineTarget(this.time, target.at) : target ? target.alt : 0.5;
+      : target?.kind === 'sine' ? sineTarget(this.time, target.at, target) : target ? target.alt : 0.5;
     if (this.scheme === SCHEME.THRESHOLD) {
       const lead = target && target.kind === 'ring' ? 0.02 : 0.015;
       if (this.alt < alt - lead) return { a: 0.6, b: 0 };
@@ -366,7 +381,7 @@ export class FlightGame extends Game {
       const samples = s.kind === 'sine' ? 48 : 24, pts = [];
       for (let i = 0; i <= samples; i++) {
         const tt = s.at + (s.end - s.at) * i / samples;
-        pts.push([gx + (tt - this.time) * pps, y(s.kind === 'trace' ? traceTarget(tt, s.at, s.goal) : sineTarget(tt, s.at))]);
+        pts.push([gx + (tt - this.time) * pps, y(s.kind === 'trace' ? traceTarget(tt, s.at, s.goal) : sineTarget(tt, s.at, s))]);
       }
       if (deco) lightTrail(ctx, pts, COLORS.good, 2.4, dark ? 1 : 0.9);
       else { ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.strokeStyle = COLORS.good; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke(); }

@@ -1,5 +1,8 @@
 // GameRunner — one training step: source → pipeline → hand → game. Shared by the app loop
 // and the headless tests, so what is tested is exactly what the player runs (DRY).
+// 05.11: the runner also counts how often each channel's command starts while the exercise runs (core/channeluse.js) —
+// one place for every game, the two-handed one included.
+import { ChannelUse, sumUses } from '../core/channeluse.js';
 
 export function toEmulatorTarget(t) {
   return t.gesture ? { gesture: t.gesture, effort: t.effort ?? 0.6, a: 0, b: 0 } : { a: t.a ?? 0, b: t.b ?? 0, gesture: null };
@@ -19,6 +22,7 @@ export class GameRunner {
     Object.assign(this, { game, pipeline, hand, source, emulator, autopilot, quality });
     this.intent = null;
     this.signalLost = false;
+    this.uses = new ChannelUse();
   }
 
   step(now, dt) {
@@ -30,7 +34,10 @@ export class GameRunner {
     this.hand.update(this.intent, dt);
     // No signal → the exercise freezes (not a failure of the user, cf. v3 watchdog).
     // The hand follows real time (control law); only the game world runs at the chosen pace.
-    if (!this.signalLost && !this.game.paused) this.game.update(dt * this.game.speed, this.intent, this.hand);
+    if (!this.signalLost && !this.game.paused && !this.game.done) {
+      this.game.update(dt * this.game.speed, this.intent, this.hand);
+      this.uses.add(this.intent, dt);
+    }
     return this.intent;
   }
 }
@@ -60,7 +67,11 @@ export class DuoRunner {
     this.emulator = emulators[lead] ?? null;
     this.intent = null;
     this.signalLost = false;
+    this.sideUses = { left: new ChannelUse(), right: new ChannelUse() };
   }
+
+  /** The uses of both arms: each arm's commands start on its own, the run keeps their sum. */
+  get uses() { return { summary: () => sumUses([this.sideUses.left.summary(), this.sideUses.right.summary()]) }; }
 
   step(now, dt) {
     if (this.autopilot && this.intent) {
@@ -76,7 +87,10 @@ export class DuoRunner {
     }
     this.intent = { ...sides[this.lead], valid: sides.left.valid && sides.right.valid, sides };
     this.signalLost = !this.intent.valid;
-    if (!this.signalLost && !this.game.paused) this.game.update(dt * this.game.speed, this.intent, this.hands);
+    if (!this.signalLost && !this.game.paused && !this.game.done) {
+      this.game.update(dt * this.game.speed, this.intent, this.hands);
+      for (const side of ['left', 'right']) this.sideUses[side].add(sides[side], dt);
+    }
     return this.intent;
   }
 }

@@ -16,6 +16,7 @@ import { HoldConfirm } from '../core/handsfree.js';
 import { coachFeedback, coachMood } from './coach.js';
 import { CALIBRATION_ADAPT, HANDS_FREE, PET, SESSION } from '../config.js';
 import { QUALITY_TIPS, signalIssuesText } from '../core/signalquality.js';
+import { channelBalance } from '../core/channeluse.js';
 import { signalMeter, segmented, mioAvatar } from './widgets.js';
 
 /** Hands-free confirm of the primary action (results and rest): the same rule as the game start, a bit longer. */
@@ -105,6 +106,26 @@ export function crossingsText(n) {
   // Zero crossings is not «clean»: the other channel can rise under its switch-on line and still lower the percent.
   return n ? `Второй канал включался, пока работал первый: ${count(n, FORMS.times)}. Начните с половины силы — так его легче не задеть.`
     : 'Второй канал ни разу не пересёк линию включения, пока работал первый.';
+}
+
+/** «вдвое», «втрое», «вчетверо», then «в 5 раз». */
+const timesWord = n => ({ 2: 'вдвое', 3: 'втрое', 4: 'вчетверо' }[n] ?? `в ${n} раз`);
+
+/**
+ * 6.1 — how often each channel's command started (Q&A of 04.11, answer 5: balance the use of both channels). Numbers and
+ * the lean only: one exercise cannot tell a lean of its tasks («Мастерская» changes grips by B twice) from a lean of the
+ * person — the specialist reads that in the report over a period. Pure: tests/balance.test.mjs.
+ */
+export function usesText(uses) {
+  if (!uses || uses.close + uses.open === 0) return '';
+  const both = uses.switch ? `, коактивация — ${count(uses.switch, FORMS.times)}` : '';
+  const base = `Команды каналов: сжатие (A) — ${count(uses.close, FORMS.times)}, раскрытие (B) — ${count(uses.open, FORMS.times)}${both}.`;
+  const b = channelBalance(uses);
+  if (!b) return base;
+  if (b.verdict === 'balanced') return `${base} Оба канала работали без перекоса.`;
+  const [more, less] = b.verdict === 'close' ? ['A', 'B'] : ['B', 'A'];
+  const lo = Math.min(uses.close, uses.open), hi = Math.max(uses.close, uses.open);
+  return `${base} ${lo ? `${more} начинал команду ${timesWord(Math.round(hi / lo))} чаще ${less}` : `Работал только ${more}`}: игровая цифра, подробнее — в отчёте.`;
 }
 
 /** Cubes and rings (5.32). A game rate, not a Box and Blocks score. */
@@ -278,6 +299,8 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
     h('p', { class: 'note' }, 'Это отметится в отчёте специалисту. Если повторяется — покажите отчёт протезисту.')) : null;
   // 5.31 — isolation in the words of the meetup of 21.10: how often the passive channel came on while the other worked.
   const crossNote = Number.isInteger(d.crossings) ? h('p', { class: 'note' }, crossingsText(d.crossings)) : null;
+  const usesLine = usesText(run.uses);
+  const usesNote = usesLine ? h('p', { class: 'note' }, usesLine) : null;
   const cleanLine = cleanPairText(d);
   const cleanNote = cleanLine ? h('p', { class: 'note' }, cleanLine) : null;
   const practiceNote = practiceText(d) ? h('p', { class: 'note' }, practiceText(d)) : null;
@@ -312,7 +335,7 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
       effortCard,
       assessmentCard,
       replayCard(replay),
-      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote, cleanNote, practiceNote),
+      h('section', { class: 'card' }, h('h2', {}, 'Навыки'), ...skills, crossNote, cleanNote, usesNote, practiceNote),
       h('section', { class: 'card coach' }, h('div', { class: 'coach-head' }, mioAvatar(coachMood({ stars: run.stars, stopAdvice }), 52), h('b', {}, 'Мио советует')), ...advice.map(t => h('p', {}, t))),
       h('div', { class: 'sticky-actions' },
         h('button', { class: 'btn primary big', onclick: primary.go }, primary.label),

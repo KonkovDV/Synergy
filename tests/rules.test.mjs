@@ -43,7 +43,7 @@ test('rules: every numeric constant of the game rules has a row', () => {
   const leaves = (v, path) => (typeof v === 'number' ? [path] : v && typeof v === 'object'
     ? Object.entries(v).flatMap(([k, x]) => leaves(x, Array.isArray(v) ? `${path}[${k}]` : `${path}.${k}`)) : []);
   // The groups that make the game rules; SIGNAL is signal processing — only its co-activation and switch-on rules count.
-  const groups = ['STARS', 'XP', 'SESSION', 'CHILD', 'ADAPT', 'GUIDANCE', 'SPACING', 'WELLBEING', 'PET', 'MISSIONS', 'LOCK'];
+  const groups = ['STARS', 'XP', 'SESSION', 'CHILD', 'ADAPT', 'GUIDANCE', 'SPACING', 'WELLBEING', 'PET', 'MISSIONS', 'LOCK', 'CHANNEL_BALANCE'];
   const missing = [...groups.flatMap(g => leaves(config[g], g)), 'SIGNAL.coThreshold', 'SIGNAL.coOnsetWindowMs', 'SIGNAL.coHysteresis', 'SIGNAL.onThreshold',
     'SETTINGS_RANGES.weeklyGoal.min', 'SETTINGS_RANGES.weeklyGoal.max'].filter(p => !covered(p));
   assert.deepEqual(missing, [], 'add a row to «Константы» in docs/GAME_RULES.md');

@@ -10,6 +10,7 @@ import { SCHEME, GESTURE_BY_ID } from './vocabulary.js';
 import { GESTURE_SET_IDS } from './gesture-set.js';
 import { cleanSignalIssues } from './signalquality.js';
 import { SPPPR_DICTIONARIES } from './spppr.js';
+import { cleanUses } from './channeluse.js';
 import { cleanOutfit } from './pet.js';
 import { validMission, cleanMissionPass } from './missions.js';
 import { validTourState } from './tours.js';
@@ -296,6 +297,7 @@ export function parseState(raw, catalog = null) {
     if (r.formWeek !== undefined && !(Number.isInteger(r.formWeek) && r.formWeek >= 0 && r.formWeek < 100000)) { const { formWeek, ...rest } = r; r = rest; } // parallel form of the skill check: a week index
     if (r.signalIssues !== undefined) { const { signalIssues, ...rest } = r; r = rest; const kept = cleanSignalIssues(signalIssues); if (kept.length) r.signalIssues = kept; } // 5.30
     if (r.stream !== undefined) { const { stream, ...rest } = r; r = rest; const kept = cleanStream(stream); if (kept) r.stream = kept; } // 6.0
+    if (r.uses !== undefined) { const { uses, ...rest } = r; r = rest; const kept = cleanUses(uses); if (kept) r.uses = kept; } // 6.1: channel balance
     if (isObject(r.details)) {
       const details = { ...r.details };
       let dropped = false;

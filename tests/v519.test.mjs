@@ -57,7 +57,7 @@ test('the specialist report and the CSV carry the protocol: its table, a quick_s
   assert.match(html, /H2\. Открыто быстрым стартом<\/td><td>1 из 2 упражнений; дней — 1/);
   const [head, ...rows] = reportCsv(st).split('\n');
   const col = head.split(';').indexOf('quick_start');
-  assert.ok(col > 0 && head.endsWith('rest_missed;cross_on;spilled;clean_close;clean_open;stream_rate_hz;stream_jitter_ms;stream_gaps;stream_forgiven;stream_rejected;stream_confidence;stream_coactivation;stream_classes;signal_issues')); // signal quality stays last; cleanliness of each channel and (6.0) the СПППР stream (04.11: its dictionary) sit before it
+  assert.ok(col > 0 && head.endsWith('rest_missed;cross_on;spilled;clean_close;clean_open;stream_rate_hz;stream_jitter_ms;stream_gaps;stream_forgiven;stream_rejected;stream_confidence;stream_coactivation;stream_classes;uses_close;uses_open;uses_switch;signal_issues')); // signal quality stays last; cleanliness of each channel, (6.0) the СПППР stream (6.1: its dictionary) and (6.1) the uses of the channels sit before it
   assert.deepEqual(rows.map(r => r.split(';')[col]), ['1', '0']);
 });
 
