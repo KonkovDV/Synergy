@@ -8,7 +8,9 @@ Use it to plug ANY emulator or sensor into the game (Settings → Источни
                                                 a packet of the task {"timestamp_ms":..,"dist":{..}} is forwarded once,
                                                 as it came (6.0: node tools/spppr-emulator.mjs | … --stdin)
   python3 bridge/ws_bridge.py --lab             4-ch raw synthetic EMG → filter → features → LDA (7 gestures);
-                                                the on-screen pads of the game choose what to synthesize
+                                                the on-screen pads of the game choose what to synthesize: the lab
+                                                greets every client with {"type":"bridge-hello","intents":true}, and only
+                                                then the game shows its pads (6.1; with real EMG — no multi-touch)
                                                 (needs numpy/scipy/scikit-learn: pip install -r lab/requirements.txt)
   python3 bridge/ws_bridge.py --lab --spppr     the same lab, but each decision is the packet of the task
                                                 {"timestamp_ms": MCU time, "dist": {7 states}}
@@ -114,7 +116,10 @@ class StdinSource:
 
 class LabSource:
     """Raw-EMG lab: the game sends {"type":"intent","gesture":..,"effort":..} or {"a":..,"b":..}.
-    With spppr=True each decision goes out as the packet of the task (MCU time from the bridge's start)."""
+    With spppr=True each decision goes out as the packet of the task (MCU time from the bridge's start).
+    listens: it reads the pads of the game — the bridge tells every client so (6.1, the game shows its remote)."""
+    listens = True
+
     def __init__(self, spppr=False):
         self.spppr = spppr
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lab'))
@@ -165,6 +170,10 @@ class Bridge:
             return await self.refuse(writer, '503 Service Unavailable', 'слишком много клиентов')
         accept = base64.b64encode(hashlib.sha1((key + GUID).encode()).digest()).decode()
         writer.write(f'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: {accept}\r\n\r\n'.encode())
+        # 6.1 (Q&A of 04.11, answer 13: with real EMG no multi-touch) — the game shows its pads only to a source that reads
+        # them. The lab says so before its first frame; a device or a recording says nothing, and the game shows no pads.
+        if getattr(self.source, 'listens', False):
+            writer.write(self.encode(json.dumps({'type': 'bridge-hello', 'intents': True})))
         await writer.drain()
         self.clients.add(writer)
         print(f'+ клиент ({len(self.clients)})', flush=True)

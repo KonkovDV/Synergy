@@ -744,11 +744,9 @@ export class App {
     return next;
   }
 
-  /** Tells a bidirectional lab what the on-screen pads ask for (only when it changes). */
+  /** Tells a bidirectional lab what the on-screen pads ask for (once per change and per connection: BridgeSource.sendIntent). */
   forwardIntent() {
-    if (!this.bridge) return;
-    const msg = JSON.stringify({ type: 'intent', ...this.emulator.target });
-    if (msg !== this.lastIntentMsg) { this.lastIntentMsg = msg; this.bridge.send(JSON.parse(msg)); }
+    this.bridge?.sendIntent({ type: 'intent', ...this.emulator.target });
   }
 
   frame(now) {

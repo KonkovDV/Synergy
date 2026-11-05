@@ -24,6 +24,17 @@ import { howFor } from '../games/registry.js';
 /** Hints that flip with the signal (spaced for screen readers); everything else is a task and is said promptly. */
 const FEEDBACK_HINT = /^(Держите|Сильнее|Слабее|Слабо|Сильно|Отлично|Несите)/;
 
+/**
+ * 6.1 — the controls under an external source (Q&A of 04.11, answer 13: touch is for menus, settings and emulation; with
+ * real EMG no multi-touch — one area for the healthy hand, the rest by EMG). The pads of the emulator appear only for a
+ * source that reads them — the raw-EMG lab says so on connect (`bridge-hello`, bridge/ws_bridge.py --lab). A device, a
+ * recording or the prosthesis through the host app gets no pads. Pure: tests/pads.test.mjs.
+ */
+export function bridgeControls({ wsUrl = '', listens = false } = {}) {
+  if (listens) return { pads: true, note: `${wsUrl ? `Адрес: ${wsUrl}. ` : ''}Площадки ниже — пульт лаборатории сырой ЭМГ.` };
+  return { pads: false, note: wsUrl ? `Адрес: ${wsUrl}. Управление только сигналом: площадок эмулятора нет.` : 'Кадры приходят от протеза или эмулятора напрямую (без адреса). Управление только сигналом.' };
+}
+
 export function playScreen(app, { game, level, retention = false, plan = false, demo = false, pose = null, quick = false }) {
   loadSprites(roomPictures(game)); // the room of this game only — not the four rooms at startup
   const s = app.settings;
@@ -90,6 +101,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   };
 
   const controls = h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' });
+  let shownRemote = null; // whether the lab's remote is on the screen (a «bridge-hello» may come after the screen opened)
   const renderControls = () => {
     if (demo) controls.replaceChildren(h('p', { class: 'pads-note' }, 'Демо: автопилот управляет эмулятором ЭМГ — тот же путь сигнала, что у вас. Результат не сохраняется.'));
     else {
@@ -97,13 +109,19 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       const duo = session.game.constructor.bimanual;
       const pads = duo ? createDuoPads(app.emulator, app.emulator2)
         : session.scheme === SCHEME.GESTURE ? createGesturePads(app.emulator, { mirror: !!s.mirrorHint }) : createTwoChannelPads(app.emulator);
-      // In bridge mode the pads stay as a remote for the raw-EMG lab (bridge/ws_bridge.py --lab).
-      controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, qualityInfo, h('small', {}, s.wsUrl ? `Адрес: ${s.wsUrl}. Площадки ниже — пульт лаборатории (--lab).` : 'Кадры приходят от протеза или эмулятора напрямую (без адреса).')), pads] : [pads]));
+      // 6.1: under an external source the pads are a remote only for a source that reads them (bridgeControls above).
+      const remote = bridgeMode ? bridgeControls({ wsUrl: s.wsUrl, listens: !!app.bridge?.listens }) : null;
+      shownRemote = remote?.pads ?? null;
+      controls.replaceChildren(...(bridgeMode ? [h('div', { class: 'bridge-panel' }, h('b', {}, 'Внешний источник'), bridgeInfo, qualityInfo, h('small', {}, remote.note)), ...(remote.pads ? [pads] : [])] : [pads]));
       if (bridgeMode) controls.classList.add('compact');
     }
   };
   renderControls();
-  const updateBridge = status => { bridgeInfo.textContent = bridgeLine(app.bridge, status); };
+  const updateBridge = status => {
+    bridgeInfo.textContent = bridgeLine(app.bridge, status);
+    // The lab greets on connect, maybe after this screen opened: its remote appears then (and goes when it leaves).
+    if (shownRemote !== null && shownRemote !== !!app.bridge?.listens) renderControls();
+  };
 
   const badge = retention ? 'Без подсказки' : demo ? 'Демо' : plan ? 'План дня' : '';
   const header = h('header', { class: 'play-top' },

@@ -1,5 +1,5 @@
 """Red Team tests of the WebSocket bridge (standard library only): python -m unittest bridge/test_ws_bridge.py"""
-import asyncio, base64, os, struct, sys, unittest
+import asyncio, base64, json, os, struct, sys, unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ws_bridge import Bridge, origin_allowed, clean_intent, is_task_packet, GESTURES, MAX_PAYLOAD
 
@@ -60,6 +60,28 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         finally:
             writer.close()
         return data
+
+    async def first_message(self, source):
+        """The first text frame the bridge sends to a new client, or None if it says nothing within 0.3 s."""
+        self.bridge.source = source
+        _, reader, writer = await self.handshake()
+        try:
+            head = await asyncio.wait_for(reader.readexactly(2), 0.3)
+            n = head[1] & 0x7F
+            if n == 126: n = struct.unpack('!H', await reader.readexactly(2))[0]
+            return (await reader.readexactly(n)).decode()
+        except asyncio.TimeoutError:
+            return None
+        finally:
+            writer.close()
+
+    async def test_a_source_that_reads_the_pads_says_so_and_only_it(self):
+        # 6.1 (Q&A of 04.11, answer 13): with real EMG the game shows no multi-touch pads; only a source that listens to them
+        # (the raw-EMG lab, --lab) asks for the remote — the first message to every client.
+        class Lab(Silent):
+            listens = True
+        self.assertEqual(json.loads(await self.first_message(Lab())), {'type': 'bridge-hello', 'intents': True})
+        self.assertIsNone(await self.first_message(Silent()), 'a source that ignores the pads says nothing')
 
     async def test_oversized_frame_is_closed_with_1009(self):
         data = await self.closed_after(bytes([0x81, 0x80 | 127]) + struct.pack('!Q', MAX_PAYLOAD * 1000))
