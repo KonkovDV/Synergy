@@ -205,3 +205,14 @@
 | `ui/play.js` | `bridgeControls()` — площадки под внешним источником только для источника, который их читает | — |
 | `services/host.js` | `side`, `thresholds` в `parseLaunch`; `channelsMessage()`, поле `channels` в `synergy:result` | новый ключ запуска — шаблон в трёх местах (страница, `MainActivity.launchQuery`, `LaunchRequest`), тест сверяет |
 
+
+### v6.2 — поток 10 Гц и скринкаст
+
+| Где | Что | Точка расширения |
+|---|---|---|
+| `core/spppr.js` | `SppprDecoder.datedStart()` — начало серии сырых пакетов команды (один чужой пакет внутри — прощённый шум); `onsetTs`; кадр несёт `since` (часы МК + смещение) и `packetMs` (медиана интервалов, переживает сброс статистики) | решения декодера не меняются: дата — только для тех, кто судит время |
+| `core/signal.js` | `readFrame` берёт `since` и `packetMs` только у кадра декодера и в разумных пределах; `fromGesture` кладёт их в намерение | — |
+| `games/rhythm.js` | `streamEventLag()` — задержка события по дате, `streamWaitLag()` — сколько нота ждёт на этом потоке; без даты — `RHYTHM_LATENCY_S` | другая игра на время — те же две функции |
+| `input/spppr-emulator.js` | `streamProfile(realism, rateHz)`, `rateHz` у эмулятора и драйвера; `advanceTo()` — сокращение по времени опроса; выброс по полной строке путаниц | новая частота — значение в `STREAM_RATES_HZ` (`config.js`) |
+| `input/spppr-source.js` | `OnScreenEmulator.rateHz` — смена частоты начинает счётчики потока заново | — |
+| `tools/screencast.mjs`, `tools/screencast-plan.mjs` | скринкаст: запись телефона 430 × 932, сцена 1920 × 1080 в ffmpeg, `.srt` и главы; раскадровка — данные, проверяемые тестом | новая сцена — строка в `SCENES` и действие в `ACT` |
