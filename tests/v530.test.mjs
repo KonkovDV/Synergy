@@ -291,3 +291,14 @@ test('5.30 lab stream: a recognizer\'s decision and its distribution together �
   const g = parseExternal(JSON.stringify({ gesture: 'fist', confidence: 0.9, probs: 'oops', a: 0.5, b: 0 }));
   assert.equal(g.gesture, 'fist'); assert.equal(g.probs, undefined);
 });
+
+test('ответы 04.11 № 13: frames of a prosthesis or a host leave no on-screen pads; the emulator and the lab bridge keep them', async () => {
+  const { emulatorPads } = await import('../src/core/hands.js');
+  const { readFileSync } = await import('node:fs');
+  assert.equal(emulatorPads({}), 'pads', 'the on-screen emulator: the pads are the muscles');
+  assert.equal(emulatorPads({ bridge: true, wsUrl: '' }), 'none', 'a prosthesis or a host app: only the muscles, no multitouch');
+  assert.equal(emulatorPads({ bridge: true, wsUrl: 'ws://127.0.0.1:8765' }), 'lab', 'the lab bridge: the pads are its remote (--lab)');
+  assert.equal(emulatorPads({ demo: true, bridge: true }), 'none', 'a demo is driven by the autopilot');
+  const play = readFileSync('src/ui/play.js', 'utf8');
+  assert.match(play, /emulatorPads\(\{ demo, bridge: bridgeMode, wsUrl: s\.wsUrl \}\)/, 'the play screen asks the rule, not its own copy');
+});
