@@ -637,3 +637,36 @@ test('6.1 channel balance (Q&A of 04.11, answer 5): a finished exercise keeps ho
   const back = parseState(JSON.stringify(app.state));
   assert.deepEqual(back.runs.at(-1).uses, run.uses);
 });
+
+test('6.1 launch (Q&A of 04.11, answer 16): the host names the arm and the thresholds — the arm is kept, the thresholds await the external source', () => {
+  store.clear();
+  globalThis.location = { search: '?side=left&closeThreshold=60&openThreshold=45' };
+  let app;
+  try { app = new App(el('main')); } finally { delete globalThis.location; }
+  assert.equal(app.settings.side, 'left', 'the prosthesis app knows the arm');
+  assert.equal(new App(el('main')).settings.side, 'left', 'kept: the next start without the key has the same arm');
+  assert.equal(app.bridge, null, 'thresholds alone do not switch the source: the emulator on the screen stays');
+  app.updateSettings({ source: 'bridge', wsUrl: '' });
+  assert.deepEqual(app.bridge.thresholds.map(v => Math.round(v * 255)), [60, 45], 'A closes at 60, B opens at 45, in the units of the frames');
+});
+
+test('6.1 result (Q&A of 04.11, answer 16): an exercise on the external source returns where each channel switched on, in 0…255', () => {
+  const app = fresh();
+  const sent = [];
+  globalThis.SynergyHost = { onMessage: json => sent.push(JSON.parse(json)) };
+  try {
+    app.updateSettings({ source: 'bridge', wsUrl: '', scheme: 'threshold', sensitivity: 0.22, sensitivityB: 0.3, prosthesisThresholds: false });
+    app.state.calibrations.bridge = { rest: [0.04, 0.06], max: [0.8, 0.7], at: '2026-11-05T09:00:00.000Z' };
+    const session = app.createSession({ game: 'flight', level: 1 });
+    session.game.done = true;
+    app.finishSession(session);
+    const result = sent.find(m => m.type === 'synergy:result');
+    assert.deepEqual(result.channels, { closeThreshold: 53, openThreshold: 64, line: 'game', sensitivity: { close: 0.22, open: 0.3 } });
+    // the on-screen emulator is not the person's EMG: nothing to return
+    app.updateSettings({ source: 'touch' });
+    const touch = app.createSession({ game: 'flight', level: 1 });
+    touch.game.done = true;
+    app.finishSession(touch);
+    assert.equal('channels' in sent.filter(m => m.type === 'synergy:result').at(-1), false);
+  } finally { delete globalThis.SynergyHost; }
+});

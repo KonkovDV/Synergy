@@ -4,6 +4,9 @@
 // WebView or an iframe, may start a given exercise, and receives small JSON messages. Contract (docs/embed/README.md):
 // pure parsing and message building here, the app calls them.
 //   in:  ?game=<id>&level=<n> — open that exercise (after the safety onboarding); ?embed=1 — embedded without a game;
+//        6.1: ?side=left|right — the arm with the prosthesis; ?closeThreshold=<0…255>&openThreshold=<0…255> — its
+//        thresholds in the units of Motorica Start (Q&A of 04.11, answer 16: the host passes the arm, the thresholds and
+//        the stream; the keys are ours, question К.3);
 //        window.Synergy.start(game, level); postMessage {type:'synergy-start'|'synergy-frame'|'synergy-ping'} (5.15)
 //   out: synergy:ready (once the first screen is up, and on a ping), synergy:result (each exercise), synergy:close
 //        (the person is done: «Вернуться в приложение», or back on the home screen) — through the first native channel
@@ -28,6 +31,10 @@ export const HOST_COMMANDS = { frame: 'synergy-frame', start: 'synergy-start', p
 export const CLOSE_REASONS = ['done', 'back'];
 
 const GAME_ID = /^[a-z]{2,16}$/;
+/** 6.1 — a threshold of Motorica Start: a whole number 0…255 without a sign or leading zeros (the address is untrusted). */
+const LEVEL_255 = /^(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$/;
+/** Its full scale: the snapshot's levels and thresholds are 0…255, the game's frames 0…1 (input/bridge.js). */
+export const HOST_LEVEL_MAX = 255;
 
 /** A known game and a level within its range (1 when out of range), or null. */
 function gameLevel(game, level, gameInfo) {
@@ -47,9 +54,14 @@ export function parseLaunch(search, gameInfo) {
   const q = new URLSearchParams(search ?? '');
   // 5.30: `self=1` — opened by the app itself (an APK or iPhone link, a shortcut of the installed PWA), not by a host:
   // an exercise opens, but nobody waits for «synergy:close» and the person's own signal source stays.
-  const out = { game: null, level: null, hostOrigin: null, embed: q.get('embed') === '1', self: q.get('self') === '1' };
+  const out = { game: null, level: null, hostOrigin: null, embed: q.get('embed') === '1', self: q.get('self') === '1', side: null, thresholds: null };
   const gl = gameLevel(q.get('game'), q.get('level'), gameInfo);
   if (gl) Object.assign(out, gl);
+  // 6.1 — what the prosthesis app knows (Q&A of 04.11, answer 16): the arm, and the two thresholds — both or none.
+  const side = q.get('side');
+  if (side === 'left' || side === 'right') out.side = side;
+  const close = q.get('closeThreshold'), open = q.get('openThreshold');
+  if (LEVEL_255.test(close ?? '') && LEVEL_255.test(open ?? '')) out.thresholds = { close: Number(close), open: Number(open) };
   const host = q.get('host');
   if (host) {
     try {
@@ -85,14 +97,32 @@ export function readyMessage({ version, onboarded, games }) {
     gestures: { set: GESTURE_SET.id, classes: [...GESTURE_CLASS_ORDER] } };
 }
 
-/** The result summary a host receives (no wellbeing, no name; numbers only). */
-export function resultMessage(run, version) {
+/**
+ * 6.1 — what the game returns about the channels (Q&A of 04.11, answer 16: the game may return the sensitivity and the
+ * thresholds). Where each channel switched on in this exercise, in the units a host sends (0…255, as Motorica Start's
+ * snapshot and `getLatestThresholds()`): rest + share × (max − rest) of the game's calibration, × 255. `line` — whose
+ * line it was: the game's sliders, or the prosthesis's thresholds the host passed. `sensitivity` — the game's sliders, a
+ * share of the calibrated span. Null without a calibration: nothing to say in the host's units. The game writes nothing
+ * to the prosthesis — what to do with the numbers is the host's call.
+ */
+export function channelsMessage({ shares, calibration, line, sensitivity }) {
+  if (!calibration?.rest || !calibration?.max || !shares?.every(Number.isFinite)) return null;
+  const at = ch => Math.round(HOST_LEVEL_MAX * (calibration.rest[ch] + shares[ch] * (calibration.max[ch] - calibration.rest[ch])));
+  const [close, open] = [at(0), at(1)];
+  if (![close, open].every(v => Number.isInteger(v) && v >= 0 && v <= HOST_LEVEL_MAX)) return null;
+  return { closeThreshold: close, openThreshold: open, line: line === 'prosthesis' ? 'prosthesis' : 'game',
+    sensitivity: { close: sensitivity[0], open: sensitivity[1] } };
+}
+
+/** The result summary a host receives (no wellbeing, no name; numbers only). 6.1: `channels` — channelsMessage, when known. */
+export function resultMessage(run, version, { channels = null } = {}) {
   const num = v => (Number.isFinite(v) ? v : null);
   return {
     type: HOST_TYPES.result, protocol: HOST_PROTOCOL, version,
     at: run.at, game: run.game, level: run.level, scheme: run.scheme, retention: !!run.retention,
     score: num(run.score), stars: num(run.stars), durationS: num(run.durationS),
     skills: Object.fromEntries(Object.entries(run.skills ?? {}).filter(([, v]) => Number.isFinite(v))),
+    ...(channels ? { channels } : {}),
   };
 }
 

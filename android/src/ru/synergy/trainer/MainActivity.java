@@ -92,18 +92,34 @@ public class MainActivity extends Activity {
         return view;
     }
 
+    /** 6.1 — a threshold of Motorica Start: a whole number 0–255 (the same pattern as services/host.js and the iPhone app). */
+    static final String LEVEL_255 = "25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]";
+
     /**
      * 5.30 — Motorica Start opens its games by package and activity (docs/RESEARCH.md §18); a link opens one too:
      * synergy://play?game=grip&level=2&gestures=ubi4. Extras or query: game, level, gestures. Only known shapes pass —
      * a game id, a level 1–99, a gesture set — the page checks them again (services/host.js parseLaunch).
+     * 6.1 — what the prosthesis app knows (Q&A of 04.11, answer 16): side (left, right) and the two thresholds
+     * closeThreshold and openThreshold, 0–255, both or none. The keys are ours: question К.3 asks Motorica for theirs.
      */
-    static String launchQuery(String game, String level, String gestures) {
+    static String launchQuery(String game, String level, String gestures, String side, String closeThreshold, String openThreshold) {
         StringBuilder q = new StringBuilder();
         if (game != null && game.matches("[a-z]{2,16}")) q.append("&game=").append(game);
         if (level != null && level.matches("[1-9][0-9]?")) q.append("&level=").append(level);
         if (gestures != null && gestures.matches("tz|tz2|synergy|ubi4|spr8")) q.append("&gestures=").append(gestures);
+        if (side != null && side.matches("left|right")) q.append("&side=").append(side);
+        if (closeThreshold != null && openThreshold != null && closeThreshold.matches(LEVEL_255) && openThreshold.matches(LEVEL_255)) {
+            q.append("&closeThreshold=").append(closeThreshold).append("&openThreshold=").append(openThreshold);
+        }
         // self=1: the app opened its own exercise — not a host waiting for «synergy:close» (services/host.js).
         return q.length() == 0 ? "" : "?" + q.substring(1) + "&self=1";
+    }
+
+    /** A string extra, or an int extra written as text (a host may put either: putExtra("level", 2)). */
+    private static String extra(Intent intent, String name) {
+        String value = intent.getStringExtra(name);
+        if (value == null && intent.hasExtra(name)) value = String.valueOf(intent.getIntExtra(name, -1));
+        return value;
     }
 
     private String startUrl(Intent intent) {
@@ -111,11 +127,11 @@ public class MainActivity extends Activity {
         if (intent == null) return page;
         Uri link = intent.getData();
         if (link != null && "synergy".equals(link.getScheme())) {
-            return page + launchQuery(link.getQueryParameter("game"), link.getQueryParameter("level"), link.getQueryParameter("gestures"));
+            return page + launchQuery(link.getQueryParameter("game"), link.getQueryParameter("level"), link.getQueryParameter("gestures"),
+                link.getQueryParameter("side"), link.getQueryParameter("closeThreshold"), link.getQueryParameter("openThreshold"));
         }
-        String level = intent.getStringExtra("level");
-        if (level == null && intent.hasExtra("level")) level = String.valueOf(intent.getIntExtra("level", 0));
-        return page + launchQuery(intent.getStringExtra("game"), level, intent.getStringExtra("gestures"));
+        return page + launchQuery(intent.getStringExtra("game"), extra(intent, "level"), intent.getStringExtra("gestures"),
+            intent.getStringExtra("side"), extra(intent, "closeThreshold"), extra(intent, "openThreshold"));
     }
 
     /** A second launch (another game from the host's list, a link) while the app is open: open what it asks. */

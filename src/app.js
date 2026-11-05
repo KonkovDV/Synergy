@@ -31,7 +31,7 @@ import { setSoundEnabled, unlockAudio } from './services/audio.js';
 import { setVoiceEnabled, say, stopVoice } from './services/voice.js';
 import { setRenderOptions } from './render/draw.js';
 import { mount, toast, h } from './ui/dom.js';
-import { parseLaunch, parseHostCommand, readyMessage, resultMessage, closeMessage, notifyHost, isEmbedded, hostChannel, HOST_PROTOCOL } from './services/host.js';
+import { parseLaunch, parseHostCommand, readyMessage, resultMessage, channelsMessage, closeMessage, notifyHost, isEmbedded, hostChannel, HOST_PROTOCOL, HOST_LEVEL_MAX } from './services/host.js';
 import { SCREENS } from './ui/screens.js';
 import { startTour } from './ui/tour.js';
 import { mergeTours } from './core/tours.js';
@@ -154,6 +154,11 @@ export class App {
     if (typeof history !== 'undefined' && 'scrollRestoration' in history) history.scrollRestoration = 'manual';
     // 5.14 — embedding (services/host.js): a host may name a game to open and its own origin for result messages.
     this.launch = parseLaunch(typeof location !== 'undefined' ? location.search : '', gameInfo);
+    // 6.1 — what the prosthesis app knows (Q&A of 04.11, answer 16). The arm is kept: it is the same person's prosthesis.
+    if (this.launch.side && this.launch.side !== this.settings.side) { this.settings.side = this.launch.side; this.save(); }
+    // Its thresholds, in the units of the frames (0…1, A closes): the external source starts with them until the host sends
+    // its own. They do not switch the source — an APK opened by an intent has no stream from the host yet (К.3).
+    this.launchThresholds = this.launch.thresholds ? [this.launch.thresholds.close / HOST_LEVEL_MAX, this.launch.thresholds.open / HOST_LEVEL_MAX] : null;
     // 5.15 — the exercise a host asked for waits for the safety onboarding (and «Первые шаги», if taken) and opens on
     // the way home; before, it was lost when the onboarding came first.
     this.pendingLaunch = this.launch.game ? { game: this.launch.game, level: this.launch.level } : null;
@@ -305,7 +310,7 @@ export class App {
       this.ble?.disconnect(); this.ble = null;
       this.bridge?.stop();
       this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s), swap: () => this.settings.swapChannels, hostOrigin: this.launch?.hostOrigin ?? null,
-        thresholds: this.bridge?.rawThresholds ?? null, onThresholds: () => this.screen?.onThresholds?.(),
+        thresholds: this.bridge?.rawThresholds ?? this.launchThresholds ?? null, onThresholds: () => this.screen?.onThresholds?.(),
         lead: () => ({ side: this.settings.side, two: this.settings.prostheses === 'two' }) }); // 5.30: two prostheses
       this.bridge.start();
     } else if (this.bridge) {
@@ -614,8 +619,20 @@ export class App {
     const calibrationNote = this.adoptRest(session.runner.pipeline.restTracker);
     this.save();
     if (report.levelUp) this.feedback.event({ name: 'levelup' });
-    notifyHost(resultMessage(run, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
+    notifyHost(resultMessage(run, APP.version, { channels: this.channelsOf(session, run) }), { hostOrigin: this.launch?.hostOrigin ?? null });
     return { run, report, planBonus, calibrationNote, replay };
+  }
+
+  /**
+   * 6.1 — where each channel switched on in this exercise, for the host (Q&A of 04.11, answer 16: the game may return the
+   * sensitivity and the thresholds; services/host.js `channelsMessage`). Only on the external source: the emulator on the
+   * screen is not the person's EMG. The lines the pipeline really used, through the calibration it really used.
+   */
+  channelsOf(session, run) {
+    if (session.demo || run.source !== 'bridge') return null;
+    const pipeline = session.runner.pipeline, s = this.settings;
+    return channelsMessage({ shares: pipeline.channelThresholds(), calibration: pipeline.calibration, line: run.thresholds === 'prosthesis' ? 'prosthesis' : 'game',
+      sensitivity: [s.sensitivity, s.sensitivityB ?? s.sensitivity] });
   }
 
   /** Co-adaptive calibration: keeps a bounded rest shift for the next session, or asks to recalibrate. */
