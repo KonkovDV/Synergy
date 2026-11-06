@@ -10,7 +10,8 @@
  │                   · пороги протеза [A, B] (5.29: getLatestThresholds, open/close_ch_num) — не кадр
  ▼
  SignalPipeline (core/signal.js)
-   readFrame → сторож 300 мс (жест после обрыва — с покоя) → калибровка
+   readFrame → сторож: 300 мс без кадра, у потока СПППР — 1,5 с без пакета (6.2.1: тишина — от последних данных,
+   silentMs; жест после обрыва — с покоя) → калибровка
    (+ RestTracker: подстройка покоя, только внешний источник) → сглаживание
    → порог включения каждого канала: порог игры или порог протеза через калибровку (thresholdShares, 5–90 %)
    → гистерезис → коактивация (≥40 %, ≤350 мс) → схема: пороговая | пропорциональная | жесты
@@ -216,3 +217,13 @@
 | `input/spppr-emulator.js` | `streamProfile(realism, rateHz)`, `rateHz` у эмулятора и драйвера; `advanceTo()` — сокращение по времени опроса; выброс по полной строке путаниц | новая частота — значение в `STREAM_RATES_HZ` (`config.js`) |
 | `input/spppr-source.js` | `OnScreenEmulator.rateHz` — смена частоты начинает счётчики потока заново | — |
 | `tools/screencast.mjs`, `tools/screencast-plan.mjs` | скринкаст: запись телефона 430 × 932, сцена 1920 × 1080 в ffmpeg, `.srt` и главы; раскадровка — данные, проверяемые тестом | новая сцена — строка в `SCENES` и действие в `ACT` |
+
+### v6.2.1 — аудит 06.11, вечер
+
+| Где | Что | Точка расширения |
+|---|---|---|
+| `core/signal.js` | `SignalPipeline.silentMs(now)` — тишина источника от последних данных (у кадра декодера — от последнего пакета, `ageMs`); `lossLimitMs()` — 300 мс для кадров, `SPPPR.linkLostMs` для потока; `LossWatch.update(lost, silentMs)` — один раз на потерю | другой источник со своими часами — кадр с `link` и `ageMs` |
+| `games/runner.js` | `GameRunner.silentMs`, `DuoRunner.silentMs` (большая из двух рук) | — |
+| `ui/play.js` | пауза «Сигнал потерян» через `SIGNAL.criticalLossMs` тишины; отсчёт заново от «Продолжить» (`resumedAt`) | — |
+| `app.js` | `createPipeline({ scheme })` и `inputScheme()` — конвейер и клавиши в схеме упражнения | новая игра со своей схемой — `schemes` в `registry.js` |
+| `docs/embed/motorica-start-catalog.json`, `ios/Synergy/SynergyApp.swift` | запись для каталога игр Motorica Start; `synergy://launch` — главный экран | новая версия — `versionName`/`versionCode` вместе с манифестом и проектом iPhone (тест сверяет) |

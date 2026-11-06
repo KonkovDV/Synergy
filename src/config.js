@@ -4,17 +4,19 @@ import { CLOSING_GESTURES } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '6.2.0',
+  version: '6.2.1',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
 
 export const SIGNAL = {
   frameTimeoutMs: 300,      // watchdog: no fresh valid frame for this long → «сигнал потерян»
-  // 06.11.2026 — Q&A of 04.11, answer 25: «потерю больше 1–2 секунд надо считать критической и выходить». Once the source
-  // is lost (the watchdog above; the СПППР stream after SPPPR.linkLostMs), one more second and the running exercise
-  // leaves its running state: a pause that says the signal is gone (ui/play.js). Up to that the state rides on.
-  criticalLossMs: 1000,
+  // Q&A of 04.11, answer 25: «потерю больше 1–2 секунд надо считать критической и выходить». The running exercise pauses
+  // («Сигнал потерян», ui/play.js) once the source has given no data this long — counted from its last frame, or from the
+  // last packet of the СПППР stream, so both streams pause inside the organizers' 1–2 s. It equals SPPPR.linkLostMs: the
+  // stream rides on inertia up to the moment its link is lost, then pauses at once. 6.2.0 counted one more second from
+  // the declared loss, which for the stream came after a second wait of the watchdog: 2.8 s of silence.
+  criticalLossMs: 1500,
   smoothingMs: 35,          // EMA time constant applied to normalized activation
   onThreshold: 0.22,        // channel becomes active (fraction of calibrated comfortable max)
   hysteresis: 0.07,         // channel turns off below onThreshold - hysteresis…

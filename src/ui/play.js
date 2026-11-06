@@ -206,8 +206,11 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
 
   function begin() { phase = 'countdown'; countdown = 3; lastCount = 0; setDialog(false); focusIn(pauseBtn()); }
 
-  // A lost external signal that lasts is critical (the organizers' answer 25): the exercise pauses and says why.
+  // A lost external signal that lasts is critical (the organizers' answer 25): the exercise pauses and says why. The
+  // silence counts from the source's last data — a signal gone during the 3-2-1 pauses the exercise as it starts — and
+  // anew from «Продолжить»: with the signal still gone the exercise pauses again a full SIGNAL.criticalLossMs later.
   const lossWatch = new LossWatch();
+  let resumedAt = -Infinity; // null: «Продолжить» was pressed, the next frame starts the count
   function pause({ signal = false } = {}) {
     if (phase !== 'running') return;
     phase = 'paused'; session.game.paused = true;
@@ -217,7 +220,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
         ? 'Сигнала с датчиков нет — упражнение на паузе, кисть стоит. Проверьте контакт электродов, заряд и связь. Сигнал вернулся — нажмите «Продолжить».'
         : 'Расслабьте руку. Если устали — закончите на сегодня, это тоже правильно.'),
       h('div', { class: 'row-actions col' },
-        h('button', { class: 'btn primary big', onclick: () => { setDialog(false); phase = 'running'; session.game.paused = false; focusIn(pauseBtn()); } }, 'Продолжить'),
+        h('button', { class: 'btn primary big', onclick: () => { setDialog(false); phase = 'running'; resumedAt = null; session.game.paused = false; focusIn(pauseBtn()); } }, 'Продолжить'),
         h('button', { class: 'btn ghost', onclick: () => restart(demo) }, 'Начать заново'),
         h('button', { class: 'btn ghost', onclick: () => exit() }, 'Выйти'),
         // 5.27 (medical review): pain that came with the exercise is said here, not only in the morning check-in — today
@@ -306,7 +309,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     if (phase === 'countdown') drawCountdown();
     const lost = bridgeMode && session.runner.signalLost && phase === 'running';
     node.classList.toggle('lost', lost);
-    if (lossWatch.update(lost, now)) { pause({ signal: true }); return; }
+    resumedAt ??= now;
+    if (lossWatch.update(lost, lost ? Math.min(session.runner.silentMs(now), now - resumedAt) : 0)) { pause({ signal: true }); return; }
     // The countdown goes to the live hint too: a screen-reader user without the app's own voice hears it (5.10).
     const hintText = lost ? lostSignalHint(app.bridge?.status)
       : phase === 'countdown' ? `${block.rounds > 1 ? `Раунд ${block.rounds} · ` : ''}Старт через ${Math.max(1, Math.ceil(countdown))}… расслабьтесь`

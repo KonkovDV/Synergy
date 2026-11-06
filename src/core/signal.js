@@ -1,6 +1,6 @@
 // Signal pipeline: SignalFrame → (validate, watchdog, calibrate, smooth) → ChannelState → Intent.
 // Pure module: no DOM, deterministic, unit-tested in tests/core.test.mjs.
-import { SIGNAL, PROSTHESIS_THRESHOLDS, BOTH_ON } from '../config.js';
+import { SIGNAL, SPPPR, PROSTHESIS_THRESHOLDS, BOTH_ON } from '../config.js';
 import { COMMAND, SCHEME, GESTURE_BY_ID, GESTURE_CLASS_ORDER } from './vocabulary.js';
 
 export const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
@@ -97,17 +97,18 @@ export function restIntent(scheme, valid, t = 0) {
 }
 
 /**
- * The organizers' answer 25: a loss longer than 1–2 s is critical. `update(lost, now)` is true once, at the
- * moment the lost signal has lasted `ms`; false while there is a signal, while the loss is shorter, and after it was told
- * (until the signal comes back and goes again). Pure: the play screen pauses the exercise on it.
+ * The organizers' answer 25: a loss longer than 1–2 s is critical. `update(lost, silentMs)` is true once, when the
+ * exercise has no signal (`lost`) and the source has given no data for `ms` (`silentMs` — from its last frame or packet,
+ * SignalPipeline.silentMs; the play screen counts it anew from «Продолжить»); false while there is a signal, while the
+ * silence is shorter, and after it was told. A silence counted again from below `ms` — the signal came back, or the
+ * person resumed the exercise — is a new loss. Pure: the play screen pauses the exercise on it.
  */
 export class LossWatch {
-  constructor(ms = SIGNAL.criticalLossMs) { this.ms = ms; this.since = null; }
-  update(lost, now) {
-    if (!lost) { this.since = null; return false; }
-    if (this.since === null) this.since = now;
-    if (this.since === Infinity || now - this.since < this.ms) return false;
-    this.since = Infinity; // told once for this loss
+  constructor(ms = SIGNAL.criticalLossMs) { this.ms = ms; this.told = false; }
+  update(lost, silentMs) {
+    if (!lost || !(silentMs >= this.ms)) { this.told = false; return false; }
+    if (this.told) return false;
+    this.told = true; // once for this loss
     return true;
   }
 }
@@ -169,10 +170,24 @@ export class SignalPipeline {
     this.aboveSince = [null, null]; this.offSince = [-Infinity, -Infinity];
     this.out = { level: 0, intensity: 0, t: null }; // the slew-limited proportional output
     this.aHighSince = null; this.bHighSince = null;
-    this.lastRaw = null; this.lastFrame = null; this.lastValidAt = -Infinity; this.lastT = null;
+    this.lastRaw = null; this.lastFrame = null; this.dataAt = -Infinity; this.lastT = null;
     this.stableGesture = 'rest'; this.pendingGesture = 'rest'; this.pendingSince = 0;
     this.confidence = 0; this.uncertain = false;
   }
+
+  /**
+   * How long the source has given no data, ms (Infinity before its first frame). A frame of the СПППР decoder is drawn
+   * at every step, packet or not: its data is the stream's last packet, `ageMs` old (answer 25 of the organizers counts
+   * the loss from there).
+   */
+  silentMs(now) { return now - this.dataAt; }
+
+  /**
+   * The watchdog: frames are lost after frameTimeoutMs without one. The СПППР stream (its frames carry `link`) has its own
+   * limit, SPPPR.linkLostMs without a packet, and the decoder rides on inertia up to it — the watchdog does not wait a
+   * second time on top (until 6.2.0 «сигнал потерян» came 1.8 s after the last packet, not 1.5 s).
+   */
+  lossLimitMs() { return this.lastFrame?.link ? SPPPR.linkLostMs : this.params.frameTimeoutMs; }
 
   /** Feeds one frame (or null when the source produced nothing) and returns the Intent at `now`. */
   process(rawFrame, now) {
@@ -182,7 +197,7 @@ export class SignalPipeline {
       const fresh = frame && frame.t <= now + 50 && (this.lastT === null || frame.t > this.lastT);
       if (fresh) this.ingest(frame, now);
     }
-    if (now - this.lastValidAt > this.params.frameTimeoutMs) {
+    if (this.silentMs(now) > this.lossLimitMs()) {
       this.a = 0; this.b = 0; this.aOn = false; this.bOn = false; this.lead = null; this.latest = null;
       this.aboveSince = [null, null];
       // Keep the clock. t: null disarms the slew limiter, so the first frame back jumped to full output.
@@ -206,7 +221,7 @@ export class SignalPipeline {
     this.b += (normalize(frame.b, 1, this.calibration) - this.b) * k;
     this.lastT = frame.t;
     this.lastFrame = frame;
-    this.lastValidAt = now;
+    this.dataAt = frame.link ? now - (frame.ageMs ?? 0) : now;
     this.updateChannels(frame.t);
     if (frame.gesture) this.updateGesture(frame, frame.t);
   }

@@ -2,7 +2,8 @@
 // The page is dist/ of `npm run build`, copied into the app as the folder «dist» (ios/project.yml).
 // Native parts the browser lacks on iOS: the voice (AVSpeechSynthesizer, Russian), vibration (UIFeedbackGenerator),
 // the system theme, «Поделиться» and printing — the page reaches them through window.SynergyNative, the same object
-// the Android APK gives (NativeBridge.swift). Links synergy://play?game=grip&level=2&gestures=ubi4 open an exercise.
+// the Android APK gives (NativeBridge.swift). Links synergy://play?game=grip&level=2&gestures=ubi4 open an exercise;
+// synergy://launch (how Motorica Start opens a game of its catalog) opens the home screen.
 import SwiftUI
 
 @main
@@ -39,7 +40,12 @@ struct LaunchRequest: Equatable {
     init() {}
 
     init?(url: URL) {
-        guard url.scheme == "synergy", url.host == "play",
+        guard url.scheme == "synergy" else { return nil }
+        // Motorica Start opens a game of its catalog as <urlScheme>://launch, with a one-time token only its own games can
+        // check (public source, 05.11.2026; docs/INTEGRATION.md «Каталог игр Motorica Start»): the home screen, as the
+        // Android app started by its activity.
+        if url.host == "launch" { return }
+        guard url.host == "play",
               let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return nil }
         let value = { (name: String) in items.first { $0.name == name }?.value }
         game = LaunchRequest.matching(value("game"), "^[a-z]{2,16}$")
