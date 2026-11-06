@@ -109,8 +109,27 @@ function mioDrawing(mood, size) {
   return svg;
 }
 
+/** A five-point star path around (cx, cy) — the stars of «Созвездие». */
+const starPath = (cx, cy, r) => `M${Array.from({ length: 10 }, (_, i) => {
+  const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r;
+  return `${(cx + Math.cos(a) * rr).toFixed(2)} ${(cy + Math.sin(a) * rr).toFixed(2)}`;
+}).join(' L')} Z`;
+
 /** Game pictures (64 × 64): an object of the game in soft 3D. */
 const GAME_ART = {
+  // «Созвездие»: four golden stars joined by a light line, and the mint spark of the joystick on its way to the last.
+  stars: id => {
+    const pts = [[12, 46], [24, 30], [40, 36], [52, 16]];
+    return [
+      s('defs', {}, lin(`${id}g`, [[0, '#fff3c4'], [0.55, '#ffc93c'], [1, '#d98200']], [0, 0, 0, 1]), rad(`${id}m`, [[0, '#eafff5'], [0.5, '#16e182'], [1, '#0a7a47']], 0.36, 0.3, 0.85)),
+      line(`M${pts.slice(0, 3).map(p => p.join(' ')).join(' L')}`, '#ffc93c', 2, { opacity: 0.75 }),
+      line('M40 36 L52 16', '#ffc93c', 1.6, { opacity: 0.35, 'stroke-dasharray': '2 3' }),
+      ...pts.flatMap(([x, y], i) => [glow(id, x, y, i === 3 ? 7 : 5.5, '#ffc93c', i === 3 ? 0.9 : 0.6),
+        path(starPath(x, y, i === 3 ? 6.5 : 5), { fill: `url(#${id}g)`, stroke: '#c46a00', 'stroke-width': 0.8, 'stroke-linejoin': 'round' })]),
+      line('M30 52 Q38 50 44 44', '#16e182', 2.4, { opacity: 0.55 }),
+      glow(id, 46, 42, 6.5, '#16e182', 0.85), circle(46, 42, 4.2, `url(#${id}m)`), circle(44.8, 40.6, 1.2, '#ffffff'),
+    ];
+  },
   // 5.30 «Две руки»: two palms, the left in the colour of A, the right in the colour of B, and an arc between them.
   duo: () => [
     line('M14 22 Q32 8 50 22', '#a78bfa', 2.4, { opacity: 0.8 }),

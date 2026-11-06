@@ -62,6 +62,21 @@ await page.getByRole('radio', { name: /Жесты/ }).first().click(); await wai
 await page.evaluate(() => window.Synergy.go('play', { game: 'safe', level: 6 }));
 await wait(300); await page.getByRole('button', { name: 'Старт' }).click(); await wait(4000); await shot('13-safe-gestures');
 
+// 6.0, 05.11 — «Созвездие» on the joystick of the СПППР stream: the home card, the levels, a demo run to the results,
+// and a run by hand on the keys of the set (2 — flexion) that moves the spark.
+await page.evaluate(() => window.Synergy.go('home')); await wait(400);
+const starsCard = page.getByRole('button', { name: 'Играть на джойстике' });
+if (!(await starsCard.count())) errors.push('home: no «Созвездие» card in the gesture scheme of the task set');
+else { await starsCard.click(); await wait(300); await shot('14-stars-levels'); }
+await page.evaluate(() => window.Synergy.go('play', { game: 'stars', level: 4, demo: true }));
+await wait(300); await page.getByRole('button', { name: 'Старт' }).click();
+await wait(5000); await shot('15-stars-demo');
+await page.waitForSelector('.results', { timeout: 90000 }).catch(() => errors.push('stars: the demo run did not reach the results'));
+await wait(400); await shot('16-stars-results');
+await page.evaluate(() => window.Synergy.go('play', { game: 'stars', level: 1 }));
+await wait(300); await page.getByRole('button', { name: 'Старт' }).click(); await wait(4200);
+await page.keyboard.down('Digit3'); await wait(900); await shot('17-stars-hand'); await page.keyboard.up('Digit3'); await wait(300);
+
 const state = await page.evaluate(() => window.Synergy.state());
 console.log(JSON.stringify({ errors, screen: state.screen, runs: state.runs, scheme: state.settings.scheme }, null, 2));
 writeEvidence('smoke', { errors: errors.length, out });

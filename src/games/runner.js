@@ -5,7 +5,8 @@
 import { ChannelUse, sumUses } from '../core/channeluse.js';
 
 export function toEmulatorTarget(t) {
-  return t.gesture ? { gesture: t.gesture, effort: t.effort ?? 0.6, a: 0, b: 0 } : { a: t.a ?? 0, b: t.b ?? 0, gesture: null };
+  // `mix` («Созвездие»): other classes of the task's set held at the same time, { id: effort } — the СПППР emulator blends them.
+  return t.gesture ? { gesture: t.gesture, effort: t.effort ?? 0.6, a: 0, b: 0, mix: t.mix ?? null } : { a: t.a ?? 0, b: t.b ?? 0, gesture: null, mix: null };
 }
 
 export class GameRunner {
