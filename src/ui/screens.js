@@ -16,7 +16,8 @@ import { faqScreen } from './faq.js';
 import { primerScreen } from './primer.js';
 import { feedbackScreen } from './feedback.js';
 
-export const SCREENS = {
+// No prototype (audit 06.11.2026, F6): `go('constructor')` found Object itself and tore the page down, as GAME_BY_ID once did.
+export const SCREENS = Object.assign(Object.create(null), {
   home: homeScreen,
   levels: levelsScreen,
   play: playScreen,
@@ -36,4 +37,4 @@ export const SCREENS = {
   faq: faqScreen,
   primer: primerScreen,
   feedback: feedbackScreen,
-};
+});

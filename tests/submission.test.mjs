@@ -205,6 +205,29 @@ test('submission numbers (04.11): the writers set exactly the numbers the gate r
   assert.equal(withEvidenceNumbers(text, { apk: { kb: 5093 }, tests: { total: 487 } }), written);
 });
 
+test('submission gate (audit 06.11, F5): a shallow clone says its history is cut, not a wrong first-commit date', () => {
+  const dir = copyRepo(), cut = mkdtempSync(join(tmpdir(), 'synergy-shallow-'));
+  try {
+    // Two commits with old dates, then a clone of the last one only: its oldest commit is the cut (2026-10-27), not 17.10.
+    const dated = date => ({ ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date });
+    execFileSync('git', ['-c', 'user.name=gate', '-c', 'user.email=gate@test', 'commit', '-q', '--amend', '--no-edit'], { cwd: dir, env: dated('2026-10-17T12:00:00Z') });
+    writeFileSync(join(dir, 'NOTE.md'), 'x\n'); git(dir, 'add', 'NOTE.md');
+    execFileSync('git', ['-c', 'user.name=gate', '-c', 'user.email=gate@test', 'commit', '-q', '-m', 'later'], { cwd: dir, env: dated('2026-10-27T12:00:00Z') });
+    rmSync(cut, { recursive: true, force: true });
+    execFileSync('git', ['clone', '-q', '--depth', '1', `file://${dir.replaceAll('\\', '/')}`, cut]);
+    copyRelease(cut);
+    const shallow = gate(cut);
+    assert.equal(shallow.status, 0, shallow.stdout);
+    assert.match(shallow.stdout, /история git неполная/);
+    assert.doesNotMatch(shallow.stdout, /первый коммит 2026-10-27/, 'the cut is not the first commit');
+    // The full copy still names its real first commit.
+    assert.match(gate(dir).stdout, /первый коммит 2026-10-17/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(cut, { recursive: true, force: true });
+  }
+});
+
 test('APK signer: a debug key, the team key and no signature are told apart (Red Team C-1)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'synergy-apk-'));
   try {

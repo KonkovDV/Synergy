@@ -212,4 +212,16 @@ export function useFlier(alias, stageId, items = {}) {
 }
 
 /** CSS `url()` of a picture for a background (the nest room, the home header), or null. */
-export const artBackground = name => (hasArt(name) ? `url("${artUrl(name)}")` : null);
+/**
+ * A picture for a CSS background, as an absolute address (audit 06.11.2026, F7). It travels in a custom property
+ * (`--room`) and is used in styles/app.css, so a relative `public/art/…` was read against the stylesheet: the source
+ * build asked for styles/public/art/bg-nest-room.webp and the nest had no room. The built page hid it (app.css sits
+ * beside index.html). A data URI of the one-file build stays as it is.
+ */
+export const artBackground = name => {
+  if (!hasArt(name)) return null;
+  const url = artUrl(name);
+  let href = url;
+  try { href = new URL(url, globalThis.document?.baseURI).href; } catch { /* no document: the address as it is */ }
+  return `url("${href}")`;
+};

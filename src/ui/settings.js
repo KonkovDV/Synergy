@@ -8,7 +8,7 @@ import { dictionaryName } from '../core/spppr.js';
 import { streamsSpppr } from '../input/spppr-source.js';
 import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
 import { CalibrationRecorder, CALIBRATION_STEPS, thresholdForRest, shownRippleIssues } from '../core/calibration.js';
-import { defaultCalibration, thresholdShares } from '../core/signal.js';
+import { defaultCalibration, thresholdShares, latencyNote } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
 import { voiceAvailable } from '../services/voice.js';
 import { bleSupported } from '../input/ble.js';
@@ -89,7 +89,16 @@ export function settingsScreen(app, { back = null } = {}) {
   // 5.32 — liveFrames(), not signalSource(): the host's first frame rebuilds the bridge, and a screen opened before it
   // kept reading the stopped one («Нет сигнала» in a calibration that had a signal).
   const preview = { pipeline: app.createPipeline(), source: app.liveFrames() };
-  const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.liveFrames(); paintLimits(); };
+  const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.liveFrames(); paintLimits(); paintLatency(); };
+  // Audit 06.11.2026 (F3): the response at the person's own parameters, measured again on every change of a slider. The
+  // line used to be built once: «сейчас удержание 15 мс» stayed on screen while the hold went to 300 ms and past 100 ms.
+  const latencyEl = h('p', { class: 'note' });
+  function paintLatency() {
+    const { text, over } = latencyNote(app.signalParams());
+    latencyEl.textContent = text;
+    latencyEl.classList.toggle('warn', over);
+  }
+  paintLatency();
   // 5.29 — the prosthesis's own thresholds, when the host (Motorica Start) passed them: read, never written.
   const limitsNote = h('p', { class: 'note', 'aria-live': 'polite' });
   function paintLimits() {
@@ -140,7 +149,7 @@ export function settingsScreen(app, { back = null } = {}) {
       ...tune('smoothingMs', 'Сглаживание', ms, 'Постоянная времени сглаживания огибающей. Больше — ровнее, но позже отклик.'),
       ...tune('slewPerS', 'Ограничение скачков', v => `${Math.round(v)}\u00a0/с`, 'Насколько быстро может меняться пропорциональный выход: резкий скачок сигнала не дёргает кисть.'),
       ...tune('deadZone', 'Мёртвая зона выхода', pct, 'Пропорциональный выход: разница A и B меньше этой доли — покой посередине; выше — выход растёт от нуля, без ступеньки.'), // 04.11: «пропорционального» не помещалось в 320 px при тексте 200 % (аудит раскладки в CI)
-      h('p', { class: 'note' }, `По умолчанию отклик от первого кадра сокращения до команды — не больше 100 мс (ТЗ), сейчас удержание ${Math.round(s.holdMs)} мс.`));
+      latencyEl);
   };
 
   const pinInput = h('input', { type: 'password', inputmode: 'numeric', maxlength: 6, autocomplete: 'new-password', placeholder: '4–6 цифр', 'aria-label': 'Новый PIN родителя' });

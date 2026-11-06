@@ -197,8 +197,14 @@ if (tracked.some(f => /\.(keystore|jks)$/.test(f))) fail('ключ подпис�
 // 5.29 — supply chain: actions by SHA, no install scripts, cooldown, exact versions, hashes (tools/supply-chain.mjs).
 for (const m of checkSupplyChain(root)) fail(`цепочка поставки: ${m}`);
 if (tracked.some(f => /customer\/rules\./.test(f))) fail('текст правил организатора в репозитории (п. 5.5) — только ссылка и цитаты в docs/TASK.md');
-const firstCommit = execFileSync('git', ['log', '--reverse', '--format=%cs', '--max-parents=0'], { cwd: root, encoding: 'utf8' }).trim().split('\n')[0];
-if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md; ответ организатора на вопрос PLAN 0.6 записать в MEMORY.md`);
+// Audit 06.11.2026 (F5): a shallow clone (a cloud session, `git clone --depth`) has no first commit — its oldest commit is
+// where the clone was cut, and the warning named that date (26.10) instead of the real 17.10.
+const shallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: root, encoding: 'utf8' }).trim() === 'true';
+if (shallow) warn('история git неполная (shallow clone): дату первого коммита не проверить — git fetch --unshallow');
+else {
+  const firstCommit = execFileSync('git', ['log', '--reverse', '--format=%cs', '--max-parents=0'], { cwd: root, encoding: 'utf8' }).trim().split('\n')[0];
+  if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md; ответ организатора на вопрос PLAN 0.6 записать в MEMORY.md`);
+}
 
 for (const w of warnings) console.log(`⚠ ${w}`);
 for (const e of errors) console.log(`✗ ${e}`);
