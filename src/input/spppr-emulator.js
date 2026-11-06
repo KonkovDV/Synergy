@@ -9,8 +9,8 @@
 // EmgEmulator. Deterministic for a seed. The game reads it through EmulatorDriver (spppr-driver.js: the one line to
 // replace with the MCU's driver).
 import { SPPPR, GESTURE_CONFUSION } from '../config.js';
-import { SPPPR_SET, GESTURE_BY_ID, COMMAND } from '../core/vocabulary.js';
-import { SPPPR_WIRE, sppprPacket } from '../core/spppr.js';
+import { SPPPR_SET, GESTURE_BY_ID, GESTURE_SET, COMMAND } from '../core/vocabulary.js';
+import { SPPPR_WIRE, sppprPacket, PAIR_CLASSES } from '../core/spppr.js';
 import { createRng } from '../core/rng.js';
 
 const IDS = SPPPR_SET.classOrder;
@@ -26,14 +26,16 @@ const CLOSE = index(by(COMMAND.CLOSE)), OPEN = index(by(COMMAND.OPEN));
 export function streamProfile(realism = 0.5) {
   const r = Math.max(0, Math.min(1, realism));
   return {
-    periodMs: 20,                  // the MCU sends at 50 Hz…
+    // 6.0, 05.11 — the organizers' answers (№ 24): the СПППР sends at 10 Hz with a delay under 100 ms. Until then the
+    // emulator sent at 50 Hz; every game was checked on both (tests/stars.test.mjs, «10 Гц»).
+    periodMs: 100,                 // the MCU sends at 10 Hz…
     spread: 0.45 * r,              // …with a log-normal spread of the interval
-    minMs: 10, maxMs: 40 + 100 * r, // the task: from 10 to 100+ ms
-    longEvery: r ? 4 / r : 0,      // seconds between rare long intervals (100–160 ms)
+    minMs: 10, maxMs: 100 + 100 * r, // the task: jitter of 10–100+ ms
+    longEvery: r ? 4 / r : 0,      // seconds between rare long intervals (1.6–2.6 periods)
     latencyMs: 6, latencyJitterMs: 14 * r, // radio and OS: a base delay and an exponential tail
     stallEvery: r ? 12 / r : 0,    // seconds between radio stalls: packets wait and arrive together
     stallMs: [50, 160],
-    loss: 0.03 * r,                // independent packet loss
+    loss: 0.01 * r,                // independent packet loss: «незначительны» (answers of 05.11); at 10 Hz one lost packet is a 200 ms gap
     dropoutEvery: r ? 25 / r : 0,  // seconds between dropouts longer than the task's 200 ms
     dropoutMs: [220, 520],
     reorder: 0.004 * r,            // a packet overtaken by the next one
@@ -66,6 +68,8 @@ export class SppprEmulator {
    */
   constructor({ realism = 0.5, seed = 11, bootMs = null, profile = {} } = {}) {
     this.rng = createRng(seed);
+    // 6.0, 05.11: a СПППР of two gestures and neutral sends three classes (the set «СПППР · 2 жеста», or `classes: 3`)
+    this.classes = profile.classes ?? (GESTURE_SET.id === 'tz2' ? PAIR_CLASSES : N);
     this.overrides = profile;
     this.realism = realism;
     this.level = new Array(N).fill(0); // how strongly each class is being produced now (0…1)
@@ -91,13 +95,21 @@ export class SppprEmulator {
    * The effort maps to a probability above the decoder's dead zone, so the decoder gives the same effort back.
    */
   setTarget(t) {
-    this.target = { ...this.target, ...t };
+    // `mix` is never inherited: the pads and the keys send { gesture, effort } only, and a blend left by the demo bot
+    // must not keep pushing the spark of a person who plays by hand.
+    this.target = { ...this.target, ...t, mix: t?.mix ?? null };
     const want = new Array(N).fill(0);
     const level = e => Math.min(0.97, SPPPR.deadZone + Math.max(0, Math.min(1, e)) * (1 - SPPPR.deadZone));
     const g = this.target.gesture;
     if (g && g !== 'rest') {
       const i = index(g) > 0 ? index(g) : index(taskClassOf(g));
       if (i > 0) want[i] = level(this.target.effort ?? 0.6);
+      // 6.0, 05.11 — two movements at once («Созвездие»: a diagonal is flexion and supination together). A recognizer gives
+      // each its share; they compete for the one probability mass, so the joystick of a softmax stays in |x| + |y| ≤ 1.
+      const mix = this.target.mix;
+      if (mix && typeof mix === 'object') {
+        for (const [id, e] of Object.entries(mix)) { const j = index(id); if (j > 0 && j !== i && Number.isFinite(e) && e > 0.02) want[j] = level(e); }
+      }
     } else if (!g) {
       if ((this.target.a ?? 0) > 0.02) want[CLOSE] = level(this.target.a);
       if ((this.target.b ?? 0) > 0.02) want[OPEN] = level(this.target.b);
@@ -117,7 +129,7 @@ export class SppprEmulator {
     if (this.nextSend < now - 500) this.nextSend = now - 500;
     while (this.nextSend <= now) this.send(this.nextSend);
     const out = [];
-    while (this.inFlight.length && this.inFlight[0].at <= now) out.push(this.inFlight.shift());
+    while (this.inFlight.length && this.inFlight[0].at <= now) { const { text, at } = this.inFlight.shift(); out.push({ text, at }); }
     return out;
   }
 
@@ -128,7 +140,7 @@ export class SppprEmulator {
     this.advance(dt / 1000);
     // the next interval: log-normal around the period, rarely a long one
     let next = Math.max(P.minMs, Math.min(P.maxMs, P.periodMs * Math.exp(P.spread * rng.gauss())));
-    if (P.longEvery && rng() < (dt / 1000) / P.longEvery) next = rng.range(100, 160);
+    if (P.longEvery && rng() < (dt / 1000) / P.longEvery) next = rng.range(1.6 * P.periodMs, 2.6 * P.periodMs);
     this.nextSend = at + next;
     if (P.rebootEvery && rng() < (dt / 1000) / P.rebootEvery) { this.bootMs = Math.round(rng.range(200, 900)); this.t0 = at; }
     if (P.dropoutEvery && at >= this.dropoutUntil && rng() < (dt / 1000) / P.dropoutEvery) this.dropoutUntil = at + rng.range(...P.dropoutMs);
@@ -136,10 +148,13 @@ export class SppprEmulator {
     if (P.stallEvery && at >= this.stallUntil && rng() < (dt / 1000) / P.stallEvery) this.stallUntil = at + rng.range(...P.stallMs);
     const text = rng() < P.malformed ? this.broken(this.mcuAt(at)) : JSON.stringify(sppprPacket(this.mcuAt(at), this.distribution(dt / 1000)));
     const latency = P.latencyMs + (P.latencyJitterMs ? -Math.log(Math.max(1e-6, rng())) * P.latencyJitterMs : 0);
-    let arrive = Math.max(at + latency, at < this.stallUntil ? this.stallUntil : 0);
-    if (rng() < P.reorder && this.inFlight.length) arrive = Math.max(at, this.inFlight[this.inFlight.length - 1].at - 1);
-    else arrive = Math.max(arrive, this.inFlight.length ? this.inFlight[this.inFlight.length - 1].at : 0); // a radio keeps the order
-    this.inFlight.push({ text, at: arrive });
+    // A radio keeps the order of what it sends; a packet retried after a collision does not: it arrives after the next
+    // one (6.0, 05.11: overtaking a packet still in flight almost never happens at 10 Hz, so the late one is delayed).
+    const queued = this.inFlight.filter(f => !f.late);
+    let arrive = Math.max(at + latency, at < this.stallUntil ? this.stallUntil : 0, queued.length ? queued[queued.length - 1].at : 0);
+    const late = rng() < P.reorder;
+    if (late) arrive = Math.max(arrive, at + next + latency + 30); // a retry costs ~30 ms: the next packet gets there first
+    this.inFlight.push({ text, at: arrive, late });
     this.inFlight.sort((x, y) => x.at - y.at);
     this.sent++;
   }
@@ -182,7 +197,10 @@ export class SppprEmulator {
     const out = p.map(v => Math.round(1000 * v / sum) / 1000);
     const top = out.indexOf(Math.max(...out));
     out[top] = Math.round(1000 * (out[top] + 1 - out.reduce((s, v) => s + v, 0))) / 1000; // rounding never breaks Σ = 1
-    return out;
+    if (this.classes !== PAIR_CLASSES) return out;
+    // Two gestures and neutral: what a six-gesture model would give the other movements is neutral to this system; the
+    // packet carries neutral, flexion and extension (the first three keys of the task's order).
+    return [Math.round(1000 * (1 - out[1] - out[2])) / 1000, out[1], out[2]];
   }
 
   /** A broken packet of one kind or another (only when profile.malformed > 0). */

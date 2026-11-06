@@ -20,7 +20,9 @@ import { GESTURE_SET, GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
 
 export const HOST_PROTOCOL = 1;
 /** Message types (additive within protocol 1: a 5.14 host reads `synergy:result` as before). */
-export const HOST_TYPES = { ready: 'synergy:ready', result: 'synergy:result', close: 'synergy:close' };
+// 6.0, 05.11 — `synergy:settings`: the organizers' answers (№ 16) — «при наличии настроек игра может возвращать
+// чувствительность сенсоров и пороги».
+export const HOST_TYPES = { ready: 'synergy:ready', result: 'synergy:result', close: 'synergy:close', settings: 'synergy:settings' };
 export const HOST_MESSAGE = HOST_TYPES.result;
 /** Commands a host may post (WebView WebMessage or the embedding frame). */
 export const HOST_COMMANDS = { frame: 'synergy-frame', start: 'synergy-start', ping: 'synergy-ping', thresholds: 'synergy-thresholds' };
@@ -47,7 +49,10 @@ export function parseLaunch(search, gameInfo) {
   const q = new URLSearchParams(search ?? '');
   // 5.30: `self=1` — opened by the app itself (an APK or iPhone link, a shortcut of the installed PWA), not by a host:
   // an exercise opens, but nobody waits for «synergy:close» and the person's own signal source stays.
-  const out = { game: null, level: null, hostOrigin: null, embed: q.get('embed') === '1', self: q.get('self') === '1' };
+  const out = { game: null, level: null, hostOrigin: null, embed: q.get('embed') === '1', self: q.get('self') === '1', side: null };
+  // 6.0, 05.11 — the answers (№ 16): Motorica Start passes the side of the hand; the routing names it `side=left|right`.
+  const side = q.get('side');
+  if (side === 'left' || side === 'right') out.side = side;
   const gl = gameLevel(q.get('game'), q.get('level'), gameInfo);
   if (gl) Object.assign(out, gl);
   const host = q.get('host');
@@ -94,6 +99,27 @@ export function resultMessage(run, version) {
     score: num(run.score), stars: num(run.stars), durationS: num(run.durationS),
     skills: Object.fromEntries(Object.entries(run.skills ?? {}).filter(([, v]) => Number.isFinite(v))),
   };
+}
+
+/**
+ * 6.0, 05.11 — what the host may take back (the answers, № 16): the side, the switch-on threshold of each channel as a
+ * share of its calibrated span (the sliders «Порог закрытия» / «Порог открытия»), and — when the calibration is on the
+ * prosthesis's 0…255 scale — the same thresholds in its units. Motorica Start's `getLatestThresholds()` returns
+ * [open, close]; here they go by name, `thresholds255: { close, open }`, so the order cannot be mixed up. Absent when unknown.
+ */
+export function settingsMessage({ side, sensitivity, calibration = null, usesProsthesisThresholds = false }, version) {
+  const share = v => (Number.isFinite(v) ? Math.round(v * 1000) / 1000 : null);
+  const [a, b] = sensitivity.map(share);
+  const msg = { type: HOST_TYPES.settings, protocol: HOST_PROTOCOL, version, side: side === 'left' ? 'left' : 'right',
+    sensitivity: { close: a, open: b }, prosthesisThresholds: !!usesProsthesisThresholds };
+  const units = (ch, v) => {
+    const rest = calibration?.rest?.[ch], max = calibration?.max?.[ch];
+    if (![rest, max, v].every(Number.isFinite) || max <= rest || max > 1.5) return null; // not the 0…1 scale of 0…255 levels
+    return Math.max(0, Math.min(255, Math.round(255 * (rest + v * (max - rest)))));
+  };
+  const close = units(0, a), open = units(1, b);
+  if (close !== null && open !== null) msg.thresholds255 = { close, open };
+  return msg;
 }
 
 /** The person is done with the app (the host may close the WebView). */

@@ -1,5 +1,5 @@
 """Red Team tests of the WebSocket bridge (standard library only): python -m unittest bridge/test_ws_bridge.py"""
-import asyncio, base64, os, struct, sys, unittest
+import asyncio, base64, json, os, struct, sys, unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ws_bridge import Bridge, origin_allowed, clean_intent, is_task_packet, GESTURES, MAX_PAYLOAD
 
@@ -69,6 +69,27 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         data = await self.closed_after(bytes([0x81, 2]) + b'{}')
         self.assertIn(bytes([0x88, 2]) + struct.pack('!H', 1002), data)
 
+    async def test_a_huge_number_in_an_intent_keeps_the_connection(self):
+        """6.0, 05.11 (Red Team): {"effort": <400 digits>} raised OverflowError in the reader and dropped the client."""
+        def masked(text):
+            data, mask = text.encode(), os.urandom(4)
+            n = len(data)
+            head = bytes([0x81, 0x80 | n]) if n < 126 else bytes([0x81, 0x80 | 126]) + struct.pack('!H', n)
+            return head + mask + bytes(c ^ mask[i % 4] for i, c in enumerate(data))
+        status, reader, writer = await self.handshake()
+        self.assertIn('101', status)
+        try:
+            writer.write(masked('{"type": "intent", "gesture": "flexion", "effort": ' + '9' * 400 + '}'))
+            writer.write(masked('{"type": "intent", "gesture": "extension", "effort": 0.3}'))
+            await writer.drain()
+            for _ in range(50):
+                if self.bridge.intent.get('gesture') == 'extension': break
+                await asyncio.sleep(0.01)
+            self.assertEqual(self.bridge.intent, {'type': 'intent', 'gesture': 'extension', 'effort': 0.3, 'a': 0.0, 'b': 0.0})
+            self.assertEqual(len(self.bridge.clients), 1, 'the client is still connected')
+        finally:
+            writer.close()
+
 
 class HardeningTest(unittest.TestCase):
     """5.10 (Red Team C-13): a LAN peer needs the token; a malformed intent or a failing source does not stop the bridge."""
@@ -84,6 +105,10 @@ class HardeningTest(unittest.TestCase):
         self.assertEqual(clean_intent({'type': 'intent', 'effort': None, 'gesture': 'nope', 'a': 7, 'b': float('nan')}),
                          {'type': 'intent', 'gesture': None, 'effort': 0.6, 'a': 1.0, 'b': 0.0})
         self.assertEqual(clean_intent({'gesture': 'pronation', 'effort': 0.4})['gesture'], 'pronation')
+        # 6.0, 05.11 (Red Team): a 400-digit integer is valid JSON; float() of it raised OverflowError and closed the client
+        huge = json.loads('{"type": "intent", "effort": ' + '9' * 400 + ', "a": -' + '9' * 400 + '}')
+        self.assertEqual(clean_intent(huge)['effort'], 1.0)
+        self.assertEqual(clean_intent(huge)['a'], 0.0)
         self.assertEqual(GESTURES[0], 'rest', 'the task numbers neutral 0; the game calls it rest')
 
     def test_a_failing_source_does_not_stop_the_pump(self):

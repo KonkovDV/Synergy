@@ -177,7 +177,7 @@ test('ТЗ эмулятор: the exact format, its own MCU clock, jitter 10–10
   assert.ok(iv.some(v => v > 200), 'dropouts longer than 200 ms');
   const bursts = parsed.slice(1).filter((p, i) => p.at - parsed[i].at < 1).length;
   assert.ok(bursts > 5, `bursts after a radio stall: ${bursts}`);
-  const sent = emu.sent, expected = 120000 / 20;
+  const sent = emu.sent, expected = 120000 / streamProfile(1).periodMs; // 10 Hz since the organizers' answers (05.11)
   assert.ok(sent < expected, 'some packets were lost');
   const wrong = parsed.filter(p => p.p.indexOf(Math.max(...p.p)) !== 1).length;
   assert.ok(wrong > 10 && wrong < parsed.length * 0.2, `wrong packets are few but there: ${wrong}/${parsed.length}`);
