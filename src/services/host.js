@@ -12,7 +12,7 @@
 //        (the person is done: «Вернуться в приложение», or back on the home screen) — through the first native channel
 //        the WebView has (hostChannel), a CustomEvent on document, and postMessage to the parent frame — only to the
 //        origin the host named in ?host=<origin> (never to «*»).
-// 5.15 — the team's sample (docs/onboarding of FinPhoenix) gives every platform its own guide and example, each with an
+// 5.15 — every platform gets its own guide and example, each with an
 // honest «how verified». Here the same: each stack's ordinary way of hearing a page (a JS interface on Android, a
 // script message handler on iOS, a JavaScriptChannel in Flutter, ReactNativeWebView, Unity's WebView plugin) is
 // recognised, so a host needs no glue script; the bridge contract of the sample's 3D scene added the «ready» handshake.

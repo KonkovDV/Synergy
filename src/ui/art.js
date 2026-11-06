@@ -1,5 +1,5 @@
 // Illustrations (5.12): the coach Мио, game and reward pictures, stars, light trails and the cover scene.
-// Style — soft 3D («clay / glossy», like the 3D pictures of the team's sample ФинФениксы) in the corporate palette of
+// Style — soft 3D («clay / glossy») in the palette of
 // «Моторика»: green → teal → blue → violet, graphite prostheses with a green glow. Every volume is lit from the top
 // left: a body gradient, a darker underside, a specular gloss, a rim light and a soft contact shadow.
 // Drawn in SVG from code, no emoji (they differ on every platform and are missing in some WebView fonts); a picture

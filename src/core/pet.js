@@ -2,7 +2,7 @@
 // theory) next to competence (stars, skills) and autonomy (free play). It grows with days of training, so regularity
 // matters, not force. Ethical rules of the design (docs/GAME_DESIGN.md): it never sickens, shrinks or leaves; a rest
 // day, pain or a skipped day changes nothing but its mood words — no guilt, no loss.
-// 5.13 (ideas of the team's sample, the FinPhoenix pet): it says why it feels so, reacts to a touch and to the day's
+// 5.13: it says why it feels so, reacts to a touch and to the day's
 // events with a small animation, and wears what the player earned — items for achievements, never bought.
 import { PET } from '../config.js';
 
