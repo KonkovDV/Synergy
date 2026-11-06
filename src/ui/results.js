@@ -204,9 +204,35 @@ function safeReplayCard(replay) {
     h('p', { class: 'note' }, `${safeReplaySummary(replay, id => GESTURE_BY_ID[id]?.name ?? id)} Огоньки — цифры кода по порядку: зелёные открыты, жёлтые — нет.`));
 }
 
+/**
+ * «Как прошло созвездие» (ported 06.11.2026; pure: tests/stars.test.mjs): the quality of control the organizers ask to show
+ * (answers, № 18) in the metrics of a Fitts-type test — stars lit, how straight the path, overshoots, both pairs at once,
+ * the glide on a silent link.
+ */
+export function starsReplaySummary(r) {
+  const parts = [`Звёзд зажжено: ${r.solved} из ${r.total}.`];
+  if (r.pathEfficiency !== null && r.pathEfficiency !== undefined) parts.push(`Путь прямой на ${r.pathEfficiency} %.`);
+  if (r.solved) parts.push(r.overshoots ? `Проскакивали звезду: ${r.overshoots}.` : 'Ни одной звезды не проскочили.');
+  if (r.simultaneous) parts.push(`Обе пары мышц разом — ${r.simultaneous} % времени движения.`);
+  if (r.inertiaMs >= 100) parts.push(`Сигнал пропадал: искра скользила по инерции ${fmtFixed(r.inertiaMs / 1000)} с.`);
+  return parts.join(' ');
+}
+
+/** «Как прошло созвездие»: the sky of the run — lit stars joined in their order, missed ones apart — and the summary. */
+function starsReplayCard(replay) {
+  if (!replay?.stars?.length) return null;
+  const S = 160, at = v => ((v + 1) / 2 * (S - 20) + 10).toFixed(1), aty = v => ((1 - v) / 2 * (S - 20) + 10).toFixed(1);
+  const lit = replay.stars.filter(st => st.ok);
+  const line = lit.length > 1 ? svgEl('polyline', { points: lit.map(st => `${at(st.x)},${aty(st.y)}`).join(' '), class: 'sky-line' }) : null;
+  const dots = replay.stars.map(st => svgEl('circle', { cx: at(st.x), cy: aty(st.y), r: st.ok ? 5 : 3.5, class: st.ok ? 'lamp ok' : 'lamp miss' }));
+  const pic = svgEl('svg', { viewBox: `0 0 ${S} ${S}`, class: 'replay-plot stars-plot', 'aria-hidden': 'true', focusable: 'false' }, ...[line, ...dots].filter(Boolean));
+  return h('section', { class: 'card replay' }, h('h2', { class: 'with-art' }, gameArt('stars', 32), 'Как прошло созвездие'), pic,
+    h('p', { class: 'note' }, `${starsReplaySummary(replay)} Зелёные — зажжённые звёзды по порядку, жёлтые — пропущенные.`));
+}
+
 /** The replay of the game that has one («Полёт», «Мастерская», «Сейф»), or nothing. */
 const replayCard = replay => (replay?.kind === 'grip' ? gripReplayCard(replay) : replay?.kind === 'flight' ? flightReplayCard(replay)
-  : replay?.kind === 'safe' ? safeReplayCard(replay) : null);
+  : replay?.kind === 'safe' ? safeReplayCard(replay) : replay?.kind === 'stars' ? starsReplayCard(replay) : null);
 
 /**
  * 5.17 — «Как прошёл полёт»: the altitude line over the rings after the run (delayed feedback, games/flight.js replay).
