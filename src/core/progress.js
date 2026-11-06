@@ -65,8 +65,8 @@ export const ACHIEVEMENTS = [
   { id: 'streak7', name: 'Неделя', text: '7 дней с тренировкой за 14 дней', test: (p, run, ctx) => trainingDaysWithin(p, ctx?.today ?? dayKey(), 14) >= 7 },
   { id: 'week_goal', name: 'Цель недели', text: 'Выполните недельную цель', test: (p, run, ctx) => ctx?.weekly?.done >= ctx?.weekly?.goal },
   { id: 'retention', name: 'Без подсказки', text: 'Пройдите испытание без подсказки на 2★', test: (p, run) => run?.retention && run.stars >= 2 },
-  // 06.11: the four training games themselves (`ctx.training`, the plan's catalogue from the app) — any four played games
-  // counted, so «Две руки» and «Созвездие» stood in for «Ритм» or «Сейф». Without the list (older callers) — the old count.
+  // The four training games themselves (`ctx.training`, the plan's catalogue from the app). Counting any four played games
+  // let «Две руки» and «Созвездие» stand in for «Ритм» or «Сейф». Without the list (older callers) — the old count.
   { id: 'all_games', name: 'Универсал', text: 'Сыграйте во все четыре игры', test: (p, run, ctx) => (ctx?.training?.length
     ? ctx.training.every(id => p.games[id]?.played) : Object.values(p.games).filter(g => g.played && !g.assessment).length >= 4) },
   { id: 'tutorial', name: 'Первые шаги', text: 'Пройдите обучение: покой, A, B, сила, коактивация', test: (p) => !!p.tutorialPassed },

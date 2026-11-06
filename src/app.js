@@ -46,8 +46,8 @@ const THEME_COLOR = { light: '#f3f5f7', dark: '#071019' };
 /** Game catalog for the stored-state check (core does not import games): id → number of levels. */
 const CATALOG = Object.fromEntries(Object.entries(GAME_BY_ID).map(([id, g]) => [id, g.Game.levels.length]));
 /** A game id → its number of levels, for the launch parameters and the host's commands (services/host.js). */
-// 06.11: a joystick game («Созвездие») needs the axes of the task's set — in another set its spark would never move, so a
-// host's launch or start of it is refused there like an unknown id (the set is chosen once per page load).
+// A joystick game («Созвездие») needs the axes of the task's set: in another set its spark would never move, so a host's
+// launch or start of it is refused there like an unknown id (the set is chosen once per page load).
 const gameInfo = id => (playableIn(GAME_BY_ID[id]) ? { levels: GAME_BY_ID[id].Game.levels.length } : null);
 
 /** What a same-screen re-render keeps (5.10): scroll, open sections, the focused choice group or button. */
@@ -197,7 +197,7 @@ export class App {
     const before = this.settings.source;
     if (patch.wsUrl !== undefined || patch.source === 'touch') this.hostFed = false; // the person chose the source
     Object.assign(this.settings, patch);
-    // 06.11 (answer 16): a changed threshold or side is told to the host once the slider rests
+    // A changed threshold or side is told to the host once the slider rests (the organizers' answer 16)
     if (['sensitivity', 'sensitivityB', 'side', 'prosthesisThresholds'].some(k => k in patch)) { clearTimeout(this.settingsTimer); this.settingsTimer = setTimeout(() => this.notifySettings(), 600); }
     this.emulator.realism = this.settings.realism; this.emulator2.realism = this.settings.realism;
     this.emulator.rateHz = this.settings.streamRateHz; // 6.2: 50 or 10 packets a second (the stream panel)
@@ -364,12 +364,12 @@ export class App {
   /** Hands control back to the host (5.15): «Вернуться в приложение» after an exercise, or back on the home screen. */
   closeToHost(reason) {
     if (!this.embedded) return false;
-    this.notifySettings(); // 06.11 (answer 16): the thresholds go back before the host closes the game
+    this.notifySettings(); // the thresholds go back before the host closes the game
     notifyHost(closeMessage(reason, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
     return true;
   }
 
-  /** 06.11 — the side, the sliders and (external source) the lines in the host's 0…255 units (services/host.js settingsMessage). */
+  /** The side, the sliders and (external source) the lines in the host's 0…255 units (services/host.js settingsMessage). */
   notifySettings() {
     clearTimeout(this.settingsTimer); this.settingsTimer = null;
     if (!this.embedded || this.showcase) return false; // the demo profile is not the person's

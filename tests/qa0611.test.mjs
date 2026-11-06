@@ -1,6 +1,6 @@
 import './pin-tz.mjs'; // the set of the task — imported FIRST (tests/pin-tz.mjs)
-// 06.11.2026 — the branches of 04–06.11 merged into one (docs/AUDIT.md §57). The parallel branch of 06.11 fixed what this
-// line still had wrong; its tests come along with the fixes, on the code of this line.
+// The organizers' answers that the code did not keep yet (docs/AUDIT.md §57): four values of Stream 1 in one message,
+// losses of the stream, the settings a host gets back — and the Red Team cases found next to them.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseExternal, BridgeSource, RAW_SAMPLE_MAX } from '../src/input/bridge.js';
@@ -108,7 +108,9 @@ test('ответ № 16: the game returns its settings — on a change of a thre
   const { readFileSync } = await import('node:fs');
   const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
   assert.match(app, /\['sensitivity', 'sensitivityB', 'side', 'prosthesisThresholds'\]\.some\(k => k in patch\)/, 'a change is told once the slider rests');
-  assert.match(app, /this\.notifySettings\(\); \/\/ 06\.11 \(answer 16\): the thresholds go back before the host closes the game/);
+  // Before «close»: the host that closes the game right away still gets the last thresholds. The order is the check,
+  // not the wording of a comment.
+  assert.match(app, /closeToHost\(reason\) \{[^}]*this\.notifySettings\(\);[^}]*notifyHost\(closeMessage\(/);
 });
 
 test('«Универсал» is the four training games themselves — «Две руки» and «Созвездие» do not stand in for them', async () => {

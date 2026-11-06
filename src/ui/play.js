@@ -164,7 +164,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     // Safety > motivation: free play stays open on a declared rest day or over the cap, with a caution.
     const caution = demo ? null : freePlayCaution({ checkin: app.checkin(), secondsToday: secondsToday(app.profile, dayKey()), softCapMin: app.rules.softCapMin });
     // The words describe the exercise's own scheme — «Созвездие» is gestures and «Две руки» two channels whatever the
-    // settings say (the pads already followed session.scheme; ported 06.11.2026).
+    // settings say (the pads already followed session.scheme).
     const legend = session.scheme === SCHEME.GESTURE
       ? gestureLegend()
       : s.gripSwitch === 'co'
@@ -206,7 +206,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
 
   function begin() { phase = 'countdown'; countdown = 3; lastCount = 0; setDialog(false); focusIn(pauseBtn()); }
 
-  // 06.11 — Q&A of 04.11, answer 25: a lost external signal that lasts is critical; the exercise pauses and says why.
+  // A lost external signal that lasts is critical (the organizers' answer 25): the exercise pauses and says why.
   const lossWatch = new LossWatch();
   function pause({ signal = false } = {}) {
     if (phase !== 'running') return;

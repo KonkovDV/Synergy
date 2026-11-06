@@ -90,13 +90,13 @@ export function settingsScreen(app, { back = null } = {}) {
   // kept reading the stopped one («Нет сигнала» in a calibration that had a signal).
   const preview = { pipeline: app.createPipeline(), source: app.liveFrames() };
   const refreshPreview = () => { preview.pipeline = app.createPipeline(); preview.source = app.liveFrames(); paintLimits(); paintLatency(); };
-  // Audit 06.11.2026 (F3): the response at the person's own parameters, measured again on every change of a slider. The
-  // line used to be built once: «сейчас удержание 15 мс» stayed on screen while the hold went to 300 ms and past 100 ms.
+  // The response at the person's own parameters, measured again on every change of a slider. A line built once said
+  // «15 мс» while the hold went to 300 ms and past the task's 100 ms.
   const latencyEl = h('p', { class: 'note' });
   function paintLatency() {
     const { text, over } = latencyNote(app.signalParams());
-    // The hold is how long the signal must already have lasted (06.11, main): at 30 Hz the 15 ms fit in the next frame —
-    // the measured 33 ms, not a frame on top of the hold.
+    // The hold is how long the signal must already have lasted: at 30 Hz the 15 ms fit in the next frame — the measured
+    // 33 ms, not a frame on top of the hold.
     latencyEl.textContent = `${text} Удержание сейчас ${Math.round(app.settings.holdMs)}\u00a0мс: канал включается, только когда сигнал уже продержался это время.`;
     latencyEl.classList.toggle('warn', over);
   }

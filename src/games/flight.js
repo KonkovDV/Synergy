@@ -249,8 +249,7 @@ export class FlightGame extends Game {
       }
     }
     if (this.flash) this.flash.t -= dt;
-    // 6.0, 05.11 (ported 06.11 from the parallel branch): the trail is the path of the last TRAIL_S of game time, drawn
-    // where the world was (render). It was the last 40 frames at 4 px each — 0.33 s squeezed or 1.3 s stretched by the
+    // The trail is the path of the last TRAIL_S of game time, drawn where the world was (render). It was the last 40 frames at 4 px each — 0.33 s squeezed or 1.3 s stretched by the
     // screen's refresh rate (120 or 30 Hz), and it scrolled 1.8–3.6 times faster than the rings it was flown through.
     this.trail.push([this.time, this.alt]);
     while (this.trail.length > 2 && this.trail[0][0] < this.time - TRAIL_S) this.trail.shift();
