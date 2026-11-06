@@ -3,8 +3,8 @@
 // prostheses. Pure functions: the settings screen, the layout and the source router read them.
 
 export const SIDES = Object.freeze(['left', 'right']);
+/** Lower-case side, the same word in the report, the signal line and the pause hint. */
 export const SIDE_NAME = Object.freeze({ left: 'левый', right: 'правый' });
-export const SIDE_HAND = Object.freeze({ left: 'левая рука', right: 'правая рука' });
 
 /** The other side. */
 export const otherSide = side => (side === 'left' ? 'right' : 'left');

@@ -18,6 +18,7 @@ import { audioClock, playMusic } from '../services/audio.js';
 import { freePlayCaution, adviseStop } from '../core/wellbeing.js';
 import { secondsToday, dayKey, trainingDays } from '../core/progress.js';
 import { HoldConfirm } from '../core/handsfree.js';
+import { SIDE_NAME } from '../core/hands.js';
 import { LossWatch } from '../core/signal.js';
 import { howFor } from '../games/registry.js';
 
@@ -83,7 +84,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     if (!r.qualities) return r.quality?.verdict ?? null;
     for (const side of ['left', 'right']) {
       const v = r.qualities[side]?.verdict;
-      if (v && !v.ok) return { ...v, text: `${v.text} · ${side === 'left' ? 'левый' : 'правый'}` };
+      if (v && !v.ok) return { ...v, text: `${v.text} · ${SIDE_NAME[side]}` };
     }
     return r.qualities.left || r.qualities.right ? { ok: true, text: 'Сигнал: хороший' } : null;
   };

@@ -3,7 +3,7 @@
 // what it wears and the gifts the training earned. Progress keeps the skills and the report (it had grown to ten
 // phone screens). Ethics of 5.12 stay: growth only from training days, nothing decays, no currency and no shop.
 import { fmtDay, count, FORMS } from '../core/format.js';
-import { h } from './dom.js';
+import { h, hiDpiCanvas } from './dom.js';
 import { firebird, badgeArt, trails, achievementArt, giftArt, skinArt, sectionArt } from './art.js';
 import { artBackground } from './pictures.js';
 import { touchableBird } from './petcard.js';
@@ -13,12 +13,6 @@ import { PET } from '../config.js';
 import { trainingDays, dayKey, ACHIEVEMENTS, SKINS, skinUnlocked, daysSinceTraining } from '../core/progress.js';
 import { drawHand } from '../render/draw.js';
 import { COMMAND_POSE } from '../core/vocabulary.js';
-
-function hiDpiCanvas(w, hgt, cls) {
-  const canvas = h('canvas', { class: cls, width: w * 2, height: hgt * 2, style: { width: `${w}px`, height: `${hgt}px` } });
-  const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-  return { canvas, ctx };
-}
 
 const GIFT_BY_ACHIEVEMENT = Object.fromEntries(PET_ITEMS.map(i => [i.achievement, i]));
 

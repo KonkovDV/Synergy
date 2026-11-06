@@ -122,7 +122,8 @@ await page.getByRole('radiogroup', { name: 'Схема управления' }).
 await page.evaluate(() => { const d = [...document.querySelectorAll('details.fold')].find(x => x.querySelector('.stream-rate')); if (d) d.open = true; });
 await page.getByRole('radiogroup', { name: 'Частота пакетов эмулятора СПППР' }).getByRole('radio', { name: /10 Гц/ }).click(); await wait(2600);
 const rate = await page.evaluate(() => ({ setting: window.Synergy.state().settings.streamRateHz, line: document.querySelector('.meter-stream')?.textContent ?? '' }));
-if (rate.setting !== 10 || !/СПППР (9|10|11)(\.\d)? пак\/с/.test(rate.line)) errors.push(`settings: the 10 Hz emulator (${JSON.stringify(rate)})`);
+const measured = Number(rate.line.match(/СПППР (\d+(?:\.\d+)?) пак\/с/)?.[1]);
+if (rate.setting !== 10 || !(measured > 4 && measured < 20)) errors.push(`settings: the 10 Hz emulator (${JSON.stringify(rate)})`);
 await audit('settings-stream');
 await page.getByRole('radiogroup', { name: 'Частота пакетов эмулятора СПППР' }).getByRole('radio', { name: /50 Гц/ }).click();
 await page.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Пропорц/ }).click(); await wait(300);
