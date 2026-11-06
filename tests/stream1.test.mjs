@@ -4,6 +4,7 @@ import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Си�
 // suppression and dead zone. Proportional mode: amplitude = speed/force, smoothing, no sharp jumps. Latency ≤ 100 ms.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { SignalPipeline } from '../src/core/signal.js';
 import { EmgEmulator } from '../src/input/emulator.js';
 import { SIGNAL, SETTINGS_RANGES } from '../src/config.js';
@@ -109,4 +110,9 @@ test('ТЗ настраиваемые параметры: every parameter has a 
     assert.ok(SETTINGS_RULES[key](min) && SETTINGS_RULES[key](max) && SETTINGS_RULES[key](DEFAULT_SETTINGS[key]), key);
     assert.ok(!SETTINGS_RULES[key](max * 2 + 1) && !SETTINGS_RULES[key](-1), `${key}: out of range is refused`);
   }
+  // The hold is how long the signal must already have lasted. At 30 Hz that wait fits inside the next frame (33 ms),
+  // so the screen must not add another frame on top of the 15 ms.
+  const note = readFileSync(new URL('../src/ui/settings.js', import.meta.url), 'utf8');
+  assert.match(note, /уже продержался это время/);
+  assert.equal(note.includes('ещё один кадр'), false);
 });
