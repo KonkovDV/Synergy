@@ -95,7 +95,9 @@ export function settingsScreen(app, { back = null } = {}) {
   const latencyEl = h('p', { class: 'note' });
   function paintLatency() {
     const { text, over } = latencyNote(app.signalParams());
-    latencyEl.textContent = text;
+    // The hold is how long the signal must already have lasted (06.11, main): at 30 Hz the 15 ms fit in the next frame —
+    // the measured 33 ms, not a frame on top of the hold.
+    latencyEl.textContent = `${text} Удержание сейчас ${Math.round(app.settings.holdMs)}\u00a0мс: канал включается, только когда сигнал уже продержался это время.`;
     latencyEl.classList.toggle('warn', over);
   }
   paintLatency();
@@ -305,7 +307,6 @@ export function settingsScreen(app, { back = null } = {}) {
         h('p', {}, `${APP.name} ${APP.version} — игра-тренажёр управления бионическим протезом по ЭМГ. Два канала: пороговый и пропорциональный режимы. Поток СПППР: семь состояний из ТЗ 28.10 (нейтраль, сгибание, разгибание, пронация, супинация, приведение, отведение) или два жеста и нейтраль — второй словарь из ответов организаторов 04.11.`),
         h('p', { class: 'note warn' }, 'Не медицинское изделие: не диагностирует и не лечит. Не заменяет занятия с реабилитологом. При боли или усталости — остановитесь.'),
         h('p', { class: 'note' }, `Возрастная категория: ${APP.ageRating} (436-ФЗ). Детям — с родителем.`),
-        h('p', { class: 'note' }, 'В разработке использовались ИИ-инструменты. Перечень функций и отчёт о проверке лежат в репозитории: docs/AI_USAGE.md.'),
         h('button', { class: 'btn ghost', 'data-return': 'faq', onclick: () => app.go('faq', { from: 'settings' }) }, 'Вопросы и ответы'),
         // 6.0 — feedback after testing (task of 28.10): SUS, NASA-TLX, questions of the game; exported by the person
         h('button', { class: 'btn ghost', 'data-return': 'feedback', onclick: () => app.go('feedback', { from: 'settings' }) }, 'Отзыв о тестировании'))),
