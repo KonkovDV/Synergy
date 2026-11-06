@@ -18,6 +18,13 @@ export function h(tag, attrs = {}, ...children) {
 
 export function mount(root, ...nodes) { root.replaceChildren(...nodes); }
 
+/** A canvas laid out in CSS pixels and drawn at 2×, so charts and the nest stay sharp. */
+export function hiDpiCanvas(w, hgt, cls) {
+  const canvas = h('canvas', { class: cls, width: w * 2, height: hgt * 2, style: { width: `${w}px`, height: `${hgt}px` } });
+  const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
+  return { canvas, ctx };
+}
+
 /**
  * Letters in the longest word of the labels (5.9). CSS turns it into the narrowest column of a group, so
  * «Пропорциональный» stacks the options on a phone instead of breaking mid-word; a hyphen or slash may break.

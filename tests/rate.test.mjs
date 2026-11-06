@@ -76,6 +76,8 @@ test('ответ № 24: at 10 Hz the emulator does not show a movement before i
   assert.deepEqual(STREAM_RATES_HZ, [50, 10]);
   assert.equal(streamProfile(0.5, 10).periodMs, 100);
   assert.ok(streamProfile(1, 10).maxMs >= 200, 'at 10 Hz the intervals still spread past 100 ms (the task: 10–100+ ms)');
+  assert.ok(streamProfile(1, 10).minMs >= 50, 'a 10 Hz stream does not emit a 10 ms packet');
+  assert.equal(streamProfile(1).minMs, 10, '50 Hz keeps the task floor of 10 ms');
   assert.equal(streamProfile(0.5).periodMs, 20, '50 Hz stays the default');
 });
 
@@ -158,7 +160,8 @@ test('6.2: the packet rate is a setting of the on-screen emulator — saved, che
   assert.equal(emu.rateHz, 10);
   emu.setTarget({ gesture: 'flexion', effort: 0.7, a: 0, b: 0 });
   for (let t = 0; t <= 4000; t += 16) emu.sample(t);
-  assert.ok(emu.decoder.timing().rateHz < 12, `${emu.decoder.timing().rateHz} packets a second at 10 Hz`);
+  const at10 = emu.decoder.timing().rateHz;
+  assert.ok(at10 > 8 && at10 < 12, `${at10} packets a second at 10 Hz: the button names the mean interval`);
   emu.rateHz = 50;
   emu.decoder.resetStats();
   for (let t = 4016; t <= 8000; t += 16) emu.sample(t);
