@@ -1,28 +1,20 @@
 // Progress: skill profile (radar + numbers), per-skill trends, training calendar, achievements,
 // collection, and the report for a prosthetist / rehabilitation specialist.
 import { fmtNum, fmtPct, fmtDay, plural, count, FORMS } from '../core/format.js';
-import { h, toast } from './dom.js';
+import { h, toast, hiDpiCanvas } from './dom.js';
 import { sharePlain } from './share.js';
 import { gameArt, firebird, sectionArt } from './art.js';
 import { picture } from './pictures.js';
 import { petStageIndex } from '../core/pet.js';
 import { PET } from '../config.js';
 import { bottomNav, skillBar, segmented } from './widgets.js';
-import { SKILL_NAME, skillKeys } from '../core/vocabulary.js';
+import { SKILL_NAME, skillKeys, gestureName as name, SCHEME_INFO } from '../core/vocabulary.js';
 import { skillProfile, trainingDays, dayKey, weekCompare, weekShareText } from '../core/progress.js';
 import { COLORS } from '../render/draw.js';
-import { gestureName as name } from '../core/vocabulary.js';
 import { buildReport, reportCsv, reportHtml, printHtml, download, wellbeingLog, REPORT_PERIODS } from '../services/report.js';
 import { confusionMatrix, assessmentHistory, completionChange } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS } from '../core/wellbeing.js';
 import { GAME_BY_ID } from '../games/registry.js';
-import { SCHEME_INFO } from '../core/vocabulary.js';
-
-function hiDpiCanvas(w, hgt, cls) {
-  const canvas = h('canvas', { class: cls, width: w * 2, height: hgt * 2, style: { width: `${w}px`, height: `${hgt}px` } });
-  const ctx = canvas.getContext('2d'); ctx.scale(2, 2);
-  return { canvas, ctx };
-}
 
 /**
  * Radar geometry for a canvas `width` px wide and labels of `labelWidths` px (5.9). Until 5.9 the canvas was 260 px

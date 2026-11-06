@@ -33,9 +33,11 @@ export function streamProfile(realism = 0.5, rateHz = STREAM_RATES_HZ[0]) {
   const r = Math.max(0, Math.min(1, realism));
   const periodMs = 1000 / (STREAM_RATES_HZ.includes(rateHz) ? rateHz : STREAM_RATES_HZ[0]);
   return {
-    periodMs,                      // the MCU sends at 50 Hz (or 10)…
-    spread: 0.45 * r,              // …with a log-normal spread of the interval
-    minMs: 10, maxMs: Math.max(40, periodMs) + 100 * r, // the task: from 10 to 100+ ms (at 10 Hz: 100 to 200)
+    periodMs,                      // the MCU sends at 50 Hz (or 10): this is the mean interval, not the median
+    spread: 0.45 * r,              // log-normal jitter around that mean (exp(s²/2) is taken back in send)
+    // 50 Hz keeps the task's floor of 10 ms. At 10 Hz a 10 ms packet would be a 100 Hz burst, so the floor is half a period.
+    minMs: periodMs <= 25 ? 10 : Math.round(periodMs / 2),
+    maxMs: Math.max(40, periodMs) + 100 * r, // still past 100 ms at 10 Hz (the task: 10–100+ ms of jitter)
     longEvery: r ? 4 / r : 0,      // seconds between rare long intervals (100–160 ms)
     latencyMs: 6, latencyJitterMs: 14 * r, // radio and OS: a base delay and an exponential tail
     stallEvery: r ? 12 / r : 0,    // seconds between radio stalls: packets wait and arrive together
@@ -166,8 +168,11 @@ export class SppprEmulator {
     this.lastSend = at;
     this.advanceTo(at);
     // the next interval: log-normal around the period, rarely a long one
-    let next = Math.max(P.minMs, Math.min(P.maxMs, P.periodMs * Math.exp(P.spread * rng.gauss())));
-    if (P.longEvery && rng() < (dt / 1000) / P.longEvery) next = rng.range(100, 160);
+    // exp(s·Z) has mean exp(s²/2), so the selected rate would be the median and the mean would run slow.
+    // Subtracting s²/2 makes the mean interval the period the button names; the clamp keeps the task's range.
+    const s = P.spread;
+    let next = Math.max(P.minMs, Math.min(P.maxMs, P.periodMs * Math.exp(s * rng.gauss() - s * s / 2)));
+    if (P.longEvery && rng() < (dt / 1000) / P.longEvery) next = Math.max(next, P.periodMs <= 25 ? rng.range(100, 160) : rng.range(P.periodMs * 1.4, P.periodMs * 2));
     this.nextSend = at + next;
     if (P.rebootEvery && rng() < (dt / 1000) / P.rebootEvery) { this.bootMs = Math.round(rng.range(200, 900)); this.t0 = at; }
     if (P.dropoutEvery && at >= this.dropoutUntil && rng() < (dt / 1000) / P.dropoutEvery) this.dropoutUntil = at + rng.range(...P.dropoutMs);

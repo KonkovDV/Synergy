@@ -11,6 +11,7 @@
 //   stuck      — a channel holds one exact value above rest for seconds: a stream or a sensor that froze
 //   saturation — a channel at the top of its calibrated span for seconds: too strong, or a calibration done too weak
 import { robustSd } from './calibration.js';
+import { SIDE_NAME } from './hands.js';
 
 /** The share of the calibrated span, unclipped (the game's own `normalize` clips to 0..1). */
 const share = (value, ch, cal) => (value - cal.rest[ch]) / Math.max(1e-6, cal.max[ch] - cal.rest[ch]);
@@ -142,6 +143,5 @@ export const signalIssuesCode = list => (list ?? []).map(x => `${x.id}${x.side ?
 
 /** One line for the report and the results screen: «помехи в покое 12 с, скачки сигнала (левый) 5 с». */
 export function signalIssuesText(list) {
-  const arm = { left: 'левый', right: 'правый' };
-  return (list ?? []).map(x => `${QUALITY_TIPS[x.id]?.title.toLowerCase() ?? x.id}${x.side ? ` (${arm[x.side]})` : ''} ${x.seconds} с`).join(', ');
+  return (list ?? []).map(x => `${QUALITY_TIPS[x.id]?.title.toLowerCase() ?? x.id}${x.side ? ` (${SIDE_NAME[x.side]})` : ''} ${x.seconds} с`).join(', ');
 }

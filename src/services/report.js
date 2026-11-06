@@ -12,6 +12,7 @@ import { sumTime, timedShare, shareVerdict } from '../core/timeshare.js';
 import { susScore, tlxScore } from '../core/survey.js';
 import { dictionaryName } from '../core/spppr.js';
 import { balanceByGame } from '../core/channeluse.js';
+import { SIDE_NAME } from '../core/hands.js';
 import { TIME_SHARE, CHANNEL_BALANCE } from '../config.js';
 
 /** 6.0 — the time of the period by kind (core/timeshare.js) and the share of the task's band. */
@@ -271,7 +272,7 @@ ${table(['День', 'Боль', 'Усталость', 'Кожа под датч
 ${table(['Дата', 'Игра', 'Ур.', 'Очки', '★', 'Сложность', 'Без подсказки', 'Заметка'],
   runs.slice(-15).reverse().map(r => [ruDate(r.at), gameTitle(r.game), r.level, r.score, r.stars, r.details?.difficulty ?? '—', r.retention ? 'да' : '',
     [r.details?.unreleased ? `не отпустили ${r.details.unreleased}` : '', r.details?.restMissed ? `покой не получился ${r.details.restMissed}` : '',
-      r.details?.crossings ? `второй канал включался ${r.details.crossings}` : '', isGamePercent(r.details?.cleanClose) ? `чистота закрытия ${r.details.cleanClose} %` : '', isGamePercent(r.details?.cleanOpen) ? `чистота открытия ${r.details.cleanOpen} %` : '', r.details?.spilled ? `расплескали чай ${r.details.spilled}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', recordedGestureSet(r) ? `набор жестов ${GESTURE_SETS[recordedGestureSet(r)].name}` : '', r.side ? `${r.side === 'left' ? 'левый' : 'правый'} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
+      r.details?.crossings ? `второй канал включался ${r.details.crossings}` : '', isGamePercent(r.details?.cleanClose) ? `чистота закрытия ${r.details.cleanClose} %` : '', isGamePercent(r.details?.cleanOpen) ? `чистота открытия ${r.details.cleanOpen} %` : '', r.details?.spilled ? `расплескали чай ${r.details.spilled}` : '', r.thresholds === 'prosthesis' ? 'пороги протеза' : '', recordedGestureSet(r) ? `набор жестов ${GESTURE_SETS[recordedGestureSet(r)].name}` : '', r.side ? `${SIDE_NAME[r.side] ?? r.side} протез` : '', r.signalIssues?.length ? `сигнал: ${signalIssuesText(r.signalIssues)}` : ''].filter(Boolean).join('; ')]))}
 <p class="muted">«Не отпустили» и «покой не получился» — игровая статистика, не оценка тонуса и не диагноз.</p>
 ${quality.length ? `<h2>Качество сигнала с датчиков</h2>
 ${table(['Что мешало', 'Упражнений', 'Секунд всего', 'Последний раз', 'Что подсказала игра'], quality.map(q => [QUALITY_TIPS[q.id].title, q.runs, q.seconds, ruDate(q.last), QUALITY_TIPS[q.id].tip]))}
