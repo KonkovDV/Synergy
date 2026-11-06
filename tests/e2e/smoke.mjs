@@ -77,6 +77,19 @@ await page.evaluate(() => window.Synergy.go('play', { game: 'stars', level: 1 })
 await wait(300); await page.getByRole('button', { name: 'Старт' }).click(); await wait(4200);
 await page.keyboard.down('Digit3'); await wait(900); await shot('17-stars-hand'); await page.keyboard.up('Digit3'); await wait(300);
 
+// 06.11 — Q&A of 04.11, answer 25: «потерю больше 1–2 секунд надо считать критической и выходить». The host's frames
+// stop in the middle of an exercise: after the watchdog and one more second the exercise pauses and says why.
+await page.evaluate(() => { window.Synergy.feed({ a: 0.02, b: 0.02 }); window.__feed = setInterval(() => window.Synergy.feed({ a: 0.02, b: 0.02 }), 40); });
+await page.evaluate(() => window.Synergy.go('play', { game: 'grip', level: 1 }));
+await wait(300); await page.getByRole('button', { name: 'Старт' }).click();
+await page.waitForFunction(() => !/Старт через/.test(document.querySelector('.stage-hint')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => errors.push('loss: the countdown did not end'));
+await wait(600);
+await page.evaluate(() => clearInterval(window.__feed));
+await page.getByRole('heading', { name: 'Сигнал потерян' }).waitFor({ timeout: 4000 }).catch(() => errors.push('loss: a lost signal did not pause the exercise (answer 25)'));
+await shot('18-signal-lost-pause');
+await page.getByRole('button', { name: 'Выйти' }).click().catch(() => errors.push('loss: no «Выйти» on the pause'));
+await page.evaluate(() => window.Synergy.useTouch()); await wait(300);
+
 const state = await page.evaluate(() => window.Synergy.state());
 console.log(JSON.stringify({ errors, screen: state.screen, runs: state.runs, scheme: state.settings.scheme }, null, 2));
 writeEvidence('smoke', { errors: errors.length, out });

@@ -31,7 +31,7 @@ import { setSoundEnabled, unlockAudio } from './services/audio.js';
 import { setVoiceEnabled, say, stopVoice } from './services/voice.js';
 import { setRenderOptions } from './render/draw.js';
 import { mount, toast, h } from './ui/dom.js';
-import { parseLaunch, parseHostCommand, readyMessage, resultMessage, channelsMessage, closeMessage, notifyHost, isEmbedded, hostChannel, HOST_PROTOCOL, HOST_LEVEL_MAX } from './services/host.js';
+import { parseLaunch, parseHostCommand, readyMessage, resultMessage, channelsMessage, closeMessage, settingsMessage, notifyHost, isEmbedded, hostChannel, HOST_PROTOCOL, HOST_LEVEL_MAX } from './services/host.js';
 import { SCREENS } from './ui/screens.js';
 import { startTour } from './ui/tour.js';
 import { mergeTours } from './core/tours.js';
@@ -195,6 +195,8 @@ export class App {
     const before = this.settings.source;
     if (patch.wsUrl !== undefined || patch.source === 'touch') this.hostFed = false; // the person chose the source
     Object.assign(this.settings, patch);
+    // 06.11 (answer 16): a changed threshold or side is told to the host once the slider rests
+    if (['sensitivity', 'sensitivityB', 'side', 'prosthesisThresholds'].some(k => k in patch)) { clearTimeout(this.settingsTimer); this.settingsTimer = setTimeout(() => this.notifySettings(), 600); }
     this.emulator.realism = this.settings.realism; this.emulator2.realism = this.settings.realism;
     this.emulator.rateHz = this.settings.streamRateHz; // 6.2: 50 or 10 packets a second (the stream panel)
     this.applyPresentation();
@@ -360,7 +362,22 @@ export class App {
   /** Hands control back to the host (5.15): «Вернуться в приложение» after an exercise, or back on the home screen. */
   closeToHost(reason) {
     if (!this.embedded) return false;
+    this.notifySettings(); // 06.11 (answer 16): the thresholds go back before the host closes the game
     notifyHost(closeMessage(reason, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
+    return true;
+  }
+
+  /** 06.11 — the side, the sliders and (external source) the lines in the host's 0…255 units (services/host.js settingsMessage). */
+  notifySettings() {
+    clearTimeout(this.settingsTimer); this.settingsTimer = null;
+    if (!this.embedded) return false;
+    const s = this.settings, sensitivity = [s.sensitivity, s.sensitivityB ?? s.sensitivity];
+    let channels = null;
+    if (this.liveSource() === 'bridge') {
+      const pipeline = this.createPipeline();
+      channels = channelsMessage({ shares: pipeline.channelThresholds(), calibration: pipeline.calibration, line: this.prosthesisThresholds() ? 'prosthesis' : 'game', sensitivity });
+    }
+    notifyHost(settingsMessage({ side: s.side, sensitivity, prosthesisThresholds: s.prosthesisThresholds, channels }, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
     return true;
   }
 
