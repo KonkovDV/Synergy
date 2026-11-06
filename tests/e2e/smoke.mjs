@@ -78,10 +78,13 @@ await wait(300); await page.getByRole('button', { name: 'Старт' }).click();
 await page.keyboard.down('Digit3'); await wait(900); await shot('17-stars-hand'); await page.keyboard.up('Digit3'); await wait(300);
 
 // 06.11 — Q&A of 04.11, answer 25: «потерю больше 1–2 секунд надо считать критической и выходить». The host's frames
-// stop in the middle of an exercise: after the watchdog and one more second the exercise pauses and says why.
+// stop in the middle of an exercise: after 1.5 s without a frame (6.2.1: SIGNAL.criticalLossMs) it pauses and says why.
 await page.evaluate(() => { window.Synergy.feed({ a: 0.02, b: 0.02 }); window.__feed = setInterval(() => window.Synergy.feed({ a: 0.02, b: 0.02 }), 40); });
 await page.evaluate(() => window.Synergy.go('play', { game: 'grip', level: 1 }));
 await wait(300); await page.getByRole('button', { name: 'Старт' }).click();
+// 6.2.1: the 3-2-1 first begins, then ends — right after the click the hint still shows the intro, and a wait for «no
+// countdown» passed at once: the frames stopped during the 3-2-1, not in the middle of the exercise.
+await page.waitForFunction(() => /Старт через/.test(document.querySelector('.stage-hint')?.textContent ?? ''), null, { timeout: 5000 }).catch(() => errors.push('loss: the countdown did not begin'));
 await page.waitForFunction(() => !/Старт через/.test(document.querySelector('.stage-hint')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => errors.push('loss: the countdown did not end'));
 await wait(600);
 await page.evaluate(() => clearInterval(window.__feed));

@@ -26,6 +26,9 @@ export class GameRunner {
     this.uses = new ChannelUse();
   }
 
+  /** How long the source has given no data (SignalPipeline.silentMs): the play screen pauses a lasting loss on it. */
+  silentMs(now) { return this.pipeline.silentMs(now); }
+
   step(now, dt) {
     if (this.autopilot && this.emulator && this.intent) this.emulator.setTarget(toEmulatorTarget(this.game.autopilot(this.intent, this.hand)));
     const frame = this.source.sample(now);
@@ -73,6 +76,9 @@ export class DuoRunner {
 
   /** The uses of both arms: each arm's commands start on its own, the run keeps their sum. */
   get uses() { return { summary: () => sumUses([this.sideUses.left.summary(), this.sideUses.right.summary()]) }; }
+
+  /** The longer silence of the two arms: the exercise freezes while either has no signal. */
+  silentMs(now) { return Math.max(this.pipelines.left.silentMs(now), this.pipelines.right.silentMs(now)); }
 
   step(now, dt) {
     if (this.autopilot && this.intent) {

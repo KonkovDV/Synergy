@@ -109,7 +109,7 @@ export class App {
     this.petTaps = -1;         // touches of the Firebird this visit: its answers go in turn (core/pet.js petTap)
     this.tour = null;          // the hint tour on screen (ui/tour.js), or null
     this.applyPresentation();
-    bindKeyboard(this.emulator, () => this.settings.scheme, () => (this.screen?.duo ? { left: this.emulator, right: this.emulator2 } : null)); // 5.30
+    bindKeyboard(this.emulator, () => this.inputScheme(), () => (this.screen?.duo ? { left: this.emulator, right: this.emulator2 } : null)); // 5.30
     window.addEventListener('pointerdown', unlockAudio, { once: true });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { this.hiddenAt = Date.now(); this.hiddenDay = dayKey(); this.screen?.onHidden?.(); return; }
@@ -500,12 +500,20 @@ export class App {
     return thresholdShares(this.prosthesisThresholds(demo), this.calibration(), game);
   }
 
-  createPipeline(demo = false, { adaptRest = false } = {}) {
+  /**
+   * `scheme` — the exercise's own (registry.js sessionScheme). 6.2.1: the pipeline used the settings' scheme, so
+   * «Созвездие» (gestures only) started by a host or a link in a two-channel scheme drew gesture pads over a pipeline
+   * of channels, and its spark never moved.
+   */
+  createPipeline(demo = false, { adaptRest = false, scheme = this.settings.scheme } = {}) {
     const s = this.settings;
     const calibration = demo || this.sensorsPaused() ? this.state.calibrations.touch : this.calibration();
     const restTracker = adaptRest ? new RestTracker(calibration, { onThreshold: Math.max(...this.switchOn(demo)) }) : null;
-    return new SignalPipeline({ scheme: s.scheme, calibration, params: { ...this.signalParams(), bothOn: s.bothOn, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
+    return new SignalPipeline({ scheme, calibration, params: { ...this.signalParams(), bothOn: s.bothOn, prosthesisThresholds: this.prosthesisThresholds(demo) }, restTracker });
   }
+
+  /** The scheme the pads and the keys speak now: the running exercise's own, else the person's (settings). */
+  inputScheme() { return this.screen?.session?.()?.scheme ?? this.settings.scheme; }
 
   /** The person's signal parameters (Настройки → Чувствительность): thresholds and, since 6.0, the parameters of the task. */
   signalParams() {
@@ -553,10 +561,10 @@ export class App {
     const live = this.liveSource();
     const adaptRest = restAdaptationAllowed({ source: live, enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
     const runner = instance.constructor.bimanual ? this.createDuoRunner(instance, scheme, demo)
-      : new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest }), hand, source: this.liveFrames(demo), emulator: this.emulator, autopilot: demo,
+      : new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest, scheme }), hand, source: this.liveFrames(demo), emulator: this.emulator, autopilot: demo,
         quality: live === 'bridge' && !demo ? this.qualityMonitor(this.calibration()) : null });
     const armPose = pose && !demo && live === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
-    this.sppprDecoder(demo)?.resetStats(); // 6.0: the stream's counters of this exercise (the run keeps them)
+    this.sppprDecoder(demo, scheme)?.resetStats(); // 6.0: the stream's counters of this exercise (the run keeps them)
     if (!demo) this.sessionQuests(); // 6.0: a session's missions exist before its first exercise ends
     return { id: game, level, retention, demo, plan, quick: !!quick && !demo, pose: armPose, game: instance, hand: runner.hand, runner, entry: GAME_BY_ID[game], scheme,
       ...(game === 'check' && !demo ? { formWeek: week } : {}) };
@@ -592,9 +600,9 @@ export class App {
    * 6.0 — the decoder of the СПППР stream in use, or null: the external one (a packet of the task came through the bridge)
    * or the on-screen emulator's (the gesture scheme of the task's set).
    */
-  sppprDecoder(demo = false) {
+  sppprDecoder(demo = false, scheme = this.settings.scheme) {
     if (!demo && this.liveSource() === 'bridge') return this.bridge?.spppr ?? null;
-    return this.emulator.usesStream?.() || (this.settings.scheme === 'gesture' && streamsSpppr()) ? this.emulator.decoder ?? null : null;
+    return this.emulator.usesStream?.() || (scheme === 'gesture' && streamsSpppr()) ? this.emulator.decoder ?? null : null;
   }
 
   /** Faded feedback: share of trials with live feedback from this game's recent skill (all trials when off). */
@@ -610,7 +618,7 @@ export class App {
     const r = session.game.result();
     const signalIssues = session.demo ? [] : runSignalIssues(session.runner);
     // 6.0: what the СПППР stream was like during the exercise (rate, jitter, gaps, forgiven noise) — for the report.
-    const decoder = session.scheme === 'gesture' ? this.sppprDecoder(session.demo) : null;
+    const decoder = session.scheme === 'gesture' ? this.sppprDecoder(session.demo, session.scheme) : null;
     const stream = decoder && decoder.stats.accepted ? decoder.summary() : null;
     // 05.11 — how often each channel's command started (Q&A of 04.11, answer 5: balance the use of both channels).
     const uses = session.runner.uses?.summary() ?? null;
@@ -704,6 +712,8 @@ export class App {
       name = 'recovery';
     }
     this.screen = { name, ...screen };
+    // An exercise in a scheme of its own («Созвездие» — gestures, «Две руки» — two channels): the emulator rests in it.
+    if (this.inputScheme() !== this.settings.scheme) this.emulator.setTarget({ a: 0, b: 0, gesture: this.inputScheme() === 'gesture' ? 'rest' : null });
     this.mountedAt = performance.now();
     mount(this.root, ...(this.showcase ? [this.showcaseBanner()] : []), screen.node);
     if (!(view && restoreView(this.root, view))) {

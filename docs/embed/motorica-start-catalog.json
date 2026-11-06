@@ -1,0 +1,22 @@
+{
+  "games": [
+    {
+      "id": "synergy",
+      "title": "Синергия",
+      "android": {
+        "packageName": "ru.synergy.trainer",
+        "launcherActivity": "ru.synergy.trainer.MainActivity",
+        "versionName": "6.2.1",
+        "versionCode": 49,
+        "usesMotoricaControl": false
+      },
+      "ios": {
+        "bundleId": "ru.synergy.trainer",
+        "urlScheme": "synergy",
+        "versionName": "6.2.1",
+        "versionCode": 49,
+        "appStoreUrl": ""
+      }
+    }
+  ]
+}

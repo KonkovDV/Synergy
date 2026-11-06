@@ -80,19 +80,21 @@ test('ответ № 25: a lost signal that lasts is critical — told once, the
   const { LossWatch } = await import('../src/core/signal.js');
   const { SIGNAL } = await import('../src/config.js');
   const w = new LossWatch();
-  assert.equal(SIGNAL.criticalLossMs, 1000, 'after the source is declared lost, one more second');
+  // 6.2.1: the silence is counted from the source's last data, 1.5 s for both streams (6.2.0: one more second after the
+  // declared loss — 1.3 s of silence for the channels, 2.8 s for the СПППР stream; tests/v621.test.mjs).
+  assert.equal(SIGNAL.criticalLossMs, 1500, 'from the last frame or packet');
   assert.equal(w.update(false, 0), false, 'a signal: nothing to say');
-  assert.equal(w.update(true, 100), false, 'lost: the state rides on…');
-  assert.equal(w.update(true, 1099), false, '…up to the critical time');
-  assert.equal(w.update(true, 1100), true, 'critical: told');
+  assert.equal(w.update(true, 300), false, 'lost: the state rides on…');
+  assert.equal(w.update(true, 1499), false, '…up to the critical time');
+  assert.equal(w.update(true, 1500), true, 'critical: told');
   assert.equal(w.update(true, 5000), false, 'once for this loss');
-  assert.equal(w.update(false, 5100), false);
-  assert.equal(w.update(true, 6000), false);
-  assert.equal(w.update(true, 7000), true, 'a new loss is told again');
+  assert.equal(w.update(false, 0), false);
+  assert.equal(w.update(true, 300), false);
+  assert.equal(w.update(true, 1500), true, 'a new loss is told again');
   // The play screen pauses the exercise on it and says why (not «Пауза» alone): the frozen field used to wait forever.
   const { readFileSync } = await import('node:fs');
   const play = readFileSync(new URL('../src/ui/play.js', import.meta.url), 'utf8');
-  assert.match(play, /if \(lossWatch\.update\(lost, now\)\) \{ pause\(\{ signal: true \}\); return; \}/);
+  assert.match(play, /if \(lossWatch\.update\(lost, lost \? Math\.min\(session\.runner\.silentMs\(now\), now - resumedAt\) : 0\)\) \{ pause\(\{ signal: true \}\); return; \}/);
   assert.match(play, /signal \? 'Сигнал потерян' : 'Пауза'/);
 });
 
