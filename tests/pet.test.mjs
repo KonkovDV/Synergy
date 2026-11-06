@@ -1,5 +1,5 @@
 import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
-// 5.13 — ideas of the team's sample (FinPhoenix), offline: the Firebird says why it feels so and reacts, wears items
+// 5.13 — offline: the Firebird says why it feels so and reacts, wears items
 // earned by achievements, offers goals; hint tours point at named anchors. Domain rules, no DOM.
 import test from 'node:test';
 import assert from 'node:assert/strict';

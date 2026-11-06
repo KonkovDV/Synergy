@@ -157,7 +157,7 @@ test('tours: the nest has its own tour; every tour step stays short', () => {
   for (const t of TOURS) { assert.ok(t.steps.length <= 3, t.key); for (const s of t.steps) assert.ok(s.body.length <= 240, s.anchor); }
 });
 
-// ===== SOTA checks from the team's sample =====
+// ===== extra checks =====
 
 /** User-facing strings of the interface and the pet: Cyrillic string literals, comments stripped. */
 function uiStrings() {

@@ -1,9 +1,8 @@
-/* Синергия — дизайн 5.12 «Моторика × ФинФениксы»: mobile-first, one-handed.
-   Layout and components follow the team's sample (ФинФениксы: gradient header with the mascot, cards, tinted tiles,
-   onboarding covers, a bottom bar with the current section in a filled square); colour, type and graphic language
-   follow the corporate style of «Моторика» (IR brochure 2025): white and light-grey surfaces, the green → teal → blue →
-   violet gradient, near-black ink, Unbounded for titles and numbers, Inter for text, light trails on dark covers.
-   No logo or name of the brand is used: the product is «Синергия».
+/* Синергия — дизайн 5.12: mobile-first, one-handed.
+   Layout: gradient header with the mascot, cards, tinted tiles, onboarding covers, a bottom bar with the current
+   section in a filled square. Colour and type: white and light-grey surfaces, the green → teal → blue → violet
+   gradient, near-black ink, Unbounded for titles and numbers, Inter for text, light trails on dark covers.
+   No logo or name of another brand is used: the product is «Синергия».
    Rules kept from 5.x: solid surfaces under text (every token pair ≥ 4.5:1 — tests/design.test.mjs), decoration only
    behind content, ≥ 48 px targets, primary actions in the thumb zone, motion off with .rm / prefers-reduced-motion,
    gradients flattened by .hc and forced colours. Channels: A — coral, B — blue, A+B — violet; text uses «-ink». */
@@ -116,11 +115,11 @@ button { font: inherit; color: inherit }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
 
 .screen { display: flex; flex-direction: column; min-height: 100dvh }
-.scroll { flex: 1; padding: 16px 16px 120px }
+.scroll { flex: 1; padding: 16px 16px 120px; min-width: 0 } /* a long word must not widen the column past the screen */
 .scroll.center { text-align: center }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 }
 .eyebrow { font-size: 0.8125rem; font-weight: 700;                      text-transform: uppercase;                       margin: 0 }
-.note { font-size: 0.875rem; color: var(--muted) }
+.note { font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; min-width: 0 } /* «микроконтроллера —» is glued with a non-breaking space */
 /* 5.31 — the four states of two channels in the settings: a term over its meaning, never two columns (200 % text). */
 .four-states { margin: 8px 0 4px }
 .four-states dt { font-weight: 700; margin-top: 8px; overflow-wrap: anywhere }
@@ -271,6 +270,7 @@ button { font: inherit; color: inherit }
 .quest-list li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--card2) }
 .quest-list li small { color: var(--muted) }
 .quest-list li.done b { color: var(--good-ink) }
+.stream-box, .stream-rate, .stream-packet { min-width: 0; max-width: 100% }
 .stream-packet { margin: 0; padding: 8px 10px; border-radius: 12px; background: var(--card2); color: var(--text); font: 0.75rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere }
 
 /* Emulator pads. */
@@ -415,7 +415,7 @@ td.heat.h1 { background: rgba(255,107,107,.18) } td.heat.h2 { background: rgba(2
 td.heat.h3 { background: rgba(255,107,107,.55) } td.heat.h4 { background: rgba(255,107,107,.8); color: #fff }
 
 
-/* ===== 5.12 design layer — «Моторика × ФинФениксы». The base rules above hold layout; this layer is the look.
+/* ===== 5.12 design layer. The base rules above hold layout; this layer is the look.
    Rules: solid surfaces under text, decoration only behind content, every motion off with .rm / prefers-reduced-motion,
    every gradient flattened by .hc (tokens) and forced colours. ===== */
 body {
@@ -864,6 +864,9 @@ html { scroll-padding-top: calc(3rem + 24px) } /* sticky top bar / showcase bann
    column: «Пропорциональный» stacks the options on a phone, «Правая рука / Левая рука» stay side by side.
    Measured: bold 14 px Cyrillic ≈ 0.56 rem per letter; + padding. */
 .segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(5.75rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)) } /* 5.12: three short options in a row */
+/* 6.2: «50 Гц / по умолчанию» and «10 Гц / как у „Моторики“» are short labels with a long caption. The caption, not the label, set the column, and at 200 % text on 320 px the settings page grew past the screen. */
+.stream-rate .segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)) }
+.card { min-width: 0 }
 .checkin .segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)) }
 /* Gesture pads: icon + name; never fewer than two columns (seven pads in one column would push the field away).
    bold 13 px ≈ 0.52 rem per letter + icon 36 px + gaps and padding. */
@@ -1031,7 +1034,7 @@ table.data th { font-size: 0.75rem }
 .pet-promise { color: var(--text) }
 
 
-/* ===== 5.13 — the living Firebird, its things, goals and hint tours (ideas of the team's sample ФинФениксы).
+/* ===== 5.13 — the living Firebird, its things, goals and hint tours.
    Motion: short one-shots and an idle that stops by itself within 5 s (WCAG 2.2.2); all of it off with .rm and
    prefers-reduced-motion (the rules at the end of the file). No flashes: the «evolve» glow changes slowly. ===== */
 .pet-card .pet-art { display: grid; place-items: center; padding: 0; margin: 0; border: 0; background: transparent; border-radius: 24px; cursor: pointer; min-width: 48px; min-height: 48px; color: inherit }

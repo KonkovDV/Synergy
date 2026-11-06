@@ -1,5 +1,5 @@
 import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
-// Design system 5.12 («Моторика × ФинФениксы») as a fitness function: the colour tokens of styles/app.css keep text readable in every
+// Design system 5.12 as a fitness function: the colour tokens of styles/app.css keep text readable in every
 // theme (WCAG 1.4.3: ≥ 4.5:1), the two copies of the dark theme stay identical, and the interface draws pictures
 // instead of emoji (emoji differ on every platform and are missing in some WebView fonts).
 import test from 'node:test';

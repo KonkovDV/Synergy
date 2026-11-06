@@ -241,7 +241,7 @@
 ```bash
 npm test && npm run build && node tools/gesture-drill.mjs
 node tests/e2e/v5.mjs                    # сервер поднимает сам (C.1.43); 0 ошибок JS, a11y: [] ; скриншоты → docs/screenshots
-npm run audit:layout                     # ≈ 17 мин, 1824 сочетания; вторую не начинать, пока первая держит JSON (C.1.45)
+npm run audit:layout                     # 8 экранов; штамп 6.2 — 1944 сочетания; вторую не начинать, пока первая держит JSON (C.1.45)
 # версия: patch — исправления, minor — функции; package.json (+ package-lock), src/config.js, AndroidManifest (versionCode +1), CHANGELOG, CITATION.cff (version, date-released), значок и имя APK в README
 VERIFY_API=1 sh tools/build-apk.sh && cp android/build/synergy.apk release/Synergy-X.Y.Z.apk && cp dist/synergy-standalone.html release/ && git rm release/Synergy-<старая>.apk
 npm run pack                             # zip + проверка распакованной копии; должно быть «Черновик без ошибок»
@@ -403,7 +403,7 @@ npm run pack                             # zip + проверка распако
 
 ### Фаза 0 — до 28.10 (команда)
 
-- [ ] **0.1 P0** Приватный репозиторий GitHub — сделано https://github.com/KonkovDV/Synergy (20.10.2026). Dependabot alerts включены 21.10.2026. Осталось: первый зелёный CI (B.1, блокер — оплата аккаунта). Secret scanning и CodeQL у приватного репозитория требуют GitHub Advanced Security, у публичного бесплатны. Private vulnerability reporting и Pages — после решения команды открыть репозиторий.
+- [ ] **0.1 P0** Приватный репозиторий GitHub — сделано https://github.com/KonkovDV/Synergy (20.10.2026). Dependabot alerts включены 21.10.2026. Задания CI запускаются. Secret scanning и CodeQL у приватного репозитория требуют GitHub Advanced Security, у публичного бесплатны. Private vulnerability reporting и Pages — после решения команды открыть репозиторий.
 - [ ] **0.2 P0** APK на 3+ телефона (Android 8, 11, 14+, один слабый): запуск, озвучивание, «Поделиться», печать PDF, вибрация, «Назад»; HTML в Chrome и Safari. Результаты таблицей — в `MEMORY.md`.
 - [ ] **0.3 P0** Вопросы на митап / в @CodenrockBot: формат и транспорт эмулятора, частота, нормирован ли сигнал; какие 7 жестов и есть ли среди них «покой»; обязателен ли APK, нужен ли iOS, достаточно ли PWA; засчитываются ли наработки до 28.10; аудитория (дети/взрослые); будут ли пользователи протезов для плейтеста; нужна ли публичность репозитория. **С 21.10 (`docs/RESEARCH.md` §14):** будет ли эмулятор отдавать снимок Motorica Start v1 (`openLevel`, `closeLevel`, `connected`, `seq`), как Motorica Kart, или прежний `Sensor_levels`; в каких единицах уровни; какое «peak length» (смена жеста повторным раскрытием) ставят протезисты чаще всего и сколько жестов обычно в группе ротации; пускает ли Motorica Start сторонние игры к службе `com.motorica.gamecontrol.BIND` (разрешение `CONTROL_GAME`) — **ответ из их открытого кода (5.29): не пускает, `protectionLevel="signature"`; значения по умолчанию «времени пиков» (1,00 с) и блокировки (1,6 с) там же**; каким адресом и форматом Motorica Start запускает игру и принимает её результат.
 - [ ] **0.4 P0** `AUTHORS.md`: ФИО, роли, вклад. Приёмка: строгий `npm run check:submission` без ошибок.
