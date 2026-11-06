@@ -197,7 +197,7 @@ if (tracked.some(f => /\.(keystore|jks)$/.test(f))) fail('ключ подпис�
 // 5.29 — supply chain: actions by SHA, no install scripts, cooldown, exact versions, hashes (tools/supply-chain.mjs).
 for (const m of checkSupplyChain(root)) fail(`цепочка поставки: ${m}`);
 if (tracked.some(f => /customer\/rules\./.test(f))) fail('текст правил организатора в репозитории (п. 5.5) — только ссылка и цитаты в docs/TASK.md');
-// Audit 06.11.2026 (F5): a shallow clone (a cloud session, `git clone --depth`) has no first commit — its oldest commit is
+// A shallow clone (`git clone --depth`, a CI checkout) has no first commit — its oldest commit is
 // where the clone was cut, and the warning named that date (26.10) instead of the real 17.10.
 const shallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: root, encoding: 'utf8' }).trim() === 'true';
 if (shallow) warn('история git неполная (shallow clone): дату первого коммита не проверить — git fetch --unshallow');

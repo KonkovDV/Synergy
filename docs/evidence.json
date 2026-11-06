@@ -1,65 +1,52 @@
 {
  "version": "6.2.0",
- "generated": "2026-11-05T18:52:25.339Z",
+ "generated": "2026-11-06T11:48:50.034Z",
  "tests": {
-  "total": 543,
+  "total": 574,
   "failed": 0,
-  "at": "2026-11-05T18:52:25.338Z",
-  "platform": "linux 6.18.44-fc-v236",
+  "at": "2026-11-06T11:48:50.033Z",
+  "platform": "linux 6.18.44-fc-v242",
   "node": "v22.23.4"
  },
  "a11y": {
-  "light": 34,
+  "light": 37,
   "dark": 10,
   "violations": 0,
   "errors": 0,
   "browser": "153.0.8010.12",
   "axe": "4.14.0",
-  "source": "a4939d1ad531aea2",
-  "at": "2026-11-05T18:28:56.493Z",
-  "platform": "linux 6.18.44-fc-v236",
+  "source": "fbc4ddf2f8013b79",
+  "at": "2026-11-06T11:27:29.072Z",
+  "platform": "linux 6.18.44-fc-v242",
   "node": "v22.23.4"
  },
  "layout": {
-  "states": 77,
+  "states": 81,
   "viewports": 8,
   "scales": 3,
-  "combinations": 1848,
+  "combinations": 1944,
   "findings": 0,
   "errors": 0,
-  "seconds": 1149,
-  "source": "a4939d1ad531aea2",
-  "at": "2026-11-05T18:49:32.198Z",
-  "platform": "linux 6.18.44-fc-v236",
+  "seconds": 1185,
+  "source": "fbc4ddf2f8013b79",
+  "at": "2026-11-06T11:44:35.716Z",
+  "platform": "linux 6.18.44-fc-v242",
   "node": "v22.23.4"
  },
  "apk": {
   "file": "release/Synergy-6.2.0.apk",
-  "bytes": 5220293,
-  "kb": 5098,
-  "sha256": "756a050d6be8ea5f36af8f342f949152f0400959721627d79f6ec88c52679b1d"
+  "bytes": 5227119,
+  "kb": 5105,
+  "sha256": "7b3e6da5abee7e165d47ee5160dae3911af37bd9d04202f24e2b8a758c3e8385"
  },
  "html": {
   "file": "release/synergy-standalone.html",
-  "bytes": 6838358,
-  "kb": 6678,
-  "sha256": "5051df62b0adf0ed45228e74808ca66100263e53b1ce1a28a174bfe8bfff1a70"
+  "bytes": 6858774,
+  "kb": 6698,
+  "sha256": "6fcd0281172ce5fa256d38885b78294630ed1f655ce47afa5cbc49523d460799"
  },
  "art": {
   "pictures": 244,
   "bytes": 4512738
- },
- "soak": {
-  "seconds": 900,
-  "runs": 29,
-  "errors": 0,
-  "frames": 57271,
-  "growthMb": 1.5,
-  "heap0": 3385304,
-  "heap1": 4950272,
-  "source": "ad564572534318e4",
-  "at": "2026-10-23T05:54:56.747Z",
-  "platform": "win32 10.0.26200",
-  "node": "v24.11.0"
  }
 }
