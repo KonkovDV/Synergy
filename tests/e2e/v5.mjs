@@ -105,6 +105,10 @@ await page.getByRole('button', { name: 'Старт' }).click(); await wait(5000)
 await go('play', { game: 'rhythm', level: 1 }); await wait(300); await audit('play-intro-player');
 await go('play', { game: 'check', level: 1, demo: true }); await wait(300); await page.getByRole('button', { name: 'Старт' }).click();
 await page.waitForSelector('.results', { timeout: 60000 }); await wait(600); await shot('v5-09-check-results', true); await audit('results');
+// 6.0, 05.11 — «Созвездие»: the intro (gesture words whatever the settings), a demo to its results with the sky card
+await go('play', { game: 'stars', level: 4, demo: true }); await wait(300); await audit('play-intro-stars');
+await page.getByRole('button', { name: 'Старт' }).click();
+await page.waitForSelector('.results', { timeout: 90000 }); await wait(600); await shot('v5-19-stars-results', true); await audit('results-stars');
 await go('settings'); await wait(300); await shot('v5-10-settings', true); await audit('settings');
 // 5.32 — the live trace of A and B under «Чувствительность» (folded by default): drawn, sized to the card, named for a screen reader.
 await page.evaluate(() => { const d = [...document.querySelectorAll('details.fold')].find(x => x.querySelector('.trace')); if (d) d.open = true; });
@@ -260,8 +264,8 @@ land.on('pageerror', e => errors.push(`landscape: ${e.message}`));
 await land.goto(base); await land.waitForTimeout(400);
 for (let i = 0; i < 2; i++) { await land.getByRole('button', { name: 'Дальше' }).click(); await land.waitForTimeout(350); }
 await land.getByRole('button', { name: 'Пропустить обучение' }).click(); await land.waitForTimeout(300);
-for (const [scheme, game] of [['proportional', 'grip'], ['gesture', 'safe']]) {
-  if (scheme === 'gesture') { await land.evaluate(() => window.Synergy.go('settings')); await land.waitForTimeout(200); await land.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click(); await land.waitForTimeout(200); }
+for (const [scheme, game] of [['proportional', 'grip'], ['gesture', 'safe'], ['gesture', 'stars']]) {
+  if (scheme === 'gesture' && game === 'safe') { await land.evaluate(() => window.Synergy.go('settings')); await land.waitForTimeout(200); await land.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click(); await land.waitForTimeout(200); }
   await land.evaluate(g => window.Synergy.go('play', { game: g, level: 1 }), game); await land.waitForTimeout(400);
   const box = await land.evaluate(() => { const c = document.querySelector('.controls').getBoundingClientRect(), s = document.querySelector('.stage').getBoundingClientRect(); return { controls: c.bottom, stage: s.height, h: innerHeight }; });
   if (box.controls > box.h + 1 || box.stage < 150) errors.push(`landscape ${scheme}: ${JSON.stringify(box)}`);

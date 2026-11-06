@@ -23,6 +23,8 @@ const LEVELS = [
 // Altitude / s in the threshold scheme, rising with the level: at L1 a 250 ms reaction overshoots ≈ 0.08 < tolerance.
 const climbRate = levelNumber => 0.32 + 0.03 * (levelNumber - 1);
 const LEAD_S = 2.2;     // seconds of track visible ahead of the glider
+/** Seconds of the glider's own path behind it: 0.24 w at (0.76 w / LEAD_S) px/s is 0.69 s — the trail reaches the edge. */
+export const TRAIL_S = 0.7;
 const CUE_AHEAD_S = 1.6; // the spoken cue names the next target this long before it
 
 /**
@@ -69,10 +71,11 @@ export function tracePhase(t, t0) {
 export function traceMetrics({ n, sse, inside, holdPeak }, { goal = TRACE.goal, tol }) {
   if (!n) return null;
   const height = Math.abs(goal - TRACE.rest) || 1;
+  const side = goal < TRACE.rest ? -1 : 1; // 6.0, 05.11: a profile under the middle line overshoots downwards
   return {
     nrmse: Math.round(Math.sqrt(sse / n) / height * 1000) / 1000,
     inCorridor: Math.round(inside / n * 100),
-    overshoot: Math.round(Math.max(0, (holdPeak - goal) / height) * 100),
+    overshoot: Math.round(Math.max(0, side * (holdPeak - goal) / height) * 100),
   };
 }
 
@@ -135,7 +138,7 @@ export class FlightGame extends Game {
   cue(target) {
     if (!target || target.at - this.time > CUE_AHEAD_S) return this.baseHint;
     if (target.kind === 'trace' || target.kind === 'sine') {
-      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at);
+      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at, { center: target.center });
       if (Math.abs(want - this.alt) <= this.tol) return 'Держите линию';
       return want > this.alt ? 'Линия выше' : 'Линия ниже';
     }
@@ -158,11 +161,16 @@ export class FlightGame extends Game {
       items.push({ kind: 'ring', at: t, end: t, alt, side, done: false });
       t += L.gap;
       if (this.scheme !== SCHEME.THRESHOLD && this.levelNumber >= TRACE.fromLevel && i === Math.floor(L.rings / 2) - 1) {
+        // 6.0, 05.11 — the organizers' answers (№ 5, № 30): no channel dominates. The profile stood above the middle line
+        // on every level, so it was always A (A took 72 % of the proportional flight); now odd levels fly it with A, even
+        // ones under the line with B.
+        const side = this.levelNumber % 2 ? 1 : -1;
         if (this.levelNumber >= SINE.fromLevel) {
-          items.push({ kind: 'sine', at: t, end: t + SINE_SPAN_S, side: 1, done: false, n: 0, sse: 0, inside: 0 });
+          items.push({ kind: 'sine', at: t, end: t + SINE_SPAN_S, side, center: side > 0 ? SINE.center : 1 - SINE.center, done: false, n: 0, sse: 0, inside: 0 });
           t += SINE_SPAN_S + 0.8;
         } else {
-          items.push({ kind: 'trace', at: t, end: t + TRACE_SPAN_S, goal: TRACE.goal, side: 1, done: false, n: 0, sse: 0, inside: 0, holdPeak: TRACE.goal });
+          const goal = side > 0 ? TRACE.goal : TRACE.rest - (TRACE.goal - TRACE.rest);
+          items.push({ kind: 'trace', at: t, end: t + TRACE_SPAN_S, goal, side, done: false, n: 0, sse: 0, inside: 0, holdPeak: goal });
           t += TRACE_SPAN_S + 0.8;
         }
       }
@@ -196,9 +204,9 @@ export class FlightGame extends Game {
     const target = this.nextTarget();
     // Open interval: at the exact end the profile is already «rest», and that one frame used to count as a miss.
     if (target && (target.kind === 'trace' || target.kind === 'sine') && this.time > target.at && this.time < target.end) {
-      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at);
+      const want = target.kind === 'trace' ? traceTarget(this.time, target.at, target.goal) : sineTarget(this.time, target.at, { center: target.center });
       accumulateFollow(target, want, this.alt, dt, this.level.tol);
-      if (target.kind === 'trace' && tracePhase(this.time, target.at) === 'hold') target.holdPeak = Math.max(target.holdPeak, this.alt);
+      if (target.kind === 'trace' && tracePhase(this.time, target.at) === 'hold') target.holdPeak = target.side < 0 ? Math.min(target.holdPeak, this.alt) : Math.max(target.holdPeak, this.alt);
     }
     if (target && target.side !== 0 && target.kind !== 'trace' && target.kind !== 'sine') this.separation.add(intent, target.side > 0, dt);
     this.hint = this.cue(target);
@@ -232,7 +240,11 @@ export class FlightGame extends Game {
       }
     }
     if (this.flash) this.flash.t -= dt;
-    this.trail.push(this.alt); if (this.trail.length > 40) this.trail.shift();
+    // 6.0, 05.11: the trail is the path of the last TRAIL_S of game time, drawn where the world was (render). It was the
+    // last 40 frames at 4 px each — 0.33 s squeezed or 1.3 s stretched by the screen's refresh rate (120 or 30 Hz), and
+    // it scrolled 1.8–3.6 times faster than the rings it was flown through.
+    this.trail.push([this.time, this.alt]);
+    while (this.trail.length > 2 && this.trail[0][0] < this.time - TRAIL_S) this.trail.shift();
     if (this.time >= this.total) this.finish();
   }
 
@@ -266,7 +278,7 @@ export class FlightGame extends Game {
   autopilot(intent) {
     const target = this.nextTarget();
     const alt = target?.kind === 'trace' ? traceTarget(this.time, target.at, target.goal)
-      : target?.kind === 'sine' ? sineTarget(this.time, target.at) : target ? target.alt : 0.5;
+      : target?.kind === 'sine' ? sineTarget(this.time, target.at, { center: target.center }) : target ? target.alt : 0.5;
     if (this.scheme === SCHEME.THRESHOLD) {
       const lead = target && target.kind === 'ring' ? 0.02 : 0.015;
       if (this.alt < alt - lead) return { a: 0.6, b: 0 };
@@ -366,7 +378,7 @@ export class FlightGame extends Game {
       const samples = s.kind === 'sine' ? 48 : 24, pts = [];
       for (let i = 0; i <= samples; i++) {
         const tt = s.at + (s.end - s.at) * i / samples;
-        pts.push([gx + (tt - this.time) * pps, y(s.kind === 'trace' ? traceTarget(tt, s.at, s.goal) : sineTarget(tt, s.at))]);
+        pts.push([gx + (tt - this.time) * pps, y(s.kind === 'trace' ? traceTarget(tt, s.at, s.goal) : sineTarget(tt, s.at, { center: s.center }))]);
       }
       if (deco) lightTrail(ctx, pts, COLORS.good, 2.4, dark ? 1 : 0.9);
       else { ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.strokeStyle = COLORS.good; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.stroke(); }
@@ -394,13 +406,15 @@ export class FlightGame extends Game {
     // Glider + trail (hidden in the retention probe until a ring is passed).
     const hidden = this.retention && !(this.flash?.t > 0);
     if (!hidden) {
-      const n = this.trail.length;
+      // The world scrolls `pps` pixels a game second; a point of the trail stands where the glider was `age` ago.
+      const tx = t => gx - (this.time - t) * pps;
       ctx.lineCap = 'round';
-      for (let i = 1; i < n; i++) {
-        const k = i / n;
+      for (let i = 1; i < this.trail.length; i++) {
+        const [t0, a0] = this.trail[i - 1], [t1, a1] = this.trail[i];
+        const k = clamp01(1 - (this.time - t1) / TRAIL_S);
         ctx.globalAlpha = deco ? k * 0.85 : 1;
         ctx.strokeStyle = deco ? mix(BRAND.sky, BRAND.mint, k) : COLORS.accent; ctx.lineWidth = deco ? 1 + 5 * k : 3;
-        ctx.beginPath(); ctx.moveTo(gx - (n - i + 1) * 4, y(this.trail[i - 1])); ctx.lineTo(gx - (n - i) * 4, y(this.trail[i])); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(tx(t0), y(a0)); ctx.lineTo(tx(t1), y(a1)); ctx.stroke();
       }
       ctx.globalAlpha = 1;
       this.drawGlider(ctx, gx, y(this.alt));

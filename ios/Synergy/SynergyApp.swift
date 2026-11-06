@@ -29,6 +29,8 @@ struct LaunchRequest: Equatable {
     var game: String?
     var level: String?
     var gestures: String?
+    /** 6.0, 05.11 — the side of the hand Motorica Start passes (the organizers' answers, № 16). */
+    var side: String?
 
     init() {}
 
@@ -38,12 +40,13 @@ struct LaunchRequest: Equatable {
         let value = { (name: String) in items.first { $0.name == name }?.value }
         game = LaunchRequest.matching(value("game"), "^[a-z]{2,16}$")
         level = LaunchRequest.matching(value("level"), "^[1-9][0-9]?$")
-        gestures = LaunchRequest.matching(value("gestures"), "^(tz|synergy|ubi4|spr8)$")
+        gestures = LaunchRequest.matching(value("gestures"), "^(tz|tz2|synergy|ubi4|spr8)$")
+        side = LaunchRequest.matching(value("side"), "^(left|right)$")
     }
 
     /** self=1: the app opened its own exercise — not a host waiting for «synergy:close» (services/host.js). */
     var queryItems: [URLQueryItem] {
-        let items = [("game", game), ("level", level), ("gestures", gestures)].compactMap { name, value in
+        let items = [("game", game), ("level", level), ("gestures", gestures), ("side", side)].compactMap { name, value in
             value.map { URLQueryItem(name: name, value: $0) }
         }
         return items.isEmpty ? [] : items + [URLQueryItem(name: "self", value: "1")]

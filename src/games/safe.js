@@ -24,7 +24,10 @@ export const PROMPTS = {
     { id: 'switch', name: 'Коактивация', from: 2, command: 'switch', band: [0, 1.01], pose: COMMAND_POSE.switch },
     { id: 'close-soft', name: 'Слабое сжатие', from: 3, command: 'close', band: [0.22, 0.45], pose: [0.5, 0.55, 0.55, 0.55, 0.55] },
     { id: 'close-strong', name: 'Сильное сжатие', from: 3, command: 'close', band: [0.65, 1.01], pose: COMMAND_POSE.close },
-    { id: 'open-soft', name: 'Слабое раскрытие', from: 4, command: 'open', band: [0.22, 0.45], pose: [0.15, 0.15, 0.15, 0.15, 0.15] },
+    // 6.0, 05.11 — the organizers' answers (№ 5, № 30): both channels in balance, neither dominates. Closing had three
+    // graded cards and opening one: A took 72 % of the proportional safe (75–83 % from level 3). Now each side has three.
+    { id: 'open-soft', name: 'Слабое раскрытие', from: 3, command: 'open', band: [0.22, 0.45], pose: [0.15, 0.15, 0.15, 0.15, 0.15] },
+    { id: 'open-strong', name: 'Сильное раскрытие', from: 4, command: 'open', band: [0.65, 1.01], pose: COMMAND_POSE.open },
   ],
   threshold: [
     { id: 'close', name: 'Сжатие', from: 1, command: 'close', band: [0, 1.01], pose: COMMAND_POSE.close },
@@ -67,8 +70,14 @@ export class SafeGame extends Game {
     const pool = PROMPTS[this.scheme].filter(p => p.from <= this.levelNumber)
       .map(p => (this.scheme === SCHEME.PROPORTIONAL && p.command !== COMMAND.SWITCH ? { ...p, band: reachableBand(p.band, this.onThreshold) } : p));
     this.code = [];
+    // 6.0, 05.11 — the organizers' answers (№ 5): neither channel dominates. A card of the channel already asked more
+    // often in this code is drawn again (a few times, so a code stays random); a balanced pool alone still dealt 83 % A.
+    const used = { close: 0, open: 0 };
+    const heavier = p => (p.command === COMMAND.CLOSE && used.close > used.open) || (p.command === COMMAND.OPEN && used.open > used.close);
     for (let i = 0; i < this.level.code; i++) {
-      let p; do { p = this.rng.pick(pool); } while (pool.length > 1 && p.id === this.code[i - 1]?.id);
+      let p, tries = 0;
+      do { p = this.rng.pick(pool); tries++; } while (pool.length > 1 && (p.id === this.code[i - 1]?.id || (tries < 12 && heavier(p))));
+      if (p.command in used) used[p.command]++;
       this.code.push({ ...p, state: 'wait' });
     }
     this.index = 0; this.phase = 'rest'; this.restFor = 0; this.restWait = 0; this.holdFor = 0; this.cardTime = 0;

@@ -18,6 +18,8 @@ export const SPPPR_WIRE = Object.freeze(BY_ORDER.map(g => g.wire));
 const AXIS = BY_ORDER.map(g => g.axis);
 const AXES = ['x', 'y', 'z'];
 const NEUTRAL = 0;
+/** Keys of a packet of a СПППР trained on two gestures: neutral and two movements (05.11). */
+export const PAIR_CLASSES = 3;
 
 /** Why a packet was refused — the counters of the stream panel and of the run record. */
 export const SPPPR_ERRORS = Object.freeze(['size', 'json', 'shape', 'timestamp', 'dist', 'unknown', 'missing', 'value', 'sum']);
@@ -30,6 +32,9 @@ const refuse = (error, detail) => ({ ok: false, error, ...(detail !== undefined 
  * { ok: true, ts, p } — p: the seven probabilities in class order, normalized by their sum — or { ok: false, error }.
  * Extra top-level fields are ignored (a later firmware may add a sequence number); an unknown class, a missing class,
  * a value outside 0…1 or a sum outside 1 ± sumTolerance refuse the packet.
+ * 6.0, 05.11 — the organizers' answers (№ 22): a СПППР is trained on six gestures and neutral, or on two and neutral. So
+ * `dist` has exactly one of two shapes: all seven classes, or neutral and two of the movements (the classes the system
+ * was not trained on are absent, their probability is 0). Any other set of keys is refused as «missing», as before.
  */
 export function parseSppprPacket(input, params = SPPPR) {
   let data = input;
@@ -42,23 +47,25 @@ export function parseSppprPacket(input, params = SPPPR) {
   if (typeof ts !== 'number' || !Number.isSafeInteger(ts) || ts < 0) return refuse('timestamp');
   const dist = data.dist;
   if (!isObj(dist)) return refuse('dist');
-  for (const key of Object.keys(dist)) if (!SPPPR_WIRE.includes(key)) return refuse('unknown', key);
+  const keys = Object.keys(dist);
+  for (const key of keys) if (!SPPPR_WIRE.includes(key)) return refuse('unknown', key);
+  const pair = keys.length === PAIR_CLASSES && Object.hasOwn(dist, SPPPR_WIRE[NEUTRAL]);
   const p = [];
   for (const key of SPPPR_WIRE) {
-    if (!Object.hasOwn(dist, key)) return refuse('missing', key);
+    if (!Object.hasOwn(dist, key)) { if (pair) { p.push(0); continue; } return refuse('missing', key); }
     const v = dist[key];
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1) return refuse('value', key);
     p.push(v);
   }
   const sum = p.reduce((s, v) => s + v, 0);
   if (Math.abs(sum - 1) > params.sumTolerance) return refuse('sum');
-  return { ok: true, ts, p: p.map(v => v / sum) };
+  return { ok: true, ts, p: p.map(v => v / sum), classes: keys.length };
 }
 
 /** A packet of the contract, as the emulator and the documents write it (keys in the task's order). */
 export function sppprPacket(ts, p) {
   const dist = {};
-  SPPPR_WIRE.forEach((key, i) => { dist[key] = p[i]; });
+  SPPPR_WIRE.forEach((key, i) => { if (p[i] !== undefined) dist[key] = p[i]; }); // three values: neutral, flexion, extension
   return { timestamp_ms: ts, dist };
 }
 
@@ -124,7 +131,7 @@ export class SppprDecoder {
   reset() {
     this.p = null; this.raw = null; this.axes = { x: 0, y: 0, z: 0 }; this.slope = { x: 0, y: 0, z: 0 };
     this.lastTs = null; this.lastArrival = null; this.lastText = null;
-    this.dir = NEUTRAL; this.dirSince = null; this.cand = null; this.candSince = null;
+    this.dir = NEUTRAL; this.dirSince = null; this.cand = null; this.candSince = null; this.onsetTs = null;
   }
 
   /** One packet as it arrived: the text (or object) and the phone time of its arrival. True when it was taken. */
@@ -143,6 +150,7 @@ export class SppprDecoder {
     if (dtMs !== null) {
       st.intervals.push(dtMs);
       if (st.intervals.length > 128) st.intervals.shift();
+      st.medianMs = median(st.intervals); // 6.0, 05.11: the frames carry it (a rhythm judged on the stream's own delay)
       if (dtMs > this.params.lossMs) st.gaps++;
       st.maxGapMs = Math.max(st.maxGapMs, dtMs);
     }
@@ -150,6 +158,7 @@ export class SppprDecoder {
     const k = this.p === null ? 1 : 1 - Math.exp(-dt / (this.params.smoothingMs / 1000));
     this.p = pk.p.map((v, i) => (this.p === null ? v : this.p[i] + (v - this.p[i]) * k));
     this.raw = pk.p;
+    st.classes = pk.classes; // 7 or 3 (two gestures + neutral): the stream panel says which system speaks
     const axes = axesOf(this.p);
     for (const a of AXES) {
       // The slope on MCU time; after a gap there is no slope to go on (the next packet starts from where it is).
@@ -190,7 +199,8 @@ export class SppprDecoder {
     }
     if (ts - this.candSince >= this.params.dwellMs) {
       if (candidate !== NEUTRAL) this.stats.switches++;
-      this.dir = candidate; this.dirSince = ts; this.cand = null;
+      // 6.0, 05.11 — the event time: the movement began with the first agreeing packet, not with the one that confirmed it
+      this.dir = candidate; this.dirSince = ts; this.onsetTs = this.candSince; this.cand = null;
     }
   }
 
@@ -250,6 +260,10 @@ export class SppprDecoder {
       axes: { x: dead(axes.x) * fade, y: dead(axes.y) * fade, z: dead(axes.z) * fade },
       probs: alignedProbs(this.p), stable: true, uncertain: sorted[0] - sorted[1] < P.uncertainMargin,
       coact: Math.min(this.p[xi], this.p[xe]), link: age > P.lossMs ? 'inertia' : 'ok', ageMs: Math.round(age),
+      // 6.0, 05.11 — the median interval between packets on the MCU clock: 100 ms at the 10 Hz of the organizers' answers
+      ...(Number.isFinite(this.stats.medianMs) && this.stats.medianMs > 0 ? { intervalMs: this.stats.medianMs } : {}),
+      // …and how long ago (MCU clock) the current direction began: its first agreeing packet (event time, not decision time)
+      ...(this.onsetTs !== null ? { sinceMs: Math.max(0, Math.round((mcuNow ?? this.lastTs) - this.onsetTs)) } : {}),
     };
   }
 

@@ -3,6 +3,7 @@
 import { createGame } from '../src/games/registry.js';
 import { GameRunner, toEmulatorTarget } from '../src/games/runner.js';
 import { OnScreenEmulator } from '../src/input/spppr-source.js';
+import { SppprEmulator, EmulatorDriver } from '../src/input/spppr-emulator.js';
 import { SignalPipeline } from '../src/core/signal.js';
 import { BionicHand } from '../src/core/hand.js';
 
@@ -11,9 +12,11 @@ function mulberry(seed) {
   return () => { s = (s + 0x6D2B79F5) >>> 0; let x = Math.imul(s ^ (s >>> 15), s | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
 }
 
-export function playStream(id, { scheme = 'gesture', levelNumber = 1, realism = 0.5, seed = 3, novice = false, maxS = 300 } = {}) {
+/** `profile` — overrides of the stream (spppr-emulator.js streamProfile), e.g. the 10 Hz of the organizers' answers (05.11). */
+export function playStream(id, { scheme = 'gesture', levelNumber = 1, realism = 0.5, seed = 3, novice = false, maxS = 300, profile = null } = {}) {
   const game = createGame(id, { levelNumber, scheme, seed });
-  const emu = new OnScreenEmulator({ realism, seed });
+  const driver = profile ? new EmulatorDriver(new SppprEmulator({ realism, seed: seed + 1, profile })) : null;
+  const emu = new OnScreenEmulator({ realism, seed, driver });
   const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme }), hand: new BionicHand(), source: emu, emulator: emu, autopilot: !novice });
   const rng = mulberry(seed * 7919);
   const gauss = () => Math.sqrt(-2 * Math.log(Math.max(1e-9, rng()))) * Math.cos(2 * Math.PI * rng());

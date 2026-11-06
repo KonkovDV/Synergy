@@ -50,7 +50,10 @@ export const GESTURE_CONFUSION = {
     // together (adduction: FCU + ECU; abduction: FCR + ECRL), pronator teres starts with the flexors, the supinator lies
     // in the extensor compartment. Our model for the emulator — not data of Motorica's recognizer.
     ['flexion', 'adduction', 0.30], ['extension', 'abduction', 0.30], ['flexion', 'abduction', 0.15], ['extension', 'adduction', 0.15],
-    ['pronation', 'flexion', 0.20], ['supination', 'extension', 0.20], ['pronation', 'supination', 0.08]],
+    ['pronation', 'flexion', 0.20], ['supination', 'extension', 0.20], ['pronation', 'supination', 0.08],
+    // 6.0, 05.11 — the antagonists themselves: crosstalk between the two forearm compartments and co-contraction. The one
+    // confusion a СПППР of two gestures and neutral can make (answers of 05.11, № 22); small, the muscles are opposite.
+    ['flexion', 'extension', 0.05]],
   other: 0.02,
 };
 
@@ -257,7 +260,10 @@ export const GRIP_SWITCH = { defaultMode: 'open', holdDefaultS: 1, minS: 0.1, ma
  * the prosthesis at the meetup («выполнит первую пришедшую команду») and Momo's FIRST_OVER policy (hcilab, MIT). Which
  * law a given hand follows is the prosthetist's word, so the default stays 'hold'.
  */
-export const BOTH_ON = { modes: ['hold', 'first'], defaultMode: 'hold' };
+// 6.0, 05.11 — Q&A of the organizers (№ 10): in the classic mode of a prosthesis the first signal over its threshold keeps
+// the control until it falls under it ('first'); in the sport mode the second may take it over ('last'); both at once may
+// lock the hand ('hold' here: the hand stands; the lock itself is the A+B hold of LOCK).
+export const BOTH_ON = { modes: ['hold', 'first', 'last'], defaultMode: 'hold' };
 
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 

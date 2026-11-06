@@ -117,7 +117,11 @@ test('tutorial: the prosthesis lock — hold A+B as long as the person\'s prosth
 
 test('host: launch parameters are validated; results go only to a host that asked, without health notes', () => {
   const info = id => ({ grip: { levels: 8 }, check: { levels: 1 } }[id] ?? null);
-  assert.deepEqual(parseLaunch('?game=grip&level=3', info), { game: 'grip', level: 3, hostOrigin: null, embed: false, self: false });
+  assert.deepEqual(parseLaunch('?game=grip&level=3', info), { game: 'grip', level: 3, hostOrigin: null, embed: false, self: false, side: null });
+  // 6.0, 05.11 — the side of the hand from the routing (the organizers' answers, № 16): left or right, nothing else
+  assert.equal(parseLaunch('?side=left', info).side, 'left');
+  assert.equal(parseLaunch('?side=right', info).side, 'right');
+  for (const bad of ['?side=LEFT', '?side=up', '?side=', '?side=left%00']) assert.equal(parseLaunch(bad, info).side, null, bad);
   assert.equal(parseLaunch('?game=grip&level=99', info).level, 1, 'a level out of range starts at 1');
   assert.equal(parseLaunch('?game=__proto__', info).game, null);
   assert.equal(parseLaunch('?game=nope', info).game, null);

@@ -32,6 +32,8 @@ export function readFrame(f) {
     if (finite(f.coact)) frame.coact = clamp(f.coact);
     if (f.link === 'ok' || f.link === 'inertia') frame.link = f.link;
     if (finite(f.ageMs) && f.ageMs >= 0) frame.ageMs = Math.round(f.ageMs);
+    if (finite(f.intervalMs) && f.intervalMs > 0 && f.intervalMs <= 10000) frame.intervalMs = Math.round(f.intervalMs); // 6.0, 05.11
+    if (finite(f.sinceMs) && f.sinceMs >= 0 && f.sinceMs <= 3.6e6) frame.sinceMs = Math.round(f.sinceMs);
   }
   return frame;
 }
@@ -105,7 +107,7 @@ export class SignalPipeline {
 
   reset() {
     this.a = 0; this.b = 0;
-    this.aOn = false; this.bOn = false; this.lead = null;
+    this.aOn = false; this.bOn = false; this.lead = null; this.latest = null;
     // 6.0: time above the threshold before a channel turns on (holdMs) and when it last turned off (refractoryMs)
     this.aboveSince = [null, null]; this.offSince = [-Infinity, -Infinity];
     this.out = { level: 0, intensity: 0, t: null }; // the slew-limited proportional output
@@ -124,7 +126,7 @@ export class SignalPipeline {
       if (fresh) this.ingest(frame, now);
     }
     if (now - this.lastValidAt > this.params.frameTimeoutMs) {
-      this.a = 0; this.b = 0; this.aOn = false; this.bOn = false; this.lead = null;
+      this.a = 0; this.b = 0; this.aOn = false; this.bOn = false; this.lead = null; this.latest = null;
       this.aboveSince = [null, null];
       // Keep the clock. t: null disarms the slew limiter, so the first frame back jumped to full output.
       this.out = { level: 0, intensity: 0, t: now };
@@ -178,8 +180,14 @@ export class SignalPipeline {
       this.aboveSince[ch] ??= t;
       return t - this.aboveSince[ch] >= holdMs;
     };
+    const wasA = this.aOn, wasB = this.bOn;
     this.aOn = step(this.aOn, this.a, 0);
     this.bOn = step(this.bOn, this.b, 1);
+    // 6.0, 05.11 — the channel that switched on last (the sport mode takes its command); both in one frame — none.
+    const roseA = this.aOn && !wasA, roseB = this.bOn && !wasB;
+    if (roseA !== roseB) this.latest = roseA ? 'a' : 'b';
+    else if (roseA) this.latest = null;
+    if (!this.aOn && !this.bOn) this.latest = null;
     // 5.32 — which channel came first. Alone it leads; when both are on, the first keeps the lead (both in one frame —
     // no lead); when the leader goes off, the one still on takes over (Momo's FIRST_OVER does the same).
     if (this.aOn !== this.bOn) this.lead = this.aOn ? 'a' : 'b';
@@ -234,6 +242,8 @@ export class SignalPipeline {
     else if (this.bOn && !this.aOn) command = COMMAND.OPEN;
     // Both on, not a co-contraction: the hand stands ('hold') or goes on with the first command ('first', BOTH_ON).
     else if (this.aOn && this.bOn && this.params.bothOn === 'first' && this.lead) command = this.lead === 'a' ? COMMAND.CLOSE : COMMAND.OPEN;
+    // sport mode (6.0, 05.11): the second channel takes the control over the first one while both stay on
+    else if (this.aOn && this.bOn && this.params.bothOn === 'last' && this.latest) command = this.latest === 'a' ? COMMAND.CLOSE : COMMAND.OPEN;
     const fixed = this.params.thresholdIntensity;
     const intensity = command === COMMAND.REST ? 0
       : !proportional ? fixed
@@ -275,6 +285,6 @@ export class SignalPipeline {
       ...(this.probs ? { probs: this.probs } : {}),
       // 6.0 — the СПППР joystick (x = flexion − extension, y = pronation − supination, z = abduction − adduction) and
       // how much the antagonists work together; `link` — 'inertia' while the speed fades after a silent 200 ms.
-      ...(frame.axes ? { axes: frame.axes } : {}), ...(frame.coact !== undefined ? { coact: frame.coact } : {}), ...(frame.link ? { link: frame.link, ageMs: frame.ageMs ?? 0 } : {}) };
+      ...(frame.axes ? { axes: frame.axes } : {}), ...(frame.coact !== undefined ? { coact: frame.coact } : {}), ...(frame.link ? { link: frame.link, ageMs: frame.ageMs ?? 0 } : {}), ...(frame.intervalMs ? { intervalMs: frame.intervalMs } : {}), ...(frame.sinceMs !== undefined ? { sinceMs: frame.sinceMs } : {}) };
   }
 }

@@ -28,8 +28,21 @@ const PERFECT_S = 0.1, GOOD_S = 0.22;
 // 33 ms at 30 Hz. A gesture: the task set is already debounced (100 ms at 30 Hz); the other sets still
 // wait out their own 90 ms stability on top of the emulator, and 200 ms is the delay those levels were
 // balanced on. Using 200 ms for the task set marked an on-time contraction about 100 ms early.
-const gestureDelayS = GESTURE_SET.id === 'tz' ? 0.1 : 0.2;
+const gestureDelayS = GESTURE_SET.stream === true ? 0.1 : 0.2;
 export const RHYTHM_LATENCY_S = { threshold: 0.033, proportional: 0.033, gesture: gestureDelayS };
+/**
+ * 6.0, 05.11 — the delay of a gesture on the СПППР stream follows its rate: the decoder confirms a direction on the next
+ * agreeing packet. Measured end to end (emulator → packets → decoder → pipeline, median): 125–139 ms at 50 Hz, 174–245 ms
+ * at the 10 Hz of the organizers' answers. 0.08 s + one interval gives the 0.1 s the levels were balanced on at 50 Hz and
+ * 0.18 s at 10 Hz; a fixed 0.1 s marked an on-time gesture of a 10 Hz stream late.
+ */
+export const streamDelayS = intervalMs => Math.max(0.1, Math.min(0.3, 0.08 + intervalMs / 1000));
+/**
+ * When a gesture on the stream really began, seconds before now: the decoder says how long ago its first agreeing packet
+ * came (`sinceMs`); the person moved before that packet — the rise of the class over the decoder's threshold (~26 ms for
+ * the emulator's 70 ms rise) and on average half an interval of waiting for the packet to be sent.
+ */
+export const streamOnsetAgoS = (sinceMs, intervalMs) => sinceMs / 1000 + 0.026 + (intervalMs ?? 20) / 2000;
 // The built-in player. Two channels keep a longer shift than the pipeline delay: the force is still
 // rising after the onset (slewPerS), and the high-threshold bands were balanced on it. Gestures use the
 // same shift as judging, so the player's onset lands on the beat.
@@ -91,7 +104,15 @@ export class RhythmGame extends Game {
   music() { return musicPattern({ bpm: this.level.bpm, beats: this.level.beats, countIn: COUNT_IN_BEATS, seed: this.seed, level: this.levelNumber }); }
 
   /** Timing window for a «good» onset (challenge point). */
-  get good() { return this.adapt.widen(GOOD_S); }
+  /**
+   * 6.0, 05.11 — a rhythm is not judged finer than its input is sampled: on a stream the windows grow by the share of the
+   * packet interval over 20 ms (50 Hz, the rate the levels were balanced on): «perfect» by 0.6 of it, «good» by all of it.
+   * At the 10 Hz of the organizers' answers an onset is known to ±50 ms plus the task's jitter of up to 100+ ms; a 100 ms
+   * «perfect» window was a coin toss. At 50 Hz and on the two channels the windows are what they were.
+   */
+  get sampling() { return this.scheme === SCHEME.GESTURE && this.intervalS > 0.02 ? this.intervalS - 0.02 : 0; }
+  get perfect() { return PERFECT_S + this.sampling * 0.6; }
+  get good() { return this.adapt.widen(GOOD_S + this.sampling); } // «хорошо» covers the stream's whole extra interval
 
   laneState(intent) {
     return {
@@ -102,12 +123,16 @@ export class RhythmGame extends Game {
   }
 
   step(dt, intent) {
+    // the stream's own delay, once its rate is known (frames of the СПППР decoder carry the median packet interval)
+    if (this.scheme === SCHEME.GESTURE && Number.isFinite(intent?.intervalMs)) { this.intervalS = intent.intervalMs / 1000; this.latency = this.botShift = streamDelayS(intent.intervalMs) * this.speed; }
     const now = this.time - this.latency;
+    // 6.0, 05.11 — event time on the stream: the onset or the release is placed where the movement began
+    const at = this.scheme === SCHEME.GESTURE && Number.isFinite(intent?.sinceMs) ? this.time - streamOnsetAgoS(intent.sinceMs, intent.intervalMs) * this.speed : now;
     while (this.nextBeat * this.beat <= this.time && this.nextBeat * this.beat < this.total) { this.emit('beat', { strong: this.nextBeat % 4 === 0 }); this.nextBeat++; }
     const state = this.laneState(intent);
     for (const lane of ['a', 'b', 'both']) {
-      if (state[lane] && !this.lane[lane]) this.onset(lane, now);
-      if (!state[lane] && this.lane[lane]) this.release(lane, now);
+      if (state[lane] && !this.lane[lane]) this.onset(lane, at);
+      if (!state[lane] && this.lane[lane]) this.release(lane, at);
     }
     this.lane = state;
     for (const n of this.notes) {
@@ -135,7 +160,7 @@ export class RhythmGame extends Game {
       return;
     }
     const err = Math.abs(now - note.at);
-    note.state = 'active'; note.onsetErr = err; note.grade = err <= PERFECT_S ? 'perfect' : 'good';
+    note.state = 'active'; note.onsetErr = err; note.grade = err <= this.perfect ? 'perfect' : 'good';
     this.onsetErrors.push(err);
     this.emit('hit', { timed: true }); // timed: a verdict sound is skipped when the audio output lags (services/feedback.js)
   }
@@ -189,7 +214,7 @@ export class RhythmGame extends Game {
 
   autopilot() {
     const now = this.time - this.botShift;
-    const lead = this.scheme === SCHEME.GESTURE ? 0.19 : 0.06; // anticipate the rise; the hold stays what the levels were balanced on
+    const lead = this.scheme === SCHEME.GESTURE ? 0.19 : 0.06; // anticipate the rise; `now` already holds the scheme's delay (botShift)
     const note = this.notes.find(n => (n.state === 'wait' || n.state === 'active') && now >= n.at - lead - 0.02 && now <= n.at + Math.max(n.dur, 0.14));
     if (!note || (note.state === 'active' && now > note.at + Math.max(note.dur, 0.14) - 0.05)) return this.scheme === SCHEME.GESTURE ? { gesture: 'rest', effort: 0 } : { a: 0, b: 0 };
     const level = note.band ? (this.bands[note.band][0] + Math.min(1, this.bands[note.band][1])) / 2 : 0.6;

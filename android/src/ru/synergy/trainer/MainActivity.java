@@ -97,11 +97,15 @@ public class MainActivity extends Activity {
      * synergy://play?game=grip&level=2&gestures=ubi4. Extras or query: game, level, gestures. Only known shapes pass —
      * a game id, a level 1–99, a gesture set — the page checks them again (services/host.js parseLaunch).
      */
-    static String launchQuery(String game, String level, String gestures) {
+    static String launchQuery(String game, String level, String gestures) { return launchQuery(game, level, gestures, null); }
+
+    /** 6.0, 05.11 — `side`: Motorica Start passes the side of the hand (the organizers' answers, № 16). */
+    static String launchQuery(String game, String level, String gestures, String side) {
         StringBuilder q = new StringBuilder();
         if (game != null && game.matches("[a-z]{2,16}")) q.append("&game=").append(game);
         if (level != null && level.matches("[1-9][0-9]?")) q.append("&level=").append(level);
-        if (gestures != null && gestures.matches("tz|synergy|ubi4|spr8")) q.append("&gestures=").append(gestures);
+        if (gestures != null && gestures.matches("tz|tz2|synergy|ubi4|spr8")) q.append("&gestures=").append(gestures);
+        if (side != null && side.matches("left|right")) q.append("&side=").append(side);
         // self=1: the app opened its own exercise — not a host waiting for «synergy:close» (services/host.js).
         return q.length() == 0 ? "" : "?" + q.substring(1) + "&self=1";
     }
@@ -111,11 +115,11 @@ public class MainActivity extends Activity {
         if (intent == null) return page;
         Uri link = intent.getData();
         if (link != null && "synergy".equals(link.getScheme())) {
-            return page + launchQuery(link.getQueryParameter("game"), link.getQueryParameter("level"), link.getQueryParameter("gestures"));
+            return page + launchQuery(link.getQueryParameter("game"), link.getQueryParameter("level"), link.getQueryParameter("gestures"), link.getQueryParameter("side"));
         }
         String level = intent.getStringExtra("level");
         if (level == null && intent.hasExtra("level")) level = String.valueOf(intent.getIntExtra("level", 0));
-        return page + launchQuery(intent.getStringExtra("game"), level, intent.getStringExtra("gestures"));
+        return page + launchQuery(intent.getStringExtra("game"), level, intent.getStringExtra("gestures"), intent.getStringExtra("side"));
     }
 
     /** A second launch (another game from the host's list, a link) while the app is open: open what it asks. */

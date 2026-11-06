@@ -119,7 +119,7 @@ export function settingsScreen(app, { back = null } = {}) {
         segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, pick, 'Смена хвата')),
       hold, openNote, coNote,
       h('div', { class: 'row' }, h('span', {}, 'Второй канал позже первого'),
-        segmented([{ value: 'hold', label: 'Кисть стоит', sub: 'как раньше' }, { value: 'first', label: 'Первая команда', sub: 'со слов «Моторики»' }], s.bothOn ?? BOTH_ON.defaultMode, pickBoth, 'Второй канал включился позже первого')),
+        segmented([{ value: 'hold', label: 'Кисть стоит', sub: 'как раньше' }, { value: 'first', label: 'Первая команда', sub: 'классический' }, { value: 'last', label: 'Вторая команда', sub: 'спортивный' }], s.bothOn ?? BOTH_ON.defaultMode, pickBoth, 'Второй канал включился позже первого')),
       bothNote,
       signalParamsBox(),
     ];
@@ -175,7 +175,7 @@ export function settingsScreen(app, { back = null } = {}) {
   }
 
   // 6.0 — the СПППР stream of the task, live: the counters and the last packet as it came (the hard contract is visible).
-  const tzStream = s.scheme === 'gesture' && GESTURE_SET.id === 'tz';
+  const tzStream = s.scheme === 'gesture' && GESTURE_SET.stream === true;
   const lastPacket = h('pre', { class: 'stream-packet', 'aria-label': 'Последний пакет СПППР' }, '—');
   const streamBox = tzStream ? h('div', { class: 'stream-box' },
     h('p', { class: 'note' }, 'Пакет ТЗ: {"timestamp_ms": время микроконтроллера, "dist": вероятности 7 состояний}. Скорость считается только по разнице timestamp_ms; джиттер сглаживается, пауза > 200 мс плавно гасит скорость, одиночный шум прощается.'),
