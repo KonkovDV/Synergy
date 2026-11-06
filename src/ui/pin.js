@@ -25,7 +25,18 @@ export const PIN_LOCK = { freeTries: 5, baseS: 30, maxS: 900 };
 
 export function pinLockWait(lock, now = Date.now()) {
   const until = Number.isFinite(lock?.until) ? lock.until : 0;
-  return Math.max(0, Math.ceil((until - now) / 1000));
+  return Math.min(PIN_LOCK.maxS, Math.max(0, Math.ceil((until - now) / 1000)));
+}
+
+/**
+ * Audit 06.11.2026 (F2): a lock that ends later than the longest brake from now. Its clock went back (a phone set to the
+ * wrong year, corrected after the failed tries), or a copy brought it. The wait was `until − now`, and the parent was
+ * locked out for years: the only way out was a reinstall, and that loses the progress. The brake starts again from now.
+ * That is not a way around it: moving the clock forward already ends any lock. An ordinary lock is returned as it is.
+ */
+export function clampPinLock(lock, now = Date.now()) {
+  const longest = now + PIN_LOCK.maxS * 1000;
+  return Number.isFinite(lock?.until) && lock.until > longest ? { ...lock, until: longest } : lock;
 }
 
 export function nextPinLock(lock, ok, now = Date.now()) {
@@ -42,6 +53,8 @@ export function pinGateScreen(app, { next = 'settings' } = {}) {
   const error = h('p', { class: 'note warn', 'aria-live': 'polite' });
   const check = e => {
     e?.preventDefault();
+    const lock = clampPinLock(app.settings.pinLock);
+    if (lock !== app.settings.pinLock) app.updateSettings({ pinLock: lock }); // kept, so the wait counts down
     const wait = pinLockWait(app.settings.pinLock);
     if (wait) { error.textContent = `Слишком много попыток. Подождите ${wait} с`; input.value = ''; return; }
     if (!input.value) { error.textContent = 'Введите PIN'; input.focus(); return; } // an empty field is not an attempt

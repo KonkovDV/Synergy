@@ -96,6 +96,40 @@ export function restIntent(scheme, valid, t = 0) {
   };
 }
 
+/** The task's bound on the response of the two channels (ТЗ 28.10, Поток 1). */
+export const RESPONSE_LIMIT_MS = 100;
+
+/**
+ * Audit 06.11.2026 (F3): how long the channels answer at these parameters — ms from the first frame of a contraction to
+ * the command, measured on the pipeline itself (the way tests/stream1.test.mjs measures the defaults): 0.5 s of rest,
+ * then channel A steps to `level` of the comfortable maximum at `hz` frames a second. Null when no command comes within
+ * 0.5 s (the step is under the switch-on line). The settings show it next to the sliders, so a hold or a smoothing that
+ * pushes the answer past the task's 100 ms is said, not left to the default's promise.
+ */
+export function responseMs(params = {}, { hz = 60, level = 0.6 } = {}) {
+  const pipeline = new SignalPipeline({ scheme: SCHEME.THRESHOLD, params });
+  const step = 1000 / hz, rest = 0.02;
+  let t = 0;
+  for (; t < 500; t += step) pipeline.process({ t, a: rest, b: rest }, t);
+  const start = t;
+  for (; t < start + 500; t += step) if (pipeline.process({ t, a: level, b: rest }, t).command === COMMAND.CLOSE) return Math.round(t - start);
+  return null;
+}
+
+/** The line under «Параметры сигнала»: the measured response at 60 and 30 frames a second, and whether it is over 100 ms. */
+export function latencyNote(params = {}) {
+  const ms = v => `${v} мс`;
+  const at60 = responseMs(params, { hz: 60 }), at30 = responseMs(params, { hz: 30 });
+  const limit = ms(RESPONSE_LIMIT_MS);
+  if (at60 === null || at30 === null) return { over: true, text: 'Сжатие на 60 % комфортного уровня не включает канал: порог выше. Опустите порог закрытия (A).' };
+  const over = Math.max(at60, at30) > RESPONSE_LIMIT_MS;
+  // Hz as in README («17 мс при 60 Гц»): «кадрах/с» broke at the slash on a phone.
+  const at = `${ms(at60)} при 60 Гц, ${ms(at30)} при 30 Гц`;
+  return { over, text: over
+    ? `Отклик сейчас: ${at} — больше ${limit} по ТЗ. Уменьшите время удержания или сглаживание.`
+    : `Отклик сейчас: ${at} — в пределах ${limit} по ТЗ (от первого кадра сжатия до команды).` };
+}
+
 export class SignalPipeline {
   /**
    * @param {object} options
