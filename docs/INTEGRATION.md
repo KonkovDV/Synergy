@@ -115,6 +115,16 @@ Intent().setClassName("ru.synergy.trainer", "ru.synergy.trainer.MainActivity")
 
 `closeThreshold`/`openThreshold` — где каналы включались в этом упражнении, в тех же 0–255, что приходят от хоста: покой + доля × (максимум − покой) калибровки игры, × 255. `line` — чья это линия: ползунков игры (`game`) или порогов протеза (`prosthesis`). `sensitivity` — ползунки игры «Порог закрытия (A)» и «Порог открытия (B)», доля откалиброванного диапазона. В протез игра ничего не пишет: что делать с числами — решает хост. Проверка — `tests/launch.test.mjs`, `tests/app.test.mjs`, `tests/v530.test.mjs` (javac и обвязка), `VERIFY_API=1 sh tools/build-apk.sh`.
 
+**Настройки обратно, без упражнения (06.11.2026, ответ № 16).** Пороги можно поменять в настройках и не сыграть ни одного упражнения — тогда `synergy:result` их не донесёт. Поэтому игра шлёт `synergy:settings`, когда меняется порог, сторона или «Пороги как у протеза» (через 0,6 с после последнего движения ползунка), и перед `synergy:close`:
+
+```json
+{ "type": "synergy:settings", "protocol": 1, "version": "6.2.0", "side": "left",
+  "sensitivity": { "close": 0.22, "open": 0.3 }, "prosthesisThresholds": true,
+  "channels": { "closeThreshold": 53, "openThreshold": 64, "line": "game", "sensitivity": { "close": 0.22, "open": 0.3 } } }
+```
+
+`channels` — те же числа, что в результате, и только на внешнем источнике. Имени и ответов о самочувствии в сообщении нет. Проверка — `tests/qa0611.test.mjs`.
+
 **Качество сигнала.** Хосту ничего делать не нужно: игра сама смотрит на кадры внешнего источника и подсказывает человеку, если помехи, скачки, застывший канал или упор в предел (`src/core/signalquality.js`). В сводке результата этого нет — это сведения о контакте, они идут только в отчёт, который человек сохраняет сам.
 
 **Активные пользователи (5.31, метрика компании).** Игра офлайн и ничего никуда не отправляет. Хост, в который она встроена, уже получает `synergy:result` после каждого упражнения: поле `at` — когда, `durationS` — сколько секунд. Активный день — день, в который у этого человека есть хотя бы один такой результат. Считать людей и дни хост может у себя. В игру аналитику не добавляем.
@@ -185,7 +195,7 @@ export const createSppprDriver = o => new EmulatorDriver(new SppprEmulator(o)); 
 
 Организатор просит, чтобы решение было «подготовлено с учётом возможности дальнейшей интеграции в стороннее приложение» (страница кейса на Codenrock); скорее всего, это Motorica Start или ATTILAN. «Синергия» встраивается как офлайн-веб-модуль в WebView любого стека из кейса или в `iframe`.
 
-**Полное руководство — [embed/README.md](embed/README.md):** контракт (протокол 1: `synergy:ready`, `synergy:result`, `synergy:close`; команды `synergy-start`, `synergy-frame`, `synergy-ping`), чек-лист и пример для Web, Android (Kotlin), iOS (Swift), Flutter, React Native и Unity, раздел «Как проверено».
+**Полное руководство — [embed/README.md](embed/README.md):** контракт (протокол 1: `synergy:ready`, `synergy:result`, `synergy:settings`, `synergy:close`; команды `synergy-start`, `synergy-frame`, `synergy-ping`), чек-лист и пример для Web, Android (Kotlin), iOS (Swift), Flutter, React Native и Unity, раздел «Как проверено».
 
 Коротко:
 - хост → игра: `index.html?game=grip&level=2` (после знакомства с безопасностью на первом запуске), `window.Synergy.start(game, level)`, `window.Synergy.feed(frame)`, а из страницы другого origin — `postMessage`;

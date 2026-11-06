@@ -65,7 +65,10 @@ export const ACHIEVEMENTS = [
   { id: 'streak7', name: 'Неделя', text: '7 дней с тренировкой за 14 дней', test: (p, run, ctx) => trainingDaysWithin(p, ctx?.today ?? dayKey(), 14) >= 7 },
   { id: 'week_goal', name: 'Цель недели', text: 'Выполните недельную цель', test: (p, run, ctx) => ctx?.weekly?.done >= ctx?.weekly?.goal },
   { id: 'retention', name: 'Без подсказки', text: 'Пройдите испытание без подсказки на 2★', test: (p, run) => run?.retention && run.stars >= 2 },
-  { id: 'all_games', name: 'Универсал', text: 'Сыграйте во все четыре игры', test: (p) => Object.values(p.games).filter(g => g.played && !g.assessment).length >= 4 },
+  // 06.11: the four training games themselves (`ctx.training`, the plan's catalogue from the app) — any four played games
+  // counted, so «Две руки» and «Созвездие» stood in for «Ритм» or «Сейф». Without the list (older callers) — the old count.
+  { id: 'all_games', name: 'Универсал', text: 'Сыграйте во все четыре игры', test: (p, run, ctx) => (ctx?.training?.length
+    ? ctx.training.every(id => p.games[id]?.played) : Object.values(p.games).filter(g => g.played && !g.assessment).length >= 4) },
   { id: 'tutorial', name: 'Первые шаги', text: 'Пройдите обучение: покой, A, B, сила, коактивация', test: (p) => !!p.tutorialPassed },
   { id: 'check', name: 'Самопроверка', text: 'Пройдите проверку навыка', test: (p, run) => !!run?.details?.assessment },
   // 5.15 — «Азбука протеза» (core/primer.js): every check answered right at least once; a retake is always open.
@@ -179,7 +182,7 @@ export function weekOutlookText(status, options) {
  * Applies a finished run to the profile. Returns a report for the results screen.
  * Demo (autopilot) runs never change progress.
  */
-export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION.weeklyGoalDefault } = {}) {
+export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION.weeklyGoalDefault, training = null } = {}) {
   if (run.demo) return { xp: 0, levelUp: false, achievements: [], unlockedLevel: null, skins: [], items: [], mission: null, quests: [] };
   const before = playerLevel(profile.xp);
   const gp = { ...gameProgress(profile, run.game) };
@@ -210,7 +213,7 @@ export function recordRun(profile, run, { today = dayKey(), weeklyGoal = SESSION
   profile.quests = q.quests; profile.xp += q.xp;
   const after = playerLevel(profile.xp);
   const skins = SKINS.filter(s => s.level && s.level > before.level && s.level <= after.level).map(s => s.id);
-  const achievements = unlockAchievements(profile, run, { weekly: weeklyStatus(profile, weeklyGoal, today) }, today);
+  const achievements = unlockAchievements(profile, run, { weekly: weeklyStatus(profile, weeklyGoal, today), training }, today);
   return { xp, levelUp: after.level > before.level, level: after.level, achievements, unlockedLevel, skins, items: itemsFor(achievements).map(i => i.id), mission,
     quests: q.completed.map(i => ({ ...i, xp: q.completed.length ? q.xp / q.completed.length : 0 })) };
 }
