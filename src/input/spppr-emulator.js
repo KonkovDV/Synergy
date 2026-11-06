@@ -110,13 +110,21 @@ export class SppprEmulator {
    * The effort maps to a probability above the decoder's dead zone, so the decoder gives the same effort back.
    */
   setTarget(t) {
-    this.target = { ...this.target, ...t };
+    // `mix` is never inherited: the pads and the keys send { gesture, effort } only, and a blend left by the demo bot
+    // must not keep pushing the spark of a person who plays by hand («Созвездие»).
+    this.target = { ...this.target, ...t, mix: t?.mix ?? null };
     const want = new Array(N).fill(0);
     const level = e => Math.min(0.97, SPPPR.deadZone + Math.max(0, Math.min(1, e)) * (1 - SPPPR.deadZone));
     const g = this.target.gesture;
     if (g && g !== 'rest') {
       const i = index(g) > 0 ? index(g) : index(taskClassOf(g));
       if (i > 0 && this.known[i]) want[i] = level(this.target.effort ?? 0.6);
+      // Two movements at once («Созвездие»: a diagonal is flexion and supination together). A recognizer gives each its share;
+      // they compete for the one probability mass, so the joystick of a softmax stays in |x| + |y| ≤ 1.
+      const mix = this.target.mix;
+      if (mix && typeof mix === 'object') {
+        for (const [id, e] of Object.entries(mix)) { const j = index(id); if (j > 0 && j !== i && this.known[j] && Number.isFinite(e) && e > 0.02) want[j] = level(e); }
+      }
     } else if (!g) {
       if ((this.target.a ?? 0) > 0.02) want[CLOSE] = level(this.target.a);
       if ((this.target.b ?? 0) > 0.02) want[OPEN] = level(this.target.b);

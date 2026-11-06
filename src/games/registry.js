@@ -5,7 +5,8 @@ import { RhythmGame } from './rhythm.js';
 import { SafeGame } from './safe.js';
 import { AssessmentGame } from './assess.js';
 import { DuoGame, DUO_SCHEMES } from './duo.js';
-import { SCHEME, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
+import { StarsGame } from './stars.js';
+import { SCHEME, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET, SPPPR_SET } from '../core/vocabulary.js';
 
 const ALL = [SCHEME.THRESHOLD, SCHEME.PROPORTIONAL, SCHEME.GESTURE];
 /** id, title and skills come from the game class only (5.10: three copies had drifted — «Мастерская» measured
@@ -61,6 +62,26 @@ export const GAMES = [
   },
 ];
 
+/**
+ * «Созвездие» (ported 06.11.2026 from the parallel branch of the same day) — games on the joystick of the СПППР stream
+ * (core/joystick.js). They need both axes of the task's set (x = flexion − extension, y = pronation − supination), so they
+ * are offered only in its gesture scheme (`available`; «2 жеста» has the x axis only) and stay out of `GAMES`, whose every
+ * game runs in every scheme and set (tests/games.test.mjs). They are in the catalogue (`GAME_BY_ID`) always: a backup or a
+ * switch of the set must not drop their progress, and a host may start one by id. Not in the daily plan, like «Две руки».
+ */
+export const JOYSTICK_GAMES = [
+  {
+    ...meta(StarsGame), schemes: [SCHEME.GESTURE], joystick: true,
+    available: settings => settings?.scheme === SCHEME.GESTURE && GESTURE_SET.id === SPPPR_SET.id,
+    tagline: 'Джойстик СПППР: доведите искру до звезды и замрите',
+    teaches: 'Плавное управление двумя парами мышц-антагонистов: скорость — разность вероятностей движений, как в ТЗ. Остановка вовремя: в звезде нужен покой. Сначала одна пара, потом обе.',
+    how: ['Сгибание и разгибание ведут искру влево и вправо, супинация — вверх, пронация — вниз', 'Сильнее и увереннее движение — быстрее искра; покой — она стоит', 'В звезде расслабьтесь: она загорается, пока искра внутри', 'Пропал сигнал — искра скользит по инерции и останавливается'],
+  },
+];
+
+/** Every game the app knows (the catalogue of progress, launch parameters and the host's commands). */
+const ALL_GAMES = [...GAMES, ...JOYSTICK_GAMES];
+
 /** What to do in this scheme: the gesture scheme has its own words where the games speak of channels. */
 export const howFor = (entry, scheme) => (scheme === SCHEME.GESTURE && entry.howGesture ? entry.howGesture() : entry.how);
 
@@ -73,7 +94,7 @@ export const DUO_GAMES = GAMES.filter(g => g.twoProstheses);
 export const sessionScheme = (entry, scheme) => (entry.schemes.includes(scheme) ? scheme : entry.schemes.includes(SCHEME.PROPORTIONAL) ? SCHEME.PROPORTIONAL : entry.schemes[0]);
 export const ASSESSMENT = GAMES.find(g => g.assessment);
 
-export const GAME_BY_ID = Object.assign(Object.create(null), Object.fromEntries(GAMES.map(g => [g.id, g]))); // no prototype: ids come from backups too
+export const GAME_BY_ID = Object.assign(Object.create(null), Object.fromEntries(ALL_GAMES.map(g => [g.id, g]))); // no prototype: ids come from backups too
 
 /** Catalog view used by the pure planning code (core/progress.js). */
 export const PLAN_CATALOG = TRAINING_GAMES.map(g => ({ id: g.id, title: g.title, schemes: g.schemes, skills: g.skills, levelCount: g.Game.levels.length }));

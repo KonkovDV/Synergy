@@ -2,7 +2,7 @@
 import { fmtPct, count, FORMS } from '../core/format.js';
 import { h } from './dom.js';
 import { bottomNav, topBar, mioAvatar } from './widgets.js';
-import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID, DUO_GAMES } from '../games/registry.js';
+import { TRAINING_GAMES, ASSESSMENT, GAME_BY_ID, DUO_GAMES, JOYSTICK_GAMES } from '../games/registry.js';
 import { trainingDays, playerLevel, weeklyStatus, weekOutlookText, dayKey, gameProgress, recommendedLevel, streakAlive, secondsToday, assessmentStatus, painRestDays, planClosedDays, daysSinceTraining, recordDayNote, quickStart, scheduleOffer } from '../core/progress.js';
 import { SCHEME_INFO, SKILL_NAME } from '../core/vocabulary.js';
 import { DAILY_TIPS } from './coach.js';
@@ -150,6 +150,15 @@ export function homeScreen(app) {
       h('button', { class: 'btn ghost', onclick: () => app.go('levels', { game: g.id }) }, 'Играть двумя руками'));
   });
 
+  // «Созвездие» on the joystick of the СПППР stream: in the gesture scheme of the task's set (not in the plan).
+  const joystickCards = JOYSTICK_GAMES.filter(g => g.available(s)).map(g => {
+    const gp = gameProgress(p, g.id);
+    return h('section', { class: `card g-${g.id}` },
+      h('div', { class: 'card-head' }, h('b', { class: 'with-art' }, gameArt(g.id, 36), g.title), h('span', { class: 'pill' }, gp.played ? `ур. ${gp.unlocked}` : 'джойстик')),
+      h('p', { class: 'note' }, g.tagline),
+      h('button', { class: 'btn ghost', onclick: () => app.go('levels', { game: g.id }) }, 'Играть на джойстике'));
+  });
+
   const games = h('section', { class: 'games' }, h('h2', {}, 'Игры'),
     h('div', { class: 'game-grid' }, ...TRAINING_GAMES.map(g => {
       const gp = gameProgress(p, g.id);
@@ -203,7 +212,7 @@ export function homeScreen(app) {
       return h('li', { class: item.done ? 'done' : '' }, h('b', { class: item.done ? 'with-art' : null }, item.done ? sectionArt('done', 20) : null, item.done ? h('span', { class: 'sr-only' }, 'Выполнено: ') : null, t.title), h('small', {}, t.why));
     })),
     h('p', { class: 'note' }, `${quests.items.filter(i => i.done).length} из ${quests.items.length} · за каждую +${QUESTS.xp} XP. Новые — в следующей сессии.`)) : null;
-  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, questCard, petCard, everydayCard, checkCard, rhythmCard, ...duoCards, tipCard, games), bottomNav(app, 'home')) };
+  return { node: h('div', { class: 'screen home' }, h('main', { class: 'scroll' }, head, tutorialCard, planCard, questCard, petCard, everydayCard, checkCard, rhythmCard, ...duoCards, ...joystickCards, tipCard, games), bottomNav(app, 'home')) };
 }
 
 export function levelsScreen(app, { game }) {

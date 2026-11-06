@@ -23,7 +23,7 @@ import { OnScreenEmulator } from './input/spppr-source.js';
 import { BridgeSource, trustedMessageSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard, setPadMode } from './ui/controls.js';
-import { createGame, GAME_BY_ID, GAMES, PLAN_CATALOG, sessionScheme } from './games/registry.js';
+import { createGame, GAME_BY_ID, GAMES, JOYSTICK_GAMES, PLAN_CATALOG, sessionScheme } from './games/registry.js';
 import { assessmentTrials, formSeed } from './games/assess.js';
 import { GameRunner, DuoRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
@@ -352,7 +352,8 @@ export class App {
 
   /** «Ready» for the host (5.15, the handshake of the sample's scene bridge): after the first screen, and on a ping. */
   notifyReady() {
-    const games = GAMES.map(g => ({ id: g.id, title: g.title, levels: g.Game.levels.length }));
+    // «Созвездие»: the joystick games are listed where they can be played (the gesture scheme of the task's set).
+    const games = [...GAMES, ...JOYSTICK_GAMES.filter(g => g.available(this.settings))].map(g => ({ id: g.id, title: g.title, levels: g.Game.levels.length }));
     notifyHost(readyMessage({ version: APP.version, onboarded: this.profile.onboarded, games }), { hostOrigin: this.launch?.hostOrigin ?? null });
   }
 

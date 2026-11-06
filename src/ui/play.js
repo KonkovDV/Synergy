@@ -162,17 +162,19 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
     phase = 'intro'; session.game.paused = true; confirm = new HoldConfirm(confirmS);
     // Safety > motivation: free play stays open on a declared rest day or over the cap, with a caution.
     const caution = demo ? null : freePlayCaution({ checkin: app.checkin(), secondsToday: secondsToday(app.profile, dayKey()), softCapMin: app.rules.softCapMin });
-    const legend = s.scheme === SCHEME.GESTURE
+    // The words describe the exercise's own scheme — «Созвездие» is gestures and «Две руки» two channels whatever the
+    // settings say (the pads already followed session.scheme; ported 06.11.2026).
+    const legend = session.scheme === SCHEME.GESTURE
       ? gestureLegend()
       : s.gripSwitch === 'co'
         ? 'A — сжатие · B — раскрытие · A+B разом — коактивация (смена хвата) · покой — протез держит'
         : `A — сжатие · B — раскрытие · снова B у раскрытой кисти ${String(s.holdOpenS).replace('.', ',')} с — смена хвата · A+B — коактивация · покой — протез держит`;
     overlay.replaceChildren(h('div', { class: 'sheet' },
-      h('p', { class: 'eyebrow' }, `${SCHEME_INFO[s.scheme].mode}${retention ? ' · без подсказки' : ''}`),
+      h('p', { class: 'eyebrow' }, `${SCHEME_INFO[session.scheme].mode}${retention ? ' · без подсказки' : ''}`),
       // 5.16: before the weekly skill check Мио is focused with the player (the illustrations' «перед проверкой»).
       h('div', { class: 'sheet-title' }, h('span', { class: `tile g-${entry.id}`, 'aria-hidden': 'true' }, entry.assessment ? mio('focus', 44) : gameArt(entry.id, 44)), h('h2', { id: 'play-dialog-title' }, entry.title)),
       h('p', {}, entry.teaches),
-      h('ul', { class: 'how' }, ...howFor(entry, s.scheme).map(x => h('li', {}, x))),
+      h('ul', { class: 'how' }, ...howFor(entry, session.scheme).map(x => h('li', {}, x))),
       h('p', { class: 'legend' }, legend),
       !retention && session.game.guidance < 1 ? h('p', { class: 'note' }, session.game.constructor.summaryBlocks && session.game.guidance <= 0.5
         ? 'Две попытки подряд без шкалы: что вышло — сразу после них.'
@@ -182,13 +184,13 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
       caution ? h('p', { class: 'note warn', role: 'status' }, caution) : null,
       // Sticky at the bottom of the sheet (5.10): the description scrolls, «Старт» and the hands-free hint stay visible.
       h('div', { class: 'sheet-actions' },
-        h('div', { class: 'confirm' }, h('i', { class: 'confirm-ring' }), h('span', {}, handsFreeText(s.scheme, confirmS, 'старт'))),
+        h('div', { class: 'confirm' }, h('i', { class: 'confirm-ring' }), h('span', {}, handsFreeText(session.scheme, confirmS, 'старт'))),
         h('div', { class: 'row-actions' },
           h('button', { class: 'btn primary big', onclick: () => begin() }, 'Старт'),
           !demo ? h('button', { class: 'btn ghost', onclick: () => restart(true) }, 'Смотреть демо') : null))));
     setDialog(true);
     focusIn(overlay.querySelector('.btn.primary'));
-    app.say(`${caution ? `${caution} ` : ''}${entry.title}. ${howFor(entry, s.scheme)[0]}. ${handsFreeText(s.scheme, confirmS, 'старт', { spoken: true })}`, { interrupt: true });
+    app.say(`${caution ? `${caution} ` : ''}${entry.title}. ${howFor(entry, session.scheme)[0]}. ${handsFreeText(session.scheme, confirmS, 'старт', { spoken: true })}`, { interrupt: true });
   }
 
   // Dialog focus (5.10): the main button takes focus when a sheet opens, the pause button when it closes —

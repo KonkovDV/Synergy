@@ -55,7 +55,7 @@ export class OnScreenEmulator {
     this.stream.driver.rateHz = v;
     this.stream.decoder.resetStats();
   }
-  setTarget(t) { this.emg.setTarget(t); this.stream.driver.setTarget?.({ ...this.emg.target }); }
+  setTarget(t) { this.emg.setTarget(t); this.stream.driver.setTarget?.({ ...this.emg.target, mix: t?.mix ?? null }); }
   /** The gesture scheme (a target with a gesture) of the task's set goes through the stream. */
   usesStream() { return streamsSpppr() && this.emg.target.gesture != null; }
   sample(t) { return this.usesStream() ? this.stream.sample(t) : this.emg.sample(t); }

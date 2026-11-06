@@ -7,6 +7,7 @@ import { mio } from './art.js';
 import { SignalTrace, traceSummary } from '../core/signaltrace.js';
 import { SIGNAL_TRACE } from '../config.js';
 import { picture } from './pictures.js';
+import { stickVector } from '../core/joystick.js';
 
 /**
  * Line icons drawn in SVG (5.8): emoji and symbols (⌂ 📈 ⚙ ← ✕ Ⅱ) render differently on every platform —
@@ -132,7 +133,10 @@ export function signalMeter(app) {
       const axes = intent.valid ? intent.axes : null;
       if (stick.hidden !== !axes) stick.hidden = !axes;
       if (axes) {
-        dot.style.transform = `translate(${Math.round(-axes.x * 20)}px, ${Math.round(-axes.y * 20)}px)`;
+        // One rule with «Созвездие» (core/joystick.js): supination up, pronation down, flexion towards the midline. Until
+        // 06.11 the dot rose on pronation, against its own cue «ладонь вниз».
+        const v = stickVector(axes, { mirror: app.settings?.side === 'left' });
+        dot.style.transform = `translate(${Math.round(v.x * 20)}px, ${Math.round(-v.y * 20)}px)`;
         dot.classList.toggle('on', intent.command !== 'rest');
         zFill.style.left = axes.z < 0 ? `${50 + axes.z * 50}%` : '50%';
         zFill.style.width = `${Math.abs(axes.z) * 50}%`;

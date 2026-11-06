@@ -1359,6 +1359,12 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 .safe-plot .lamp { stroke: var(--text); stroke-width: 1.5 }
 .safe-plot .lamp.ok { fill: var(--good) }
 .safe-plot .lamp.miss { fill: var(--warn) }
+/* «Как прошло созвездие» (ported 06.11.2026): the sky of the run, lit stars joined in their order. */
+.stars-plot { max-width: 220px; margin: 4px auto 8px }
+.stars-plot .sky-line { fill: none; stroke: var(--text); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.7 }
+.stars-plot .lamp { stroke: var(--text); stroke-width: 1.2 }
+.stars-plot .lamp.ok { fill: var(--good) }
+.stars-plot .lamp.miss { fill: var(--warn) }
 :root.hc .replay-plot { background: none; border: 2px solid currentColor }
 @media (forced-colors: active) {
   .replay-plot { background: none; border: 1px solid CanvasText }
@@ -1368,9 +1374,9 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
   .grip-plot .track { fill: Canvas; stroke: CanvasText }
   .grip-plot .window, .grip-plot .force.ok { fill: Highlight; opacity: 1 }
   .grip-plot .break, .grip-plot .force.miss { fill: GrayText; opacity: 1 }
-  .grip-plot .force, .safe-plot .lamp { stroke: CanvasText }
-  .safe-plot .lamp.ok { fill: Highlight }
-  .safe-plot .lamp.miss { fill: GrayText }
+  .grip-plot .force, .safe-plot .lamp, .stars-plot .lamp, .stars-plot .sky-line { stroke: CanvasText }
+  .safe-plot .lamp.ok, .stars-plot .lamp.ok { fill: Highlight }
+  .safe-plot .lamp.miss, .stars-plot .lamp.miss { fill: GrayText }
 }
 
 /* 5.30 — the controls under the hand that taps them (meetup 21.10.2026: «под правую, левую, здоровую руку»;
