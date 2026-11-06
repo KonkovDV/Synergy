@@ -23,6 +23,8 @@ const LEVELS = [
 // Altitude / s in the threshold scheme, rising with the level: at L1 a 250 ms reaction overshoots ≈ 0.08 < tolerance.
 const climbRate = levelNumber => 0.32 + 0.03 * (levelNumber - 1);
 const LEAD_S = 2.2;     // seconds of track visible ahead of the glider
+/** Seconds of the glider's own path behind it: 0.24 w at (0.76 w / LEAD_S) px/s is 0.69 s — the trail reaches the edge. */
+export const TRAIL_S = 0.7;
 const CUE_AHEAD_S = 1.6; // the spoken cue names the next target this long before it
 
 /**
@@ -247,7 +249,11 @@ export class FlightGame extends Game {
       }
     }
     if (this.flash) this.flash.t -= dt;
-    this.trail.push(this.alt); if (this.trail.length > 40) this.trail.shift();
+    // 6.0, 05.11 (ported 06.11 from the parallel branch): the trail is the path of the last TRAIL_S of game time, drawn
+    // where the world was (render). It was the last 40 frames at 4 px each — 0.33 s squeezed or 1.3 s stretched by the
+    // screen's refresh rate (120 or 30 Hz), and it scrolled 1.8–3.6 times faster than the rings it was flown through.
+    this.trail.push([this.time, this.alt]);
+    while (this.trail.length > 2 && this.trail[0][0] < this.time - TRAIL_S) this.trail.shift();
     if (this.time >= this.total) this.finish();
   }
 
@@ -409,13 +415,15 @@ export class FlightGame extends Game {
     // Glider + trail (hidden in the retention probe until a ring is passed).
     const hidden = this.retention && !(this.flash?.t > 0);
     if (!hidden) {
-      const n = this.trail.length;
+      // The world scrolls `pps` pixels a game second; a point of the trail stands where the glider was `age` ago.
+      const tx = t => gx - (this.time - t) * pps;
       ctx.lineCap = 'round';
-      for (let i = 1; i < n; i++) {
-        const k = i / n;
+      for (let i = 1; i < this.trail.length; i++) {
+        const [t0, a0] = this.trail[i - 1], [t1, a1] = this.trail[i];
+        const k = clamp01(1 - (this.time - t1) / TRAIL_S);
         ctx.globalAlpha = deco ? k * 0.85 : 1;
         ctx.strokeStyle = deco ? mix(BRAND.sky, BRAND.mint, k) : COLORS.accent; ctx.lineWidth = deco ? 1 + 5 * k : 3;
-        ctx.beginPath(); ctx.moveTo(gx - (n - i + 1) * 4, y(this.trail[i - 1])); ctx.lineTo(gx - (n - i) * 4, y(this.trail[i])); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(tx(t0), y(a0)); ctx.lineTo(tx(t1), y(a1)); ctx.stroke();
       }
       ctx.globalAlpha = 1;
       this.drawGlider(ctx, gx, y(this.alt));
