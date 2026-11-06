@@ -29,7 +29,7 @@ export function pinLockWait(lock, now = Date.now()) {
 }
 
 /**
- * Audit 06.11.2026 (F2): a lock that ends later than the longest brake from now. Its clock went back (a phone set to the
+ * A lock that ends later than the longest brake from now. Its clock went back (a phone set to the
  * wrong year, corrected after the failed tries), or a copy brought it. The wait was `until − now`, and the parent was
  * locked out for years: the only way out was a reinstall, and that loses the progress. The brake starts again from now.
  * That is not a way around it: moving the clock forward already ends any lock. An ordinary lock is returned as it is.

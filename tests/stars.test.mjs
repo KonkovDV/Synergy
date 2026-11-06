@@ -1,7 +1,6 @@
 import './pin-tz.mjs'; // the joystick of the task's set (tests/pin-tz.mjs) — imported FIRST
-// «Созвездие» (ported 06.11.2026 from the parallel branch): the joystick of the СПППР stream as a game (src/games/stars.js),
-// the one rule of its directions (src/core/joystick.js), a blend of the demo bot that must not stick to the pads. The Red
-// Team fixes of the same branch (trail of «Полёт», raw EMG overflow) are tested in tests/qa0611.test.mjs.
+// «Созвездие»: the joystick of the СПППР stream as a game (src/games/stars.js), the one rule of its directions
+// (src/core/joystick.js), a blend of the demo bot that must not stick to the pads.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { playStream } from './stream-helpers.mjs';

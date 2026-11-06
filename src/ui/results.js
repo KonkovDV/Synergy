@@ -205,7 +205,7 @@ function safeReplayCard(replay) {
 }
 
 /**
- * «Как прошло созвездие» (ported 06.11.2026; pure: tests/stars.test.mjs): the quality of control the organizers ask to show
+ * «Как прошло созвездие» (pure: tests/stars.test.mjs): the quality of control the organizers ask to show
  * (answers, № 18) in the metrics of a Fitts-type test — stars lit, how straight the path, overshoots, both pairs at once,
  * the glide on a silent link.
  */

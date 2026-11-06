@@ -9,6 +9,7 @@ import { SignalPipeline } from '../src/core/signal.js';
 import { SignalQualityMonitor } from '../src/core/signalquality.js';
 import { SeparationMeter } from '../src/games/base.js';
 import { MEETUP_SHAPE, meetupSample, meetupContraction } from './fixtures/meetup-shapes.mjs';
+import { GAMES, JOYSTICK_GAMES, ASSESSMENT } from '../src/games/registry.js';
 
 function calibrate() {
   const rec = new CalibrationRecorder();
@@ -69,7 +70,9 @@ test('submission pack (M-17): the jury page names the architecture and how to la
   assert.match(text, /docs\/ARCHITECTURE\.md/);
   assert.match(text, /README\.md/);
   assert.match(text, /Сыграть без датчиков|Демо-профиль/);
-  assert.match(text, /5 игр/);
+  // The count follows the catalogue: «5 игр» stayed on the page when «Созвездие» became the sixth (06.11).
+  const games = [...GAMES, ...JOYSTICK_GAMES].filter(g => g !== ASSESSMENT).length;
+  assert.match(text, new RegExp(`${games} игр`));
   assert.match(text, /12:30/);
   assert.match(text, /10\.11/);
 });

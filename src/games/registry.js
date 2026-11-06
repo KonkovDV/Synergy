@@ -28,7 +28,7 @@ export const GAMES = [
     ...meta(FlightGame), schemes: ALL,
     tagline: 'Высота = сила сигнала. Пролетите сквозь кольца',
     teaches: 'Плавное управление высотой, работа каждого канала отдельно, ровное удержание уровня.',
-    // Audit 06.11.2026 (F4): no «птицу» — the egg and the chick (the first days) leave the flight to the glider.
+    // No «птицу» here: the egg and the chick (the first days) leave the flight to the glider.
     how: ['A — выше, B — ниже, покой — середина', 'Оранжевые кольца — канал A, голубые — канал B, белые — расслабление', 'В «потоке» держите высоту ровно до конца', 'Зелёная линия — летите вдоль неё. Со 2-го уровня это подъём и удержание, с 5-го — медленная волна'],
     howGesture: () => [`Жест хвата — выше, ${OPEN()} — ниже, покой — середина`, `Оранжевые кольца — жест хвата, голубые — ${OPEN()}, белые — покой`, 'В «потоке» держите высоту ровно до конца', 'Зелёная линия — летите вдоль неё. Со 2-го уровня это подъём и удержание, с 5-го — медленная волна'],
   },
@@ -63,7 +63,7 @@ export const GAMES = [
 ];
 
 /**
- * «Созвездие» (ported 06.11.2026 from the parallel branch of the same day) — games on the joystick of the СПППР stream
+ * «Созвездие» — games on the joystick of the СПППР stream
  * (core/joystick.js). They need both axes of the task's set (x = flexion − extension, y = pronation − supination), so they
  * are offered only in its gesture scheme (`available`; «2 жеста» has the x axis only) and stay out of `GAMES`, whose every
  * game runs in every scheme and set (tests/games.test.mjs). They are in the catalogue (`GAME_BY_ID`) always: a backup or a
@@ -74,7 +74,7 @@ export const JOYSTICK_GAMES = [
     ...meta(StarsGame), schemes: [SCHEME.GESTURE], joystick: true,
     available: settings => settings?.scheme === SCHEME.GESTURE && GESTURE_SET.id === SPPPR_SET.id,
     tagline: 'Джойстик СПППР: доведите искру до звезды и замрите',
-    teaches: 'Плавное управление двумя парами мышц-антагонистов: скорость — разность вероятностей движений, как в ТЗ. Остановка вовремя: в звезде нужен покой. Сначала одна пара, потом обе.',
+    teaches: 'Плавное управление двумя парами мышц-антагонистов: чем увереннее движение, тем быстрее искра. Остановка вовремя: в звезде нужен покой. Сначала одна пара мышц, потом обе.',
     how: ['Сгибание и разгибание ведут искру влево и вправо, супинация — вверх, пронация — вниз', 'Сильнее и увереннее движение — быстрее искра; покой — она стоит', 'В звезде расслабьтесь: она загорается, пока искра внутри', 'Пропал сигнал — искра скользит по инерции и останавливается'],
   },
 ];
@@ -83,7 +83,7 @@ export const JOYSTICK_GAMES = [
 const ALL_GAMES = [...GAMES, ...JOYSTICK_GAMES];
 
 /**
- * 06.11 — whether a game can be played in a gesture set: a joystick game needs the axes of the task's set (in another set its
+ * Whether a game can be played in a gesture set: a joystick game needs the axes of the task's set (in another set its
  * spark would never move), every other game runs in every set. A host's launch or start of an unplayable one is refused.
  */
 export const playableIn = (entry, setId = GESTURE_SET.id) => !!entry && (!entry.joystick || setId === SPPPR_SET.id);

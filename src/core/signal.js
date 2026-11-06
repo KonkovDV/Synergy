@@ -97,7 +97,7 @@ export function restIntent(scheme, valid, t = 0) {
 }
 
 /**
- * 06.11.2026 — Q&A of 04.11, answer 25: a loss longer than 1–2 s is critical. `update(lost, now)` is true once, at the
+ * The organizers' answer 25: a loss longer than 1–2 s is critical. `update(lost, now)` is true once, at the
  * moment the lost signal has lasted `ms`; false while there is a signal, while the loss is shorter, and after it was told
  * (until the signal comes back and goes again). Pure: the play screen pauses the exercise on it.
  */
@@ -116,7 +116,7 @@ export class LossWatch {
 export const RESPONSE_LIMIT_MS = 100;
 
 /**
- * Audit 06.11.2026 (F3): how long the channels answer at these parameters — ms from the first frame of a contraction to
+ * How long the channels answer at these parameters — ms from the first frame of a contraction to
  * the command, measured on the pipeline itself (the way tests/stream1.test.mjs measures the defaults): 0.5 s of rest,
  * then channel A steps to `level` of the comfortable maximum at `hz` frames a second. Null when no command comes within
  * 0.5 s (the step is under the switch-on line). The settings show it next to the sliders, so a hold or a smoothing that
