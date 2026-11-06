@@ -23,7 +23,7 @@ import { OnScreenEmulator } from './input/spppr-source.js';
 import { BridgeSource, trustedMessageSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard, setPadMode } from './ui/controls.js';
-import { createGame, GAME_BY_ID, GAMES, PLAN_CATALOG, sessionScheme } from './games/registry.js';
+import { createGame, GAME_BY_ID, GAMES, JOYSTICK_GAMES, PLAN_CATALOG, sessionScheme } from './games/registry.js';
 import { assessmentTrials, formSeed } from './games/assess.js';
 import { GameRunner, DuoRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
@@ -31,7 +31,7 @@ import { setSoundEnabled, unlockAudio } from './services/audio.js';
 import { setVoiceEnabled, say, stopVoice } from './services/voice.js';
 import { setRenderOptions } from './render/draw.js';
 import { mount, toast, h } from './ui/dom.js';
-import { parseLaunch, parseHostCommand, readyMessage, resultMessage, closeMessage, notifyHost, isEmbedded, hostChannel, HOST_PROTOCOL } from './services/host.js';
+import { parseLaunch, parseHostCommand, readyMessage, resultMessage, closeMessage, settingsMessage, notifyHost, isEmbedded, hostChannel, HOST_PROTOCOL } from './services/host.js';
 import { SCREENS } from './ui/screens.js';
 import { startTour } from './ui/tour.js';
 import { mergeTours } from './core/tours.js';
@@ -158,6 +158,8 @@ export class App {
     // the way home; before, it was lost when the onboarding came first.
     this.pendingLaunch = this.launch.game ? { game: this.launch.game, level: this.launch.level } : null;
     this.launchEmbedded = isEmbedded(this.launch);
+    // 6.0, 05.11 — the host names the side of the prosthesis (`side=`): the hand, the mirror and the pads follow it
+    if (this.launch.side && this.launch.side !== this.settings.side) Object.assign(this.settings, { side: this.launch.side });
     // Started by a host: the host gives the signal, so a stored «Внешний» source does not dial its WebSocket address
     // until the person types one (hostSource). Before the first host frame the game simply waits for frames.
     this.hostFed = this.launchEmbedded;
@@ -190,6 +192,8 @@ export class App {
     const before = this.settings.source;
     if (patch.wsUrl !== undefined || patch.source === 'touch') this.hostFed = false; // the person chose the source
     Object.assign(this.settings, patch);
+    // 6.0, 05.11: a changed threshold is told to the host once the slider rests (the answers, № 16)
+    if (['sensitivity', 'sensitivityB', 'side'].some(k => k in patch)) { clearTimeout(this.settingsTimer); this.settingsTimer = setTimeout(() => this.notifySettings(), 600); }
     this.emulator.realism = this.settings.realism; this.emulator2.realism = this.settings.realism;
     this.applyPresentation();
     if (patch.source !== undefined || patch.wsUrl !== undefined || before !== this.settings.source) this.applySource();
@@ -345,14 +349,25 @@ export class App {
 
   /** «Ready» for the host (5.15, the handshake of the sample's scene bridge): after the first screen, and on a ping. */
   notifyReady() {
-    const games = GAMES.map(g => ({ id: g.id, title: g.title, levels: g.Game.levels.length }));
+    // 6.0, 05.11: the joystick games are listed where they can be played (the gesture scheme of the task's set).
+    const games = [...GAMES, ...JOYSTICK_GAMES.filter(g => g.available(this.settings))].map(g => ({ id: g.id, title: g.title, levels: g.Game.levels.length }));
     notifyHost(readyMessage({ version: APP.version, onboarded: this.profile.onboarded, games }), { hostOrigin: this.launch?.hostOrigin ?? null });
   }
 
   /** Hands control back to the host (5.15): «Вернуться в приложение» after an exercise, or back on the home screen. */
   closeToHost(reason) {
     if (!this.embedded) return false;
+    this.notifySettings(); // 6.0, 05.11: the thresholds go back before the host closes the game
     notifyHost(closeMessage(reason, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
+    return true;
+  }
+
+  /** 6.0, 05.11 — the side, the sensitivity and the thresholds for the host (services/host.js `settingsMessage`). */
+  notifySettings() {
+    if (!this.embedded) return false;
+    const s = this.settings;
+    notifyHost(settingsMessage({ side: s.side, sensitivity: this.switchOn(), calibration: this.state.calibrations.bridge,
+      usesProsthesisThresholds: !!this.prosthesisThresholds() }, APP.version), { hostOrigin: this.launch?.hostOrigin ?? null });
     return true;
   }
 
@@ -567,7 +582,7 @@ export class App {
    */
   sppprDecoder(demo = false) {
     if (!demo && this.liveSource() === 'bridge') return this.bridge?.spppr ?? null;
-    return this.emulator.usesStream?.() || (this.settings.scheme === 'gesture' && GESTURE_SET.id === 'tz') ? this.emulator.decoder ?? null : null;
+    return this.emulator.usesStream?.() || (this.settings.scheme === 'gesture' && GESTURE_SET.stream === true) ? this.emulator.decoder ?? null : null;
   }
 
   /** Faded feedback: share of trials with live feedback from this game's recent skill (all trials when off). */

@@ -4,7 +4,7 @@
 // the target goes to the СПППР stream (JSON text through the decoder, as from the prosthesis); in the two-channel schemes
 // to the EMG envelope emulator, as before.
 import { SppprDecoder } from '../core/spppr.js';
-import { GESTURE_SET, SPPPR_SET } from '../core/vocabulary.js';
+import { GESTURE_SET } from '../core/vocabulary.js';
 import { EmgEmulator } from './emulator.js';
 import { createSppprDriver } from './spppr-driver.js';
 
@@ -35,7 +35,7 @@ export class SppprSource {
 }
 
 /** The task's set speaks the СПППР stream; another set keeps the frames of EmgEmulator (its own classes). */
-export const streamsSpppr = () => GESTURE_SET.id === SPPPR_SET.id;
+export const streamsSpppr = () => GESTURE_SET.stream === true; // the task's set and its two-gesture variant (05.11)
 
 export class OnScreenEmulator {
   constructor({ realism = 0.5, seed = 7, driver = null } = {}) {
@@ -45,7 +45,7 @@ export class OnScreenEmulator {
   get target() { return this.emg.target; }
   get realism() { return this.emg.realism; }
   set realism(v) { this.emg.realism = v; if ('realism' in this.stream.driver) this.stream.driver.realism = v; }
-  setTarget(t) { this.emg.setTarget(t); this.stream.driver.setTarget?.({ ...this.emg.target }); }
+  setTarget(t) { this.emg.setTarget(t); this.stream.driver.setTarget?.({ ...this.emg.target, mix: t?.mix ?? null }); }
   /** The gesture scheme (a target with a gesture) of the task's set goes through the stream. */
   usesStream() { return streamsSpppr() && this.emg.target.gesture != null; }
   sample(t) { return this.usesStream() ? this.stream.sample(t) : this.emg.sample(t); }

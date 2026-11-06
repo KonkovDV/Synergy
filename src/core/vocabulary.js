@@ -147,7 +147,7 @@ const SPR8 = {
  * `dev` — radial (−1, abduction) or ulnar (+1, adduction) deviation; `roll` — pronation (+1) or supination (−1).
  */
 const TZ = {
-  id: 'tz', name: 'СПППР (ТЗ)', short: '7 состояний · СПППР', size: 7,
+  id: 'tz', name: 'СПППР (ТЗ)', short: '7 состояний · СПППР', size: 7, stream: true,
   text: 'Поток вероятностей СПППР по ТЗ: нейтраль и шесть движений кисти. Сгибание закрывает кисть, разгибание раскрывает, сила — разность их вероятностей.',
   source: 'ТЗ организаторов 28.10.2026: словарь жестов кисти СПППР',
   classOrder: ['rest', 'flexion', 'extension', 'pronation', 'supination', 'adduction', 'abduction'],
@@ -162,8 +162,21 @@ const TZ = {
   ],
 };
 
+/**
+ * 6.0, 05.11 — the organizers' answers (№ 22): a СПППР is trained either on six gestures and neutral (the set above) or on
+ * two gestures and neutral. Two of the task's own classes — the antagonists the task builds the training on, flexion
+ * closes and extension opens — on the same wire keys; its packets carry three classes (core/spppr.js accepts both shapes).
+ */
+const TZ2 = {
+  id: 'tz2', name: 'СПППР · 2 жеста', short: '3 состояния · СПППР', size: 3, stream: true,
+  text: 'Поток вероятностей СПППР, обученной на двух жестах и нейтрали: сгибание закрывает кисть, разгибание раскрывает, сила — разность их вероятностей.',
+  source: 'Ответы организаторов 05.11.2026 (№ 22): СПППР на 2 жестах + нейтраль',
+  classOrder: ['rest', 'flexion', 'extension'],
+  gestures: TZ.gestures.filter(g => ['rest', 'flexion', 'extension'].includes(g.id)),
+};
+
 /** Every set, by id (no prototype: ids come from settings and addresses). The published set first. */
-export const GESTURE_SETS = Object.assign(Object.create(null), { tz: TZ, synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
+export const GESTURE_SETS = Object.assign(Object.create(null), { tz: TZ, tz2: TZ2, synergy: SYNERGY, ubi4: UBI4, spr8: SPR8 });
 /** 6.0 — the wire contract of the СПППР stream is fixed by the task, whatever set the game speaks (core/spppr.js). */
 export const SPPPR_SET = TZ;
 /** The set of this page load: id, name, short, text, size, source. */

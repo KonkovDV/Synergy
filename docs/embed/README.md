@@ -24,6 +24,7 @@
 | `synergy:ready` | первый экран открыт; повторно — в ответ на `synergy-ping` | `onboarded` — пройдено ли знакомство с безопасностью; `games` — `[{ id, title, levels }]`: что можно запустить (с 5.30 — и «Две руки», `duo`); `gestures` — `{ set, classes }`: набор жестов и порядок классов, в котором игра ждёт массив вероятностей (5.30) |
 | `synergy:result` | каждое упражнение (кроме демо автопилота) | `at`, `game`, `level`, `scheme`, `retention`, `score`, `stars`, `durationS`, `skills` |
 | `synergy:close` | человек закончил: «Вернуться в приложение» на итогах (`reason: "done"`) или «Назад» на главной «Синергии» (`reason: "back"`) | `reason` |
+| `synergy:settings` | 6.0, 05.11 (ответ организаторов № 16): порог изменили или игра закрывается — сторона, чувствительность каналов, пороги в шкале протеза 0–255, если калибровка в ней | `side`, `sensitivity: {close, open}`, `prosthesisThresholds`, `thresholds255?: {close, open}` |
 
 **Хост → игра.**
 
@@ -51,6 +52,8 @@
 5. `window.Unity.call(json)` — плагин WebView для Unity (gree/unity-webview).
 
 Хост 5.14 с одним методом `SynergyHost.onResult(json)` по-прежнему получает результаты. Кроме канала, каждое сообщение — событие `CustomEvent` с тем же именем на `document` и `postMessage` родительскому окну, **только** на origin из параметра `?host=https://…` (на `*` не отправляется никогда).
+
+**Запуск маршрутом (05.11, ответы № 15, 16):** `synergy://play?game=…&level=…&gestures=…&side=left|right` (APK и iPhone) или те же параметры страницы. `side` — сторона протеза из Motorica Start; неизвестное значение игнорируется.
 
 ## Чек-лист правильной интеграции
 

@@ -6,7 +6,8 @@
 
 /** Known sets; the definitions are in vocabulary.js. */
 // 6.0: the set of the published task (tz) is the default; the others stay for hosts and old addresses.
-export const GESTURE_SET_IDS = Object.freeze(['tz', 'synergy', 'ubi4', 'spr8']);
+// 6.0, 05.11: tz2 — the СПППР trained on two gestures and neutral (the organizers' answers, № 22).
+export const GESTURE_SET_IDS = Object.freeze(['tz', 'tz2', 'synergy', 'ubi4', 'spr8']);
 export const DEFAULT_GESTURE_SET = 'tz';
 /** localStorage key of the person's choice. */
 export const GESTURE_SET_KEY = 'synergy.gestureSet';

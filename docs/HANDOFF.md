@@ -100,7 +100,7 @@
 
 ```bash
 npm ci
-npm test                         # 381 тест (1 пропущен: подпись APK без собранного APK)
+npm test                         # все тесты; число — в таблице README (без собранного APK пропущен тест подписи)
 npm run test:ubi4                # тот же набор на наборе жестов UBI4
 npm run build
 npm run e2e                      # smoke

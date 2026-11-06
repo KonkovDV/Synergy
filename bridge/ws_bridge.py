@@ -48,8 +48,17 @@ def origin_allowed(origin, token_given, token, allowed=(), peer='127.0.0.1'):
 
 def clean_intent(msg):
     """An intent from the game, as the lab expects it: a known gesture or none, numbers in 0..1 (5.10: one
-    {"effort": null} raised TypeError in the pump and stopped the whole bridge)."""
-    num = lambda v, d: max(0.0, min(1.0, float(v))) if isinstance(v, (int, float)) and not isinstance(v, bool) and v == v else d
+    {"effort": null} raised TypeError in the pump and stopped the whole bridge). 6.0, 05.11: an integer of 400 digits is
+    valid JSON and float() of it raised OverflowError, which closed the client's connection — it is clamped like any
+    other number out of range."""
+    def num(v, d):
+        if isinstance(v, bool) or not isinstance(v, (int, float)):
+            return d
+        try:
+            f = float(v)
+        except OverflowError:  # an int too large for a float: certainly out of 0..1 on its side
+            return 1.0 if v > 0 else 0.0
+        return max(0.0, min(1.0, f)) if f == f else d
     gesture = msg.get('gesture') if msg.get('gesture') in GESTURES else None
     return {'type': 'intent', 'gesture': gesture, 'effort': num(msg.get('effort'), 0.6), 'a': num(msg.get('a'), 0.0), 'b': num(msg.get('b'), 0.0)}
 # 6.0 — the 7 states of the СПППР (task of 28.10.2026), in the class order of src/core/vocabulary.js (the gate checks it).
@@ -183,7 +192,7 @@ class Bridge:
                     try:
                         msg = json.loads(data)
                         if isinstance(msg, dict) and msg.get('type') == 'intent': self.intent = clean_intent(msg)
-                    except ValueError:
+                    except (ValueError, RecursionError):  # not JSON, or nested deeper than the parser goes
                         pass
         except (asyncio.IncompleteReadError, ConnectionError):
             pass

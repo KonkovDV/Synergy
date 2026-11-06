@@ -33,7 +33,9 @@ export function formSeed(week) {
   if (!Number.isInteger(week) || week < 0) return ASSESS.seed;
   let h = Math.imul((ASSESS.seed ^ week) >>> 0, 0x01000193) >>> 0;
   h = Math.imul(h ^ (week >>> 8), 0x85EBCA6B) >>> 0;
-  return h || 1;
+  // 6.0, 05.11: bit 0 is the week's parity — a set of two gestures has two orders only, and they alternate by week
+  const s = (((h >>> 1) << 1) | (week & 1)) >>> 0;
+  return s || 2;
 }
 
 /** Index of difficulty, Shannon formulation (ISO 9241-411), bits. */
@@ -70,6 +72,11 @@ function fittsBlock(seed = ASSESS.seed) {
  * so throughput stays honest when the threshold differs (5.10).
  */
 export function assessmentTrials(scheme, onThreshold, seed = ASSESS.seed) {
+  if (scheme === SCHEME.GESTURE && ACTIVE_GESTURE_IDS.length === 2) {
+    // two gestures (the СПППР of two gestures and neutral, 05.11): the two orders alternate by the week's parity
+    const [a, b] = (seed & 1) ? [...ACTIVE_GESTURE_IDS].reverse() : ACTIVE_GESTURE_IDS;
+    return [a, b, a, b].map(g => ({ gesture: g, name: GESTURE_BY_ID[g].name, pose: GESTURE_BY_ID[g].pose, wrist: GESTURE_BY_ID[g].wrist ?? 0, roll: GESTURE_BY_ID[g].roll ?? 0, dev: GESTURE_BY_ID[g].dev ?? 0 }));
+  }
   if (scheme === SCHEME.GESTURE) {
     const rng = createRng(seed), order = [];
     for (let round = 0; round < 2; round++) {

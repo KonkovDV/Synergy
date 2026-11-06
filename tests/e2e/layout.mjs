@@ -314,10 +314,13 @@ const STATES = [
     await p.evaluate(() => window.Synergy.useTouch());
   }],
   ['results-signal', async p => go(p, 'results', { run: { ...run, source: 'bridge', signalIssues: [{ id: 'noise', seconds: 14 }, { id: 'spikes', seconds: 4, side: 'left' }] }, report: { xp: 98, levelUp: false, achievements: [], skins: [], unlockedLevel: null } })],
-  ...['grip', 'flight', 'rhythm', 'safe', 'check'].map(g => [`levels-${g}`, async p => go(p, 'levels', { game: g })]),
-  ...['grip', 'flight', 'rhythm', 'safe', 'check'].map(g => [`play-intro-${g}`, async p => go(p, 'play', { game: g, level: 1 })]),
+  ...['grip', 'flight', 'rhythm', 'safe', 'check', 'stars'].map(g => [`levels-${g}`, async p => go(p, 'levels', { game: g })]),
+  ...['grip', 'flight', 'rhythm', 'safe', 'check', 'stars'].map(g => [`play-intro-${g}`, async p => go(p, 'play', { game: g, level: 1 })]),
   ['play-running', async p => { await go(p, 'play', { game: 'grip', level: 3, demo: true }); await p.getByRole('button', { name: 'Старт' }).click(); await p.waitForTimeout(3600); }],
   ['play-paused', async p => { await p.getByRole('button', { name: 'Пауза' }).click(); }],
+  // 6.0, 05.11 — «Созвездие» running (gesture pads, the compass of probabilities) and its results with the sky of the run
+  ['play-running-stars', async p => { await go(p, 'play', { game: 'stars', level: 4, demo: true }); await p.getByRole('button', { name: 'Старт' }).click(); await p.waitForTimeout(3600); }],
+  ['results-stars', async p => go(p, 'results', { run: { ...run, game: 'stars', level: 4, scheme: 'gesture', details: { solved: 5, total: 6, completionRate: 83, meanReachMs: 1840, pathEfficiency: 78, overshoots: 1, inertiaMs: 420, simultaneous: 31 } }, report: { xp: 90, levelUp: false, achievements: [], skins: [], unlockedLevel: 5 }, replay: { kind: 'stars', stars: [{ x: 0.5, y: 0.2, ok: true }, { x: -0.3, y: 0.6, ok: true }, { x: -0.7, y: -0.2, ok: false }, { x: 0.1, y: -0.6, ok: true }, { x: 0.6, y: -0.4, ok: true }, { x: 0.2, y: 0.7, ok: true }], solved: 5, total: 6, pathEfficiency: 78, overshoots: 1, inertiaMs: 420, simultaneous: 31 } })],
   ['play-retention', async p => go(p, 'play', { game: 'rhythm', level: 2, retention: true })],
   ['results', async p => go(p, 'results', { run, report: { xp: 119, levelUp: false, achievements: [], skins: [], unlockedLevel: 3 }, planBonus: 0, calibrationNote: { recalibrate: true, stuckChannel: 0, shiftPct: 0 } })],
   ['results-check', async p => go(p, 'results', { run: check, report: { xp: 111, levelUp: false, achievements: [], skins: [], unlockedLevel: null } })],
