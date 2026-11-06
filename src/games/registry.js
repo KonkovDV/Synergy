@@ -82,6 +82,12 @@ export const JOYSTICK_GAMES = [
 /** Every game the app knows (the catalogue of progress, launch parameters and the host's commands). */
 const ALL_GAMES = [...GAMES, ...JOYSTICK_GAMES];
 
+/**
+ * 06.11 — whether a game can be played in a gesture set: a joystick game needs the axes of the task's set (in another set its
+ * spark would never move), every other game runs in every set. A host's launch or start of an unplayable one is refused.
+ */
+export const playableIn = (entry, setId = GESTURE_SET.id) => !!entry && (!entry.joystick || setId === SPPPR_SET.id);
+
 /** What to do in this scheme: the gesture scheme has its own words where the games speak of channels. */
 export const howFor = (entry, scheme) => (scheme === SCHEME.GESTURE && entry.howGesture ? entry.howGesture() : entry.how);
 

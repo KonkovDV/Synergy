@@ -40,7 +40,7 @@ export function buildShowcaseState(settings = DEFAULT_SETTINGS, today = dayKey()
         source: 'showcase', retention: false, demo: false, score, stars: starsFor(score), skills, durationS: 100 + Math.round(60 * rng()),
         details: g.id === 'safe' ? safeDetails(rng, k) : { switches: g.id === 'grip' ? 2 : 0, difficulty: Math.round((k - 0.5) * 60) / 100 } };
       runs.push(run);
-      recordRun(profile, run, { today: day, weeklyGoal: settings.weeklyGoal });
+      recordRun(profile, run, { today: day, weeklyGoal: settings.weeklyGoal, training: catalog.map(g => g.id) });
       if (run.stars >= 2 && level[g.id] < g.levels) level[g.id]++;
     });
     if (back % 7 === 0) runs.push(assessmentRun(rng, date, settings.scheme, k, profile, checkTrials));

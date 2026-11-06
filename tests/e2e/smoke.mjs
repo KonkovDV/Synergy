@@ -87,7 +87,7 @@ await wait(600);
 await page.evaluate(() => clearInterval(window.__feed));
 await page.getByRole('heading', { name: 'Сигнал потерян' }).waitFor({ timeout: 4000 }).catch(() => errors.push('loss: a lost signal did not pause the exercise (answer 25)'));
 await shot('18-signal-lost-pause');
-await page.getByRole('button', { name: 'Выйти' }).click().catch(() => errors.push('loss: no «Выйти» on the pause'));
+await page.locator('.overlay').getByRole('button', { name: 'Выйти' }).click().catch(() => errors.push('loss: no «Выйти» on the pause'));
 await page.evaluate(() => window.Synergy.useTouch()); await wait(300);
 
 const state = await page.evaluate(() => window.Synergy.state());

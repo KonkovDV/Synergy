@@ -23,7 +23,7 @@ import { OnScreenEmulator } from './input/spppr-source.js';
 import { BridgeSource, trustedMessageSource } from './input/bridge.js';
 import { connectBle, bleSupported } from './input/ble.js';
 import { bindKeyboard, setPadMode } from './ui/controls.js';
-import { createGame, GAME_BY_ID, GAMES, JOYSTICK_GAMES, PLAN_CATALOG, sessionScheme } from './games/registry.js';
+import { createGame, GAME_BY_ID, GAMES, JOYSTICK_GAMES, PLAN_CATALOG, sessionScheme, playableIn } from './games/registry.js';
 import { assessmentTrials, formSeed } from './games/assess.js';
 import { GameRunner, DuoRunner } from './games/runner.js';
 import { createFeedback } from './services/feedback.js';
@@ -46,7 +46,9 @@ const THEME_COLOR = { light: '#f3f5f7', dark: '#071019' };
 /** Game catalog for the stored-state check (core does not import games): id → number of levels. */
 const CATALOG = Object.fromEntries(Object.entries(GAME_BY_ID).map(([id, g]) => [id, g.Game.levels.length]));
 /** A game id → its number of levels, for the launch parameters and the host's commands (services/host.js). */
-const gameInfo = id => (GAME_BY_ID[id] ? { levels: GAME_BY_ID[id].Game.levels.length } : null);
+// 06.11: a joystick game («Созвездие») needs the axes of the task's set — in another set its spark would never move, so a
+// host's launch or start of it is refused there like an unknown id (the set is chosen once per page load).
+const gameInfo = id => (playableIn(GAME_BY_ID[id]) ? { levels: GAME_BY_ID[id].Game.levels.length } : null);
 
 /** What a same-screen re-render keeps (5.10): scroll, open sections, the focused choice group or button. */
 function captureView(root) {
@@ -370,7 +372,7 @@ export class App {
   /** 06.11 — the side, the sliders and (external source) the lines in the host's 0…255 units (services/host.js settingsMessage). */
   notifySettings() {
     clearTimeout(this.settingsTimer); this.settingsTimer = null;
-    if (!this.embedded) return false;
+    if (!this.embedded || this.showcase) return false; // the demo profile is not the person's
     const s = this.settings, sensitivity = [s.sensitivity, s.sensitivityB ?? s.sensitivity];
     let channels = null;
     if (this.liveSource() === 'bridge') {
@@ -632,7 +634,7 @@ export class App {
     const replay = session.game.replay?.() ?? null; // shown on the results screen, never saved
     if (session.demo) return { run, report: null, planBonus: 0, replay };
     this.state.runs.push(run);
-    const report = recordRun(this.profile, run, { today: dayKey(), weeklyGoal: this.settings.weeklyGoal });
+    const report = recordRun(this.profile, run, { today: dayKey(), weeklyGoal: this.settings.weeklyGoal, training: PLAN_CATALOG.map(g => g.id) });
     // Only exercises started from the plan complete it (5.10: a free-play «без подсказки» ticked the plan's probe
     // before any training and without the day's check-in).
     const planBonus = session.plan ? completePlanItem(this.profile, run, dayKey()) : 0;

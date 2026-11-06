@@ -110,3 +110,48 @@ test('ответ № 16: the game returns its settings — on a change of a thre
   assert.match(app, /\['sensitivity', 'sensitivityB', 'side', 'prosthesisThresholds'\]\.some\(k => k in patch\)/, 'a change is told once the slider rests');
   assert.match(app, /this\.notifySettings\(\); \/\/ 06\.11 \(answer 16\): the thresholds go back before the host closes the game/);
 });
+
+test('«Универсал» is the four training games themselves — «Две руки» and «Созвездие» do not stand in for them', async () => {
+  const { createProfile, recordRun } = await import('../src/core/progress.js');
+  const { PLAN_CATALOG } = await import('../src/games/registry.js');
+  const training = PLAN_CATALOG.map(g => g.id);
+  assert.equal(training.length, 4, 'the four games of the plan');
+  const p = createProfile();
+  const run = (game, at) => ({ id: `${game}-${at}`, at, game, level: 1, levelCount: 8, scheme: 'gesture', source: 'touch', retention: false, demo: false, score: 80, stars: 2, skills: {}, durationS: 60, details: {} });
+  const got = [];
+  ['duo', 'stars', training[0], training[1]].forEach((g, i) => got.push(...recordRun(p, run(g, `2026-11-06T10:0${i}:00.000Z`), { today: '2026-11-06', training }).achievements));
+  assert.equal(got.includes('all_games'), false, 'four played games, but two of them are not the four');
+  got.push(...recordRun(p, run(training[2], '2026-11-06T10:05:00.000Z'), { today: '2026-11-06', training }).achievements);
+  assert.equal(got.includes('all_games'), false);
+  got.push(...recordRun(p, run(training[3], '2026-11-06T10:06:00.000Z'), { today: '2026-11-06', training }).achievements);
+  assert.ok(got.includes('all_games'), 'the fourth of the four unlocks it');
+  const { readFileSync } = await import('node:fs');
+  assert.match(readFileSync(new URL('../src/app.js', import.meta.url), 'utf8'), /training: PLAN_CATALOG\.map\(g => g\.id\)/, 'the app passes the four');
+});
+
+test('«Созвездие» on the 10 Hz stream the organizers named: every level ≥ 2★, the novice lights level 1', async () => {
+  const { playStream } = await import('./stream-helpers.mjs');
+  const { StarsGame } = await import('../src/games/stars.js');
+  for (let level = 1; level <= StarsGame.levels.length; level++) {
+    const { result } = playStream('stars', { levelNumber: level, realism: 1, seed: 3, rateHz: 10 });
+    assert.ok(result.stars >= 2, `L${level} at 10 Hz on a bad stream: ${result.stars}★`);
+  }
+  const novice = playStream('stars', { levelNumber: 1, realism: 0.5, seed: 5, rateHz: 10, novice: true }).result;
+  assert.ok(novice.stars >= 2, `novice: ${novice.stars}★`);
+});
+
+test('a host cannot start «Созвездие» where it cannot be played; the demo profile tells the host nothing', async () => {
+  const { GAME_BY_ID, playableIn } = await import('../src/games/registry.js');
+  const { parseLaunch } = await import('../src/services/host.js');
+  assert.equal(playableIn(GAME_BY_ID.stars, 'tz'), true, 'the task\'s set has both axes');
+  for (const set of ['tz2', 'synergy', 'ubi4', 'spr8']) assert.equal(playableIn(GAME_BY_ID.stars, set), false, `${set}: its spark would never move`);
+  for (const id of ['grip', 'flight', 'rhythm', 'safe', 'check', 'duo']) assert.equal(playableIn(GAME_BY_ID[id], 'synergy'), true, id);
+  assert.equal(playableIn(undefined), false);
+  const info = setId => id => (playableIn(GAME_BY_ID[id], setId) ? { levels: GAME_BY_ID[id].Game.levels.length } : null);
+  assert.equal(parseLaunch('?game=stars&level=2', info('synergy')).game, null, 'refused like an unknown id');
+  assert.equal(parseLaunch('?game=stars&level=2', info('tz')).game, 'stars');
+  const { readFileSync } = await import('node:fs');
+  const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+  assert.match(app, /const gameInfo = id => \(playableIn\(GAME_BY_ID\[id\]\)/);
+  assert.match(app, /if \(!this\.embedded \|\| this\.showcase\) return false; \/\/ the demo profile is not the person's/);
+});
