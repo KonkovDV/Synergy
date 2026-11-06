@@ -178,7 +178,8 @@ export function parseExternal(msg, map = { channelA: 0, channelB: 1 }) {
   }
   const frame = parseFrame(data, map);
   const side = data && typeof data === 'object' ? sideOf(data.side ?? data.hand ?? data.snapshot?.side) : null;
-  return frame && side && !frame.thresholds ? { ...frame, side } : frame;
+  // a frame with levels keeps its side even when the thresholds ride along (6.0, 05.11); thresholds alone have no side
+  return frame && side && (!frame.thresholds || 'a' in frame) ? { ...frame, side } : frame;
 }
 
 const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -198,10 +199,32 @@ function parseFrame(msg, map) {
   if (Array.isArray(data)) data = { channels: data };
   if (!data || typeof data !== 'object') return null;
   const limits = thresholdsOf(data);
-  if (limits !== undefined) return limits; // null: a malformed threshold message is dropped, not read as a frame
+  if (limits === null) return null; // a malformed threshold message is dropped, not read as a frame
+  // 6.0, 05.11 — Q&A of the organizers (№ 6): «в игру поступают четыре значения: амплитуды двух ЭМГ-сенсоров 0…255 и два
+  // пороговых значения». In one message the thresholds used to win and the two levels were dropped: the game saw no
+  // signal at all. Now the levels are the frame and the thresholds ride along; thresholds alone are still no frame.
+  const levels = levelsOf(data, map);
+  if (limits) return levels ? { ...levels, ...limits } : limits;
+  return levels === undefined ? frameOf(data, map) : levels;
+}
+
+/** The two levels of a Motorica snapshot or of the 2023–2024 broadcast; undefined when the message is not one of them. */
+function levelsOf(data, map) {
   const snapshot = data.snapshot && typeof data.snapshot === 'object' ? data.snapshot : data; // iOS App Group keeps it under «snapshot»
   if ('openLevel' in snapshot || 'closeLevel' in snapshot) return motoricaFrame(snapshot);
   if ('sensor_level_1' in data || 'sensor_level_2' in data) return sensorLevelsFrame(data);
+  if (!('thresholds' in data || 'openThreshold' in data || 'closeThreshold' in data)) return undefined;
+  // a generic frame that carries thresholds too ({a, b, thresholds}, {emg: […], thresholds}): its levels, if any. The
+  // thresholds are on the 0…255 scale of the contract, so are the amplitudes sent with them — both are scaled alike
+  // (a threshold of 60 next to a level of 200 must stay below it after the scaling).
+  if (!('a' in data || 'b' in data || ['ch', 'channels', 'emg', 'values'].some(k => k in data))) return null;
+  const f = frameOf(data, map);
+  const level = x => Math.min(1, Math.max(0, x / MOTORICA_LEVEL_MAX));
+  return f && Number.isFinite(f.a) && Number.isFinite(f.b) ? { ...f, a: level(f.a), b: level(f.b) } : f;
+}
+
+/** A generic frame: two levels, a gesture label or probabilities (see parseFrame). */
+function frameOf(data, map) {
   const list = data.ch ?? data.channels ?? data.emg ?? data.values;
   let a = num(data.a), b = num(data.b);
   if (Array.isArray(list)) { a = num(list[map.channelA]); b = num(list[map.channelB] ?? 0); }
@@ -227,6 +250,10 @@ function parseFrame(msg, map) {
   if (!gesture && isLabel(label) && !Number.isFinite(a) && !Number.isFinite(b)) return { a: 0, b: 0, gesture: 'rest', confidence: 0, label: String(label).trim().slice(0, LABEL_MAX) };
   if (gesture && !Number.isFinite(a)) { a = 0; b = 0; }
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  // 6.0, 05.11 (Red Team): one raw sample of −1e300 is a finite number, but its square is not — the envelope of the
+  // whole 150 ms window became Infinity and every frame of it was refused («сигнал потерян»). No converter gives more
+  // than 2³² counts; a 24-bit ADC with its DC offset (±8.4·10⁶) still passes, the envelope removes the offset.
+  if (Math.abs(a) > RAW_SAMPLE_MAX || Math.abs(b) > RAW_SAMPLE_MAX) return null;
   const frame = { a, b }; // the sign is kept: a negative value means raw EMG (BridgeSource builds the envelope)
   if (gesture) { frame.gesture = gesture; frame.confidence = Number.isFinite(confidence) ? confidence : 1; if (shownProbs) frame.probs = shownProbs; }
   if (Number.isFinite(effort)) frame.effort = effort;
@@ -240,6 +267,8 @@ function parseFrame(msg, map) {
  * (Until 5.9 the modulus of the last frame was taken silently — external audit T6.)
  */
 export const ENVELOPE = { windowMs: 150, maxSamples: 2048 };
+/** The largest magnitude of one sample (frame units): its square summed over maxSamples stays far from overflow. */
+export const RAW_SAMPLE_MAX = 1e12;
 
 export class EnvelopeFilter {
   constructor({ windowMs = ENVELOPE.windowMs, maxSamples = ENVELOPE.maxSamples } = {}) {
