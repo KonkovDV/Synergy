@@ -23,7 +23,7 @@ import { GESTURE_SET, GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
 
 export const HOST_PROTOCOL = 1;
 /** Message types (additive within protocol 1: a 5.14 host reads `synergy:result` as before). */
-export const HOST_TYPES = { ready: 'synergy:ready', result: 'synergy:result', close: 'synergy:close' };
+export const HOST_TYPES = { ready: 'synergy:ready', result: 'synergy:result', close: 'synergy:close', settings: 'synergy:settings' };
 export const HOST_MESSAGE = HOST_TYPES.result;
 /** Commands a host may post (WebView WebMessage or the embedding frame). */
 export const HOST_COMMANDS = { frame: 'synergy-frame', start: 'synergy-start', ping: 'synergy-ping', thresholds: 'synergy-thresholds' };
@@ -112,6 +112,19 @@ export function channelsMessage({ shares, calibration, line, sensitivity }) {
   if (![close, open].every(v => Number.isInteger(v) && v >= 0 && v <= HOST_LEVEL_MAX)) return null;
   return { closeThreshold: close, openThreshold: open, line: line === 'prosthesis' ? 'prosthesis' : 'game',
     sensitivity: { close: sensitivity[0], open: sensitivity[1] } };
+}
+
+/**
+ * 06.11.2026 — the settings the game returns (Q&A of 04.11, answer 16: «при наличии настроек игра может возвращать
+ * чувствительность сенсоров и пороги»). Sent when a threshold, the side or «Пороги как у протеза» changes (once the
+ * slider rests) and before `synergy:close`. Until then they went with a result only: a threshold tuned in the settings
+ * reached the host after the next exercise, or never. `sensitivity` — the game's sliders (a share of the calibrated
+ * span); `channels` — channelsMessage, on the external source only (the emulator on the screen is not the person's EMG).
+ * No name and no health notes, as every message.
+ */
+export function settingsMessage({ side, sensitivity, prosthesisThresholds = false, channels = null }, version) {
+  return { type: HOST_TYPES.settings, protocol: HOST_PROTOCOL, version, side: side === 'left' ? 'left' : 'right',
+    sensitivity: { close: sensitivity[0], open: sensitivity[1] }, prosthesisThresholds: !!prosthesisThresholds, ...(channels ? { channels } : {}) };
 }
 
 /** The result summary a host receives (no wellbeing, no name; numbers only). 6.1: `channels` — channelsMessage, when known. */
