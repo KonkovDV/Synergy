@@ -75,3 +75,38 @@ test('«Полёт»: the trail is the path of the last 0.7 s of game time, the 
   }
   for (const hz of [30, 120]) assert.ok(Math.abs(span[hz] - TRAIL_S) <= 1 / 30 + 1e-9, `${hz} Hz: ${span[hz]}`);
 });
+
+test('ответ № 25: a lost signal that lasts is critical — told once, then again only after the signal came back', async () => {
+  const { LossWatch } = await import('../src/core/signal.js');
+  const { SIGNAL } = await import('../src/config.js');
+  const w = new LossWatch();
+  assert.equal(SIGNAL.criticalLossMs, 1000, 'after the source is declared lost, one more second');
+  assert.equal(w.update(false, 0), false, 'a signal: nothing to say');
+  assert.equal(w.update(true, 100), false, 'lost: the state rides on…');
+  assert.equal(w.update(true, 1099), false, '…up to the critical time');
+  assert.equal(w.update(true, 1100), true, 'critical: told');
+  assert.equal(w.update(true, 5000), false, 'once for this loss');
+  assert.equal(w.update(false, 5100), false);
+  assert.equal(w.update(true, 6000), false);
+  assert.equal(w.update(true, 7000), true, 'a new loss is told again');
+  // The play screen pauses the exercise on it and says why (not «Пауза» alone): the frozen field used to wait forever.
+  const { readFileSync } = await import('node:fs');
+  const play = readFileSync(new URL('../src/ui/play.js', import.meta.url), 'utf8');
+  assert.match(play, /if \(lossWatch\.update\(lost, now\)\) \{ pause\(\{ signal: true \}\); return; \}/);
+  assert.match(play, /signal \? 'Сигнал потерян' : 'Пауза'/);
+});
+
+test('ответ № 16: the game returns its settings — on a change of a threshold or the side, and before it closes', async () => {
+  const { settingsMessage, HOST_TYPES, channelsMessage } = await import('../src/services/host.js');
+  const channels = channelsMessage({ shares: [0.22, 0.3], calibration: { rest: [0.04, 0.06], max: [0.8, 0.7] }, line: 'game', sensitivity: [0.22, 0.3] });
+  const m = settingsMessage({ side: 'left', sensitivity: [0.22, 0.3], prosthesisThresholds: true, channels }, '6.2.0');
+  assert.equal(m.type, HOST_TYPES.settings);
+  assert.equal(m.type, 'synergy:settings');
+  assert.deepEqual(m, { type: 'synergy:settings', protocol: 1, version: '6.2.0', side: 'left', sensitivity: { close: 0.22, open: 0.3 }, prosthesisThresholds: true, channels });
+  assert.equal(settingsMessage({ side: 'up', sensitivity: [0.2, 0.2] }, '6').side, 'right', 'a side is left or right');
+  assert.equal('channels' in settingsMessage({ side: 'left', sensitivity: [0.2, 0.2] }, '6'), false, 'the emulator on the screen is not the person\'s EMG');
+  const { readFileSync } = await import('node:fs');
+  const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+  assert.match(app, /\['sensitivity', 'sensitivityB', 'side', 'prosthesisThresholds'\]\.some\(k => k in patch\)/, 'a change is told once the slider rests');
+  assert.match(app, /this\.notifySettings\(\); \/\/ 06\.11 \(answer 16\): the thresholds go back before the host closes the game/);
+});

@@ -96,6 +96,22 @@ export function restIntent(scheme, valid, t = 0) {
   };
 }
 
+/**
+ * 06.11.2026 — Q&A of 04.11, answer 25: a loss longer than 1–2 s is critical. `update(lost, now)` is true once, at the
+ * moment the lost signal has lasted `ms`; false while there is a signal, while the loss is shorter, and after it was told
+ * (until the signal comes back and goes again). Pure: the play screen pauses the exercise on it.
+ */
+export class LossWatch {
+  constructor(ms = SIGNAL.criticalLossMs) { this.ms = ms; this.since = null; }
+  update(lost, now) {
+    if (!lost) { this.since = null; return false; }
+    if (this.since === null) this.since = now;
+    if (this.since === Infinity || now - this.since < this.ms) return false;
+    this.since = Infinity; // told once for this loss
+    return true;
+  }
+}
+
 /** The task's bound on the response of the two channels (ТЗ 28.10, Поток 1). */
 export const RESPONSE_LIMIT_MS = 100;
 
