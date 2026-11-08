@@ -297,7 +297,7 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
   const titleOf = id => GAME_BY_ID[id]?.title ?? id;
-  const restAdvice = adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs, titleOf)?.text ?? null;
+  const restAdvice = demo ? null : adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs, titleOf)?.text ?? null;
   const stopAdvice = stopAdviceApplies({ demo, plan, next }) ? restAdvice : null;
   // 5.30 — under 5 minutes of active play today: one more exercise is offered after the plan (core/progress.js).
   const topUp = planDone ? sessionTopUp({ plan: app.dailyPlan(), secondsToday: secondsToday(app.profile, today), stopAdvice: restAdvice, light: checkinLight(app.checkin()) }) : null;
