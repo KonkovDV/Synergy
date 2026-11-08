@@ -5,8 +5,11 @@
 //   • lost packets and dropouts longer than 200 ms;
 //   • classification errors: single wrong packets and the confusions of movements that share muscles (config.js);
 //   • the rise and fall of a contraction: the probability of a class grows over ~70 ms and fades over ~110 ms;
-//   • its dictionary (Q&A of 04.11, answer 22): the seven states, or «2 gestures + neutral» — then a packet holds three
-//     keys, and a movement outside them is not recognized at all (neutral), not even by a wrong packet.
+//   • its dictionary (Q&A of 04.11, answer 22): the seven states, or «2 gestures + neutral». The structure of the stream
+//     does not change (07.11, answer 1 of the experts): a packet always holds the seven keys; a two-gesture device writes
+//     exact zeros for the four classes it does not know, and a movement outside its dictionary is not recognized at all
+//     (neutral), not even by a wrong packet. A softmax over seven classes is never exactly zero (SOFTMAX_FLOOR);
+//   • one movement at a time: the СПППР does not recognize compound gestures (07.11, answer 4).
 // The target comes from the on-screen pads, the keyboard or a game's autopilot — the same {gesture, effort} or {a, b} as
 // EmgEmulator. Deterministic for a seed. The game reads it through EmulatorDriver (spppr-driver.js: the one line to
 // replace with the MCU's driver).
@@ -20,6 +23,11 @@ const N = IDS.length;
 const index = id => IDS.indexOf(id);
 const by = cmd => SPPPR_SET.gestures.find(g => g.command === cmd)?.id;
 const CLOSE = index(by(COMMAND.CLOSE)), OPEN = index(by(COMMAND.OPEN));
+/**
+ * The least probability a class the device knows gets in a packet: a softmax is never exactly zero, and the decoder tells a
+ * two-gesture device by its exact zeros (core/spppr.js DICTIONARY_MIN_PACKETS). Above the 0.001 the packet is rounded to.
+ */
+export const SOFTMAX_FLOOR = 0.002;
 
 /** 6.2 — the packet rates the emulator offers (config.js): 50 Hz by default, 10 Hz — the organizers' (answer 24). */
 export { STREAM_RATES_HZ };
@@ -38,7 +46,7 @@ export function streamProfile(realism = 0.5, rateHz = STREAM_RATES_HZ[0]) {
     // 50 Hz keeps the task's floor of 10 ms. At 10 Hz a 10 ms packet would be a 100 Hz burst, so the floor is half a period.
     minMs: periodMs <= 25 ? 10 : Math.round(periodMs / 2),
     maxMs: Math.max(40, periodMs) + 100 * r, // still past 100 ms at 10 Hz (the task: 10–100+ ms of jitter)
-    longEvery: r ? 4 / r : 0,      // seconds between rare long intervals (100–160 ms)
+    longEvery: r ? 4 / r : 0,      // seconds between rare long intervals (100–160 ms at 50 Hz, 1.4–2 periods at 10 Hz)
     latencyMs: 6, latencyJitterMs: 14 * r, // radio and OS: a base delay and an exponential tail
     stallEvery: r ? 12 / r : 0,    // seconds between radio stalls: packets wait and arrive together
     stallMs: [50, 160],
@@ -72,7 +80,8 @@ export class SppprEmulator {
    * @param {number} [o.seed]
    * @param {number} [o.bootMs] the MCU timer at the first packet (it counts from the device's start)
    * @param {object} [o.profile] overrides of streamProfile
-   * @param {number} [o.classes] the device's dictionary: 7 (the task's states) or 3 («2 gestures + neutral»)
+   * @param {number} [o.classes] the device's dictionary: 7 (the task's states) or 3 («2 gestures + neutral»); its packets
+   *   hold the seven keys either way (answer 1 of 07.11)
    * @param {number} [o.rateHz] packets a second: 50 or 10 (6.2, STREAM_RATES_HZ)
    */
   constructor({ realism = 0.5, seed = 11, bootMs = null, profile = {}, classes = SPPPR_WIRE.length, rateHz = STREAM_RATES_HZ[0] } = {}) {
@@ -109,24 +118,19 @@ export class SppprEmulator {
   /**
    * What the person does: a gesture of the active set (or of the task's) with an effort, or two channels {a, b} — the
    * flexors and the extensors, both at once when both are set (co-activation: the probabilities cancel on the x axis).
-   * The effort maps to a probability above the decoder's dead zone, so the decoder gives the same effort back.
+   * The effort maps to a probability above the decoder's dead zone, so the decoder gives the same effort back. One
+   * movement at a time: the СПППР does not recognize compound gestures (answer 4 of the experts, 07.11), so a target has
+   * no blend of two movements (6.0–6.2.1 had one for the diagonals of «Созвездие»); its confusions remain.
    */
   setTarget(t) {
-    // `mix` is never inherited: the pads and the keys send { gesture, effort } only, and a blend left by the demo bot
-    // must not keep pushing the spark of a person who plays by hand («Созвездие»).
-    this.target = { ...this.target, ...t, mix: t?.mix ?? null };
+    const { mix, ...rest } = t ?? {};
+    this.target = { ...this.target, ...rest };
     const want = new Array(N).fill(0);
     const level = e => Math.min(0.97, SPPPR.deadZone + Math.max(0, Math.min(1, e)) * (1 - SPPPR.deadZone));
     const g = this.target.gesture;
     if (g && g !== 'rest') {
       const i = index(g) > 0 ? index(g) : index(taskClassOf(g));
       if (i > 0 && this.known[i]) want[i] = level(this.target.effort ?? 0.6);
-      // Two movements at once («Созвездие»: a diagonal is flexion and supination together). A recognizer gives each its share;
-      // they compete for the one probability mass, so the joystick of a softmax stays in |x| + |y| ≤ 1.
-      const mix = this.target.mix;
-      if (mix && typeof mix === 'object') {
-        for (const [id, e] of Object.entries(mix)) { const j = index(id); if (j > 0 && j !== i && this.known[j] && Number.isFinite(e) && e > 0.02) want[j] = level(e); }
-      }
     } else if (!g) {
       if ((this.target.a ?? 0) > 0.02) want[CLOSE] = level(this.target.a);
       if ((this.target.b ?? 0) > 0.02) want[OPEN] = level(this.target.b);
@@ -178,7 +182,7 @@ export class SppprEmulator {
     if (P.dropoutEvery && at >= this.dropoutUntil && rng() < (dt / 1000) / P.dropoutEvery) this.dropoutUntil = at + rng.range(...P.dropoutMs);
     if (at < this.dropoutUntil || rng() < P.loss) return; // lost on the way
     if (P.stallEvery && at >= this.stallUntil && rng() < (dt / 1000) / P.stallEvery) this.stallUntil = at + rng.range(...P.stallMs);
-    const text = rng() < P.malformed ? this.broken(this.mcuAt(at)) : JSON.stringify(sppprPacket(this.mcuAt(at), this.distribution(dt / 1000), this.classes));
+    const text = rng() < P.malformed ? this.broken(this.mcuAt(at)) : JSON.stringify(sppprPacket(this.mcuAt(at), this.distribution(dt / 1000)));
     const latency = P.latencyMs + (P.latencyJitterMs ? -Math.log(Math.max(1e-6, rng())) * P.latencyJitterMs : 0);
     let arrive = Math.max(at + latency, at < this.stallUntil ? this.stallUntil : 0);
     if (rng() < P.reorder && this.inFlight.length) arrive = Math.max(at, this.inFlight[this.inFlight.length - 1].at - 1);
@@ -225,7 +229,7 @@ export class SppprEmulator {
         used = Math.max(used, m);
       }
     }
-    for (let i = 1; i < N; i++) if (this.known[i]) p[i] = Math.max(0, p[i] + P.noise * rng.gauss() * (0.3 + p[i]));
+    for (let i = 1; i < N; i++) if (this.known[i]) p[i] = Math.max(SOFTMAX_FLOOR, p[i] + P.noise * rng.gauss() * (0.3 + p[i]));
     const active = p.reduce((s, v, i) => s + (i ? v : 0), 0);
     p[0] = Math.max(0.005, 1 - active);
     const sum = p.reduce((s, v) => s + v, 0);

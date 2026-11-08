@@ -5,8 +5,12 @@
 //  • OPEN first releases force, then opens the fingers;
 //  • the grip switches the way the person's prosthesis does it (GRIP_SWITCH): «open» — at full opening a new
 //    opening signal held for holdOpenS (Motorica); «co» — a co-contraction, re-armed only after full relaxation.
+//  • 07.11 (answer 3 of the experts): on the СПППР stream the intensity is the clarity of a gesture, not its force — the
+//    grip force grows while the closing gesture is held (rate control, as in the threshold scheme), at a speed that
+//    follows the clarity only up to SPPPR.fullSpeedAt.
 import { HAND, GRIP_SWITCH } from '../config.js';
-import { COMMAND, SCHEME, GESTURE_BY_ID, COMMAND_POSE } from './vocabulary.js';
+import { COMMAND, SCHEME, GESTURE_BY_ID, COMMAND_POSE, rateControl } from './vocabulary.js';
+import { clarityRate } from './spppr.js';
 
 const OPEN_POSE = COMMAND_POSE.open;
 const lerp = (a, b, k) => a + (b - a) * k;
@@ -42,10 +46,11 @@ export class BionicHand {
     if (intent.gesture) this.selectGestureGrip(intent.gesture);
     else if (this.switchMode === 'open') this.trackOpenHold(intent, dt);
     const fixedSpeed = intent.scheme === SCHEME.THRESHOLD;
-    const speed = fixedSpeed ? 1 : Math.max(0.25, intent.intensity);
+    const rate = rateControl(intent.scheme);
+    const speed = fixedSpeed ? 1 : Math.max(0.25, rate ? clarityRate(intent.intensity) : intent.intensity);
     switch (intent.command) {
       case COMMAND.SWITCH: if (this.switchMode === 'co') this.trySwitch(); break; // «open»: A+B is the lock, the hand holds
-      case COMMAND.CLOSE: this.close(speed, intent, dt); break;
+      case COMMAND.CLOSE: this.close(speed, intent, dt, rate); break;
       case COMMAND.OPEN: this.open(speed, dt); break;
       default: break; // REST — hold
     }
@@ -83,7 +88,7 @@ export class BionicHand {
     this.switches++;
   }
 
-  close(speed, intent, dt) {
+  close(speed, intent, dt, rate = false) {
     const limit = this.contactAt ?? 1;
     if (this.closure < limit) {
       this.closure = Math.min(limit, this.closure + HAND.closeSpeed * speed * dt);
@@ -92,6 +97,9 @@ export class BionicHand {
     if (this.contactAt === null) return;
     if (intent.scheme === SCHEME.THRESHOLD) {
       this.force = Math.min(1, this.force + HAND.thresholdForceRate * dt);
+    } else if (rate) {
+      // The СПППР stream: the force is gathered while the gesture is held — a clear gesture at the threshold scheme's rate.
+      this.force = Math.min(1, this.force + HAND.thresholdForceRate * speed * dt);
     } else if (intent.intensity > this.force) {
       // Proportional: force follows the effort up to its level; relaxing keeps it.
       this.force = Math.min(intent.intensity, this.force + HAND.forceRiseRate * dt);

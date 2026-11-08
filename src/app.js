@@ -4,6 +4,7 @@ import { Store, memoryStorage } from './core/storage.js';
 import { SignalPipeline, thresholdShares } from './core/signal.js';
 import { RestTracker, restAdaptationAllowed } from './core/calibration.js';
 import { SignalQualityMonitor, runSignalIssues } from './core/signalquality.js';
+import { PeakMeter } from './core/fatigue.js';
 import { BionicHand } from './core/hand.js';
 import { HAND } from './config.js';
 import { GESTURE_SET } from './core/vocabulary.js';
@@ -560,9 +561,14 @@ export class App {
     const hand = this.createHand();
     const live = this.liveSource();
     const adaptRest = restAdaptationAllowed({ source: live, enabled: s.adaptRest, demo, gameAdaptive: instance.constructor.adaptive });
+    const pipeline = instance.constructor.bimanual ? null : this.createPipeline(demo, { adaptRest, scheme });
+    const external = live === 'bridge' && !demo;
     const runner = instance.constructor.bimanual ? this.createDuoRunner(instance, scheme, demo)
-      : new GameRunner({ game: instance, pipeline: this.createPipeline(demo, { adaptRest, scheme }), hand, source: this.liveFrames(demo), emulator: this.emulator, autopilot: demo,
-        quality: live === 'bridge' && !demo ? this.qualityMonitor(this.calibration()) : null });
+      : new GameRunner({ game: instance, pipeline, hand, source: this.liveFrames(demo), emulator: this.emulator, autopilot: demo,
+        quality: external ? this.qualityMonitor(this.calibration()) : null,
+        // 07.11 (answer 12 of the experts): the peak of each channel of a live amplitude stream, kept with the run — in the
+        // games whose level asks the same force every round (a code of «Сейф» draws soft and strong digits anew).
+        peaks: external && instance.constructor.peakDemand ? new PeakMeter(pipeline.calibration) : null });
     const armPose = pose && !demo && live === 'bridge' ? ARM_POSES.find(p => p.id === pose) ?? null : null;
     this.sppprDecoder(demo, scheme)?.resetStats(); // 6.0: the stream's counters of this exercise (the run keeps them)
     if (!demo) this.sessionQuests(); // 6.0: a session's missions exist before its first exercise ends
@@ -622,6 +628,8 @@ export class App {
     const stream = decoder && decoder.stats.accepted ? decoder.summary() : null;
     // 05.11 — how often each channel's command started (Q&A of 04.11, answer 5: balance the use of both channels).
     const uses = session.runner.uses?.summary() ?? null;
+    // 07.11 — the peak of each channel (shares of the calibrated span), for the sign of fatigue (core/fatigue.js).
+    const peaks = session.demo ? null : session.runner.peaks?.summary() ?? null;
     const run = {
       id: crypto.randomUUID?.() ?? String(Date.now()), at: new Date().toISOString(),
       game: session.id, level: session.level, levelCount: session.entry.Game.levels.length,
@@ -637,7 +645,8 @@ export class App {
       ...(this.settings.prostheses === 'two' && !session.game.constructor.bimanual ? { side: this.settings.side } : {}),
       ...(Number.isInteger(session.formWeek) ? { formWeek: session.formWeek } : {}),
       // 5.30: what was wrong with the signal for 3 s or more — the specialist sees contact problems next to the results.
-      ...(signalIssues.length ? { signalIssues } : {}), ...(stream ? { stream } : {}), ...(uses && uses.close + uses.open + uses.switch ? { uses } : {}), ...r,
+      ...(signalIssues.length ? { signalIssues } : {}), ...(stream ? { stream } : {}), ...(uses && uses.close + uses.open + uses.switch ? { uses } : {}),
+      ...(peaks ? { peaks } : {}), ...r,
     };
     const replay = session.game.replay?.() ?? null; // shown on the results screen, never saved
     if (session.demo) return { run, report: null, planBonus: 0, replay };

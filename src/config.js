@@ -4,7 +4,7 @@ import { CLOSING_GESTURES } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '6.2.1',
+  version: '6.3.0',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -80,6 +80,11 @@ export const SPPPR = {
                       // beat is judged ≈ 45–55 ms late on the emulator at any rate, as at 30–50 Hz before. Real СПППР — К.2
   rampMs: 120,        // speed ramps up after a new direction (Simon et al. 2011, a decision-based velocity ramp)…
   rampFloor: 0.4,     // …from this share
+  // 07.11, answer 3 of the experts: a probability is how much a contraction looks like the pattern, and co-adaptation of
+  // the person and the model raises it. A movement goes at the speed of its clarity (the decoder's effort, 0…1 past the
+  // dead zone) up to this value and at full speed above it: an unsure movement is slow, the start is smooth, and a clearer
+  // pattern after co-adaptation does not speed the game up (core/spppr.js clarityRate, vocabulary.js rateControl).
+  fullSpeedAt: 0.55,
   extrapolateMs: 100, // between packets the axes go on along their slope at most this far (no jerk at 10–100+ ms a packet)
   maxSlope: 8,        // axis units per second the extrapolation may use
   uncertainMargin: 0.15, // top-1 minus top-2 below this → «не уверен» on the screen
@@ -90,10 +95,12 @@ export const SPPPR = {
 };
 
 /**
- * 6.2 — the packet rates of the on-screen СПППР emulator (the stream panel, `tools/spppr-emulator.mjs --rate`): 50 Hz, the
- * default the levels were balanced on, and 10 Hz — the rate the organizers named for their stream (Q&A of 04.11, № 24).
+ * The packet rates of the on-screen СПППР emulator (the stream panel, `tools/spppr-emulator.mjs --rate`), the default
+ * first. 10 Hz — the rate of the organizers' stream (Q&A of 04.11, № 24), named nominal by the experts on 07.11 (answer
+ * 2), so the emulator sends it unless asked otherwise; every level holds there (`npm run test:tz`). 50 Hz — a faster
+ * stream to feel the difference (the default of 6.2–6.2.1).
  */
-export const STREAM_RATES_HZ = Object.freeze([50, 10]);
+export const STREAM_RATES_HZ = Object.freeze([10, 50]);
 
 export const HAND = {
   closeSpeed: 2.4,          // closure units / s at intensity 1 (proportional speed)
@@ -294,6 +301,16 @@ export const WELLBEING = {
   fatigueLight: 2,          // strong fatigue → light session
   scoreDropPoints: 20,      // in-session drop vs the first exercises → signs of fatigue
   fatigueMinMinutes: 6,
+  // 07.11 — answer 12 of the organizers' experts: in about 20 minutes of continuous play «максимальная амплитуда сигнала
+  // снижалась». The peak of a live amplitude stream (Stream 1) in an exercise, as a share of the calibrated span: the
+  // last two runs of a game and level peaking `peakDrop` under the first two of today is a sign of fatigue. The mean of a
+  // submaximal contraction rises with fatigue, so the peak is the measure, not the mean (core/fatigue.js).
+  peakDrop: 0.25,
+  peakRuns: 4,              // runs of one game and level today: the first two set the peak, the last two are compared
+  peakGapMin: 5,            // …and the last two end this long after the first two: the rounds of one block are not a session
+  peakMinShare: 0.5,        // a channel that never reached half its calibrated span in that game is not compared
+  peakTauMs: 100,           // the envelope the peak is taken from: one spiky frame is not a peak
+  peakMinFrames: 60,        // fewer frames of amplitude in an exercise — no peak is kept
 };
 
 /**

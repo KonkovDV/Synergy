@@ -2,7 +2,7 @@
 // rhythm games gave the best EMG challenge in PlayBionic, Prahm et al. 2018).
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
-import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET, SPPPR_SETS } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET, SPPPR_SETS, rateControl } from '../core/vocabulary.js';
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { coverScene } from '../render/bionic.js';
@@ -76,13 +76,17 @@ export class RhythmGame extends Game {
   static title = 'Ритм';
   static skills = ['separation', 'timing', 'precision'];
   static levels = LEVELS;
+  /** 07.11 (answer 12): a level draws its force bands from the same set every round, so its peaks compare (core/fatigue.js). */
+  static peakDemand = true;
 
   constructor(opts) {
     super(opts);
     this.beat = 60 / this.level.bpm;
     this.latency = RHYTHM_LATENCY_S[this.scheme] * this.speed; // real input delay, in slowed game time
     this.botShift = BOT_SHIFT_S[this.scheme] * this.speed;
-    this.graded = this.scheme !== SCHEME.THRESHOLD;
+    // Force bands need a force: the amplitudes of the two channels, or the effort a source of another set reports. A
+    // probability of the СПППР is the clarity of a gesture (answer 3 of the experts, 07.11) — no bands on its notes.
+    this.graded = this.scheme !== SCHEME.THRESHOLD && !rateControl(this.scheme);
     this.bands = Object.fromEntries(Object.entries(BANDS).map(([k, b]) => [k, reachableBand(b, this.onThreshold)]));
     this.notes = this.buildChart();
     this.total = (COUNT_IN_BEATS + this.level.beats + 2) * this.beat;
@@ -92,7 +96,9 @@ export class RhythmGame extends Game {
     this.separation = new SeparationMeter();
     this.popups = [];
     this.nextBeat = 0;
-    this.hint = this.graded ? 'Точки на ноте — сила: • слабо, •• средне, ••• сильно' : 'Включайте канал, когда нота накрывает круг; длинные — держите';
+    this.hint = this.graded ? 'Точки на ноте — сила: • слабо, •• средне, ••• сильно'
+      : this.scheme === SCHEME.GESTURE ? 'Покажите жест, когда нота накрывает круг; длинные — держите'
+      : 'Включайте канал, когда нота накрывает круг; длинные — держите';
   }
 
   buildChart() {

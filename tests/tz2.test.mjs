@@ -18,14 +18,16 @@ test('ответ № 22: «СПППР · 2 жеста» is three classes of the 
   assert.equal(streamsSpppr(), true, 'its pads speak the СПППР stream, as the seven do');
 });
 
-test('ответ № 22: the on-screen emulator of this set is a two-gesture СПППР — three keys through the same decoder', () => {
+test('ответ № 22 and 07.11 № 1: the on-screen emulator of this set is a two-gesture СПППР — the seven keys, four at 0, through the same decoder', () => {
   const emu = new OnScreenEmulator({ realism: 0.5, seed: 4 });
   emu.setTarget({ gesture: 'flexion', effort: 0.7, a: 0, b: 0 });
   let f = null;
-  for (let t = 0; t < 1500; t += 16) f = emu.sample(t);
+  for (let t = 0; t < 4000; t += 16) f = emu.sample(t);
   assert.equal(f.gesture, 'flexion');
-  assert.equal(emu.decoder.summary().classes, 3);
-  assert.deepEqual(Object.keys(JSON.parse(emu.decoder.lastText).dist), ['neutral', 'flexion', 'extension']);
+  assert.equal(emu.decoder.summary().classes, 3, 'the decoder tells «2 жеста + нейтраль» by the zeros');
+  const dist = JSON.parse(emu.decoder.lastText).dist;
+  assert.deepEqual(Object.keys(dist), ['neutral', 'flexion', 'extension', 'pronation', 'supination', 'adduction', 'abduction'], 'the structure of the stream does not change');
+  assert.deepEqual([dist.pronation, dist.supination, dist.adduction, dist.abduction], [0, 0, 0, 0]);
   assert.equal(emu.decoder.stats.rejected, 0);
 });
 
