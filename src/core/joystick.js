@@ -53,10 +53,11 @@ export const axisOf = gestureId => SPPPR_SET.gestures.find(x => x.id === gesture
  * command has no axis or the frame points the other way.
  */
 export function commandAxes(gestureId, axes, intensity) {
+  if (!axes) return axesOfGesture(gestureId, intensity);
   const g = SPPPR_SET.gestures.find(x => x.id === gestureId);
   if (!g?.axis) return null;
   const [k, sign] = g.axis;
-  const along = Math.min(1, axes ? sign * (Number.isFinite(axes[k]) ? axes[k] : 0) : Number.isFinite(intensity) ? intensity : 0);
+  const along = Math.min(1, sign * (Number.isFinite(axes[k]) ? axes[k] : 0));
   if (!(along > 0)) return null;
   const out = { x: 0, y: 0, z: 0 };
   out[k] = sign * along;

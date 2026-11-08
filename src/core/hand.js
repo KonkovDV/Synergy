@@ -47,11 +47,14 @@ export class BionicHand {
     else if (this.switchMode === 'open') this.trackOpenHold(intent, dt);
     const fixedSpeed = intent.scheme === SCHEME.THRESHOLD;
     const rate = rateControl(intent.scheme);
-    const speed = fixedSpeed ? 1 : Math.max(0.25, rate ? clarityRate(intent.intensity) : intent.intensity);
+    // The СПППР stream has no floor: its speed fades with the clarity, so on a silent link (the inertia after 200 ms) the
+    // hand slows down and holds — audit 07.11: with the floor of the channels (0.25) it kept squeezing for 1.5 s without
+    // a packet, +0.18 of force, an egg crushed by a lost signal.
+    const speed = fixedSpeed ? 1 : rate ? clarityRate(intent.intensity) : Math.max(0.25, intent.intensity);
     switch (intent.command) {
       case COMMAND.SWITCH: if (this.switchMode === 'co') this.trySwitch(); break; // «open»: A+B is the lock, the hand holds
       case COMMAND.CLOSE: this.close(speed, intent, dt, rate); break;
-      case COMMAND.OPEN: this.open(speed, dt); break;
+      case COMMAND.OPEN: this.open(speed, dt, rate); break;
       default: break; // REST — hold
     }
   }
@@ -106,9 +109,10 @@ export class BionicHand {
     }
   }
 
-  open(speed, dt) {
+  open(speed, dt, rate = false) {
     if (this.force > 0) {
-      this.force = Math.max(0, this.force - HAND.forceDropRate * Math.max(0.3, speed) * dt);
+      // On the stream a fading opening does not keep releasing the grip either: an object is not let go by a lost signal.
+      this.force = Math.max(0, this.force - HAND.forceDropRate * (rate ? speed : Math.max(0.3, speed)) * dt);
       return;
     }
     this.closure = Math.max(0, this.closure - HAND.openSpeed * speed * dt);
