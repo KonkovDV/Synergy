@@ -4,7 +4,7 @@
 // task (its seven states, or its «2 gestures + neutral») the target goes to the СПППР stream (JSON text through the
 // decoder, as from the prosthesis); in the two-channel schemes to the EMG envelope emulator, as before.
 import { SppprDecoder } from '../core/spppr.js';
-import { GESTURE_SET, GESTURE_CLASS_ORDER, SPPPR_SETS } from '../core/vocabulary.js';
+import { GESTURE_CLASS_ORDER, STREAM_SET } from '../core/vocabulary.js';
 import { EmgEmulator } from './emulator.js';
 import { createSppprDriver } from './spppr-driver.js';
 
@@ -35,11 +35,11 @@ export class SppprSource {
 }
 
 /** The task's sets speak the СПППР stream; another set keeps the frames of EmgEmulator (its own classes). */
-export const streamsSpppr = () => SPPPR_SETS.some(set => set.id === GESTURE_SET.id);
+export const streamsSpppr = () => STREAM_SET;
 
 export class OnScreenEmulator {
   /** The pads stand in for a СПППР of the dictionary the person chose: three classes for «2 жеста», else seven.
-   *  rateHz — packets a second of that СПППР (6.2: 50, or the 10 the organizers named). */
+   *  rateHz — packets a second of that СПППР: the nominal 10 by default (answer 2 of 07.11), or 50. */
   constructor({ realism = 0.5, seed = 7, driver = null, rateHz = undefined } = {}) {
     this.emg = new EmgEmulator({ realism, seed });
     const classes = streamsSpppr() ? GESTURE_CLASS_ORDER.length : undefined;

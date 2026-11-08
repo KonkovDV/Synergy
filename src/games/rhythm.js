@@ -2,7 +2,7 @@
 // rhythm games gave the best EMG challenge in PlayBionic, Prahm et al. 2018).
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
-import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET, SPPPR_SETS, rateControl } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, STREAM_SET, rateControl } from '../core/vocabulary.js';
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { coverScene } from '../render/bionic.js';
@@ -31,7 +31,7 @@ const PERFECT_S = 0.1, GOOD_S = 0.22;
 // balanced on. Using 200 ms for the task set marked an on-time contraction about 100 ms early.
 // 6.2: both dictionaries of the task (tz and «2 жеста», tz2) go through the decoder; 6.1 compared with 'tz' only, so
 // tz2 waited 200 ms and its player was marked 100 ms early (the built-in player hid it by starting as late).
-const gestureDelayS = SPPPR_SETS.some(set => set.id === GESTURE_SET.id) ? 0.1 : 0.2;
+const gestureDelayS = STREAM_SET ? 0.1 : 0.2;
 export const RHYTHM_LATENCY_S = { threshold: 0.033, proportional: 0.033, gesture: gestureDelayS };
 
 /**

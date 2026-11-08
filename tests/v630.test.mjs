@@ -51,6 +51,35 @@ test('answer 3: on the stream the grip force grows while the gesture is held —
   assert.ok(Math.abs(squeeze - 0.4) < 1e-9, `proportional: ${squeeze}`);
 });
 
+test('answer 3 (audit 07.11): a silent stream does not keep squeezing or letting go — the hand slows with the inertia and holds', async () => {
+  const { SppprDecoder, sppprPacket } = await import('../src/core/spppr.js');
+  const { SignalPipeline } = await import('../src/core/signal.js');
+  /**
+   * The force of a hand whose gesture stream goes silent at 1.5 s: [at the silence, 0.5 s later, at the loss]. `p` is sent
+   * from `from` ms; before it the stream says neutral.
+   */
+  const silence = (p, start = 0, from = 0) => {
+    const d = new SppprDecoder(), pipe = new SignalPipeline({ scheme: 'gesture' }), hand = new BionicHand();
+    hand.setObject(0.3); hand.closure = 0.3; hand.force = start;
+    const rest = [0.94, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01];
+    let ts = 5000; const at = {};
+    for (let now = 0; now <= 3000; now += 16) {
+      if (now <= 1500 && now % 100 < 16) d.push(JSON.stringify(sppprPacket(ts += 100, now >= from ? p : rest)), now);
+      hand.update(pipe.process(d.frame(now), now), 0.016);
+      for (const k of [1504, 2000, 2992]) if (now === k) at[k] = hand.force;
+    }
+    return [at[1504], at[2000], at[2992]];
+  };
+  const [squeezed, later, lost] = silence([0.1, 0.85, 0.01, 0.01, 0.01, 0.01, 0.01]);
+  assert.ok(lost - squeezed < 0.1, `the inertia only: ${squeezed.toFixed(3)} → ${lost.toFixed(3)} (was +0.18 with the floor of the channels)`);
+  assert.ok(Math.abs(lost - later) < 0.02, `and then it holds: ${later.toFixed(3)} → ${lost.toFixed(3)}`);
+  // An opening begun just before the silence of a heavy grip: the grip eases while the opening is seen and for the 200 ms
+  // of the last value (the task), then holds instead of letting go (the floor of the channels released it to zero).
+  const [, eased, kept] = silence([0.1, 0.01, 0.85, 0.01, 0.01, 0.01, 0.01], 1, 1300);
+  assert.ok(Math.abs(kept - eased) < 0.02, `a faded opening does not keep releasing: ${eased.toFixed(3)} → ${kept.toFixed(3)}`);
+  assert.ok(kept > 0.2, `the object is still held when the link is lost: ${kept.toFixed(3)}`);
+});
+
 test('answer 3: «Полёт» on the stream — the gesture climbs, rest holds the altitude; no follow segments of a force level', () => {
   const game = createGame('flight', { levelNumber: 6, scheme: 'gesture', seed: 2 });
   assert.equal(game.rate, true);

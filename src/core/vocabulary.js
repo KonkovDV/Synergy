@@ -189,6 +189,8 @@ export const SPPPR_SET = TZ;
 export const SPPPR_SETS = Object.freeze([TZ, TZ2]);
 /** The set of this page load: id, name, short, text, size, source. */
 export const GESTURE_SET = Object.freeze((({ gestures, ...meta }) => meta)(GESTURE_SETS[selectedGestureSet()]));
+/** The set of this page load is a dictionary of the СПППР: its gesture scheme reads the packet stream (fixed at import). */
+export const STREAM_SET = SPPPR_SETS.some(set => set.id === GESTURE_SET.id);
 /**
  * 07.11 — answer 3 of the organizers' experts: a probability of the СПППР says how much a contraction looks like its
  * pattern, and it grows as the person and the model co-adapt; it is not the force of the contraction. The gesture scheme
@@ -197,7 +199,7 @@ export const GESTURE_SET = Object.freeze((({ gestures, ...meta }) => meta)(GESTU
  * SPPPR.fullSpeedAt (core/spppr.js `clarityRate`), and force bands stay with the two channels, whose amplitudes are force
  * (Stream 1). The other sets keep the effort their source reports.
  */
-export const rateControl = scheme => scheme === SCHEME.GESTURE && SPPPR_SETS.some(set => set.id === GESTURE_SET.id);
+export const rateControl = scheme => scheme === SCHEME.GESTURE && STREAM_SET;
 export const GESTURES = GESTURE_SETS[GESTURE_SET.id].gestures;
 SCHEME_INFO.gesture.short = GESTURE_SET.short;
 SCHEME_INFO.gesture.text = GESTURE_SET.text;

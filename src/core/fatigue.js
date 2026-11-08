@@ -19,7 +19,9 @@ export class PeakMeter {
   constructor(calibration, { tauMs = WELLBEING.peakTauMs, minFrames = WELLBEING.peakMinFrames } = {}) {
     this.calibration = calibration;
     Object.assign(this, { tauMs, minFrames });
-    this.recent = [[], []]; this.env = [null, null]; this.peak = [-Infinity, -Infinity]; this.lastT = null; this.frames = 0;
+    // the last three shares of each channel (a fixed ring: the meter runs every frame of a live sensor, 50–120 a second)
+    this.recent = [[0, 0, 0], [0, 0, 0]]; this.seen = 0;
+    this.env = [null, null]; this.peak = [-Infinity, -Infinity]; this.lastT = null; this.frames = 0;
   }
 
   add(frame) {
@@ -27,15 +29,17 @@ export class PeakMeter {
     if (this.lastT !== null && frame.t <= this.lastT) return;
     const dt = this.lastT === null ? 0 : Math.min(250, frame.t - this.lastT);
     const k = this.lastT === null ? 1 : 1 - Math.exp(-dt / this.tauMs);
-    const cal = this.calibration;
-    [frame.a, frame.b].forEach((v, ch) => {
-      const recent = this.recent[ch];
-      recent.push((v - cal.rest[ch]) / Math.max(1e-6, cal.max[ch] - cal.rest[ch]));
-      if (recent.length > 3) recent.shift();
-      const share = [...recent].sort((x, y) => x - y)[Math.floor((recent.length - 1) / 2)];
+    // The calibration is read every frame: the rest tracker moves its rest in place (core/calibration.js).
+    const cal = this.calibration, slot = this.seen % 3;
+    for (let ch = 0; ch < 2; ch++) {
+      const r = this.recent[ch];
+      r[slot] = ((ch ? frame.b : frame.a) - cal.rest[ch]) / Math.max(1e-6, cal.max[ch] - cal.rest[ch]);
+      // the median of the last three (of the first one or two at the start: their smaller one, as before)
+      const share = this.seen === 0 ? r[0] : this.seen === 1 ? Math.min(r[0], r[1]) : Math.max(Math.min(r[0], r[1]), Math.min(Math.max(r[0], r[1]), r[2]));
       this.env[ch] = this.env[ch] === null ? share : this.env[ch] + (share - this.env[ch]) * k;
       if (this.env[ch] > this.peak[ch]) this.peak[ch] = this.env[ch];
-    });
+    }
+    this.seen++;
     this.lastT = frame.t;
     this.frames++;
   }
