@@ -245,7 +245,7 @@ export const ART = Object.freeze({
   'skin-neon': [256, 256, 1],
   'skin-sky': [256, 256, 1],
 });
-export const ART_BYTES = 4512738;
+export const ART_BYTES = 4511928;
 // What the Firebird wears, per picture: item → [centre x %, centre y %, width %, rotation°]. A missing item —
 // the pose covers its slot (the star above the head, the book on the chest) or the stage has not opened it.
 export const PET_LAYOUT = Object.freeze({

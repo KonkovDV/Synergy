@@ -13,7 +13,9 @@
 //   action      — the main button of an open dialog is out of sight (5.10);
 //   reach       — a pad of a game, tutorial or calibration screen is off screen at the default text size (5.10);
 //   see-through — a control of a fixed/sticky bar sits on the bar's transparent fade, so the text scrolling under the
-//                 bar shows through around it (5.12.1, found on a device: the onboarding dots over a half-visible line).
+//                 bar shows through around it (5.12.1, found on a device: the onboarding dots over a half-visible line);
+//   picture     — a picture stretched or squashed, its subject cut by object-fit cover, drawn larger than its pixels, or
+//                 not loaded (6.3.0, with the CV audit of the art: tools/art-fix.py).
 // Usage: npm run build && npm run audit:layout [-- baseUrl] [-- --quick] [-- --view=568x320 --state=a,b]   (no URL — serves dist/ itself)
 import { createRequire } from 'node:module';
 import { PRIMER } from '../../src/core/primer.js';
@@ -254,6 +256,33 @@ function seeThrough() {
   return out;
 }
 
+/**
+ * picture (6.3.0, the CV audit of the art) — a picture drawn wrong: stretched or squashed (object-fit fill on a box of
+ * another shape), its subject cut by object-fit cover, upscaled past its own pixels (soft on a phone), or not loaded.
+ * The scenes and covers (bg-*, cover-*) may be cropped: they are backgrounds.
+ */
+function pictures() {
+  const out = [];
+  const px = v => parseFloat(v) || 0;
+  for (const img of document.querySelectorAll('img')) {
+    const src = (img.getAttribute('src') ?? '').split('/').pop();
+    if (!src || !img.complete || !img.offsetParent) continue;
+    if (!img.naturalWidth) { out.push({ kind: 'picture', what: `${src} did not load` }); continue; }
+    const cs = getComputedStyle(img);
+    if (cs.visibility === 'hidden') continue;
+    const w = img.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight), h = img.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom);
+    if (w < 8 || h < 8) continue;
+    const own = img.naturalWidth / img.naturalHeight, box = w / h, off = Math.max(own, box) / Math.min(own, box) - 1;
+    const fit = cs.objectFit;
+    if (fit === 'fill' && off > 0.03) out.push({ kind: 'picture', what: `${src} ${Math.round(w)}×${Math.round(h)}: drawn ${Math.round(off * 100)} % ${box > own ? 'wider' : 'taller'} than it is` });
+    else if (fit === 'cover' && off > 0.12 && !/^(bg|cover)-/.test(src)) out.push({ kind: 'picture', what: `${src} ${Math.round(w)}×${Math.round(h)}: object-fit cover cuts ${Math.round(off / (1 + off) * 100)} % of it` });
+    const fill = Math.max(w / img.naturalWidth, h / img.naturalHeight), inside = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+    const scale = fit === 'none' ? 1 : fit === 'cover' || fit === 'fill' ? fill : fit === 'scale-down' ? Math.min(1, inside) : inside;
+    if (scale > 1.05 && !/^(bg|cover)-/.test(src)) out.push({ kind: 'picture', what: `${src} ${img.naturalWidth}×${img.naturalHeight} drawn ×${scale.toFixed(2)} of its pixels (soft)` });
+  }
+  return out;
+}
+
 /** Tab through the screen: each focused control must be visible, not under a fixed or sticky bar. */
 async function focusWalk(page) {
   const out = [];
@@ -451,7 +480,7 @@ for (const [w, h] of VIEWPORTS) {
       await page.waitForFunction(() => [...document.images].every(i => i.complete), null, { timeout: 3000 }).catch(() => {});
       // Whole words at the default text size on phones from 360 px; at 320 px (the WCAG reflow width) and at 130–200 %
       // text a split is the lesser evil than text past the edge.
-      const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...(scale === 1 ? await page.evaluate(reachable) : []), ...await page.evaluate(coveredAtEnd), ...await page.evaluate(seeThrough)];
+      const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...(scale === 1 ? await page.evaluate(reachable) : []), ...await page.evaluate(coveredAtEnd), ...await page.evaluate(seeThrough), ...await page.evaluate(pictures)];
       if (scale === 1 && w < 700) found.push(...await focusWalk(page));
       // The day's main action is visible on the home screen without scrolling (portrait phones, default text).
       if (/home/.test(state) && scale === 1 && h > w && w < 700) {
