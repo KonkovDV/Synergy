@@ -1,9 +1,12 @@
 // «Полёт» — proportional precision, separation, sustained hold.
 // Altitude = A − B (position control): A lifts, B lowers, relaxing returns to the middle line.
 // Threshold scheme: A/B climb/descend at a constant rate, rest holds altitude (velocity control).
+// The СПППР stream (07.11, answer 3 of the experts: a probability is the clarity of a gesture, not its force): velocity
+// control too — the grip gesture climbs, the opening one descends, at a speed that follows the clarity up to its ceiling.
 // Rings test hitting a level; «потоки» test holding it steadily; centre rings test relaxation.
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct, cleanPair } from './base.js';
-import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, rateControl } from '../core/vocabulary.js';
+import { clarityRate } from '../core/spppr.js';
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { drawSprite } from '../render/sprites.js';
@@ -22,6 +25,13 @@ const LEVELS = [
 
 // Altitude / s in the threshold scheme, rising with the level: at L1 a 250 ms reaction overshoots ≈ 0.08 < tolerance.
 const climbRate = levelNumber => 0.32 + 0.03 * (levelNumber - 1);
+/**
+ * 07.11 — the СПППР stream climbs slower than the channels: a relaxation shows up there a packet and a dwell later (≈ 0.2 s
+ * at the nominal 10 Hz, answer 2 of the experts), and the shortest correction is that delay times the speed.
+ */
+export const STREAM_CLIMB = 0.75;
+/** Seconds of flight the built-in player stops ahead of the target on the СПППР stream (the delay of a relaxation). */
+const STREAM_LEAD_S = 0.16;
 const LEAD_S = 2.2;     // seconds of track visible ahead of the glider
 /** Seconds of the glider's own path behind it: 0.24 w at (0.76 w / LEAD_S) px/s is 0.69 s — the trail reaches the edge. */
 export const TRAIL_S = 0.7;
@@ -121,10 +131,15 @@ export class FlightGame extends Game {
   static title = 'Полёт';
   static skills = ['separation', 'precision', 'stability'];
   static levels = LEVELS;
+  /** 07.11 (answer 12): the rings of a level spread to the same height every round, so its peaks compare (core/fatigue.js). */
+  static peakDemand = true;
 
   constructor(opts) {
     super(opts);
     this.alt = 0.5;
+    // Velocity control: the threshold scheme, and the СПППР stream whose probabilities are not a force (answer 3, 07.11).
+    this.rate = rateControl(this.scheme);
+    this.velocity = this.scheme === SCHEME.THRESHOLD || this.rate;
     this.track = this.buildTrack();
     this.total = this.track.length ? this.track[this.track.length - 1].end + 1.2 : 10;
     this.points = 0; this.maxPoints = 0;
@@ -135,6 +150,7 @@ export class FlightGame extends Game {
     this.trail = [];
     this.path = []; this.nextSample = 0;
     this.baseHint = this.scheme === SCHEME.THRESHOLD ? 'A — набрать высоту, B — снизиться, покой — держать высоту'
+      : this.rate ? `Жест хвата — набрать высоту, «${OPENING_GESTURE.name}» — снизиться, покой — держать высоту`
       : this.scheme === SCHEME.GESTURE ? `Жест хвата — выше, «${OPENING_GESTURE.name}» — ниже, покой — середина`
       : 'Сильнее A — выше, сильнее B — ниже, расслабление — середина';
     this.hint = this.baseHint;
@@ -161,8 +177,10 @@ export class FlightGame extends Game {
     const L = this.level, items = [];
     let t = 2.0, streamsLeft = L.streams, sideRings = 0;
     const streamEvery = L.streams ? Math.floor(L.rings / (L.streams + 1)) : Infinity;
-    // 6.1: one draw per exercise, before the rings (Q&A of 04.11, answer 5) — which side the follow segment takes.
-    const followSide = this.scheme !== SCHEME.THRESHOLD && this.levelNumber >= TRACE.fromLevel ? (this.rng() < 0.5 ? 1 : -1) : 1;
+    // 6.1: one draw per exercise, before the rings (Q&A of 04.11, answer 5) — which side the follow segment takes. The
+    // follow segments are proportional position control: not in the velocity schemes (threshold, the СПППР stream).
+    const follow = !this.velocity && this.levelNumber >= TRACE.fromLevel;
+    const followSide = follow ? (this.rng() < 0.5 ? 1 : -1) : 1;
     for (let i = 0; i < L.rings; i++) {
       // Alternate sides so both channels work; every 4th ring is a relaxation ring at the centre. 6.1: the side rings
       // alternate among themselves — until 6.1 the centre ring took the place of every second low ring (4 up, 2 down).
@@ -172,7 +190,7 @@ export class FlightGame extends Game {
       const alt = Math.min(0.96, Math.max(0.04, 0.5 + side * offset));
       items.push({ kind: 'ring', at: t, end: t, alt, side, done: false });
       t += L.gap;
-      if (this.scheme !== SCHEME.THRESHOLD && this.levelNumber >= TRACE.fromLevel && i === Math.floor(L.rings / 2) - 1) {
+      if (follow && i === Math.floor(L.rings / 2) - 1) {
         if (this.levelNumber >= SINE.fromLevel) {
           items.push({ kind: 'sine', at: t, end: t + SINE_SPAN_S, side: followSide, center: mirrorAlt(SINE.center, followSide), amp: followSide * SINE.amp, done: false, n: 0, sse: 0, inside: 0 });
           t += SINE_SPAN_S + 0.8;
@@ -198,9 +216,10 @@ export class FlightGame extends Game {
   nextTarget() { return this.track.find(x => !x.done && x.end >= this.time - 0.05) ?? null; }
 
   step(dt, intent) {
-    if (this.scheme === SCHEME.THRESHOLD) {
+    if (this.velocity) {
       const dir = intent.command === COMMAND.CLOSE ? 1 : intent.command === COMMAND.OPEN ? -1 : 0;
-      this.alt = clamp01(this.alt + dir * climbRate(this.levelNumber) * dt);
+      const speed = this.rate ? STREAM_CLIMB * clarityRate(intent.intensity) : 1;
+      this.alt = clamp01(this.alt + dir * climbRate(this.levelNumber) * speed * dt);
     } else {
       const goal = 0.5 + intent.level * 0.47;
       this.alt += (goal - this.alt) * (1 - Math.exp(-dt / 0.12));
@@ -292,6 +311,13 @@ export class FlightGame extends Game {
       if (this.alt < alt - lead) return { a: 0.6, b: 0 };
       if (this.alt > alt + lead) return { a: 0, b: 0.6 };
       return { a: 0, b: 0 };
+    }
+    if (this.rate) {
+      // A clear gesture, let go ahead of the target by the distance flown while the relaxation reaches the decoder.
+      const lead = climbRate(this.levelNumber) * STREAM_CLIMB * STREAM_LEAD_S;
+      if (this.alt < alt - lead) return { gesture: CLOSING_GESTURES[0].id, effort: 0.7 };
+      if (this.alt > alt + lead) return { gesture: OPENING_GESTURE.id, effort: 0.7 };
+      return { gesture: 'rest', effort: 0 };
     }
     const level = Math.max(-1, Math.min(1, (alt - 0.5) / 0.47));
     if (this.scheme === SCHEME.GESTURE) {

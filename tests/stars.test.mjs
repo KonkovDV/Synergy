@@ -15,6 +15,7 @@ import { SignalPipeline } from '../src/core/signal.js';
 import { BionicHand } from '../src/core/hand.js';
 import { setRenderOptions } from '../src/render/draw.js';
 import { GESTURE_SET } from '../src/core/vocabulary.js';
+import { MIXED_SAY } from '../src/ui/results.js';
 
 const LEVELS = StarsGame.levels.length;
 
@@ -95,9 +96,11 @@ test('stars of a run: deterministic, inside the field, apart; one pair on levels
   assert.deepEqual(levelAxes('free'), { x: true, y: true });
 });
 
-test('path efficiency: straight is 1, an L-shaped path to a diagonal is 1/√2, no path is 1', () => {
+test('path efficiency (07.11, answer 4): one movement at a time — an L to a diagonal star is the shortest path, no path is 1', () => {
   assert.equal(pathEfficiency([0, 0], [0.6, 0], 0.6), 1);
-  assert.ok(Math.abs(pathEfficiency([0, 0], [0.5, 0.5], 1) - Math.SQRT1_2) < 1e-9);
+  assert.equal(pathEfficiency([0, 0], [0.5, 0.5], 1), 1, 'two legs of 0.5: the shortest path for a recognizer of one movement at a time');
+  assert.ok(Math.abs(pathEfficiency([0, 0], [0.5, 0.5], 2) - 0.5) < 1e-9, 'twice the legs: half');
+  assert.equal(pathEfficiency([0, 0], [0.5, 0.5], Math.SQRT2 * 0.5), 1, 'a diagonal (no movement flies it) is never above 1');
   assert.equal(pathEfficiency([0, 0], [0, 0], 0), 1);
   assert.equal(pathEfficiency([0, 0], [1, 0], 0.5), 1, 'never above 1 (rounding)');
 });
@@ -111,9 +114,15 @@ test('ТЗ softmax → vector: the spark flies at the probability difference; a 
   clear.step(0.2, { valid: true, gesture: 'supination', axes: { x: 0, y: -0.9, z: 0 } });  // supination 0.95 − pronation 0.05
   blend.step(0.2, { valid: true, gesture: 'supination', axes: { x: 0, y: -0.4, z: 0 } });  // supination 0.7 − pronation 0.3
   assert.ok(clear.pos.y > 0 && Math.abs(blend.pos.y / clear.pos.y - 0.4 / 0.9) < 1e-9, 'speed ∝ the difference');
+  // 07.11, answer 4 of the experts: the СПППР does not recognize compound gestures. Two pairs at once move the spark along
+  // the axis of the decoder's command only; the other pair's share is counted as a mixed gesture.
   const both = createGame('stars', { levelNumber: 4, scheme: 'gesture', seed: 1 });
-  both.step(0.2, { valid: true, gesture: 'extension', axes: { x: -0.4, y: -0.4, z: 0 } }); // extension and supination together: a diagonal
-  assert.ok(both.pos.x > 0 && both.pos.y > 0 && Math.abs(both.pos.x - both.pos.y) < 1e-9);
+  both.step(0.2, { valid: true, gesture: 'extension', axes: { x: -0.4, y: -0.4, z: 0 } }); // extension and supination together
+  assert.ok(both.pos.x > 0 && both.pos.y === 0, `along the command's axis only: ${JSON.stringify(both.pos)}`);
+  assert.ok(both.mixedS > 0 && both.movingS > 0, 'the other pair at work is a mixed gesture');
+  const against = createGame('stars', { levelNumber: 4, scheme: 'gesture', seed: 1 });
+  against.step(0.2, { valid: true, gesture: 'extension', axes: { x: 0.3, y: 0, z: 0 } }); // a stale command against its own axis
+  assert.deepEqual(against.pos, { x: 0, y: 0 }, 'a command never flies against its own axis');
   const one = createGame('stars', { levelNumber: 1, scheme: 'gesture', seed: 1 });
   one.step(0.2, { valid: true, gesture: 'supination', axes: { x: 0, y: -0.9, z: 0 } });
   assert.equal(one.pos.y, 0, 'level 1 moves one pair: the other axis stands');
@@ -227,22 +236,27 @@ test('results: the metrics of a Fitts-type test of myoelectric control, all boun
   assert.ok(d.pathEfficiency > 0 && d.pathEfficiency <= 100);
   assert.ok(d.meanReachMs > 0 && Number.isInteger(d.meanReachMs));
   assert.ok(Number.isInteger(d.overshoots) && d.overshoots >= 0);
-  assert.ok(d.simultaneous === null || (d.simultaneous >= 0 && d.simultaneous <= 100));
-  assert.ok(d.simultaneous > 0, 'the bot flies diagonals with both pairs on the free levels');
+  assert.ok(d.mixed === null || (d.mixed >= 0 && d.mixed <= 100));
+  assert.ok(d.mixed < MIXED_SAY, `07.11, answer 4: the bot moves one pair at a time — only the change of legs overlaps (${d.mixed} %)`);
   assert.ok(Object.keys(result.skills).every(k => StarsGame.skills.includes(k)));
 });
 
-test('a blend of the demo bot does not stick to the pads (mix is never inherited)', () => {
+test('07.11, answer 4: the emulator has no compound gesture — one movement at a time, a blend asked for is dropped', () => {
   const emu = new OnScreenEmulator({ realism: 0, seed: 1 });
-  emu.setTarget({ gesture: 'flexion', effort: 0.6, mix: { supination: 0.5 } });
-  assert.deepEqual(emu.stream.driver.target.mix, { supination: 0.5 });
-  emu.setTarget({ gesture: 'flexion', effort: 0.6 }); // what a pad sends
-  assert.equal(emu.stream.driver.target.mix, null);
-  // and the stream carries no supination after it
+  emu.setTarget({ gesture: 'flexion', effort: 0.6, mix: { supination: 0.5 } }); // what 6.0–6.2.1 let the demo bot send
+  assert.equal('mix' in emu.stream.driver.target, false, 'the target keeps no blend');
   const dec = emu.decoder;
   for (let t = 0; t < 1500; t += 16) emu.sample(t);
-  const supination = dec.p[4];
-  assert.ok(supination < 0.05, `supination ${supination}`);
+  assert.ok(dec.p[1] > 0.5, `flexion is held: ${dec.p[1]}`);
+  assert.ok(dec.p[4] < 0.05, `and the stream carries no supination with it: ${dec.p[4]}`);
+  // the built-in player never asks for two movements either: every target of a run on a free level is one gesture
+  const game = createGame('stars', { levelNumber: StarsGame.levels.length, scheme: 'gesture', seed: 2 });
+  const runner = new GameRunner({ game, pipeline: new SignalPipeline({ scheme: 'gesture' }), hand: new BionicHand(), source: emu, emulator: emu, autopilot: true });
+  for (let t = 0; !game.done && t < 200; t += 1 / 60) {
+    runner.step(t * 1000, 1 / 60);
+    const target = game.autopilot();
+    assert.equal(target.mix, undefined);
+  }
 });
 
 test('results: «Как прошло созвездие» — the sky of the run and the quality of control in words (answers 05.11, № 18)', async () => {
@@ -259,7 +273,8 @@ test('results: «Как прошло созвездие» — the sky of the run
   assert.equal(replay.stars.filter(s => s.ok).length, result.details.solved);
   const words = starsReplaySummary(replay);
   assert.match(words, new RegExp(`Звёзд зажжено: ${result.details.solved} из ${result.details.total}\\.`));
-  assert.match(words, /Путь прямой на \d+ %\./);
-  assert.equal(starsReplaySummary({ solved: 0, total: 5, pathEfficiency: null, overshoots: 0, simultaneous: null, inertiaMs: 0 }), 'Звёзд зажжено: 0 из 5.', 'nothing made up for an empty run');
-  assert.match(starsReplaySummary({ solved: 3, total: 5, pathEfficiency: 80, overshoots: 0, simultaneous: 20, inertiaMs: 400 }), /Ни одной звезды не проскочили\. Обе пары мышц разом — 20 % времени движения\. Сигнал пропадал: искра скользила по инерции 0,4 с\./);
+  assert.match(words, /Путь без лишних движений на \d+ %\./);
+  assert.equal(starsReplaySummary({ solved: 0, total: 5, pathEfficiency: null, overshoots: 0, mixed: null, inertiaMs: 0 }), 'Звёзд зажжено: 0 из 5.', 'nothing made up for an empty run');
+  assert.match(starsReplaySummary({ solved: 3, total: 5, pathEfficiency: 80, overshoots: 0, mixed: 20, inertiaMs: 400 }), /Ни одной звезды не проскочили\. Две пары разом — 20 % времени движения: такой жест система не распознаёт, держите одно движение\. Сигнал пропадал: искра скользила по инерции 0,4 с\./);
+  assert.doesNotMatch(starsReplaySummary({ solved: 3, total: 5, pathEfficiency: 80, overshoots: 0, mixed: MIXED_SAY - 1, inertiaMs: 0 }), /Две пары/, 'the change of legs is not a habit to point at');
 });

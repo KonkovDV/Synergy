@@ -73,12 +73,14 @@ test('ответ № 24: at 10 Hz the emulator does not show a movement before i
   const level = Math.min(0.97, SPPPR.deadZone + 0.7 * (1 - SPPPR.deadZone));
   // 12 ms of a contraction rising over 70 ms; 6.1 integrated the whole 100 ms since the last packet (≈ 0.55)
   assert.ok(p <= level * (1 - Math.exp(-16 / 70)) + 0.01, `flexion ${p}: the packet carries only the time since the change`);
-  assert.deepEqual(STREAM_RATES_HZ, [50, 10]);
+  // 07.11, answer 2 of the experts: 10 Hz is the nominal rate of the stream — the emulator's default since 6.3.
+  assert.deepEqual(STREAM_RATES_HZ, [10, 50]);
   assert.equal(streamProfile(0.5, 10).periodMs, 100);
   assert.ok(streamProfile(1, 10).maxMs >= 200, 'at 10 Hz the intervals still spread past 100 ms (the task: 10–100+ ms)');
   assert.ok(streamProfile(1, 10).minMs >= 50, 'a 10 Hz stream does not emit a 10 ms packet');
-  assert.equal(streamProfile(1).minMs, 10, '50 Hz keeps the task floor of 10 ms');
-  assert.equal(streamProfile(0.5).periodMs, 20, '50 Hz stays the default');
+  assert.equal(streamProfile(1, 50).minMs, 10, '50 Hz keeps the task floor of 10 ms');
+  assert.equal(streamProfile(0.5).periodMs, 100, 'the nominal 10 Hz is the default');
+  assert.equal(streamProfile(0.5, 50).periodMs, 20);
 });
 
 /** A player who contracts exactly on the beat and relaxes at the end of a held note; the signed onset errors. */
@@ -152,7 +154,7 @@ test('Red Team 6.2: a frame\'s date and packet period are taken only in plausibl
 
 test('6.2: the packet rate is a setting of the on-screen emulator — saved, checked, and reaching the stream at once', async () => {
   const { DEFAULT_SETTINGS, SETTINGS_RULES, parseState } = await import('../src/core/storage.js');
-  assert.equal(DEFAULT_SETTINGS.streamRateHz, 50, '50 Hz stays the default: the levels were balanced on it');
+  assert.equal(DEFAULT_SETTINGS.streamRateHz, 10, '07.11, answer 2: the nominal rate of the stream is the default');
   assert.ok(STREAM_RATES_HZ.every(hz => SETTINGS_RULES.streamRateHz(hz)));
   for (const bad of [30, 0, '10', null, 1e9]) assert.equal(SETTINGS_RULES.streamRateHz(bad), false, `streamRateHz ${bad}`);
   assert.equal(parseState(JSON.stringify({ version: 4, settings: { streamRateHz: 10 } })).settings.streamRateHz, 10);

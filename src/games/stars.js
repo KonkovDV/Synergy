@@ -1,9 +1,13 @@
 // «Созвездие» (6.0, 05.11.2026) — the joystick of the СПППР stream as a game. The task of 28.10: «Управление должно быть
 // плавным и учитывать доли вероятностей (например, вектор джойстика формируется разностью flexion − extension)» and «при
 // отсутствии пакета > 200 мс игра должна гасить скорость (инерция), но не зависать». Before this game the axes were only a
-// dot under the signal bars; here they fly a spark. Its velocity is the probability difference of each pair of
-// antagonists (core/spppr.js), so a 70/30 mixture flies slower than a clear 95/5, two pairs at once fly a diagonal, and a
-// silent link lets the spark glide to a stop instead of freezing it.
+// dot under the signal bars; here they fly a spark. Its velocity is the probability difference of the pair of antagonists
+// the decoder's command belongs to (core/spppr.js), so a 70/30 mixture flies slower than a clear 95/5, and a silent link
+// lets the spark glide to a stop instead of freezing it. The experts' answers of 07.11: the СПППР does not recognize
+// compound gestures (answer 4) — the spark goes one movement at a time, along the axis of the command; the share of the
+// other pair is a mixed gesture, counted, never flown. A probability grows as the person and the model co-adapt (answer
+// 3): here that is a faster spark, never a target — a star is lit by stopping in it, at any speed, and the challenge point
+// widens or narrows the stars and their time.
 // Each star is a trial of the Target Achievement Control test (Simon, Lock, Stubblefield, Hargrove 2011, J Rehabil Res
 // Dev 48(6)): reach a target in the space of the degrees of freedom, stay in it for a dwell, within a time limit. The
 // metrics are those of the Fitts-type tests of myoelectric control (completion rate, time, path efficiency, overshoots —
@@ -11,7 +15,7 @@
 // neutral, so every star also asks for a relaxation on time. The lit stars join into the constellation of the run.
 // A game metric, not a clinical test. Only the gesture scheme of the task's set (registry: JOYSTICK_GAMES).
 import { Game, clamp01, pct } from './base.js';
-import { stickVector, stickGesture, taskGestureName, axesOfGesture } from '../core/joystick.js';
+import { stickVector, stickGesture, taskGestureName, commandAxes, axisOf } from '../core/joystick.js';
 import { GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
 import { COLORS, text, circle, fillRound, holdRing, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, rgba, mix, glassPlate, cachedLayer, sphere } from '../render/fx.js';
@@ -19,8 +23,8 @@ import { fmtFixed } from '../core/format.js';
 
 /**
  * Levels: one degree of freedom (flexion/extension, then pronation/supination), then turns between the two, then any
- * direction. `radius` and `span` are in field units (the field is −1…1 on both axes), `gain` — field units a second at a
- * full axis, `dwell` and `limit` — seconds.
+ * direction — reached one movement after another (an L). `radius` and `span` are in field units (the field is −1…1 on
+ * both axes), `gain` — field units a second at full speed, `dwell` and `limit` — seconds.
  */
 const LEVELS = [
   { stars: 5, radius: 0.17, dwell: 0.6, limit: 12, gain: 0.85, dof: 'x', span: [0.45, 0.8] },
@@ -37,7 +41,7 @@ const LEVELS = [
 export const STAR_BOUND = 0.8;
 /** Seconds of the spark's path the trail shows (game time — the same picture at 30, 60 and 120 Hz). */
 export const TRAIL_S = 0.7;
-/** An axis above this share of its range counts as «in use» for the simultaneous-control share. */
+/** The other pair above this share of its range while the spark moves: a mixed gesture (answer 4 of 07.11). */
 const BOTH_AXES = 0.08;
 
 /** Which screen axes a level moves: the other one is held still on the one-axis levels (a beginner learns one pair). */
@@ -88,10 +92,14 @@ export function nextPoint(level, p, i, rng, placed = []) {
 
 const round3 = v => Math.round(v * 1000) / 1000;
 
-/** Path efficiency of a trial: the straight distance from its start to the entry that completed it, over the path flown. */
+/**
+ * Path efficiency of a trial: the shortest path from its start to the entry that completed it, over the path flown. The
+ * СПППР recognizes one movement at a time (answer 4 of 07.11), so the shortest path is one movement along each axis —
+ * the sum of the two legs (an L), not the diagonal no single movement flies.
+ */
 export function pathEfficiency(start, entry, path) {
   if (!start || !entry || !(path > 1e-6)) return 1;
-  return clamp01(Math.hypot(entry[0] - start[0], entry[1] - start[1]) / path);
+  return clamp01((Math.abs(entry[0] - start[0]) + Math.abs(entry[1] - start[1])) / path);
 }
 
 export class StarsGame extends Game {
@@ -111,7 +119,8 @@ export class StarsGame extends Game {
     this.vel = { x: 0, y: 0 };
     this.trail = [];                   // [game time, x, y] of the last TRAIL_S
     this.inertiaS = 0;                 // seconds the spark glided on inertia (the link was silent > 200 ms)
-    this.movingS = 0; this.bothS = 0;  // seconds in motion, and of those with both axes in use (simultaneous control)
+    this.movingS = 0; this.mixedS = 0; // seconds in motion, and of those with the other pair at work too (a mixed gesture)
+    this.botLeg = null;                // the built-in player's current leg ('x' or 'y'): one movement at a time
     this.link = 'ok';
     this.begin();
   }
@@ -142,9 +151,10 @@ export class StarsGame extends Game {
     // The stream's joystick; a frame without it (a gesture label) means the axis of its gesture at its intensity.
     // The task asks to forgive single noises and classification errors: the spark moves only while the decoder holds a
     // direction (two agreeing packets and a dwell, core/spppr.js). A wrong packet at rest used to nudge it — a resting
-    // player lit a star by drift (05.11). Once a direction holds, the speed is the probabilities' difference itself.
+    // player lit a star by drift (05.11). Once a direction holds, the spark goes along the axis of that command at the
+    // speed of the probabilities' difference of its pair (commandAxes: answer 4 of 07.11, one movement at a time).
     const moving = !!intent?.gesture && intent.gesture !== 'rest';
-    const axes = !moving ? null : intent.axes ?? axesOfGesture(intent.gesture, intent.intensity);
+    const axes = !moving ? null : commandAxes(intent.gesture, intent.axes ?? null, intent.intensity);
     const v = stickVector(axes, { mirror: this.mirror });
     const gain = this.level.gain;
     this.vel = { x: this.axesOn.x ? v.x * gain : 0, y: this.axesOn.y ? v.y * gain : 0 };
@@ -157,7 +167,10 @@ export class StarsGame extends Game {
     if (moved > 1e-6) {
       this.movingS += dt;
       if (this.link === 'inertia') this.inertiaS += dt;
-      if (Math.abs(v.x) > BOTH_AXES && Math.abs(v.y) > BOTH_AXES && this.axesOn.x && this.axesOn.y) this.bothS += dt;
+      // The other pair of the field at work while the spark moves: a mixed gesture — the СПППР does not recognize it
+      // (answer 4), the spark ignores it, the results say how much of the motion it took.
+      const k = axisOf(intent.gesture), other = k === 'x' ? 'y' : k === 'y' ? 'x' : null;
+      if (other && this.axesOn.x && this.axesOn.y && Math.abs(intent.axes?.[other] ?? 0) > BOTH_AXES) this.mixedS += dt;
     }
     this.trail.push([this.time, nx, ny]);
     while (this.trail.length > 2 && this.trail[0][0] < this.time - TRAIL_S) this.trail.shift();
@@ -211,25 +224,24 @@ export class StarsGame extends Game {
     return parts.length ? `Звезда ${parts.join(', ')}` : 'Покой — звезда загорается';
   }
 
-  /** The demo bot and the tests: the larger remaining component first; on the free levels both pairs at once. */
+  /**
+   * The demo bot and the tests: one movement at a time, as the СПППР recognizes them (answer 4 of 07.11) — the leg with
+   * the larger distance left first, kept until it is done, then the other; relaxed inside the star.
+   */
   autopilot() {
     const star = this.star;
-    if (!star) return { gesture: 'rest', effort: 0, mix: null };
+    const rest = { gesture: 'rest', effort: 0 };
+    if (!star) return rest;
     const r = this.radius;
     const dx = this.axesOn.x ? star.x - this.pos.x : 0, dy = this.axesOn.y ? star.y - this.pos.y : 0;
     const ax = Math.abs(dx), ay = Math.abs(dy);
-    if (Math.hypot(dx, dy) < r * 0.45) return { gesture: 'rest', effort: 0, mix: null }; // inside: relax and let it light
+    if (Math.hypot(dx, dy) < r * 0.45) { this.botLeg = null; return rest; } // inside: relax and let it light
     const effort = d => Math.max(0.28, Math.min(0.8, 0.22 + 1.1 * d));
-    const gx = stickGesture(dx > 0 ? 'right' : 'left', { mirror: this.mirror });
-    const gy = stickGesture(dy > 0 ? 'up' : 'down', { mirror: this.mirror });
-    if (this.level.dof === 'free' && ax > r * 0.35 && ay > r * 0.35) {
-      const main = ax >= ay ? gx : gy, other = ax >= ay ? gy : gx;
-      const e = effort(Math.max(ax, ay));
-      return { gesture: main, effort: e, mix: { [other]: e * Math.min(ax, ay) / Math.max(ax, ay) } };
-    }
-    if (ax >= ay && ax > r * 0.3) return { gesture: gx, effort: effort(ax), mix: null };
-    if (ay > r * 0.3) return { gesture: gy, effort: effort(ay), mix: null };
-    return { gesture: 'rest', effort: 0, mix: null };
+    const open = { x: ax > r * 0.3, y: ay > r * 0.3 };
+    if (!open[this.botLeg]) this.botLeg = open.x && (ax >= ay || !open.y) ? 'x' : open.y ? 'y' : null;
+    if (this.botLeg === 'x') return { gesture: stickGesture(dx > 0 ? 'right' : 'left', { mirror: this.mirror }), effort: effort(ax) };
+    if (this.botLeg === 'y') return { gesture: stickGesture(dy > 0 ? 'up' : 'down', { mirror: this.mirror }), effort: effort(ay) };
+    return rest;
   }
 
   progress() { return clamp01(this.stars.filter(s => s.state === 'ok' || s.state === 'fail').length / this.stars.length); }
@@ -269,9 +281,10 @@ export class StarsGame extends Game {
       meanReachMs: reach === null ? null : Math.round(reach * 1000),
       pathEfficiency: eff === null ? null : pct(eff),
       overshoots: lit.reduce((sum, s) => sum + s.overshoots, 0),
-      // The task's inertia, measured: how long the spark glided on a silent link; simultaneous use of both pairs.
+      // The task's inertia, measured: how long the spark glided on a silent link; how much of the motion went with the
+      // other pair at work too — a mixed gesture the СПППР does not recognize (answer 4 of 07.11).
       inertiaMs: Math.round(this.inertiaS * 1000),
-      simultaneous: this.movingS > 0.5 ? pct(this.bothS / this.movingS) : null,
+      mixed: this.movingS > 0.5 ? pct(this.mixedS / this.movingS) : null,
     };
   }
 

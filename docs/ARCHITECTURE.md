@@ -218,6 +218,18 @@
 | `input/spppr-source.js` | `OnScreenEmulator.rateHz` — смена частоты начинает счётчики потока заново | — |
 | `tools/screencast.mjs`, `tools/screencast-plan.mjs` | скринкаст: запись телефона 430 × 932, сцена 1920 × 1080 в ffmpeg, `.srt` и главы; раскадровка — данные, проверяемые тестом | новая сцена — строка в `SCENES` и действие в `ACT` |
 
+### v6.3.0 — ответы экспертов 07.11
+
+| Где | Что | Точка расширения |
+|---|---|---|
+| `core/vocabulary.js` | `rateControl(scheme)` — схема жестов набора ТЗ читает вероятности: сила и высота набираются временем, не уровнем | новый набор потока СПППР — в `SPPPR_SETS` |
+| `core/spppr.js` | `clarityRate(clarity)` — скорость по чёткости до `SPPPR.fullSpeedAt`; словарь потока по значениям (`DICTIONARY_MIN_PACKETS`), `stats.keys` | другой потолок — одна константа в `config.js` |
+| `core/hand.js`, `games/flight.js`, `games/grip.js`, `games/rhythm.js` | управление скоростью на потоке: сила хвата и высота растут, пока жест держится; полос силы на потоке нет | новая игра на потоке — спросить `rateControl`, не брать вероятность силой |
+| `core/joystick.js` | `commandAxes`, `axisOf` — движется ось команды декодера, доля второй пары — смешанный жест | — |
+| `core/fatigue.js` | `PeakMeter` (пик каналов живого источника, доля откалиброванного диапазона), `peakDecline`, `peakDeclineText` | новый признак — в `adviseStop` (`core/wellbeing.js`) |
+| `core/progress.js` | `sessionLengthNote` — один раз после 10 минут активной игры за день | — |
+| `input/spppr-emulator.js` | семь ключей при любом словаре, `SOFTMAX_FLOOR`; без смеси двух движений; 10 Гц по умолчанию (`STREAM_RATES_HZ`) | — |
+
 ### v6.2.1 — аудит 06.11, вечер
 
 | Где | Что | Точка расширения |

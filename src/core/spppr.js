@@ -1,7 +1,9 @@
 // СПППР stream of the organizers' task (28.10.2026) — the packet and its decoding. Pure, deterministic, no DOM.
 //   packet:  {"timestamp_ms": <MCU timer, ms since the device started>, "dist": {"neutral": p, "flexion": p, …}}
 //   parseSppprPacket — the hard contract: a packet is taken whole or refused with a reason, never «fixed». Its `dist` is
-//              one dictionary of the СПППР exactly: the seven states, or «2 gestures + neutral» (Q&A of 04.11, answer 22).
+//              the seven states of the task — for a СПППР of «2 gestures + neutral» too, with its four unknown classes at
+//              zero (07.11, answer 1 of the experts: the structure of the stream does not change); a `dist` of exactly
+//              those three keys, the reading of answer 22 before 07.11, is taken as well.
 //   McuClock — the MCU timer is not the phone's clock. Every dt is a difference of timestamp_ms; the offset to the
 //              phone clock serves only to draw between packets (lower envelope of arrival − timestamp).
 //   SppprDecoder — softmax → joystick. Probabilities are smoothed on MCU time; the axes are differences of probabilities
@@ -24,6 +26,14 @@ const wireOf = id => BY_ORDER.find(g => g.id === id).wire;
 export const SPPPR_DICTIONARIES = Object.freeze(SPPPR_SETS.map(set => Object.freeze(set.classOrder.map(wireOf))).sort((x, y) => x.length - y.length));
 /** The dictionary of `classes` keys (3 or 7); another number is the full one. */
 export const sppprDictionary = classes => SPPPR_DICTIONARIES.find(d => d.length === classes) ?? SPPPR_WIRE;
+/** Class indexes outside the smallest dictionary (the four wrist movements «2 жеста + нейтраль» does not know). */
+const OUTSIDE_SMALL = SPPPR_WIRE.map((key, i) => (SPPPR_DICTIONARIES[0].includes(key) ? -1 : i)).filter(i => i >= 0);
+/**
+ * 07.11 — answer 1 of the experts: the structure of the stream does not change, so a СПППР of «2 жеста + нейтраль» sends
+ * the seven keys too, its four unknown classes at exactly zero. A softmax over seven classes never gives an exact zero, so
+ * a stream whose four are zero in every packet of an exercise — this many at least — is taken as the smaller dictionary.
+ */
+export const DICTIONARY_MIN_PACKETS = 30;
 
 /** A dictionary in the organizers' words («2 жеста + нейтраль», «6 жестов + нейтраль»); null for a size of none. */
 export function dictionaryName(classes) {
@@ -36,12 +46,15 @@ export function dictionaryName(classes) {
  * The dictionary of the stream against the set the game speaks. A СПППР that knows fewer classes than the set leaves
  * the game waiting for movements that never come, so the note names the set of its dictionary. Null when they agree,
  * before the first packet, or when the game's set is not a dictionary of the СПППР (it maps the classes it lacks).
+ * `keys` — how many keys its packets had: a dictionary told by the zeros of seven keys (07.11, answer 1) is a likeness,
+ * not a fact — a recognizer of seven classes that rounds to zero looks the same until a wrist movement comes.
  */
-export function dictionaryNote(streamClasses, setId) {
+export function dictionaryNote(streamClasses, setId, keys = streamClasses) {
   const set = SPPPR_SETS.find(s => s.id === setId);
   if (!set || !dictionaryName(streamClasses) || streamClasses >= set.classOrder.length) return null;
   const fit = SPPPR_SETS.find(s => s.classOrder.length === streamClasses);
-  return `поток: ${dictionaryName(streamClasses)} — нужен набор «${fit.name}»`;
+  return keys > streamClasses ? `поток похож на «${dictionaryName(streamClasses)}» — нужен набор «${fit.name}»`
+    : `поток: ${dictionaryName(streamClasses)} — нужен набор «${fit.name}»`;
 }
 /** Class index → [axis, sign] (null for neutral). */
 const AXIS = BY_ORDER.map(g => g.axis);
@@ -128,15 +141,24 @@ export class McuClock {
   toMcu(local) { return this.offset === null ? null : local - this.offset; }
 }
 
-// classes — the dictionary of the last packet taken (3 or 7), null before the first one.
+// classes — the dictionary of the stream (3 or 7), null before the first packet: the keys of the last packet, and for the
+// seven keys of the contract the classes that had a probability (07.11, answer 1 — see DICTIONARY_MIN_PACKETS).
+// keys — how many keys the last packet's `dist` had; outside — a class the smaller dictionary lacks had a probability.
 const blankStats = () => ({
   received: 0, accepted: 0, rejected: 0, stale: 0, reboots: 0, gaps: 0, forgiven: 0, switches: 0,
   errors: Object.fromEntries(SPPPR_ERRORS.map(e => [e, 0])), lastError: null,
-  intervals: [], maxGapMs: 0, confidenceSum: 0, confidenceN: 0, coactSum: 0, coactN: 0, classes: null,
+  intervals: [], maxGapMs: 0, confidenceSum: 0, confidenceN: 0, coactSum: 0, coactN: 0, classes: null, keys: null, outside: false,
 });
 
 const median = list => { if (!list.length) return null; const s = [...list].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+
+/**
+ * 07.11 (answer 3 of the experts) — the speed of a movement on the СПППР stream, 0…1, from its clarity: the decoder's
+ * effort or the share of an axis past the dead zone. It follows the clarity up to `full` and stays at 1 above it, so a
+ * probability that grows as the person and the model co-adapt does not make the game faster; it is never a force.
+ */
+export const clarityRate = (clarity, full = SPPPR.fullSpeedAt) => (Number.isFinite(clarity) && full > 0 ? clamp(clarity / full, 0, 1) : 0);
 
 /**
  * The class a decoded state means in the gesture set the game speaks. In the task's set — itself; in another set the
@@ -229,7 +251,10 @@ export class SppprDecoder {
     this.lastArrival = arrival;
     this.lastText = typeof input === 'string' ? input : JSON.stringify(input);
     st.accepted++;
-    st.classes = pk.classes;
+    st.keys = pk.classes;
+    if (pk.classes === SPPPR_WIRE.length && OUTSIDE_SMALL.some(i => pk.p[i] > 0)) st.outside = true;
+    const small = SPPPR_DICTIONARIES[0].length;
+    st.classes = pk.classes === small || (!st.outside && st.accepted >= DICTIONARY_MIN_PACKETS) ? small : SPPPR_WIRE.length;
     const top = Math.max(...this.p);
     if (this.dir !== NEUTRAL) { st.confidenceSum += this.p[this.dir]; st.confidenceN++; }
     const [xi, xe] = antagonists();
@@ -335,7 +360,7 @@ export class SppprDecoder {
     const { rateHz, jitterMs } = this.timing();
     return {
       packets: st.accepted, rejected: st.rejected, stale: st.stale, gaps: st.gaps, forgiven: st.forgiven, reboots: st.reboots,
-      rateHz, jitterMs, maxGapMs: st.maxGapMs, classes: st.classes,
+      rateHz, jitterMs, maxGapMs: st.maxGapMs, classes: st.classes, keys: st.keys,
       meanConfidence: st.confidenceN ? Math.round(100 * st.confidenceSum / st.confidenceN) : null,
       coactivation: st.coactN ? Math.round(100 * st.coactSum / st.coactN) : null,
     };

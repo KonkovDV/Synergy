@@ -164,7 +164,7 @@ export function streamLine(decoder, intent = null) {
   const { rateHz, jitterMs } = decoder.timing();
   const st = decoder.stats;
   return [`СПППР ${rateHz ?? '—'} пак/с`, `джиттер ${jitterMs ?? '—'} мс`, `прощено шумов ${st.forgiven}`, st.rejected ? `отклонено ${st.rejected}` : null,
-    dictionaryNote(st.classes, GESTURE_SET.id)].filter(Boolean).join(' · ');
+    dictionaryNote(st.classes, GESTURE_SET.id, st.keys ?? st.classes)].filter(Boolean).join(' · ');
 }
 
 /**

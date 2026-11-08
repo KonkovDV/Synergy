@@ -41,3 +41,24 @@ export function axesOfGesture(gestureId, intensity) {
   axes[g.axis[0]] = g.axis[1] * Math.min(1, intensity);
   return axes;
 }
+
+/** The joystick axis ('x', 'y', 'z') of a class of the task's set, or null (neutral, a class of another set). */
+export const axisOf = gestureId => SPPPR_SET.gestures.find(x => x.id === gestureId)?.axis?.[0] ?? null;
+
+/**
+ * 07.11 — what a frame moves by: the axis of the decoder's command alone (answer 4 of the experts: the СПППР does not
+ * recognize compound gestures — the other pair's share is a leak or a mixed gesture and moves nothing), at the
+ * probability difference of that pair (the task: «вектор джойстика формируется разностью flexion − extension»).
+ * `axes` — the decoder's, past its dead zone (−1…1); without them (a gesture label) the frame's intensity. Null when the
+ * command has no axis or the frame points the other way.
+ */
+export function commandAxes(gestureId, axes, intensity) {
+  const g = SPPPR_SET.gestures.find(x => x.id === gestureId);
+  if (!g?.axis) return null;
+  const [k, sign] = g.axis;
+  const along = Math.min(1, axes ? sign * (Number.isFinite(axes[k]) ? axes[k] : 0) : Number.isFinite(intensity) ? intensity : 0);
+  if (!(along > 0)) return null;
+  const out = { x: 0, y: 0, z: 0 };
+  out[k] = sign * along;
+  return out;
+}

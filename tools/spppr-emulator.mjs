@@ -4,14 +4,16 @@
 //   node tools/spppr-emulator.mjs | python3 bridge/ws_bridge.py --stdin      → Настройки → Источник → Внешний
 // or save a recording:  node tools/spppr-emulator.mjs --fast --seconds 30 > stream.ndjson
 // Options: --realism 0..1 (0.5)  --seed N  --seconds S (endless)  --fast (no real-time pacing)
-//          --rate 50|10 (packets a second; 10 — the rate the organizers named, Q&A of 04.11, answer 24)
-//          --classes 7|3 (the device's dictionary: the task's seven states, or «2 gestures + neutral» — Q&A of 04.11, № 22)
+//          --rate 10|50 (packets a second; 10 — the nominal rate of the organizers' stream, answers of 04.11 № 24 and
+//          07.11 № 2 — the default)
+//          --classes 7|3 (the device's dictionary: the task's seven states, or «2 gestures + neutral» — Q&A of 04.11, № 22;
+//          the packet keeps the seven keys either way, the classes a device does not know at 0 — 07.11, answer 1)
 //          --script cycle|flexion,extension,… (cycle: every state of the dictionary 2 s, neutral between)  --effort 0..1 (0.7)
 //          --loss 0..1  --malformed 0..1 (broken packets to see the hard contract refuse them)  --reboot-every S
 //          --stats (counters to stderr at the end)
 process.env.SYNERGY_GESTURE_SET ??= 'tz';
 const { SppprEmulator, STREAM_RATES_HZ } = await import('../src/input/spppr-emulator.js');
-const { SppprDecoder, SPPPR_DICTIONARIES, SPPPR_WIRE } = await import('../src/core/spppr.js');
+const { SppprDecoder, SPPPR_DICTIONARIES, SPPPR_WIRE, dictionaryName } = await import('../src/core/spppr.js');
 const { SPPPR_SET } = await import('../src/core/vocabulary.js');
 
 const args = process.argv.slice(2);
@@ -68,7 +70,8 @@ function finish() {
   if (flag('stats')) {
     const s = check.summary();
     console.error(`пакетов принято ${s.packets}, отклонено ${s.rejected} (${Object.entries(check.stats.errors).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(', ') || 'нет'}), ` +
-      `поздних ${s.stale}, обрывов > 200 мс ${s.gaps}, перезапусков МК ${s.reboots}, прощено шумов ${s.forgiven}; ${s.rateHz} пак/с, джиттер ${s.jitterMs} мс, макс. пауза ${s.maxGapMs} мс`);
+      `поздних ${s.stale}, обрывов > 200 мс ${s.gaps}, перезапусков МК ${s.reboots}, прощено шумов ${s.forgiven}; ${s.rateHz} пак/с, джиттер ${s.jitterMs} мс, макс. пауза ${s.maxGapMs} мс; ` +
+      `ключей в пакете ${s.keys ?? '—'}, словарь ${dictionaryName(s.classes) ?? '—'}`);
   }
 }
 
@@ -76,6 +79,7 @@ function readHelp() {
   return `СПППР-эмулятор (ТЗ 28.10.2026): пакеты {"timestamp_ms", "dist"} по одному в строке.
   node tools/spppr-emulator.mjs | python3 bridge/ws_bridge.py --stdin
   --realism 0..1  --seed N  --seconds S  --fast  --script cycle|flexion,extension  --effort 0..1
-  --classes 7|3 (словарь: семь состояний или «2 жеста + нейтраль»)
+  --rate 10|50 (пакетов в секунду; 10 — номинал потока, по умолчанию)
+  --classes 7|3 (словарь: семь состояний или «2 жеста + нейтраль»; ключей в пакете всегда семь, незнакомые классы — 0)
   --loss 0..1  --malformed 0..1  --reboot-every S  --stats`;
 }
