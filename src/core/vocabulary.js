@@ -148,12 +148,12 @@ const SPR8 = {
  */
 const TZ = {
   id: 'tz', name: 'СПППР (ТЗ)', short: '7 состояний · СПППР', size: 7,
-  text: 'Поток вероятностей СПППР по ТЗ: нейтраль и шесть движений кисти. Сгибание закрывает кисть, разгибание раскрывает, сила — разность их вероятностей.',
+  text: 'Поток вероятностей СПППР по ТЗ: нейтраль и шесть движений кисти. Сгибание закрывает кисть, разгибание раскрывает; чем чётче жест, тем быстрее движение, а сила хвата набирается временем.',
   source: 'ТЗ организаторов 28.10.2026: словарь жестов кисти СПППР',
   classOrder: ['rest', 'flexion', 'extension', 'pronation', 'supination', 'adduction', 'abduction'],
   gestures: [
     { id: 'rest',       wire: 'neutral',    motorica: 'Neutral',    name: 'Нейтраль',   command: 'rest',  grip: null,   pose: [0.25, 0.2, 0.25, 0.3, 0.35], wrist: 0,  roll: 0,  dev: 0,  axis: null,     introducedAt: null, cue: 'Расслабьте кисть и предплечье — базовое положение', use: 'Покой между движениями: протез держит то, что взял' },
-    { id: 'flexion',    wire: 'flexion',    motorica: 'Flexion',    name: 'Сгибание',   command: 'close', grip: 'fist', pose: [0.55, 0.5, 0.55, 0.6, 0.65], wrist: 1,  roll: 0,  dev: 0,  axis: ['x', 1],  introducedAt: 1, cue: 'Согните кисть к ладони — работают сгибатели', use: 'Канал сгибателей: кисть протеза закрывается, сила — от уверенности' },
+    { id: 'flexion',    wire: 'flexion',    motorica: 'Flexion',    name: 'Сгибание',   command: 'close', grip: 'fist', pose: [0.55, 0.5, 0.55, 0.6, 0.65], wrist: 1,  roll: 0,  dev: 0,  axis: ['x', 1],  introducedAt: 1, cue: 'Согните кисть к ладони — работают сгибатели', use: 'Канал сгибателей: кисть протеза закрывается, сила хвата растёт, пока жест держится' },
     { id: 'extension',  wire: 'extension',  motorica: 'Extension',  name: 'Разгибание', command: 'open',  grip: null,   pose: [0, 0, 0, 0, 0],             wrist: -1, roll: 0,  dev: 0,  axis: ['x', -1], introducedAt: 1, cue: 'Разогните кисть к тыльной стороне — работают разгибатели', use: 'Канал разгибателей: кисть раскрывается и отпускает предмет' },
     { id: 'pronation',  wire: 'pronation',  motorica: 'Pronation',  name: 'Пронация',   command: 'wrist', grip: null,   pose: [0.3, 0.25, 0.3, 0.35, 0.4], wrist: 0,  roll: 1,  dev: 0,  axis: ['y', 1],  introducedAt: 2, cue: 'Поверните ладонь вниз, не сжимая пальцы', use: 'Поворот ладонью вниз: налить, перевернуть, повернуть ключ' },
     { id: 'supination', wire: 'supination', motorica: 'Supination', name: 'Супинация',  command: 'wrist', grip: null,   pose: [0.2, 0.15, 0.2, 0.25, 0.3], wrist: 0,  roll: -1, dev: 0,  axis: ['y', -1], introducedAt: 3, cue: 'Поверните ладонь вверх, не сжимая пальцы', use: 'Поворот ладонью вверх: взять монету с ладони, принять сдачу' },
@@ -172,7 +172,7 @@ const TZ = {
 const TZ_PAIR = ['rest', 'flexion', 'extension'];
 const TZ2 = {
   id: 'tz2', name: 'СПППР · 2 жеста', short: '3 состояния · СПППР', size: 3,
-  text: 'Поток СПППР «2 жеста + нейтраль»: сгибание закрывает кисть, разгибание раскрывает, сила — разность их вероятностей.',
+  text: 'Поток СПППР «2 жеста + нейтраль»: сгибание закрывает кисть, разгибание раскрывает; чем чётче жест, тем быстрее движение, а сила хвата набирается временем.',
   source: 'ответы организаторов 04.11.2026 (№ 22): СПППР «2 жеста + нейтраль»',
   classOrder: TZ_PAIR,
   gestures: TZ.gestures.filter(g => TZ_PAIR.includes(g.id)),
@@ -189,6 +189,15 @@ export const SPPPR_SET = TZ;
 export const SPPPR_SETS = Object.freeze([TZ, TZ2]);
 /** The set of this page load: id, name, short, text, size, source. */
 export const GESTURE_SET = Object.freeze((({ gestures, ...meta }) => meta)(GESTURE_SETS[selectedGestureSet()]));
+/**
+ * 07.11 — answer 3 of the organizers' experts: a probability of the СПППР says how much a contraction looks like its
+ * pattern, and it grows as the person and the model co-adapt; it is not the force of the contraction. The gesture scheme
+ * of the task's sets reads that stream, so there the force of a grip and the altitude of a flight are gathered by how long
+ * a movement is held (rate control, as in the threshold scheme), the speed follows the clarity of the movement only up to
+ * SPPPR.fullSpeedAt (core/spppr.js `clarityRate`), and force bands stay with the two channels, whose amplitudes are force
+ * (Stream 1). The other sets keep the effort their source reports.
+ */
+export const rateControl = scheme => scheme === SCHEME.GESTURE && SPPPR_SETS.some(set => set.id === GESTURE_SET.id);
 export const GESTURES = GESTURE_SETS[GESTURE_SET.id].gestures;
 SCHEME_INFO.gesture.short = GESTURE_SET.short;
 SCHEME_INFO.gesture.text = GESTURE_SET.text;

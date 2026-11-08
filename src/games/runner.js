@@ -5,8 +5,8 @@
 import { ChannelUse, sumUses } from '../core/channeluse.js';
 
 export function toEmulatorTarget(t) {
-  // `mix` («Созвездие»): other classes of the task's set held at the same time, { id: effort } — the СПППР emulator blends them.
-  return t.gesture ? { gesture: t.gesture, effort: t.effort ?? 0.6, a: 0, b: 0, mix: t.mix ?? null } : { a: t.a ?? 0, b: t.b ?? 0, gesture: null, mix: null };
+  // One movement at a time (answer 4 of the experts, 07.11: the СПППР does not recognize compound gestures).
+  return t.gesture ? { gesture: t.gesture, effort: t.effort ?? 0.6, a: 0, b: 0 } : { a: t.a ?? 0, b: t.b ?? 0, gesture: null };
 }
 
 export class GameRunner {
@@ -18,9 +18,10 @@ export class GameRunner {
    * @param {{sample(now:number):object|null}} p.source
    * @param {import('../input/emulator.js').EmgEmulator} [p.emulator] driven by the autopilot in demo mode
    * @param {import('../core/signalquality.js').SignalQualityMonitor} [p.quality] 5.30: watches an external source's frames
+   * @param {import('../core/fatigue.js').PeakMeter} [p.peaks] 07.11: the peak of each channel of an external source
    */
-  constructor({ game, pipeline, hand, source, emulator = null, autopilot = false, quality = null }) {
-    Object.assign(this, { game, pipeline, hand, source, emulator, autopilot, quality });
+  constructor({ game, pipeline, hand, source, emulator = null, autopilot = false, quality = null, peaks = null }) {
+    Object.assign(this, { game, pipeline, hand, source, emulator, autopilot, quality, peaks });
     this.intent = null;
     this.signalLost = false;
     this.uses = new ChannelUse();
@@ -33,6 +34,7 @@ export class GameRunner {
     if (this.autopilot && this.emulator && this.intent) this.emulator.setTarget(toEmulatorTarget(this.game.autopilot(this.intent, this.hand)));
     const frame = this.source.sample(now);
     this.quality?.push(frame);
+    if (!this.game.paused) this.peaks?.add(frame);
     this.intent = this.pipeline.process(frame, now);
     this.signalLost = !this.intent.valid;
     this.hand.update(this.intent, dt);

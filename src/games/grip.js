@@ -3,7 +3,7 @@
 // B lowers excess force, a wrong grip is switched the way that hand is set (open again, or co-contraction) or by a gesture.
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct, cleanPair } from './base.js';
 import { blindBlock } from '../core/guidance.js';
-import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES, rateControl } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
 import { SIGNAL, SESSION } from '../config.js';
 import { COLORS, text, textWidth, scaledPx, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
@@ -72,9 +72,14 @@ export class GripGame extends Game {
   static skills = ['separation', 'precision', 'switching', 'stability']; // isolation first (5.32): the meetup's first ask
   static levels = LEVELS;
   static summaryBlocks = true;
+  /** 07.11 (answer 12): a level asks the same force every round — the same objects — so its peaks compare (core/fatigue.js). */
+  static peakDemand = true;
 
   constructor(opts) {
     super(opts);
+    // 07.11 (answer 3 of the experts): on the СПППР stream the force is gathered by holding the grip gesture (BionicHand),
+    // as in the threshold scheme — a probability is the clarity of the gesture, not its force.
+    this.rate = rateControl(this.scheme);
     this.queue = [...this.level.items];
     this.results = [];
     this.trace = [];
@@ -155,7 +160,7 @@ export class GripGame extends Game {
       const resting = intent.relaxed;
       o.restFor = resting && hand.inContact ? o.restFor + dt : 0;
       if (!hand.inContact) this.hint = this.say('Сожмите (A), чтобы взять предмет', `Покажите «${GRIP_NAME[o.grip]}», чтобы взять предмет`);
-      else if (hand.force < o.min) this.hint = this.say('Слабо — добавьте силы (A)', 'Слабо — жест сильнее');
+      else if (hand.force < o.min) this.hint = this.say('Слабо — добавьте силы (A)', this.rate ? 'Слабо — держите жест хвата ещё' : 'Слабо — жест сильнее');
       else if (hand.force > o.max) this.hint = this.say('Сильно! Ослабьте раскрытием (B) — коротко', `Сильно! Ослабьте: коротко «${OPENING_GESTURE.name}»`);
       else this.hint = 'Отлично — расслабьтесь, протез удержит сам';
       if (inWindow && o.restFor >= LIFT_REST_S) {
@@ -258,13 +263,16 @@ export class GripGame extends Game {
       return { a: 0.75, b: 0.75 };
     }
     if (hand.force > o.max) return this.openTarget(0.3);
-    const want = this.scheme === SCHEME.THRESHOLD ? hand.force < center - 0.04 : hand.force < center - 0.03;
+    // Rate control (threshold, the СПППР stream): let go ahead of the centre by what the force gains while the relaxation
+    // reaches the hand — a frame of the channels, a packet and a dwell of the stream.
+    const want = this.scheme === SCHEME.THRESHOLD ? hand.force < center - 0.04 : this.rate ? hand.force < center - 0.07 : hand.force < center - 0.03;
     return want ? this.closeTarget(center, o.grip) : this.restTarget();
   }
 
+  /** A clear gesture on the СПППР stream: its force comes from holding it, not from the probability (answer 3, 07.11). */
   closeTarget(level, grip) {
     const gesture = CLOSING_GESTURES.find(g => g.grip === grip)?.id ?? grip;
-    return this.scheme === SCHEME.GESTURE ? { gesture, effort: level } : { a: this.scheme === SCHEME.THRESHOLD ? 0.6 : level, b: 0 };
+    return this.scheme === SCHEME.GESTURE ? { gesture, effort: this.rate ? 0.7 : level } : { a: this.scheme === SCHEME.THRESHOLD ? 0.6 : level, b: 0 };
   }
   openTarget(level) { return this.scheme === SCHEME.GESTURE ? { gesture: OPENING_GESTURE.id, effort: level } : { a: 0, b: level }; }
   restTarget() { return this.scheme === SCHEME.GESTURE ? { gesture: 'rest', effort: 0 } : { a: 0, b: 0 }; }

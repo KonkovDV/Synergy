@@ -4,7 +4,7 @@ import './pin-tz.mjs'; // 6.0: the published set (tests/pin-tz.mjs)
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { parseSppprPacket, sppprPacket, McuClock, SppprDecoder, SPPPR_WIRE, SPPPR_ERRORS, SPPPR_DICTIONARIES } from '../src/core/spppr.js';
+import { parseSppprPacket, sppprPacket, McuClock, SppprDecoder, SPPPR_WIRE, SPPPR_ERRORS, SPPPR_DICTIONARIES, DICTIONARY_MIN_PACKETS } from '../src/core/spppr.js';
 import { SppprEmulator, EmulatorDriver, streamProfile } from '../src/input/spppr-emulator.js';
 import { createSppprDriver } from '../src/input/spppr-driver.js';
 import { SppprSource, OnScreenEmulator } from '../src/input/spppr-source.js';
@@ -99,11 +99,13 @@ test('ответ № 22: the decoder on a two-gesture stream — flexion closes,
   assert.equal(both.gesture, 'rest'); assert.ok(both.coact > 0.4, 'co-activation shows');
   assert.equal(d.stats.rejected, 0);
   assert.equal(d.summary().classes, 3, 'the run record says which СПППР it was');
-  d.push(packet(ts += 20, { flexion: 0.8 }), ts);
-  assert.equal(d.summary().classes, 7, 'the dictionary of the last packet taken');
+  assert.equal(d.summary().keys, 3);
+  d.push(packet(ts += 20, { flexion: 0.7, pronation: 0.1 }), ts);
+  assert.equal(d.summary().classes, 7, 'a wrist class with a probability: the seven states');
+  assert.equal(d.summary().keys, 7);
 });
 
-test('ответ № 22: the emulator as a two-gesture СПППР writes exactly three keys — a wrist movement it cannot tell is neutral', () => {
+test('07.11, answer 1: the structure of the stream does not change — a two-gesture СПППР sends the seven keys, its four unknown classes at 0', () => {
   const emu = new SppprEmulator({ realism: 1, seed: 6, classes: 3 });
   const lines = [];
   for (const [gesture, until] of [['flexion', 4000], ['pronation', 8000], ['extension', 12000]]) {
@@ -111,18 +113,31 @@ test('ответ № 22: the emulator as a two-gesture СПППР writes exactly
     for (let now = until - 4000; now < until; now += 16) lines.push(...emu.pump(now).map(x => ({ ...x, gesture })));
   }
   const parsed = lines.map(l => ({ ...parseSppprPacket(l.text), gesture: l.gesture, keys: Object.keys(JSON.parse(l.text).dist).join() }));
-  assert.ok(parsed.length > 300);
-  assert.ok(parsed.every(p => p.ok && p.classes === 3 && p.keys === 'neutral,flexion,extension'), 'every line is the second dictionary, in order');
+  assert.ok(parsed.length > 100, `${parsed.length} packets in 12 s at the nominal 10 Hz`);
+  assert.ok(parsed.every(p => p.ok && p.keys === SPPPR_WIRE.join()), 'every line has the seven keys of the task, in order');
+  assert.ok(parsed.every(p => p.p.slice(3).every(v => v === 0)), 'the four classes the device does not know are exactly 0');
   const top = p => SPPPR_WIRE[p.p.indexOf(Math.max(...p.p))];
-  const mostly = (g, wire) => { const of = parsed.filter(p => p.gesture === g).slice(10); return of.filter(p => top(p) === wire).length / of.length; };
+  const mostly = (g, wire) => { const of = parsed.filter(p => p.gesture === g).slice(5); return of.filter(p => top(p) === wire).length / of.length; };
   assert.ok(mostly('flexion', 'flexion') > 0.8 && mostly('extension', 'extension') > 0.8, 'the two movements come through');
   assert.ok(mostly('pronation', 'neutral') > 0.8, 'pronation is not in its dictionary');
+  // The receiver tells the dictionary by the values: exact zeros in every packet of the exercise.
+  const d = new SppprDecoder();
+  lines.forEach(l => d.push(l.text, l.at));
+  assert.equal(d.summary().keys, 7);
+  assert.equal(d.summary().classes, 3, 'zeros in every packet: «2 жеста + нейтраль»');
+  const early = new SppprDecoder();
+  lines.slice(0, DICTIONARY_MIN_PACKETS - 1).forEach(l => early.push(l.text, l.at));
+  assert.equal(early.summary().classes, 7, 'too few packets to say — the seven of the contract');
   const full = new SppprEmulator({ seed: 6 });
   full.setTarget({ gesture: 'pronation', effort: 0.7 });
   const sent = [];
-  for (let now = 0; now < 2000; now += 16) sent.push(...full.pump(now));
+  for (let now = 0; now < 4000; now += 16) sent.push(...full.pump(now));
   assert.ok(sent.every(x => Object.keys(JSON.parse(x.text).dist).join() === SPPPR_WIRE.join()), 'by default the device has all seven');
-  assert.ok(sent.slice(20).filter(x => parseSppprPacket(x.text).p[3] > 0.5).length > sent.length / 2, 'and tells pronation');
+  assert.ok(sent.slice(5).filter(x => parseSppprPacket(x.text).p[3] > 0.5).length > sent.length / 2, 'and tells pronation');
+  assert.ok(sent.every(x => parseSppprPacket(x.text).p.every(v => v > 0)), 'a softmax of seven is never exactly 0');
+  const seven = new SppprDecoder();
+  sent.forEach(x => seven.push(x.text, x.at));
+  assert.equal(seven.summary().classes, 7);
 });
 
 test('ответ № 22: a run keeps the dictionary of its stream — the report and the CSV say which СПППР it was; a backup cannot invent one', async () => {
@@ -151,19 +166,23 @@ test('ответ № 22: one wording of the dictionaries; a stream of fewer clas
   assert.equal(dictionaryName(7), '6 жестов + нейтраль');
   assert.equal(dictionaryName(5), null, 'no such dictionary');
   assert.equal(dictionaryNote(3, 'tz'), 'поток: 2 жеста + нейтраль — нужен набор «СПППР · 2 жеста»', 'the game would wait for movements that never come');
+  assert.equal(dictionaryNote(3, 'tz', 7), 'поток похож на «2 жеста + нейтраль» — нужен набор «СПППР · 2 жеста»', '07.11: told by the zeros of seven keys — a likeness, not a fact');
   for (const [classes, set] of [[7, 'tz'], [3, 'tz2'], [7, 'tz2'], [null, 'tz'], [3, 'synergy'], [3, 'ubi4']]) {
     assert.equal(dictionaryNote(classes, set), null, `${classes} classes under ${set}: nothing to say`);
   }
 });
 
-test('ответ № 22: the emulator program writes the second dictionary with --classes 3 and refuses another size', async () => {
+test('ответ № 22 and 07.11 № 1: the emulator program writes the second dictionary with --classes 3 in the seven keys and refuses another size', async () => {
   const { spawnSync } = await import('node:child_process');
   const run = (...args) => spawnSync(process.execPath, ['tools/spppr-emulator.mjs', '--fast', '--seconds', '4', '--seed', '3', ...args], { encoding: 'utf8' });
-  const ok = run('--classes', '3');
+  const ok = run('--classes', '3', '--stats');
   assert.equal(ok.status, 0, ok.stderr);
   const lines = ok.stdout.trim().split('\n');
-  assert.ok(lines.length > 100);
-  assert.ok(lines.every(l => { const p = parseSppprPacket(l); return p.ok && p.classes === 3; }));
+  assert.ok(lines.length > 30, `${lines.length} packets in 4 s at the nominal 10 Hz`);
+  assert.ok(lines.every(l => { const p = parseSppprPacket(l); return p.ok && p.classes === 7 && p.p.slice(3).every(v => v === 0); }));
+  assert.match(ok.stderr, /ключей в пакете 7, словарь 2 жеста \+ нейтраль/);
+  const fast = run('--rate', '50');
+  assert.ok(fast.stdout.trim().split('\n').length > 150, 'the faster stream on request');
   const wrong = run('--classes', '5');
   assert.equal(wrong.status, 2);
   assert.match(wrong.stderr, /3 или 7/);

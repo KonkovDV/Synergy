@@ -180,12 +180,14 @@ const recordedGestureSet = r => (r.scheme === 'gesture' ? (GESTURE_SETS[r.gestur
 /** Rows → CSV text with the formula guard of every cell (one separator for every export of the app). */
 export const csvTable = rows => rows.map(row => row.map(csvCell).join(';')).join('\n');
 
+/** The CSV of the runs. 07.11: `peak_a`, `peak_b` — the peak of each channel of a live amplitude stream, shares of the
+ * calibrated span (core/fatigue.js); `stream_classes` — the dictionary of the СПППР, told by the values (answer 1). */
 export function reportCsv(state) {
   const head = ['date', 'game', 'level', 'scheme', 'source', 'retention', 'score', 'stars', 'duration_s', 'difficulty', ...CSV_SKILLS, 'completion_rate', 'selection_ms', 'completion_ms', 'accuracy', 'throughput_bps', 'path_efficiency', 'quick_start', 'thresholds', 'gesture_set', 'prosthesis_side', 'arm_pose', 'unreleased', 'rest_missed', 'cross_on', 'spilled', 'clean_close', 'clean_open',
-    'stream_rate_hz', 'stream_jitter_ms', 'stream_gaps', 'stream_forgiven', 'stream_rejected', 'stream_confidence', 'stream_coactivation', 'stream_classes', 'uses_close', 'uses_open', 'uses_switch', 'signal_issues'];
+    'stream_rate_hz', 'stream_jitter_ms', 'stream_gaps', 'stream_forgiven', 'stream_rejected', 'stream_confidence', 'stream_coactivation', 'stream_classes', 'uses_close', 'uses_open', 'uses_switch', 'peak_a', 'peak_b', 'signal_issues'];
   const rows = realRuns(state).map(r => [r.at, r.game, r.level, r.scheme, r.source, r.retention ? 1 : 0, r.score, r.stars, r.durationS, r.details?.difficulty ?? '',
     ...CSV_SKILLS.map(s => r.skills?.[s] ?? ''), r.details?.completionRate ?? '', r.details?.selectionMs ?? '', r.details?.completionMs ?? '', r.details?.accuracy ?? '', r.details?.throughputBps ?? '', r.details?.pathEfficiency ?? '', r.quick ? 1 : 0, r.thresholds ?? '', recordedGestureSet(r), r.side ?? '', r.pose ?? '', r.details?.unreleased ?? '', r.details?.restMissed ?? '', r.details?.crossings ?? '', r.details?.spilled ?? '', r.details?.cleanClose ?? '', r.details?.cleanOpen ?? '',
-    r.stream?.rateHz ?? '', r.stream?.jitterMs ?? '', r.stream?.gaps ?? '', r.stream?.forgiven ?? '', r.stream?.rejected ?? '', r.stream?.meanConfidence ?? '', r.stream?.coactivation ?? '', r.stream?.classes ?? '', r.uses?.close ?? '', r.uses?.open ?? '', r.uses?.switch ?? '', signalIssuesCode(r.signalIssues)]);
+    r.stream?.rateHz ?? '', r.stream?.jitterMs ?? '', r.stream?.gaps ?? '', r.stream?.forgiven ?? '', r.stream?.rejected ?? '', r.stream?.meanConfidence ?? '', r.stream?.coactivation ?? '', r.stream?.classes ?? '', r.uses?.close ?? '', r.uses?.open ?? '', r.uses?.switch ?? '', r.peaks?.[0] ?? '', r.peaks?.[1] ?? '', signalIssuesCode(r.signalIssues)]);
   return [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
 }
 

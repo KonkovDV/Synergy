@@ -382,6 +382,16 @@ export const trainingDays = profile => Object.values(profile.days ?? {}).filter(
  * Not before «Первые шаги», not on a declared rest day; the retention probe is not a warm-up.
  */
 /**
+ * 07.11 — answer 12 of the experts: the active session is meant to be 5–10 minutes; in about 20 minutes of continuous play
+ * the peak of the signal fell. The exercise that takes today's active play past SESSION.activeMin[1] says so once, gently:
+ * a pause, then as the person feels. Null otherwise, and when a stop is advised already (it says more).
+ */
+export function sessionLengthNote({ secondsToday, runSeconds = 0, stopAdvice = null, maxMin = SESSION.activeMin[1] }) {
+  if (stopAdvice || !(secondsToday >= maxMin * 60) || secondsToday - runSeconds >= maxMin * 60) return null;
+  return `Сегодня уже ${count(Math.floor(secondsToday / 60), FORMS.minutes)} активной игры — ориентир занятия ${SESSION.activeMin[0]}–${maxMin} минут. Сделайте паузу на пару минут; дальше — по самочувствию.`;
+}
+
+/**
  * 5.30 — one more exercise after the plan when today's active play is under SESSION.activeMin[0] minutes (the meetup:
  * 5–10 min a session) and nothing says to stop: no fatigue or cap advice, not a light day. The plan's first exercise —
  * the weakest skill — at its level. Null otherwise: the plan is enough, and resting is always allowed.

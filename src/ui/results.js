@@ -8,7 +8,7 @@ import { questText } from '../core/quests.js';
 import { skillBar, handsFreeText } from './widgets.js';
 import { GAME_BY_ID, PLAN_CATALOG } from '../games/registry.js';
 import { SKILL_NAME, skillKeys, GESTURE_BY_ID } from '../core/vocabulary.js';
-import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest, sessionTopUp, mergeReports } from '../core/progress.js';
+import { ACHIEVEMENTS, SKINS, recordDayNote, dayKey, secondsToday, trainingDays, levelBest, sessionTopUp, sessionLengthNote, mergeReports } from '../core/progress.js';
 import { RestMotion, restMotionAllowed } from '../core/restmotion.js';
 import { difficultyLabel } from '../core/adaptive.js';
 import { adviseStop, EFFORT_LEVELS, checkinLight } from '../core/wellbeing.js';
@@ -156,15 +156,15 @@ export function gripReplaySummary(replay) {
   return parts.join(' ');
 }
 
-/**
- * 5.18 — «Как прошла Мастерская»: a column per object — its green window, the crushing zone above it and a dot where
- * the force was at the outcome (games/grip.js replay). The summary under it says the same in words.
- */
 /** The shared shell of a replay: the game's picture, its drawing, and the same facts in words. */
 function replaySection(gameId, title, pic, note) {
   return h('section', { class: 'card replay' }, h('h2', { class: 'with-art' }, gameArt(gameId, 32), title), pic, h('p', { class: 'note' }, note));
 }
 
+/**
+ * 5.18 — «Как прошла Мастерская»: a column per object — its green window, the crushing zone above it and a dot where
+ * the force was at the outcome (games/grip.js replay). The summary under it says the same in words.
+ */
 function gripReplayCard(replay) {
   if (!replay?.items?.length) return null;
   const W = 320, H = 112, pad = 8, n = replay.items.length, cw = (W - 2 * pad) / n;
@@ -208,15 +208,21 @@ function safeReplayCard(replay) {
 }
 
 /**
+ * Below this share of the motion the overlap of two movements is the change from one to the other, not a habit: the
+ * built-in player, who moves one leg at a time and changes legs without a pause, overlaps 4–10 % (tests/stars.test.mjs).
+ */
+export const MIXED_SAY = 15;
+
+/**
  * «Как прошло созвездие» (pure: tests/stars.test.mjs): the quality of control the organizers ask to show
- * (answers, № 18) in the metrics of a Fitts-type test — stars lit, how straight the path, overshoots, both pairs at once,
- * the glide on a silent link.
+ * (answers, № 18) in the metrics of a Fitts-type test — stars lit, how short the path (one movement at a time), overshoots,
+ * mixed gestures (07.11, answer 4: the СПППР does not recognize them), the glide on a silent link.
  */
 export function starsReplaySummary(r) {
   const parts = [`Звёзд зажжено: ${r.solved} из ${r.total}.`];
-  if (r.pathEfficiency !== null && r.pathEfficiency !== undefined) parts.push(`Путь прямой на ${r.pathEfficiency} %.`);
+  if (r.pathEfficiency !== null && r.pathEfficiency !== undefined) parts.push(`Путь без лишних движений на ${r.pathEfficiency} %.`);
   if (r.solved) parts.push(r.overshoots ? `Проскакивали звезду: ${r.overshoots}.` : 'Ни одной звезды не проскочили.');
-  if (r.simultaneous) parts.push(`Обе пары мышц разом — ${r.simultaneous} % времени движения.`);
+  if (r.mixed >= MIXED_SAY) parts.push(`Две пары разом — ${r.mixed} % времени движения: такой жест система не распознаёт, держите одно движение.`);
   if (r.inertiaMs >= 100) parts.push(`Сигнал пропадал: искра скользила по инерции ${fmtFixed(r.inertiaMs / 1000)} с.`);
   return parts.join(' ');
 }
@@ -290,10 +296,15 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
   const ring = h('i', { class: 'confirm-ring' });
   const today = dayKey();
   // Safety first: signs of fatigue or the daily cap turn «next exercise» into «stop for today».
-  const stopAdvice = stopAdviceApplies({ demo, plan, next }) ? adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs)?.text ?? null : null;
+  const titleOf = id => GAME_BY_ID[id]?.title ?? id;
+  const restAdvice = adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs, titleOf)?.text ?? null;
+  const stopAdvice = stopAdviceApplies({ demo, plan, next }) ? restAdvice : null;
   // 5.30 — under 5 minutes of active play today: one more exercise is offered after the plan (core/progress.js).
-  const topUp = planDone ? sessionTopUp({ plan: app.dailyPlan(), secondsToday: secondsToday(app.profile, today), stopAdvice: adviseStop(app.runsToday(), secondsToday(app.profile, today), app.rules.softCapMin, app.state.runs)?.text ?? null, light: checkinLight(app.checkin()) }) : null;
-  const action = resultsAction({ run, plan, demo, next, stopAdvice, restS: app.rules.restS, titleOf: id => GAME_BY_ID[id]?.title ?? id, pose: run.pose ?? pose });
+  const topUp = planDone ? sessionTopUp({ plan: app.dailyPlan(), secondsToday: secondsToday(app.profile, today), stopAdvice: restAdvice, light: checkinLight(app.checkin()) }) : null;
+  // 07.11 — answer 12: the exercise that takes today past the 10 minutes of a session says so once, gently. A block of
+  // rounds is one exercise: it may cross the line in any of its rounds.
+  const lengthNote = demo ? null : sessionLengthNote({ secondsToday: secondsToday(app.profile, today), runSeconds: block?.activeS ?? run.durationS ?? 0, stopAdvice: restAdvice });
+  const action = resultsAction({ run, plan, demo, next, stopAdvice, restS: app.rules.restS, titleOf, pose: run.pose ?? pose });
   const primary = { label: action.label, go: () => app.go(action.kind, action.params) };
   // The hands-free «дальше» needs sensors: with the on-screen emulator there are no pads on this screen (5.10).
   const handsFree = app.liveSource() !== 'touch';
@@ -359,6 +370,7 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
         // 6.0 — after a few training days, once: an offer to leave feedback (task of 28.10), never a modal
         trainingDays(app.profile) >= 3 && !(app.profile.feedback?.length) && !app.showcase ? h('button', { class: 'btn ghost', onclick: () => app.go('feedback', { from: 'home' }) }, 'Оставить отзыв о тестировании') : null) : null,
       stopAdvice ? h('div', { class: 'card warn-card' }, h('b', { class: 'with-art' }, badgeArt('moon', 28), 'Пора отдохнуть'), h('p', {}, stopAdvice)) : null,
+      lengthNote ? h('p', { class: 'note' }, lengthNote) : null,
       effortCard,
       assessmentCard,
       replayCard(replay),

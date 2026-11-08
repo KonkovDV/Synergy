@@ -30,7 +30,7 @@ export const DEFAULT_SETTINGS = {
   sensitivityB: SIGNAL.onThreshold, // порог открытия, канал B: свой, как в приложении протеза (письменные ответы митапа)
   coThreshold: SIGNAL.coThreshold,
   realism: 0.5,             // шум и перекрёстные помехи эмулятора
-  streamRateHz: STREAM_RATES_HZ[0], // 6.2: пакетов в секунду у экранного эмулятора СПППР — 50 или 10 (частота организаторов, ответ № 24)
+  streamRateHz: STREAM_RATES_HZ[0], // пакетов в секунду у экранного эмулятора СПППР: 10 — номинал потока (ответы 04.11 № 24 и 07.11 № 2), или 50
   sound: true,
   music: true,              // процедурная музыка в «Ритме» (вместе со звуком)
   audioOffsetMs: 0,         // поправка задержки звука, мс (Настройки → «Синхронизация звука»)
@@ -221,8 +221,12 @@ export function cleanStream(s) {
     if (Number.isFinite(v) && v >= 0 && v <= max) out[k] = v;
   }
   if (STREAM_CLASSES.includes(s.classes)) out.classes = s.classes;
+  if (STREAM_CLASSES.includes(s.keys)) out.keys = s.keys; // 07.11: how many keys the packets had (7 by the contract)
   return Number.isFinite(out.packets) ? out : null;
 }
+
+/** 07.11 — the peaks of a run (core/fatigue.js PeakMeter): two shares of the calibrated span, −1…10. */
+const validPeaks = p => Array.isArray(p) && p.length === 2 && p.every(v => Number.isFinite(v) && v >= -1 && v <= 10);
 
 function validRun(r) {
   return isObject(r) && typeof r.game === 'string' && Number.isInteger(r.level) && Number.isFinite(r.score)
@@ -300,6 +304,7 @@ export function parseState(raw, catalog = null) {
     if (r.signalIssues !== undefined) { const { signalIssues, ...rest } = r; r = rest; const kept = cleanSignalIssues(signalIssues); if (kept.length) r.signalIssues = kept; } // 5.30
     if (r.stream !== undefined) { const { stream, ...rest } = r; r = rest; const kept = cleanStream(stream); if (kept) r.stream = kept; } // 6.0
     if (r.uses !== undefined) { const { uses, ...rest } = r; r = rest; const kept = cleanUses(uses); if (kept) r.uses = kept; } // 6.1: channel balance
+    if (r.peaks !== undefined && !validPeaks(r.peaks)) { const { peaks, ...rest } = r; r = rest; } // 07.11: the peaks of the two channels
     if (isObject(r.details)) {
       const details = { ...r.details };
       let dropped = false;
