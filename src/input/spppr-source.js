@@ -39,11 +39,12 @@ export const streamsSpppr = () => STREAM_SET;
 
 export class OnScreenEmulator {
   /** The pads stand in for a СПППР of the dictionary the person chose: three classes for «2 жеста», else seven.
-   *  rateHz — packets a second of that СПППР: the nominal 10 by default (answer 2 of 07.11), or 50. */
-  constructor({ realism = 0.5, seed = 7, driver = null, rateHz = undefined } = {}) {
+   *  rateHz — packets a second of that СПППР: the nominal 10 by default (answer 2 of 07.11), or 50.
+   *  decimals (09.11) — a СПППР that rounds its probabilities and does not fix the sum (tests, `npm run test:tz`). */
+  constructor({ realism = 0.5, seed = 7, driver = null, rateHz = undefined, decimals = null } = {}) {
     this.emg = new EmgEmulator({ realism, seed });
     const classes = streamsSpppr() ? GESTURE_CLASS_ORDER.length : undefined;
-    this.stream = new SppprSource({ driver: driver ?? createSppprDriver({ realism, seed: seed + 1, classes, rateHz }) });
+    this.stream = new SppprSource({ driver: driver ?? createSppprDriver({ realism, seed: seed + 1, classes, rateHz, decimals }) });
   }
   get target() { return this.emg.target; }
   get realism() { return this.emg.realism; }

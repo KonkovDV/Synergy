@@ -83,12 +83,15 @@ export class SppprEmulator {
    * @param {number} [o.classes] the device's dictionary: 7 (the task's states) or 3 («2 gestures + neutral»); its packets
    *   hold the seven keys either way (answer 1 of 07.11)
    * @param {number} [o.rateHz] packets a second: 50 or 10 (6.2, STREAM_RATES_HZ)
+   * @param {number|null} [o.decimals] 09.11 — a device that rounds every probability to 1, 2 or 3 decimals and leaves
+   *   the sum as it falls (question 4 of the checkpoint of 09.11); null — rounded to 0.001 with the sum kept exact
    */
-  constructor({ realism = 0.5, seed = 11, bootMs = null, profile = {}, classes = SPPPR_WIRE.length, rateHz = STREAM_RATES_HZ[0] } = {}) {
+  constructor({ realism = 0.5, seed = 11, bootMs = null, profile = {}, classes = SPPPR_WIRE.length, rateHz = STREAM_RATES_HZ[0], decimals = null } = {}) {
     this.rng = createRng(seed);
     this.overrides = profile;
     this._rateHz = rateHz;
     this.realism = realism;
+    this.decimals = [1, 2, 3].includes(decimals) ? decimals : null;
     const dictionary = sppprDictionary(classes);
     this.classes = dictionary.length;
     /** Class index → the device recognizes it. The rest never get a probability: no production, leak, glitch or noise. */
@@ -233,6 +236,8 @@ export class SppprEmulator {
     const active = p.reduce((s, v, i) => s + (i ? v : 0), 0);
     p[0] = Math.max(0.005, 1 - active);
     const sum = p.reduce((s, v) => s + v, 0);
+    // 09.11 — a device that rounds each probability and does not fix the sum: Σ may miss 1 by up to 7 × half a step.
+    if (this.decimals) { const k = 10 ** this.decimals; return p.map(v => Math.round(k * v / sum) / k); }
     const out = p.map(v => Math.round(1000 * v / sum) / 1000);
     const top = out.indexOf(Math.max(...out));
     out[top] = Math.round(1000 * (out[top] + 1 - out.reduce((s, v) => s + v, 0))) / 1000; // rounding never breaks Σ = 1
@@ -244,7 +249,7 @@ export class SppprEmulator {
     const kinds = [
       () => `{"timestamp_ms": ${ts}, "dist": {"neutral": 0.5, "flexion": 0.5`,                       // cut off
       () => JSON.stringify({ timestamp_ms: ts, dist: { neutral: 1 } }),                               // classes missing
-      () => JSON.stringify(sppprPacket(ts, [0.4, 0.4, 0.4, 0, 0, 0, 0])),                              // Σ ≠ 1
+      () => JSON.stringify(sppprPacket(ts, [0.5, 0.5, 0.5, 0, 0, 0, 0])),                              // Σ ≠ 1, past any rounding (09.11)
       () => JSON.stringify({ timestamp_ms: String(ts), dist: Object.fromEntries(SPPPR_WIRE.map((k, i) => [k, i ? 0 : 1])) }), // time as text
     ];
     return kinds[Math.floor(this.rng() * kinds.length)]();

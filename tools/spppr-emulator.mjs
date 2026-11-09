@@ -8,6 +8,8 @@
 //          07.11 № 2 — the default)
 //          --classes 7|3 (the device's dictionary: the task's seven states, or «2 gestures + neutral» — Q&A of 04.11, № 22;
 //          the packet keeps the seven keys either way, the classes a device does not know at 0 — 07.11, answer 1)
+//          --decimals 1|2|3 (09.11: a device that rounds every probability and leaves the sum as it falls; without the
+//          flag — 0.001 with the sum kept exact)
 //          --script cycle|flexion,extension,… (cycle: every state of the dictionary 2 s, neutral between)  --effort 0..1 (0.7)
 //          --loss 0..1  --malformed 0..1 (broken packets to see the hard contract refuse them)  --reboot-every S
 //          --stats (counters to stderr at the end)
@@ -31,7 +33,9 @@ const classes = Number(opt('classes', SPPPR_WIRE.length));
 if (!sizes.includes(classes)) { console.error(`--classes: ${opt('classes')} — словарь СПППР бывает ${sizes.join(' или ')} классов`); process.exit(2); }
 const rateHz = Number(opt('rate', STREAM_RATES_HZ[0]));
 if (!STREAM_RATES_HZ.includes(rateHz)) { console.error(`--rate: ${opt('rate')} — эмулятор шлёт ${STREAM_RATES_HZ.join(' или ')} пакетов в секунду`); process.exit(2); }
-const emu = new SppprEmulator({ realism, seed: Number(opt('seed', Date.now() % 100000)), profile, classes, rateHz });
+const decimals = opt('decimals') === undefined ? null : Number(opt('decimals'));
+if (decimals !== null && ![1, 2, 3].includes(decimals)) { console.error(`--decimals: ${opt('decimals')} — округление до 1, 2 или 3 знаков`); process.exit(2); }
+const emu = new SppprEmulator({ realism, seed: Number(opt('seed', Date.now() % 100000)), profile, classes, rateHz, decimals });
 const seconds = opt('seconds') === undefined ? Infinity : Number(opt('seconds'));
 const effort = Number(opt('effort', 0.7));
 // The states this device recognizes (its dictionary), as the game names them.
@@ -71,7 +75,7 @@ function finish() {
     const s = check.summary();
     console.error(`пакетов принято ${s.packets}, отклонено ${s.rejected} (${Object.entries(check.stats.errors).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(', ') || 'нет'}), ` +
       `поздних ${s.stale}, обрывов > 200 мс ${s.gaps}, перезапусков МК ${s.reboots}, прощено шумов ${s.forgiven}; ${s.rateHz} пак/с, джиттер ${s.jitterMs} мс, макс. пауза ${s.maxGapMs} мс; ` +
-      `ключей в пакете ${s.keys ?? '—'}, словарь ${dictionaryName(s.classes) ?? '—'}`);
+      `ключей в пакете ${s.keys ?? '—'}, словарь ${dictionaryName(s.classes) ?? '—'}, округление ${check.stats.decimals ? `до ${check.stats.decimals} ${check.stats.decimals === 1 ? 'знака' : 'знаков'}` : 'нет'}`);
   }
 }
 
@@ -81,5 +85,6 @@ function readHelp() {
   --realism 0..1  --seed N  --seconds S  --fast  --script cycle|flexion,extension  --effort 0..1
   --rate 10|50 (пакетов в секунду; 10 — номинал потока, по умолчанию)
   --classes 7|3 (словарь: семь состояний или «2 жеста + нейтраль»; ключей в пакете всегда семь, незнакомые классы — 0)
+  --decimals 1|2|3 (устройство округляет вероятности и не подгоняет сумму; без флага — 0,001, сумма ровно 1)
   --loss 0..1  --malformed 0..1  --reboot-every S  --stats`;
 }

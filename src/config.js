@@ -4,7 +4,7 @@ import { CLOSING_GESTURES } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '6.3.0',
+  version: '6.3.1',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -89,6 +89,12 @@ export const SPPPR = {
   maxSlope: 8,        // axis units per second the extrapolation may use
   uncertainMargin: 0.15, // top-1 minus top-2 below this → «не уверен» on the screen
   sumTolerance: 0.02, // Σ dist outside 1 ± this → the packet is refused (hard contract)
+  // 09.11 (audit before the second checkpoint): a recognizer that rounds every probability to 1 or 2 decimals and leaves
+  // the sum as it falls misses 1 by up to (keys) × half a step — at 2 decimals 7 × 0.005 = 0.035, past ±0.02: 2.3 % of
+  // such packets were refused, at 1 decimal 66 %. When every value of a packet sits on a step of 0.1 or 0.01 the sum may
+  // miss 1 by that bound (core/spppr.js sumToleranceOf); a packet of full precision keeps ±0.02, and a sum no rounding
+  // explains is still refused. The precision of the real stream is question 4 of the checkpoint of 09.11.
+  roundedDecimals: 2,
   rebootBackMs: 1000, // timestamp_ms went back by more → the MCU restarted (its timer counts from power-on)
   clockWindow: 64,    // packets in the clock offset estimate (lower envelope of arrival − timestamp)
   maxChars: 1024,     // a packet is ~170 bytes

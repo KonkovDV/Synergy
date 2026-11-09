@@ -3,6 +3,7 @@
 // 04.11: both dictionaries of the СПППР (Q&A of the organizers, answer 22) — the seven states (tz) and «2 жеста +
 // нейтраль» (tz2). A page load speaks one set, so each set plays in its own process: `--set tz2` plays one of them.
 // 07.11: the main pass runs at the nominal 10 Hz of the stream (answer 2 of the experts), the faster 50 Hz after it.
+// 09.11: and a pass where the СПППР rounds its probabilities to 2 or 1 decimals and does not fix the sum.
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -63,7 +64,22 @@ for (const id of ['grip', 'flight', 'rhythm', 'safe']) {
     } catch (e) { bad.push(`50 Гц ${id} L${L} r${realism}: ${e.message}`); }
   }
 }
+// 09.11 — a СПППР that rounds every probability to 2 or 1 decimals and does not fix the sum (question 4 of the checkpoint
+// of 09.11): every packet taken (the sum may miss 1 by what rounding reaches, core/spppr.js sumToleranceOf), ≥ 2★ on
+// every level of the gesture scheme at the nominal 10 Hz.
+let nRound = 0;
+for (const decimals of [2, 1]) for (const id of ['grip', 'flight', 'rhythm', 'safe']) {
+  const levels = createGame(id, { levelNumber: 1, scheme: 'gesture', seed: 1 }).constructor.levels.length;
+  for (let L = 1; L <= levels; L++) {
+    nRound++;
+    try {
+      const { result, stream } = playStream(id, { scheme: 'gesture', levelNumber: L, realism: 0.5, seed: 1, decimals });
+      if (result.stars < 2 || stream.rejected) bad.push(`округление до ${decimals} знаков: ${id} L${L}: ${result.stars}★ ${result.score}, отклонено пакетов ${stream.rejected}`);
+    } catch (e) { bad.push(`округление до ${decimals} знаков: ${id} L${L}: ${e.message}`); }
+  }
+}
 if (bad.length) { console.error(`${set}:\n${bad.join('\n')}`); process.exit(1); }
 const runs = k => `${k} ${plural(k, ['прохождение', 'прохождения', 'прохождений'])}`;
 console.log(`${set} (${dictionaryName(GESTURE_CLASS_ORDER.length)}), 10 Гц: ${runs(n)} — все уровни четырёх игр в трёх схемах, поток СПППР с джиттером и потерями — не меньше 2★; на плохом потоке СПППР — не меньше 1★${one.length ? ` (1★: ${one.join(', ')})` : ''}`);
 console.log(`${set}, 50 Гц: ${runs(n50)} схемы жестов — не меньше 2★`);
+console.log(`${set}, вероятности округлены до 2 и 1 знака без подгонки суммы: ${runs(nRound)} схемы жестов — не меньше 2★, ни один пакет не отклонён`);

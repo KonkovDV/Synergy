@@ -28,6 +28,15 @@ export function timedShare({ timedS = 0, otherS = 0 } = {}) {
   return total >= 60 ? timedS / total : null;
 }
 
+/**
+ * 09.11 — the same share with the rest between exercises counted as «other mechanics», 0…1, or null under a minute.
+ * Whether the muscles' pause may stay apart is question 6 of the checkpoint of 09.11; the report shows both readings.
+ */
+export function timedShareWithRest({ timedS = 0, otherS = 0, restS = 0 } = {}) {
+  const total = timedS + otherS + restS;
+  return total >= 60 ? timedS / total : null;
+}
+
 /** Whether a share is in the band of the task, under it or over it. */
 export function shareVerdict(share, [lo, hi] = TIME_SHARE.target) {
   if (share === null || !Number.isFinite(share)) return 'unknown';
@@ -47,5 +56,5 @@ export function referenceSession(exerciseS, { introS = 8, resultsS = 12, restS =
   const timed = exerciseS.reduce((s, v) => s + v, 0);
   const other = homeS + exerciseS.length * (introS + resultsS) + extraS;
   const rest = Math.max(0, exerciseS.length - 1) * restS;
-  return { timedS: timed, otherS: other, restS: rest, share: timed / (timed + other) };
+  return { timedS: timed, otherS: other, restS: rest, share: timed / (timed + other), shareWithRest: timed / (timed + other + rest) };
 }

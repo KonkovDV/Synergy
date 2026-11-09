@@ -40,7 +40,10 @@ export function onboardingScreen(app, { safety = false } = {}) {
       h('p', { class: 'lead' }, 'Несколько вопросов — и можно начинать.')),
       h('p', {}, 'Как вы управляете протезом?'),
       segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { s.scheme = v; }, 'Схема управления'),
-      h('p', { class: 'note' }, 'Не уверены — выберите «Пропорциональный». Режим можно сменить в настройках.'),
+      // 09.11 — the advice named one scheme for everyone, while the organizers' reference is the threshold EMG of «Инди» and
+      // «Манифесто» (written answers of 23.10). Which scheme a beginner starts with is question 2 of the checkpoint of 09.11;
+      // until the answer the note sends the person to their own prosthesis.
+      h('p', { class: 'note' }, 'Выберите ту же схему, что у вашего протеза, — её знает протезист. Сменить можно в настройках.'),
       h('p', {}, 'На какой руке протез?'),
       segmented([{ value: 'right', label: 'Правая' }, { value: 'left', label: 'Левая' }], s.side, v => { s.side = v; }, 'Рука с протезом'),
       h('p', {}, 'Протез уже есть?'),

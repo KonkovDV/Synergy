@@ -68,13 +68,37 @@ const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const refuse = (error, detail) => ({ ok: false, error, ...(detail !== undefined ? { detail: String(detail).slice(0, 32) } : {}) });
 
 /**
+ * 09.11 — the step every value sits on: 1 for 0.7 and 0.1, 2 for 0.65 and 0.05 (0 and 1 count as 1), up to `max`
+ * decimals; null when a value is finer — a packet of full precision. Floating-point noise (0.07 × 100 = 7.000000000000001)
+ * is not a decimal.
+ */
+export function roundingDecimals(values, max = SPPPR.roundedDecimals) {
+  for (let d = 1; d <= max; d++) {
+    const k = 10 ** d;
+    if (values.every(v => Math.abs(v * k - Math.round(v * k)) < 1e-6)) return d;
+  }
+  return null;
+}
+
+/**
+ * 09.11 — how far Σ dist may miss 1. A sender that rounds each of n values to d decimals and does not fix the sum misses
+ * it by at most n × ½ · 10^−d (7 keys: 0.035 at 2 decimals, 0.35 at 1); a packet of full precision — `sumTolerance`
+ * (±0.02). Never below that: rounding loosens the check only as far as rounding can reach.
+ */
+export function sumToleranceOf(values, params = SPPPR) {
+  const d = roundingDecimals(values, params.roundedDecimals ?? 0);
+  return d === null ? params.sumTolerance : Math.max(params.sumTolerance, values.length * 0.5 / 10 ** d + 1e-9);
+}
+
+/**
  * The hard contract of the task. A string (one JSON object) or an already parsed object. Returns
  * { ok: true, ts, p, classes } — p: the seven probabilities in class order, normalized by their sum, 0 for a class the
  * packet's dictionary does not have; classes: the size of that dictionary (3 or 7) — or { ok: false, error, detail }.
  * The keys of `dist` must be exactly one dictionary (SPPPR_DICTIONARIES): a key of none is 'unknown'; otherwise the
  * smallest dictionary holding every key decides, and the first of its keys the packet lacks is 'missing'. Extra
  * top-level fields are ignored (a later firmware may add a sequence number); a value outside 0…1 or a sum outside
- * 1 ± sumTolerance refuse the packet.
+ * 1 ± sumTolerance refuse the packet — 09.11: ± what rounding can reach when every value sits on a step of 0.1 or 0.01
+ * (sumToleranceOf); `decimals` says which step (null — full precision).
  */
 export function parseSppprPacket(input, params = SPPPR) {
   let data = input;
@@ -92,15 +116,17 @@ export function parseSppprPacket(input, params = SPPPR) {
   // The full dictionary holds every known key, so there is always one.
   const dictionary = SPPPR_DICTIONARIES.find(d => keys.every(k => d.includes(k)));
   const p = SPPPR_WIRE.map(() => 0);
+  const values = [];
   for (const key of dictionary) {
     if (!Object.hasOwn(dist, key)) return refuse('missing', key);
     const v = dist[key];
     if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1) return refuse('value', key);
     p[SPPPR_WIRE.indexOf(key)] = v;
+    values.push(v);
   }
   const sum = p.reduce((s, v) => s + v, 0);
-  if (Math.abs(sum - 1) > params.sumTolerance) return refuse('sum');
-  return { ok: true, ts, p: p.map(v => v / sum), classes: dictionary.length };
+  if (Math.abs(sum - 1) > sumToleranceOf(values, params)) return refuse('sum');
+  return { ok: true, ts, p: p.map(v => v / sum), classes: dictionary.length, decimals: roundingDecimals(values, params.roundedDecimals ?? 0) };
 }
 
 /**
@@ -144,10 +170,12 @@ export class McuClock {
 // classes — the dictionary of the stream (3 or 7), null before the first packet: the keys of the last packet, and for the
 // seven keys of the contract the classes that had a probability (07.11, answer 1 — see DICTIONARY_MIN_PACKETS).
 // keys — how many keys the last packet's `dist` had; outside — a class the smaller dictionary lacks had a probability.
+// decimals (09.11) — the step the last packet's values sat on (1 or 2 decimals), null for full precision.
 const blankStats = () => ({
   received: 0, accepted: 0, rejected: 0, stale: 0, reboots: 0, gaps: 0, forgiven: 0, switches: 0,
   errors: Object.fromEntries(SPPPR_ERRORS.map(e => [e, 0])), lastError: null,
   intervals: [], maxGapMs: 0, confidenceSum: 0, confidenceN: 0, coactSum: 0, coactN: 0, classes: null, keys: null, outside: false,
+  decimals: null,
 });
 
 const median = list => { if (!list.length) return null; const s = [...list].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -252,6 +280,7 @@ export class SppprDecoder {
     this.lastText = typeof input === 'string' ? input : JSON.stringify(input);
     st.accepted++;
     st.keys = pk.classes;
+    st.decimals = pk.decimals ?? null;
     if (pk.classes === SPPPR_WIRE.length && OUTSIDE_SMALL.some(i => pk.p[i] > 0)) st.outside = true;
     const small = SPPPR_DICTIONARIES[0].length;
     st.classes = pk.classes === small || (!st.outside && st.accepted >= DICTIONARY_MIN_PACKETS) ? small : SPPPR_WIRE.length;

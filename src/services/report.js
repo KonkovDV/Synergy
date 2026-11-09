@@ -8,18 +8,22 @@ import { skillProfile, playerLevel, shiftDay, dayKey } from '../core/progress.js
 import { everydayDays } from '../core/everyday.js';
 import { confusionMatrix, assessmentHistory, completionChange } from '../core/analytics.js';
 import { PAIN_LEVELS, FATIGUE_LEVELS, SKIN_LEVELS, EFFORT_LEVELS, checkinLight } from '../core/wellbeing.js';
-import { sumTime, timedShare, shareVerdict } from '../core/timeshare.js';
+import { sumTime, timedShare, timedShareWithRest, shareVerdict } from '../core/timeshare.js';
 import { susScore, tlxScore } from '../core/survey.js';
 import { dictionaryName } from '../core/spppr.js';
 import { balanceByGame } from '../core/channeluse.js';
 import { SIDE_NAME } from '../core/hands.js';
 import { TIME_SHARE, CHANNEL_BALANCE } from '../config.js';
 
-/** 6.0 — the time of the period by kind (core/timeshare.js) and the share of the task's band. */
+/**
+ * 6.0 — the time of the period by kind (core/timeshare.js) and the share of the task's band. 09.11: `shareWithRest` — the
+ * same share with the rest between exercises counted in, shown beside it (both readings of the task stay visible).
+ */
 export function timeShareOf(profile, keys) {
   const t = sumTime(profile.days ?? {}, keys);
-  const share = timedShare(t);
-  return { timedMin: Math.round(t.timedS / 6) / 10, otherMin: Math.round(t.otherS / 6) / 10, restMin: Math.round(t.restS / 6) / 10, share: share === null ? null : Math.round(share * 100), verdict: shareVerdict(share) };
+  const share = timedShare(t), withRest = timedShareWithRest(t);
+  return { timedMin: Math.round(t.timedS / 6) / 10, otherMin: Math.round(t.otherS / 6) / 10, restMin: Math.round(t.restS / 6) / 10, share: share === null ? null : Math.round(share * 100),
+    shareWithRest: withRest === null ? null : Math.round(withRest * 100), verdict: shareVerdict(share) };
 }
 
 export const DISCLAIMER = 'Тренажёр, не медицинское изделие. Игровая статистика без клинической валидации: не для оценки состояния, подбора нагрузки или решений о лечении. Не медицинская документация и не согласие на обработку персональных данных.';
@@ -110,8 +114,10 @@ export function protocolMetrics(state, today = dayKey()) {
 /** Rows of the protocol table in the report: hypothesis, what the app counted. */
 export function protocolRows(m) {
   const win = (w, n) => (w ? `${w.trained} из ${n}${w.complete ? '' : ' — период ещё идёт'}` : 'тренировок ещё не было');
+  // 6.3.1: the difference compared with the error is the corrected one (Agresti–Caffo) — it is named next to the verdict.
+  const adjusted = m.check.change?.adjusted ?? m.check.change?.delta;
   const check = m.check.change
-    ? `${m.check.first} % → ${m.check.last} % (проверок: ${m.check.count}): ${m.check.change.real ? 'больше' : 'в пределах'} погрешности ±${m.check.change.mdc} п. п.`
+    ? `${m.check.first} % → ${m.check.last} % (проверок: ${m.check.count}): с поправкой на число попыток ${adjusted > 0 ? '+' : adjusted < 0 ? '−' : ''}${Math.abs(adjusted)} п. п. — ${m.check.change.real ? 'больше' : 'в пределах'} погрешности ±${m.check.change.mdc} п. п.`
     : m.check.count >= 2 ? 'в проверках нет числа попыток (до 5.18)' : `проверок: ${m.check.count} — для сравнения нужны две`;
   return [
     ['H1. Дни с тренировкой: первые 7 дней', win(m.week1, 7)],
@@ -235,9 +241,9 @@ ${table(['Схема управления', 'Сторона', 'Протез', '�
   [[SCHEME_INFO[s.scheme]?.name ?? s.scheme, s.side === 'left' ? 'левая' : 'правая', s.prosthesis === 'waiting' ? 'ожидает' : 'есть', runs.length, period.minutes, Math.round(p.totals.seconds / 60), playerLevel(p.xp).level, `${p.streak.current} (${p.streak.best})`]])}
 <p class="muted">Полнота периода: дней — ${period.days}; с тренировкой — ${period.trained}; день отдыха (боль, кожа) — ${period.rest}; без данных — ${period.empty}. «Дело дня в быту» отмечено в ${period.everyday} дн. — это самоотчёт человека, не измерение.</p>
 <h2>Время занятий: игра с таймингом и другие механики</h2>
-${table(['Игра с таймингом, мин', 'Другие механики, мин', 'Отдых между упражнениями, мин', 'Доля игры с таймингом', 'Ориентир ТЗ'],
-  [[time.timedMin, time.otherMin, time.restMin, time.share === null ? 'мало данных' : `${time.share} %`, `${Math.round(TIME_SHARE.target[0] * 100)}–${Math.round(TIME_SHARE.target[1] * 100)} %`]])}
-<p class="muted">«Игра с таймингом» — упражнение идёт и сигнал жив: каждую секунду нужно включиться, переключиться или удержать. «Другие механики» — заставки и итоги, отсчёт, главная, гнездо Жар-птицы, «Азбука», цели. Отдых между упражнениями — пауза для мышц, в долю не входит. Ниже ориентира — занятие больше уходит на меню; выше — меньше пауз, стоит следить за усталостью.</p>
+${table(['Игра с таймингом, мин', 'Другие механики, мин', 'Отдых между упражнениями, мин', 'Доля игры с таймингом', 'Доля, если считать отдых', 'Ориентир ТЗ'],
+  [[time.timedMin, time.otherMin, time.restMin, time.share === null ? 'мало данных' : `${time.share} %`, time.shareWithRest === null ? 'мало данных' : `${time.shareWithRest} %`, `${Math.round(TIME_SHARE.target[0] * 100)}–${Math.round(TIME_SHARE.target[1] * 100)} %`]])}
+<p class="muted">«Игра с таймингом» — упражнение идёт и сигнал жив: каждую секунду нужно включиться, переключиться или удержать. «Другие механики» — заставки и итоги, отсчёт, главная, гнездо Жар-птицы, «Азбука», цели. Отдых между упражнениями — пауза для мышц: в основную долю он не входит, в соседнем столбце — доля, если считать и его. Ниже ориентира — занятие больше уходит на меню; выше — меньше пауз, стоит следить за усталостью.</p>
 ${balance.total ? `<h2>Баланс каналов A и B</h2>
 ${table(['Игра', 'Упражнений', 'Сжатие (A), раз', 'Раскрытие (B), раз', 'Коактивация, раз', 'Доля A по командам', 'Доля A по времени', 'Перекос'],
   [...balance.rows, balance.total].map(b => [b.game === null ? 'Все игры' : gameTitle(b.game), b.runs, b.close, b.open, b.switch,

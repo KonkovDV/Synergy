@@ -52,9 +52,29 @@ function fakeApk(subject, bytes = 0) {
 }
 const git = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=gate', '-c', 'user.email=gate@test', ...args], { cwd, encoding: 'utf8' });
 
+/**
+ * The files of the repository: what git tracks and what it would track. 09.11 — a copy without .git (an archive unpacked
+ * by hand, not tools/pack.sh) failed five tests of this file on «not a git repository»; it is listed by its .gitignore
+ * through a throwaway git directory, as the gate does (tools/check-submission.mjs `trackedFiles`).
+ */
+function repoFiles() {
+  try {
+    // the prefix is empty exactly at the root of the work tree (no path comparison: Windows spells paths its own way)
+    const prefix = execFileSync('git', ['rev-parse', '--show-prefix'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    if (prefix === '') return git(root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard').split('\0');
+  } catch { /* not a work tree: below */ }
+  const scratch = mkdtempSync(join(tmpdir(), 'synergy-files-'));
+  try {
+    git(scratch, 'init', '-q');
+    return execFileSync('git', ['--git-dir', join(scratch, '.git'), '--work-tree', root, 'ls-files', '-z', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8' }).split('\0');
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
+
 function copyRepo() {
   const dir = mkdtempSync(join(tmpdir(), 'synergy-gate-'));
-  const files = git(root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard').split('\0')
+  const files = repoFiles()
     .filter(f => f && !/\.(png|pptx|mp4)$/.test(f) && existsSync(join(root, f)) && lstatSync(join(root, f)).isFile()); // no symlinks (node_modules)
   for (const f of files) { mkdirSync(dirname(join(dir, f)), { recursive: true }); copyFileSync(join(root, f), join(dir, f)); }
   copyRelease(dir);
@@ -225,6 +245,24 @@ test('submission gate (audit 06.11, F5): a shallow clone says its history is cut
   } finally {
     rmSync(dir, { recursive: true, force: true });
     rmSync(cut, { recursive: true, force: true });
+  }
+});
+
+test('submission gate (09.11): a folder without .git is checked by its .gitignore, and the unchecked history is named', () => {
+  const dir = copyRepo();
+  try {
+    rmSync(join(dir, '.git'), { recursive: true, force: true });
+    const r = gate(dir);
+    assert.equal(r.status, 0, r.stdout);
+    assert.match(r.stdout, /нет истории git/);
+    assert.doesNotMatch(r.stdout, /первый коммит/, 'no history — no date of a first commit');
+    // The checks of the files still run there: a planted overstated claim fails the gate.
+    edit(dir, 'README.md', s => `${s}\n${OVERSTATED}\n`);
+    const planted = gate(dir);
+    assert.equal(planted.status, 1, planted.stdout);
+    assert.ok(planted.stdout.includes('README.md:'), planted.stdout);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 

@@ -218,6 +218,16 @@
 | `input/spppr-source.js` | `OnScreenEmulator.rateHz` — смена частоты начинает счётчики потока заново | — |
 | `tools/screencast.mjs`, `tools/screencast-plan.mjs` | скринкаст: запись телефона 430 × 932, сцена 1920 × 1080 в ffmpeg, `.srt` и главы; раскадровка — данные, проверяемые тестом | новая сцена — строка в `SCENES` и действие в `ACT` |
 
+### v6.3.1 — аудит 09.11 перед вторым чек-пойнтом
+
+| Где | Что | Точка расширения |
+|---|---|---|
+| `core/spppr.js` | `roundingDecimals(values)` — шаг значений пакета (1–2 знака или полная точность); `sumToleranceOf(values)` — сколько сумма `dist` может отличаться от 1 при таком шаге; `stats.decimals` у декодера | другой предел округления — `SPPPR.roundedDecimals` (`config.js`) |
+| `input/spppr-emulator.js`, `input/spppr-source.js` | `decimals` — устройство, которое округляет и не подгоняет сумму; по умолчанию прежний «аккуратный» поток | — |
+| `core/timeshare.js`, `services/report.js` | `timedShareWithRest`, `referenceSession().shareWithRest`, `timeShareOf().shareWithRest` — доля игры с таймингом, если считать отдых | — |
+| `core/analytics.js`, `ui/progress.js`, `services/report.js` | `completionChange()` — интервал Агрести — Каффо целиком: `adjusted` (сравниваемая разница) рядом с `delta` (сырой); `errorText()`, `signedPoints()` и строка протокола в отчёте называют `adjusted` | другой метод сравнения проверок — одна функция `completionChange`, тест-свойство ошибки I рода в `tests/v631.test.mjs` |
+| `tools/check-submission.mjs`, `tests/submission.test.mjs` | `trackedFiles()` / `repoFiles()` — без `.git` файлы по `.gitignore` через временный каталог git, история не проверяется | — |
+
 ### v6.3.0 — ответы экспертов 07.11
 
 | Где | Что | Точка расширения |

@@ -33,7 +33,7 @@ test('protocol metrics: training days in the first 7 and 14 days, quick starts, 
   const rows = protocolRows(m);
   assert.deepEqual(rows.map(r => r[0].slice(0, 2)), ['H1', 'H1', 'H2', 'H3', 'H5', 'H5', 'H5']); // 5.27: pain that stopped an exercise
   assert.match(rows[2][1], /^2 из 7 упражнений; дней — 2$/);
-  assert.match(rows[3][1], /^50 % → 100 % \(проверок: 2\): больше погрешности ±\d+ п\. п\.$/);
+  assert.match(rows[3][1], /^50 % → 100 % \(проверок: 2\): с поправкой на число попыток \+40 п\. п\. — больше погрешности ±\d+ п\. п\.$/);
   assert.match(rows[3][0], /Пропорц\./, 'the comparison is of one scheme, and the row names it');
   st.profile.days['2026-11-01'] = { runs: 5, seconds: 10 };
   assert.equal(protocolMetrics(st, '2026-10-20').week2.trained, 5, 'a day after today does not count');

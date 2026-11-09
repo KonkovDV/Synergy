@@ -48,9 +48,14 @@ test('skill check: a change counts only when it is larger than the error of n pa
 
 test('skill check: the words of the error — no praise for noise, a fall points at the sensors and the day, not the person', () => {
   assert.equal(errorText(null), '');
-  assert.match(errorText({ delta: 25, mdc: 42, real: false }), /в пределах погрешности проверки \(±42 п\. п\.\): пока нельзя сказать, что навык изменился/);
-  assert.match(errorText({ delta: 75, mdc: 40, real: true }), /Рост выполненных больше погрешности проверки \(±40 п\. п\.\)/);
-  assert.match(errorText({ delta: -60, mdc: 40, real: true }), /проверьте датчики и самочувствие/);
+  assert.match(errorText({ delta: 25, adjusted: 20, mdc: 42, real: false }), /разница \+20 п\. п\. — в пределах погрешности проверки \(±42 п\. п\.\): пока нельзя сказать, что навык изменился/);
+  assert.match(errorText({ delta: 75, adjusted: 60, mdc: 40, real: true }), /С поправкой на малое число попыток разница \+60 п\. п\. — больше погрешности проверки \(±40 п\. п\.\): скорее всего, навык действительно вырос/);
+  assert.match(errorText({ delta: -60, adjusted: -48, mdc: 40, real: true }), /разница −48 п\. п\. — больше погрешности проверки \(±40 п\. п\.\): выполненных стало меньше — проверьте датчики и самочувствие/);
+  // 6.3.1: the sentence names the difference that is compared — never «+38» next to «within ±36».
+  const borderline = completionChange({ completionRate: 63, trials: 8 }, { completionRate: 100, trials: 8 });
+  assert.equal(borderline.real, false, '5 of 8 → 8 of 8: +37 raw, +30 corrected, within ±36');
+  assert.match(errorText(borderline), new RegExp(`разница \\+${borderline.adjusted} п\\. п\\. — в пределах погрешности проверки \\(±${borderline.mdc} п\\. п\\.\\)`));
+  assert.ok(borderline.adjusted < borderline.mdc && borderline.delta > borderline.mdc, 'the raw difference alone would have been called a growth');
 });
 
 test('«Сейф»: the replay — every digit of the code, the slowest one, the pair the prosthesis mixed up', () => {

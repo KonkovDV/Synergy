@@ -81,12 +81,19 @@ function trendText(checks) {
   return parts.length ? `С первой проверки${b.scheme && SCHEME_INFO[b.scheme] ? ` (${SCHEME_INFO[b.scheme].abbr})` : ''}: ${parts.join(', ')}.${errorText(completionChange(a, b))}${moved ? ' Чувствительность менялась — сравнение приблизительное.' : ''}` : '';
 }
 
-/** 5.18 — the measurement error of the check in words (core/analytics.js `completionChange`). */
+/**
+ * 5.18 — the measurement error of the check in words (core/analytics.js `completionChange`). 6.3.1: the sentence names the
+ * difference that is compared with the error — corrected for the few trials (Agresti–Caffo) — so «+38 → within ±36» is
+ * never on the screen: 62 % → 100 % is +30 points with the correction.
+ */
+export const signedPoints = v => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)} п. п.`;
 export function errorText(change) {
   if (!change) return '';
-  if (!change.real) return ` Разница выполненных — в пределах погрешности проверки (±${change.mdc} п. п.): пока нельзя сказать, что навык изменился.`;
-  return change.delta > 0 ? ` Рост выполненных больше погрешности проверки (±${change.mdc} п. п.): скорее всего, навык действительно вырос.`
-    : ` Выполненных меньше, и это больше погрешности (±${change.mdc} п. п.): проверьте датчики и самочувствие.`;
+  const diff = change.adjusted ?? change.delta;
+  const corrected = `С поправкой на малое число попыток разница ${signedPoints(diff)}`;
+  if (!change.real) return ` ${corrected} — в пределах погрешности проверки (±${change.mdc} п. п.): пока нельзя сказать, что навык изменился.`;
+  return diff > 0 ? ` ${corrected} — больше погрешности проверки (±${change.mdc} п. п.): скорее всего, навык действительно вырос.`
+    : ` ${corrected} — больше погрешности проверки (±${change.mdc} п. п.): выполненных стало меньше — проверьте датчики и самочувствие.`;
 }
 
 function sparkline(values) {

@@ -2,11 +2,12 @@
 // Usage: npm run check:submission            — strict (before upload to the platform)
 //        node tools/check-submission.mjs --draft — CI: AUTHORS.md may still be a draft (warning)
 //        --no-tests — skip running the suite (only for the gate's own test: tests/submission.test.mjs)
-import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { NUMBER_DOCS, RUN_DOCS, TEST_COUNT, APK_SIZE } from './number-docs.mjs';
 import { apkSigner } from './apk-signer.mjs';
 import { checkSupplyChain } from './supply-chain.mjs';
@@ -98,8 +99,29 @@ for (const doc of NUMBER_DOCS) {
 
 // -z: without it git quotes names outside ASCII («"docs/\320…md"»), and such a file escaped every check below.
 // -t: «S» marks a file the sparse checkout of the archive left out on purpose (tools/pack.sh) — it is not missing.
-const tracked = execFileSync('git', ['ls-files', '-z', '-t'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean)
-  .filter(e => !e.startsWith('S ')).map(e => e.slice(2));
+// 09.11 — a copy without .git (an archive unpacked by hand, not tools/pack.sh) crashed here, and `npm test` showed five
+// failures of this gate's own tests. Without a work tree the files are the ones the repository would track: its
+// .gitignore read by git through a throwaway git directory. The checks of the history are then skipped with a word.
+function trackedFiles() {
+  try {
+    // A copy unpacked inside another repository is not that repository: its files are untracked there. The prefix of the
+    // work tree is empty exactly at its root — no path comparison (drive letters and slashes differ on Windows).
+    const prefix = execFileSync('git', ['rev-parse', '--show-prefix'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    if (prefix !== '') throw new Error('not the root of a repository');
+    return { history: true, files: execFileSync('git', ['ls-files', '-z', '-t'], { cwd: root, encoding: 'utf8' })
+      .split('\0').filter(Boolean).filter(e => !e.startsWith('S ')).map(e => e.slice(2)) };
+  } catch {
+    const scratch = mkdtempSync(join(tmpdir(), 'synergy-gate-'));
+    try {
+      execFileSync('git', ['init', '-q', scratch]);
+      const files = execFileSync('git', ['--git-dir', join(scratch, '.git'), '--work-tree', root, 'ls-files', '-z', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8' })
+        .split('\0').filter(Boolean);
+      return { history: false, files };
+    } finally { rmSync(scratch, { recursive: true, force: true }); }
+  }
+}
+const { history, files: tracked } = trackedFiles();
+if (!history) warn('нет истории git (папка без .git): файлы взяты по .gitignore, история не проверяется — для сдачи соберите архив npm run pack, в нём история');
 // Build outputs must not be tracked: the archive excludes them and the receiver rebuilds (dist/ hole of 5.1.0).
 // 5.17: the release APK and HTML too — built by tools/build-apk.sh, carried by the archive, ≈ 4 MB of history a release.
 const builds = tracked.filter(f => /^(dist|android\/build|node_modules|tools\/\.cache)\//.test(f) || /^release\/.*\.(apk|html)$/.test(f));
@@ -199,9 +221,9 @@ for (const m of checkSupplyChain(root)) fail(`цепочка поставки: $
 if (tracked.some(f => /customer\/rules\./.test(f))) fail('текст правил организатора в репозитории (п. 5.5) — только ссылка и цитаты в docs/TASK.md');
 // A shallow clone (`git clone --depth`, a CI checkout) has no first commit — its oldest commit is
 // where the clone was cut, and the warning named that date (26.10) instead of the real 17.10.
-const shallow = execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: root, encoding: 'utf8' }).trim() === 'true';
+const shallow = history && execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: root, encoding: 'utf8' }).trim() === 'true';
 if (shallow) warn('история git неполная (shallow clone): дату первого коммита не проверить — git fetch --unshallow');
-else {
+else if (history) {
   const firstCommit = execFileSync('git', ['log', '--reverse', '--format=%cs', '--max-parents=0'], { cwd: root, encoding: 'utf8' }).trim().split('\n')[0];
   if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md; ответ организатора на вопрос PLAN 0.6 записать в MEMORY.md`);
 }

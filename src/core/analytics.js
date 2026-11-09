@@ -49,12 +49,20 @@ export function assessmentHistory(runs, scheme = null, last = 8) {
  * 1.96 standard errors (the minimal-detectable-change idea — Maas et al. 2024: the success share is the reliable
  * metric of a check). Agresti–Caffo: one success and one failure added to each check, so 0 % and 100 % still carry
  * an error. With 8 trials a change has to pass 30–45 points — the screen says so instead of praising noise.
- * @returns {{ delta: number, mdc: number, real: boolean } | null} points of percent
+ * 6.3.1 (audit of 09.11) — the Agresti–Caffo interval compares the *adjusted* difference p̃₂ − p̃₁ with that error (Agresti
+ * & Caffo 2000, Am Stat 54:280): the added success and failure move the estimate, not only the variance. Until 6.3.1 the
+ * raw difference was compared — anti-conservative at the sizes of a check: with the same skill in both checks the
+ * screen called a change in 14.6 % of pairs at 6 trials and 8.2 % at 8 (exact enumeration over the binomial outcomes),
+ * against the nominal 5 %; the interval of the paper keeps it at most 6.4 %. `delta` — the raw change the person sees
+ * (62 % → 100 %), `adjusted` — the compared one, both in points of percent.
+ * @returns {{ delta: number, adjusted: number, mdc: number, real: boolean } | null} points of percent
  */
 export function completionChange(a, b) {
   if (!Number.isFinite(a?.completionRate) || !Number.isFinite(b?.completionRate) || !a.trials || !b.trials) return null;
-  const variance = (rate, n) => { const p = (rate / 100 * n + 1) / (n + 2); return p * (1 - p) / (n + 2); };
+  const adjust = (rate, n) => (rate / 100 * n + 1) / (n + 2); // p̃ = (completed + 1)/(n + 2)
+  const variance = (rate, n) => { const p = adjust(rate, n); return p * (1 - p) / (n + 2); };
   const mdc = 1.96 * Math.sqrt(variance(a.completionRate, a.trials) + variance(b.completionRate, b.trials));
   const delta = (b.completionRate - a.completionRate) / 100;
-  return { delta: Math.round(delta * 100), mdc: Math.round(mdc * 100), real: Math.abs(delta) > mdc };
+  const adjusted = adjust(b.completionRate, b.trials) - adjust(a.completionRate, a.trials);
+  return { delta: Math.round(delta * 100), adjusted: Math.round(adjusted * 100), mdc: Math.round(mdc * 100), real: Math.abs(adjusted) > mdc };
 }

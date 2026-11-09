@@ -26,7 +26,7 @@
 |---|---|---|
 | `synergy:ready` | первый экран открыт; повторно — в ответ на `synergy-ping` | `onboarded` — пройдено ли знакомство с безопасностью; `games` — `[{ id, title, levels }]`: что можно запустить (с 5.30 — и «Две руки», `duo`); `gestures` — `{ set, classes }`: набор жестов и порядок классов, в котором игра ждёт массив вероятностей (5.30) |
 | `synergy:result` | каждое упражнение (кроме демо автопилота) | `at`, `game`, `level`, `scheme`, `retention`, `score`, `stars`, `durationS`, `skills`; на внешнем источнике — `channels` (6.1) |
-| `synergy:settings` | 06.11: изменились пороги, сторона или «Пороги как у протеза» (через 0,6 с после ползунка); перед `synergy:close` | `side`, `sensitivity`, `prosthesisThresholds`; на внешнем источнике — `channels` (`docs/INTEGRATION.md`, «Настройки обратно») |
+| `synergy:settings` | 06.11: изменились пороги, сторона или «Пороги как у протеза» (через 0,6 с после ползунка); перед `synergy:close` | `side`, `sensitivity`, `prosthesisThresholds`; на внешнем источнике — `channels` (`docs/INTEGRATION.md`, «Настройки обратно»). `sensitivity` — порог игры в долях калибровки, не «чувствительность датчика» протеза (6.3.1, `docs/INTEGRATION.md`) |
 | `synergy:close` | человек закончил: «Вернуться в приложение» на итогах (`reason: "done"`) или «Назад» на главной «Синергии» (`reason: "back"`) | `reason` |
 
 **Хост → игра.**
