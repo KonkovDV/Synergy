@@ -3,11 +3,13 @@ doc, docx or txt, readable and copyable (message of 10.11). Built by code from t
 deck: the source of truth stays in git (Markdown), the .docx files are rebuilt from it.
 
   submission/TECH_DOCS.md + docs/ARCHITECTURE.md (the principles) + docs/INTEGRATION.md + docs/TZ_COMPLIANCE.md
-  + LIMITS.md                                    → Synergy-<version>-техническая-документация.docx
-  submission/AI_REPORT.md                        → Synergy-<version>-отчёт-об-ИИ.docx
+  + LIMITS.md                                    → Synergy-<version>-tech-docs.docx
+  submission/AI_REPORT.md                        → Synergy-<version>-ai-report.docx
 
-Usage: python3 tools/build-docs.py [OUT_DIR]   (needs pandoc and python-docx; default: ../Synergy-<version>-документы)
-The .docx files stay outside git.
+Usage: python3 tools/build-docs.py [OUT_DIR]   (needs pandoc and python-docx; default: submission/)
+6.3.4: the .docx files of the build are kept in submission/ — the team uploads them to the platform, and the jury finds
+them in the repository beside their Markdown sources. Latin names: a file name outside ASCII is quoted by git and
+mangled by some upload forms. The files of an earlier version are removed (the gate refuses them).
 """
 from __future__ import annotations
 
@@ -26,7 +28,7 @@ from docx.shared import Pt, RGBColor, Cm
 
 ROOT = Path(__file__).resolve().parent.parent
 VERSION = json.loads((ROOT / "package.json").read_text("utf-8"))["version"]
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / f"Synergy-{VERSION}-документы"
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "submission"
 INK, ACCENT, HEAD_FILL = RGBColor(0x0B, 0x1D, 0x2B), RGBColor(0x0E, 0x7A, 0x55), "E8F7F0"
 FONT = "Arial"
 
@@ -152,13 +154,17 @@ def polish(path: Path, subtitle: str) -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
+    for old in OUT.glob("Synergy-*-tech-docs.docx"):
+        old.unlink()
+    for old in OUT.glob("Synergy-*-ai-report.docx"):
+        old.unlink()
     built = []
-    tech = OUT / f"Synergy-{VERSION}-техническая-документация.docx"
+    tech = OUT / f"Synergy-{VERSION}-tech-docs.docx"
     # No field TOC: Word shows it empty until the fields are updated; the source carries a line of contents instead.
     pandoc(tech_markdown(), tech, f"«Синергия» {VERSION} — техническая документация", toc=False)
     polish(tech, f"Игра-тренажёр управления бионическим протезом по ЭМГ. Сборка {VERSION}. Собрано из репозитория: tools/build-docs.py")
     built.append(tech)
-    ai = OUT / f"Synergy-{VERSION}-отчёт-об-ИИ.docx"
+    ai = OUT / f"Synergy-{VERSION}-ai-report.docx"
     pandoc(clean(read("submission/AI_REPORT.md")), ai, f"«Синергия» {VERSION} — отчёт об использовании ИИ", toc=False)
     polish(ai, f"Перечень функций, план и отчёт о верификации. Сборка {VERSION}. Собрано из submission/AI_REPORT.md")
     built.append(ai)

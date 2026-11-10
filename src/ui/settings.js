@@ -4,7 +4,7 @@ import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, signalTraceView, BRIDGE_STATUS, icon } from './widgets.js';
 import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS, GESTURE_CLASS_ORDER, GESTURE_PAIR, PAIR_GESTURES, isPair } from '../core/vocabulary.js';
-import { dictionaryName } from '../core/spppr.js';
+import { dictionaryName, streamRateNote } from '../core/spppr.js';
 import { streamsSpppr } from '../input/spppr-source.js';
 import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet, gesturePairSource, saveGesturePair } from '../core/gesture-set.js';
 import { CalibrationRecorder, CALIBRATION_STEPS, thresholdForRest, shownRippleIssues } from '../core/calibration.js';
@@ -224,7 +224,7 @@ export function settingsScreen(app, { back = null } = {}) {
     h('div', { class: 'row' }, h('span', {}, 'Частота пакетов'),
       segmented(STREAM_RATES_HZ.map(hz => ({ value: hz, label: `${hz} Гц`, sub: hz === STREAM_RATES_HZ[0] ? 'как у СПППР' : 'быстрее' })), s.streamRateHz,
         v => app.updateSettings({ streamRateHz: v }), 'Частота пакетов эмулятора СПППР')),
-    h('p', { class: 'note' }, 'СПППР шлёт 10 пакетов в секунду: жест подтверждает следующий пакет, через 100 мс, — так одиночный ошибочный пакет не становится командой. «Ритм» судит удар по часам микроконтроллера — по пакету, в котором движение началось.')) : null;
+    h('p', { class: 'note' }, streamRateNote())) : null;
   const streamBox = tzStream ? h('div', { class: 'stream-box' },
     h('p', { class: 'note' }, `Пакет ТЗ: {"timestamp_ms": время микроконтроллера, "dist": вероятности — ${dictionaryName(GESTURE_CLASS_ORDER.length)}}. Скорость считается только по разнице timestamp_ms; джиттер сглаживается, пауза > 200 мс плавно гасит скорость, одиночный шум прощается.`),
     rateBox, lastPacket) : null;

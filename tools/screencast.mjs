@@ -9,9 +9,12 @@
 //   npm run screencast                     → tools/.cache/screencast/synergy-<version>-screencast.mp4 (+ .srt, -chapters.txt)
 //   node tools/screencast.mjs --out DIR    another folder; --no-build — dist/ as it is; --draft — record even when the
 //                                          evidence of this build is not clean (the captions quote it)
-// The video is not kept in git (size): the team uploads it with the submission. Needs Playwright's Chromium and ffmpeg.
+//   npm run screencast -- --publish        also copies the video and its subtitles to submission/Synergy-<version>-screencast.*
+// 6.3.4 — the video of the build is kept in submission/ (the task, «Отправка решения»: the repository carries the source
+// code, the screencast and the documentation); the team uploads the same file to the platform. Needs Playwright's
+// Chromium and ffmpeg.
 import { createRequire } from 'node:module';
-import { mkdirSync, readFileSync, writeFileSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, rmSync, statSync, copyFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -125,8 +128,10 @@ const ACT = {
   motivation: async () => {
     await go('settings'); await wait(300);
     await page.locator('summary', { hasText: 'Данные' }).click(); await wait(250);
-    await page.getByRole('button', { name: 'Демо-профиль для презентации' }).click(); await wait(900);
-    await skipTour(); await wait(300);
+    // 6.3.4: straight to the nest — the demo profile opens «Прогресс» with its hint tour, and the caption about the
+    // Firebird stood beside «Неделя к неделе» for the first two seconds of the scene.
+    await page.getByRole('button', { name: 'Демо-профиль для презентации' }).click(); await wait(250);
+    await skipTour();
     await go('nest'); await wait(900); await skipTour();
   },
   specialist: async () => {
@@ -230,3 +235,10 @@ writeFileSync(join(out, `${name}.json`), `${JSON.stringify({ version, recorded: 
 if (!flag('keep')) rmSync(work, { recursive: true, force: true });
 say(`${mp4} — ${Math.round(total)} с, ${Math.round(statSync(mp4).size / 1024 / 102.4) / 10} МБ; субтитры .srt и главы рядом`);
 if (errors.length) { console.error(`screencast: ошибки во время записи:\n  ${errors.join('\n  ')}`); process.exit(1); }
+if (flag('publish')) {
+  // One video in the repository — of this version (the gate refuses another one): the earlier files go.
+  const dir = join(ROOT, 'submission');
+  for (const f of readdirSync(dir).filter(f => /^Synergy-.*-screencast\.(mp4|srt)$/.test(f))) rmSync(join(dir, f));
+  for (const ext of ['mp4', 'srt']) copyFileSync(join(out, `${name}.${ext}`), join(dir, `Synergy-${version}-screencast.${ext}`));
+  say(`submission/Synergy-${version}-screencast.mp4 и .srt — для репозитория и загрузки на платформу`);
+}

@@ -4,7 +4,7 @@ import { HAND_GRIPS } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '6.3.3',
+  version: '6.3.4',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };

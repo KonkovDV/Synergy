@@ -135,7 +135,13 @@ if (oldTracked.length) fail(`старые APK в git: ${oldTracked.join(', ')} �
 const missing = tracked.filter(f => !existsSync(join(root, f)));
 if (missing.length) warn(`в git, но нет на диске: ${missing.length} (напр. ${missing[0]})`);
 // 5.31 — the organizer's materials (the meetup deck: logos, photos and video of people) are not part of the product.
-const foreign = tracked.filter(f => /\.(pptx|mp4|mov)$/i.test(f));
+// 6.3.4 — the task («Отправка решения»): the repository carries the source code, the screencast and the documentation.
+// The screencast of this build and the two documents of the upload are kept in submission/ under the version of the
+// build; a file of another version is stale, as an old APK is.
+const UPLOAD = /^submission\/Synergy-(\d+\.\d+\.\d+)-(screencast\.(?:mp4|srt)|tech-docs\.docx|ai-report\.docx)$/;
+const staleUploads = tracked.filter(f => UPLOAD.test(f) && f.match(UPLOAD)[1] !== version);
+if (staleUploads.length) fail(`материалы сдачи другой версии в git: ${staleUploads.join(', ')} — соберите заново (npm run screencast -- --publish, python3 tools/build-docs.py) и удалите прежние: git rm`);
+const foreign = tracked.filter(f => /\.(pptx|mp4|mov)$/i.test(f) && !UPLOAD.test(f));
 if (foreign.length) warn(`материалы не для продукта в git: ${foreign.length} (напр. ${foreign[0]}) — tools/pack.sh не берёт их в архив; перед сдачей решите, оставить ли их в репозитории (п. 5.5)`);
 
 // 3. Wording: no overstated claims in texts the jury or users read (code identifiers like predict() are fine).
