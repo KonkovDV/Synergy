@@ -106,7 +106,9 @@ test('regen: drawHeld lays the picture so the thing is where the game keeps it, 
     // the thing's centre (0.05, 0.8 of ht from the arm's axis and the top) falls on (200, 300)
     const top = 300 - 0.8 * 100, axis = 200 - 0.05 * 100;
     assert.ok(Math.abs(pic.t[0] - axis) < 1e-9 && Math.abs(pic.t[1] - (top + 660 / 686 * 100 / 2)) < 1e-9, JSON.stringify(pic));
-    assert.deepEqual([arm.a[5], arm.a[7]], [0, top + 1], 'the arm runs from the top of the field down to the picture');
+    // 6.3.3: a short forearm (a tenth of the hand's height) above the picture, the socket of the prosthesis above it —
+    // not an arm stretched to the top of the field
+    assert.ok(Math.abs(arm.a[5] - (top - 10)) < 1e-9 && Math.abs(arm.a[7] - 11) < 1e-9, JSON.stringify(arm.a));
     calls.length = 0;
     drawHeld(ctx, 'hold-test', 200, 300, 100, { mirror: true });
     assert.equal(calls.find(c => c.img === 'hold').t[0], 200 + 0.05 * 100, 'a left hand holds it on the other side of its arm');
