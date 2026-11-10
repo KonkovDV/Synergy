@@ -3,7 +3,6 @@
 // Safety rules, not a diagnosis: the advice always points to rest or to a specialist.
 import { count, FORMS } from './format.js';
 import { WELLBEING } from '../config.js';
-import { peakDecline, peakDeclineText } from './fatigue.js';
 
 /** Pain categories of the 0–10 numeric rating scale (NRS). */
 export const PAIN_LEVELS = [
@@ -136,14 +135,14 @@ export const overDailyCap = (secondsToday, softCapMin) => secondsToday / 60 >= s
 export const capAdvice = softCapMin => `Сегодня уже больше ${softCapMin} минут. Мышцам нужен отдых — продолжим завтра.`;
 
 /**
- * Safety after an exercise: signs of fatigue first — the score, then (07.11, answer 12) the peak of the signal in a game
- * played again today — then the daily cap; null — the plan may go on. `titleOf` names a game in the advice.
+ * Safety after an exercise: signs of fatigue — the score — then the daily cap; null — the plan may go on. `titleOf`
+ * names a game in the advice. 6.3.2 — the experts of Motorica, 09.11 (answer 7в): a fall of the signal's peak is not a
+ * reason to offer rest («пользователь сам решит отдохнуть, когда почувствует, что у него перестаёт получаться»). The peaks
+ * stay in the run records, the CSV and the report (core/fatigue.js); the advice no longer reads them.
  */
 export function adviseStop(runsToday, secondsToday, softCapMin, history = [], titleOf = id => id) {
   const fatigue = fatigueSigns(runsToday, history);
   if (fatigue) return { reason: 'fatigue', text: `Результат снизился на ${count(fatigue.drop, FORMS.points)} за ${fatigue.minutes} мин — похоже на усталость мышц. Лучше закончить на сегодня.` };
-  const peak = peakDecline(runsToday);
-  if (peak) return { reason: 'peak', sign: peak, text: peakDeclineText(peak, titleOf) };
   if (overDailyCap(secondsToday, softCapMin)) return { reason: 'cap', text: capAdvice(softCapMin) };
   return null;
 }

@@ -11,8 +11,8 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    MARKETING_VERSION: "6.3.1"
-    CURRENT_PROJECT_VERSION: "51"
+    MARKETING_VERSION: "6.3.2"
+    CURRENT_PROJECT_VERSION: "52"
     SWIFT_VERSION: "5.0"
     TARGETED_DEVICE_FAMILY: "1,2"
     DEVELOPMENT_TEAM: ""
@@ -22,7 +22,11 @@ targets:
     platform: iOS
     sources:
       - path: Synergy
-      # The built game as a folder reference: Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "dist")
+        excludes: [PrivacyInfo.xcprivacy]
+      # 6.3.2 — the privacy manifest App Store Connect checks: a resource of the app, named explicitly
+      - path: Synergy/PrivacyInfo.xcprivacy
+        buildPhase: resources
+      # The built game as a folder reference, served as synergy-app://game/… (Synergy/BundleSchemeHandler.swift)
       - path: ../dist
         type: folder
         buildPhase: resources

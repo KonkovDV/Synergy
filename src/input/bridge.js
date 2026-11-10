@@ -311,6 +311,12 @@ export function trustedMessageSource(event, win, hostOrigin = null) {
  */
 export const CONNECT_TIMEOUT_MS = 6000;
 
+/**
+ * 6.3.2 — amplitude frames this fresh win over a СПППР stream in a scheme of two channels (BridgeSource.sample): the
+ * watchdog of the frames (SIGNAL.frameTimeoutMs, 300 ms). Older ones are gone — the stream drives again.
+ */
+export const AMPLITUDE_FRESH_MS = 300;
+
 export class BridgeSource {
   /**
    * `swap()` — the source sends A and B the other way round (the «inverted control» of Motorica's own games).
@@ -321,8 +327,11 @@ export class BridgeSource {
    * other side's are kept apart (`sampleSide`); with one, a frame of either side is the prosthesis.
    */
   constructor({ url = '', map, clock = () => performance.now(), onStatus = () => {}, swap = () => false, hostOrigin = null, thresholds = null, onThresholds = () => {},
-    lead = () => ({ side: 'right', two: false }) } = {}) {
+    lead = () => ({ side: 'right', two: false }), channels = () => false } = {}) {
     this.lead = lead;
+    // 6.3.2 (audit 09.11, J8): the exercise runs in a scheme of two channels — fresh amplitude frames drive it even while
+    // a СПППР stream speaks too (a host that relays both); before, the stream always won and its probabilities became A/B.
+    this.channels = channels;
     this.bySide = { left: null, right: null };       // 5.30: the latest frame of each prosthesis
     this.receivedBySide = { left: 0, right: 0 };
     this.sideState = { left: { lastSeq: undefined, raw: false, envelope: null }, right: { lastSeq: undefined, raw: false, envelope: null } };
@@ -479,7 +488,8 @@ export class BridgeSource {
    */
   sample(now = this.clock()) {
     // 6.0: while the СПППР stream speaks, it is the source (the decoder extrapolates between packets and fades the speed)
-    if (this.spppr && this.sppprAt !== undefined) { const f = this.spppr.frame(now); if (f) return f; }
+    const amplitudes = this.channels() && [this.latest, this.bySide.left, this.bySide.right].some(f => f && now - f.t <= AMPLITUDE_FRESH_MS);
+    if (!amplitudes && this.spppr && this.sppprAt !== undefined) { const f = this.spppr.frame(now); if (f) return f; }
     const { side = 'right', two = false } = this.lead() ?? {};
     const sided = this.receivedBySide.left + this.receivedBySide.right > 0;
     if (two) return this.bySide[side] ?? (sided ? null : this.latest);

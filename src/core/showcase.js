@@ -66,15 +66,19 @@ function safeDetails(rng, k) {
  */
 function assessmentRun(rng, date, scheme, k, profile, trials = null) {
   const share = Math.min(1, 0.7 + 0.28 * k);
+  const selectionMs = Math.round(900 - 480 * k + 60 * rng()), completionMs = Math.round(2900 - 1300 * k + 120 * rng());
+  // 6.3.2: drawn in every scheme, so the demo's days and games do not depend on it (the default became the threshold
+  // scheme, answer 2 of the experts, 09.11; a proportional-only draw shifted the whole period and its gesture runs).
+  const throughputBps = Math.round(100 * (0.8 + 0.9 * k + 0.1 * rng())) / 100;
   const completionRate = trials ? Math.round(100 * Math.round(share * trials) / trials) : Math.round(100 * share);
   const run = {
     id: `showcase-check-${dayKey(date)}`, at: new Date(date.getTime() + 20 * 60000).toISOString(), game: 'check', level: 1, levelCount: 1,
     scheme, source: 'showcase', retention: false, demo: false,
     score: Math.round(60 + 32 * k), stars: starsFor(Math.round(60 + 32 * k)), durationS: 75,
     skills: { precision: Math.round(62 + 30 * k), timing: Math.round(58 + 34 * k), switching: completionRate },
-    details: { assessment: true, completionRate, ...(trials ? { trialsTotal: trials } : {}), selectionMs: Math.round(900 - 480 * k + 60 * rng()), completionMs: Math.round(2900 - 1300 * k + 120 * rng()),
+    details: { assessment: true, completionRate, ...(trials ? { trialsTotal: trials } : {}), selectionMs, completionMs,
       accuracy: Math.round(68 + 26 * k), overshoots: Math.max(0, Math.round(4 - 4 * k)),
-      ...(scheme === 'proportional' ? { throughputBps: Math.round(100 * (0.8 + 0.9 * k + 0.1 * rng())) / 100, fittsTrials: 6, pathEfficiency: Math.round(62 + 25 * k) } : {}) },
+      ...(scheme === 'proportional' ? { throughputBps, fittsTrials: 6, pathEfficiency: Math.round(62 + 25 * k) } : {}) },
   };
   recordRun(profile, run, { today: dayKey(date) });
   return run;

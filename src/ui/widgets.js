@@ -1,7 +1,7 @@
 // Reusable UI pieces (DRY): bottom navigation, live signal meter, form rows.
 import { h, longestWord } from './dom.js';
 import { fmtSec } from '../core/format.js';
-import { COMMAND_NAME, GESTURE_BY_ID, twoChannelControls, GESTURE_CLASS_ORDER, GESTURE_SET } from '../core/vocabulary.js';
+import { COMMAND_NAME, GESTURE_BY_ID, twoChannelControls, GESTURE_CLASS_ORDER, GESTURE_SET, GRIPS_ARE_GESTURES, closingGestureWord } from '../core/vocabulary.js';
 import { dictionaryNote } from '../core/spppr.js';
 import { mio } from './art.js';
 import { SignalTrace, traceSummary } from '../core/signaltrace.js';
@@ -154,7 +154,8 @@ export function signalMeter(app) {
 }
 
 /**
- * 6.0 — the СПППР stream in one line: packets a second, the jitter, the forgiven noise, refused packets; while no packet
+ * 6.0 — the СПППР stream in one line: packets a second, the jitter, the single wrong packets (6.3.2: «откатов» — a
+ * command of one packet the next one took back; until then «прощено шумов»), refused packets; while no packet
  * comes for more than 200 ms — that the speed fades (the task's inertia), not that the person stopped. 04.11: a stream of
  * fewer classes than the game's set (a «2 жеста» СПППР under the seven) says which set fits it (core/spppr.js).
  */
@@ -163,7 +164,7 @@ export function streamLine(decoder, intent = null) {
   if (intent?.link === 'inertia') return `Пакеты не приходят ${intent.ageMs ?? ''} мс — скорость гаснет плавно`;
   const { rateHz, jitterMs } = decoder.timing();
   const st = decoder.stats;
-  return [`СПППР ${rateHz ?? '—'} пак/с`, `джиттер ${jitterMs ?? '—'} мс`, `прощено шумов ${st.forgiven}`, st.rejected ? `отклонено ${st.rejected}` : null,
+  return [`СПППР ${rateHz ?? '—'} пак/с`, `джиттер ${jitterMs ?? '—'} мс`, `откатов ${st.forgiven}`, st.rejected ? `отклонено ${st.rejected}` : null,
     dictionaryNote(st.classes, GESTURE_SET.id, st.keys ?? st.classes)].filter(Boolean).join(' · ');
 }
 
@@ -292,7 +293,9 @@ export function mioAvatar(mood = 'support', size = 48) {
  * where any closing grip counts (5.10). `spoken` — the voice version.
  */
 export function handsFreeText(scheme, seconds, action, { spoken = false } = {}) {
-  const what = scheme === 'gesture' ? 'любой хват' : 'сжатие (A)';
-  return spoken ? `Чтобы ${action === 'старт' ? 'начать' : 'продолжить'} без касания, расслабьтесь, затем удерживайте ${scheme === 'gesture' ? 'любой хват' : 'сжатие'}.`
+  // 6.3.2: a set of the task's СПППР has one gesture that closes the hand, and it is no grip — it is named («Сгибание»)
+  const grasp = GRIPS_ARE_GESTURES ? 'любой хват' : closingGestureWord();
+  const what = scheme === 'gesture' ? grasp : 'сжатие (A)';
+  return spoken ? `Чтобы ${action === 'старт' ? 'начать' : 'продолжить'} без касания, расслабьтесь, затем удерживайте ${scheme === 'gesture' ? grasp : 'сжатие'}.`
     : `Расслабьтесь, затем удерживайте ${what} ${fmtSec(seconds)} — ${action} без касания`;
 }

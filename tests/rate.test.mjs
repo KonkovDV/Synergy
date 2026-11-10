@@ -1,8 +1,9 @@
 import './pin-tz.mjs'; // 6.0: the published set (tests/pin-tz.mjs)
 // 6.2 — the СПППР at the rate the organizers named (Q&A of 04.11.2026, answer 24: 10 Hz, «потери незначительны»).
-// A packet every 100 ms: the dwell is confirmed only by the next packet, and a movement begins on average half a packet
-// before the first packet that shows it. The decoder dates a command by the MCU clock (its first packet), «Ритм» judges
-// the movement there, and the emulator does not show a movement before it began. Each test failed on 6.1.0.
+// A packet every 100 ms: a movement begins on average half a packet before the first packet that shows it. The decoder
+// dates a command by the MCU clock (its first packet), «Ритм» judges the movement there, and the emulator does not show a
+// movement before it began. Each test failed on 6.1.0. 6.3.2 (answer 5 of the experts, 09.11): the first packet is the
+// command; the next packet confirms it or takes it back.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SppprDecoder } from '../src/core/spppr.js';
@@ -27,11 +28,15 @@ test('ответ № 24, 10 Гц: a command is dated by the first packet of its 
   const first = ts;
   // the first packet of the movement is held back by the radio for 150 ms: it is dated when it was measured
   d.push(packet(ts, { flexion: 0.8 }), ts + 157);
-  assert.notEqual(d.frame(ts + 157).gesture, 'flexion', 'one packet is not a command (the dwell)');
+  const early = d.frame(ts + 157);
+  assert.equal(early.gesture, 'flexion', '6.3.2: the first packet is the command (answer 5 of the experts, 09.11)');
+  assert.equal(early.confirmed, false, 'not confirmed yet');
+  assert.equal(early.since, first + 7, 'dated by its own MCU time, not by its late arrival');
   ts += 100;
   d.push(packet(ts, { flexion: 0.8 }), ts + 7);
   const f = d.frame(ts + 7);
-  assert.equal(f.gesture, 'flexion', 'the next packet confirms it');
+  assert.equal(f.gesture, 'flexion');
+  assert.equal(f.confirmed, true, 'the next packet confirms it');
   assert.equal(f.since, first + 7, 'dated by its first packet: timestamp_ms plus the clock offset, not its late arrival');
   assert.equal(f.packetMs, 100, 'the packet period of this MCU');
   // The pipeline hands the date to the intent («Ритм» reads it there).
@@ -40,16 +45,19 @@ test('ответ № 24, 10 Гц: a command is dated by the first packet of its 
   assert.equal(intent.packetMs, 100);
 });
 
-test('ответ № 26, 10 Гц: a single wrong packet inside a movement is forgiven and does not move its date', () => {
+test('ответ № 26, 10 Гц: a single wrong packet inside a movement is taken back by the next one and does not move its date', () => {
   const d = new SppprDecoder();
   let ts = 1000;
   for (let i = 0; i < 10; i++) { d.push(packet(ts, {}), ts); ts += 100; }
   const first = ts;
   const seq = [{ flexion: 0.8 }, { adduction: 0.7, flexion: 0.1 }, { flexion: 0.8 }, { flexion: 0.8 }];
-  const gestures = seq.map(over => { d.push(packet(ts, over), ts); const g = d.frame(ts).gesture; ts += 100; return g; });
-  assert.deepEqual(gestures, ['rest', 'rest', 'rest', 'flexion'], 'the decision is the one of 6.0: the wrong packet restarts the dwell');
-  assert.equal(d.frame(ts - 100).since, first, 'but the movement is dated by its first packet, the wrong one inside it forgiven');
-  assert.ok(d.stats.forgiven >= 1);
+  const frames = seq.map(over => { d.push(packet(ts, over), ts); const f = d.frame(ts); ts += 100; return f; });
+  // 6.3.2 (answer 5 of the experts, 09.11): every packet is acted on at once; a command no later packet agreed with is
+  // rolled back. Until 6.3.2 the wrong packet restarted a dwell of 50 ms: ['rest', 'rest', 'rest', 'flexion'].
+  assert.deepEqual(frames.map(f => f.gesture), ['flexion', 'adduction', 'flexion', 'flexion']);
+  assert.deepEqual(frames.map(f => f.confirmed), [false, false, false, true], 'only a packet that agrees confirms');
+  assert.equal(d.frame(ts - 100).since, first, 'the movement is dated by its first packet, the wrong one inside it forgiven');
+  assert.ok(d.stats.forgiven >= 2, `rollbacks: ${d.stats.forgiven}`);
   // Two wrong packets in a row end the movement: the date is the packet after them.
   const e = new SppprDecoder();
   ts = 1000;
@@ -122,7 +130,8 @@ test('ответ № 24: «Ритм» judges an onset on the beat the same at 10
 
 test('ответ № 24: the wait of a note follows the stream — 50 Hz waits as before, 10 Hz a packet longer for a forgiven one', () => {
   assert.equal(streamWaitLag({ since: 0, packetMs: 20 }), RHYTHM_LATENCY_S.gesture, '50 Hz: the 100 ms the levels were balanced on');
-  assert.ok(Math.abs(streamWaitLag({ since: 0, packetMs: 100 }) - (0.1 + 0.05 + 0.1 + SPPPR.riseMs / 1000)) < 1e-9, '10 Hz: the dwell on the next packet, half a packet, one forgiven packet');
+  // 6.3.2: a note is judged by a confirmed command — the next packet — though the hand moves on the first (answer 5)
+  assert.ok(Math.abs(streamWaitLag({ since: 0, packetMs: 100 }) - (0.1 + 0.05 + 0.1 + SPPPR.riseMs / 1000)) < 1e-9, '10 Hz: the confirming packet, half a packet, one wrong packet at the start');
   assert.equal(streamWaitLag({ packetMs: 100 }), null, 'a frame without a date keeps the fixed delay');
   assert.equal(streamEventLag({ t: 1000 }), null);
   assert.ok(Math.abs(streamEventLag({ t: 1300, since: 1000, packetMs: 100 }) - (0.3 + 0.05 + SPPPR.riseMs / 1000)) < 1e-9);

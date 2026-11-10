@@ -4,7 +4,7 @@
 import { h, toast } from './dom.js';
 import { signalMeter, icon, handsFreeText, bridgeLine, lostSignalHint } from './widgets.js';
 import { createTwoChannelPads, createGesturePads, createDuoPads } from './controls.js';
-import { SCHEME, SCHEME_INFO, gestureLegend } from '../core/vocabulary.js';
+import { SCHEME, SCHEME_INFO, STREAM_SET, gestureLegend } from '../core/vocabulary.js';
 import { COLORS, text, holdRing } from '../render/draw.js';
 import { BRAND, glow, radial, clearLayers } from '../render/fx.js';
 import { clearTints } from '../render/sprites.js';
@@ -105,7 +105,8 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const controls = h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' });
   let shownRemote = null; // whether the lab's remote is on the screen (a «bridge-hello» may come after the screen opened)
   const renderControls = () => {
-    if (demo) controls.replaceChildren(h('p', { class: 'pads-note' }, 'Демо: автопилот управляет эмулятором ЭМГ — тот же путь сигнала, что у вас. Результат не сохраняется.'));
+    // 6.3.2: in the gesture scheme of a set of the task the autopilot drives the emulator of the СПППР stream, not of the EMG
+    if (demo) controls.replaceChildren(h('p', { class: 'pads-note' }, `Демо: автопилот управляет эмулятором ${session.scheme === SCHEME.GESTURE && STREAM_SET ? 'потока СПППР' : 'ЭМГ'} — тот же путь сигнала, что у вас. Результат не сохраняется.`));
     else {
       // 5.30 — «Две руки»: a pair of pads per arm (keys: left F/D, right J/K); the left arm is `emulator`, the right `emulator2`.
       const duo = session.game.constructor.bimanual;

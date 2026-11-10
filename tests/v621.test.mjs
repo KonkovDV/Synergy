@@ -217,7 +217,7 @@ test('Motorica Start game catalog (public source, 05.11): the entry of «Син�
   assert.match(g.ios.urlScheme, /^[A-Za-z][A-Za-z0-9+.-]*$/);
   assert.ok(Number.isInteger(g.ios.versionCode) && g.ios.versionCode > 0);
   // The iPhone shell answers the catalog's link: synergy://launch opens the home screen (no exercise, nothing refused).
-  const swift = readFileSync('ios/Synergy/SynergyApp.swift', 'utf8');
+  const swift = readFileSync('ios/Synergy/LaunchRequest.swift', 'utf8'); // 6.3.2: LaunchRequest has its own file
   const init = swift.slice(swift.indexOf('init?(url: URL)'));
   assert.ok(init.indexOf('url.scheme == "synergy"') < init.indexOf('url.host == "launch"'), 'only its own scheme');
   assert.match(init, /if url\.host == "launch" \{ return \}/, 'synergy://launch is a plain start (a request without an exercise)');

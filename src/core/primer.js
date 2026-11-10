@@ -11,16 +11,22 @@
 // Numbers come from the config and the grips from the vocabulary, so a card never drifts from the rules or from the
 // gesture set of 28.10.
 import { SESSION, CHILD, SIGNAL } from '../config.js';
-import { CLOSING_GESTURES } from './vocabulary.js';
+import { CLOSING_GESTURES, HAND_GRIPS, GRIPS_ARE_GESTURES } from './vocabulary.js';
 
-const grips = () => CLOSING_GESTURES.map(g => `«${g.name}» — ${g.use.charAt(0).toLowerCase()}${g.use.slice(1)}`).join('; ');
+/**
+ * The grips the cards speak of: the closing gestures where they are grips; in a set of the task's СПППР — whose one
+ * closing class is a wrist flexion — the grips of the two-channel hand (6.3.2: the card «Какой хват для чего» named
+ * «Сгибание» alone, and the question about grips was dropped).
+ */
+const GRIPS = GRIPS_ARE_GESTURES ? CLOSING_GESTURES : HAND_GRIPS;
+const grips = () => GRIPS.map(g => `«${g.name}» — ${g.use.charAt(0).toLowerCase()}${g.use.slice(1)}`).join('; ');
 
-/** The question about grips is built from the gesture set: «what is X for?», X and two others as options. */
+/** The question about grips is built from those grips: «what is X for?», X and two others as options. */
 function gripQuestion() {
-  const [a, b, c] = [CLOSING_GESTURES[1], CLOSING_GESTURES[0], CLOSING_GESTURES[2]].filter(Boolean);
+  const [a, b, c] = [GRIPS[1], GRIPS[0], GRIPS[2]].filter(Boolean);
   if (!a || !b || !c) return null;
   return { id: 'grip-use', q: `Для чего хват «${a.name}»?`, options: [b.use, a.use, c.use], answer: 1,
-    why: `«${a.name}»: ${a.use.charAt(0).toLowerCase()}${a.use.slice(1)}. Хват выбирают под предмет — это тренирует «Сейф» в режиме жестов.` };
+    why: `«${a.name}»: ${a.use.charAt(0).toLowerCase()}${a.use.slice(1)}. Хват выбирают под предмет — это тренирует ${GRIPS_ARE_GESTURES ? '«Сейф» в режиме жестов' : '«Мастерская»: смена хвата перед предметом'}.` };
 }
 
 /**
@@ -56,7 +62,9 @@ export const PRIMER = [
   {
     id: 'grip', title: 'Сила и хват',
     cards: [
-      { id: 'proportional', front: 'Сила — это скорость', back: () => 'В пропорциональной схеме чем сильнее напряжение, тем быстрее закрывается кисть. В пороговой скорость одна, пока мышца выше порога. У «Инди» и «Манифесто» — порог; какая схема у вашей кисти, скажет протезист. Игра схему в протез не записывает.' },
+      // 6.3.2 — the experts of Motorica, 09.11 (answers 1а, 1б, 2): the threshold hand closes at one speed and its force grows
+      // while the signal is held; the proportional mode is only on prototypes under trial.
+      { id: 'proportional', front: 'Порог и пропорция', back: () => 'В пороговой схеме скорость одна, пока мышца выше порога, а сила хвата растёт, пока сигнал держится. Так работают серийные протезы «Моторики». В пропорциональной схеме чем сильнее напряжение, тем быстрее движение и сильнее хват — она есть только у прототипов. Схему в протез игра не записывает.' },
       { id: 'hold', front: 'Хват держится сам', back: () => 'В «Синергии» и во многих протезах закрытая кисть держит предмет сама: мышцу можно расслабить. Держать её напряжённой не нужно — это лишняя усталость.' },
       { id: 'release', front: 'Отпустить вовремя', back: () => 'Раскрывает кисть вторая мышца (B). Сначала поднесите предмет к месту, потом раскройте — так он не упадёт.' },
       { id: 'switch', front: 'Смена хвата', back: () => 'Протезы меняют хват по-разному. У «Моторики» — повторным раскрытием: кисть раскрыта, и сигнал B держится дольше заданного времени. У других — коактивацией, коротким напряжением обеих мышц. Как у вашего, покажет протезист.' },

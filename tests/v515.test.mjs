@@ -178,7 +178,8 @@ test('primer: numbers follow the config, grips follow the gesture set (the set o
   for (const g of CLOSING_GESTURES) assert.ok(text.includes(`«${g.name}»`), g.id);
   assert.match(grip.cards.find(c => c.id === 'names').back(), /большой и указательный/);
   assert.match(grip.cards.find(c => c.id === 'proportional').back(), /пропорциональной схеме/);
-  assert.match(grip.cards.find(c => c.id === 'proportional').back(), /пороговой скорость одна/);
+  assert.match(grip.cards.find(c => c.id === 'proportional').back(), /пороговой схеме скорость одна/);
+  assert.match(grip.cards.find(c => c.id === 'proportional').back(), /серийные протезы «Моторики»/, '6.3.2: answer 2 of the experts, 09.11');
   assert.match(grip.check().find(q => q.id === 'fragile').why, /пороговой скорость одна/);
   assert.match(PRIMER.find(d => d.id === 'signal').cards.find(c => c.id === 'terms').back(), /не записываются/);
   const signal = PRIMER.find(d => d.id === 'signal');

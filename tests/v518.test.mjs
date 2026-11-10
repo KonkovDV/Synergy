@@ -16,7 +16,7 @@ import { GESTURE_BY_ID } from '../src/core/vocabulary.js';
 import { assessmentTrials } from '../src/games/assess.js';
 import { buildShowcaseState } from '../src/core/showcase.js';
 import { PLAN_CATALOG } from '../src/games/registry.js';
-import { parseState } from '../src/core/storage.js';
+import { parseState, DEFAULT_SETTINGS } from '../src/core/storage.js';
 
 test('quick start: the plan’s first exercise before the day’s first training — not before the tutorial, not on a rest day', () => {
   const plan = { items: [{ game: 'flight', level: 2, done: false, retention: false }, { game: 'rhythm', level: 1, done: false }, { game: 'flight', level: 2, retention: true, done: false }] };
@@ -79,9 +79,12 @@ test('«Сейф»: the replay — every digit of the code, the slowest one, the
 });
 
 test('the demo profile’s checks are whole trials of the scheme and carry their count — the error shows in the pitch too', () => {
-  const trials = assessmentTrials('proportional').length;
+  // 6.3.2: the demo follows the default settings — the threshold scheme since the experts' answer 2 of 09.11
+  const scheme = DEFAULT_SETTINGS.scheme;
+  assert.equal(scheme, 'threshold');
+  const trials = assessmentTrials(scheme).length;
   const st = buildShowcaseState(undefined, '2026-10-20', PLAN_CATALOG, { checkTrials: trials });
-  const checks = assessmentHistory(st.runs, 'proportional');
+  const checks = assessmentHistory(st.runs, scheme);
   assert.ok(checks.length >= 2);
   for (const c of checks) {
     assert.equal(c.trials, trials);

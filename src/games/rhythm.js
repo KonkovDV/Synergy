@@ -2,7 +2,10 @@
 // rhythm games gave the best EMG challenge in PlayBionic, Prahm et al. 2018).
 // Lane A = сжатие, lane B = раскрытие, wide notes = коактивация. Pips = required intensity band.
 import { Game, SeparationMeter, clamp01, pct, cleanPair } from './base.js';
-import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, STREAM_SET, rateControl } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, CLOSING_GESTURES, OPENING_GESTURE, STREAM_SET, GRIPS_ARE_GESTURES, rateControl } from '../core/vocabulary.js';
+
+/** The caption of lane A in the gesture scheme: any closing grip of a set of grips, the one closing gesture of a СПППР set by name (6.3.2). */
+const LANE_A_GESTURE = GRIPS_ARE_GESTURES ? 'жест хвата' : CLOSING_GESTURES[0].name;
 import { COLORS, text, textWidth, circle, fillRound, backdrop, scene, lookKey } from '../render/draw.js';
 import { BRAND, linear, radial, glow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { coverScene } from '../render/bionic.js';
@@ -37,7 +40,8 @@ export const RHYTHM_LATENCY_S = { threshold: 0.033, proportional: 0.033, gesture
 /**
  * 6.2 — the delay of one event of the СПППР stream, in seconds of real time between the movement and the step that saw
  * its command. The decoder dates the command by the MCU clock (`since`, the first packet of the run of raw packets that
- * became it), so the dwell — confirmed by the next packet, a whole 100 ms at 10 Hz — is taken back exactly. What remains is estimated:
+ * became it), so a dwell, if one is set (none since 6.3.2; until then the next packet confirmed a command, a whole 100 ms
+ * at 10 Hz), is taken back exactly. What remains is estimated:
  * the movement began about half a packet before the first packet that showed it, and the classifier's probability
  * needs `riseMs` to reach the decoder's threshold. Null for a frame without a date (two channels, the other sets).
  */
@@ -47,10 +51,11 @@ export function streamEventLag(intent, now = intent?.t, params = SPPPR) {
 }
 
 /**
- * How long a note waits for a dated onset before it counts as passed: the dwell landed on this stream's packets, half
- * a packet, one packet more for a wrong packet forgiven inside the movement, and the rise — the delay an onset on time
- * may be seen with. Never shorter than the scheme's fixed delay, so a 50 Hz stream (the levels were balanced on it)
- * waits as before. Null without a packet period.
+ * How long a note waits for a dated onset before it counts as passed: the packet that confirms the command (6.3.2: the
+ * hand moves on the first packet, answer 5 of the experts, 09.11, but a note is judged by a confirmed command; a dwell,
+ * if one is set, landed on this stream's packets), half a packet, one packet more for a wrong packet at the start of the
+ * movement, and the rise — the delay an onset on time may be seen with. Never shorter than the scheme's fixed delay, so a
+ * 50 Hz stream (the levels were balanced on it) waits as before. Null without a packet period.
  */
 export function streamWaitLag(intent, params = SPPPR) {
   const p = intent?.packetMs;
@@ -91,6 +96,7 @@ export class RhythmGame extends Game {
     this.notes = this.buildChart();
     this.total = (COUNT_IN_BEATS + this.level.beats + 2) * this.beat;
     this.lane = { a: false, b: false, both: false };
+    this.live = this.lane; // what the lanes show: the command of the newest packet (6.3.2)
     this.combo = 0; this.bestCombo = 0;
     this.onsetErrors = []; this.bandHits = 0; this.bandChecks = 0; this.falseStarts = 0;
     this.separation = new SeparationMeter();
@@ -143,7 +149,11 @@ export class RhythmGame extends Game {
     const lag = streamEventLag(intent);
     const at = lag === null ? now : this.time - lag * this.speed;
     while (this.nextBeat * this.beat <= this.time && this.nextBeat * this.beat < this.total) { this.emit('beat', { strong: this.nextBeat % 4 === 0 }); this.nextBeat++; }
-    const state = this.laneState(intent);
+    // 6.3.2 — the lane lights on the first packet of a command (answer 5 of the experts, 09.11); a note is judged once
+    // the next packet confirmed it, at the time of its first packet (`at`, dated by the MCU clock). One wrong packet of
+    // the recognizer is neither a false start nor the end of a held note.
+    this.live = this.laneState(intent);
+    const state = intent.confirmed === false ? this.lane : this.live;
     for (const lane of ['a', 'b', 'both']) {
       if (state[lane] && !this.lane[lane]) this.onset(lane, at);
       if (!state[lane] && this.lane[lane]) this.release(lane, at);
@@ -286,14 +296,14 @@ export class RhythmGame extends Game {
     // Hit circles: the lane light, the glass face, the letter.
     for (const lane of ['a', 'b']) {
       const x = laneX[lane], col = lane === 'a' ? COLORS.a : COLORS.b;
-      const active = !this.retention && (this.lane[lane] || this.lane.both); // live lane light = concurrent feedback
+      const active = !this.retention && (this.live[lane] || this.live.both); // live lane light = concurrent feedback
       circle(ctx, x, hitY, R, active ? col : scene('#d5dde3', 'rgba(255,255,255,0.08)'));
       if (active && deco) glow(ctx, x, hitY, R * 2.4, col, 0.9);
       if (deco) { ctx.lineWidth = 2; ctx.strokeStyle = rgba(col, active ? 0.9 : 0.45); ctx.beginPath(); ctx.arc(x, hitY, R + 4, 0, Math.PI * 2); ctx.stroke(); }
       ctx.fillStyle = deco ? radial(ctx, x - R * 0.25, hitY - R * 0.3, R * 0.05, R * 0.8, scene([[0, '#ffffff'], [1, '#eef2f7']], [[0, '#25344a'], [1, '#121c2b']]), COLORS.panel) : COLORS.panel;
       ctx.beginPath(); ctx.arc(x, hitY, R * 0.76, 0, Math.PI * 2); ctx.fill();
       text(ctx, lane === 'a' ? 'A' : 'B', x, hitY + 1, { size: Math.min(17, R * 0.56), weight: 800, color: lane === 'a' ? COLORS.aInk : COLORS.bInk, display: true });
-      if (labels) text(ctx, this.scheme === SCHEME.GESTURE ? (lane === 'a' ? 'жест хвата' : OPENING_GESTURE.name) : lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, weight: 700, color: COLORS.muted, maxWidth: laneW * 2 + 16, outline: true }); // over the light trails of the stage
+      if (labels) text(ctx, this.scheme === SCHEME.GESTURE ? (lane === 'a' ? LANE_A_GESTURE : OPENING_GESTURE.name) : lane === 'a' ? 'сжатие' : 'раскрытие', x, hitY + R + 14, { size: 12, weight: 700, color: COLORS.muted, maxWidth: laneW * 2 + 16, outline: true }); // over the light trails of the stage
     }
     // Behind the notes: the count-in and the combo.
     // The game's count-in only while it runs: not drawn under the app's own 3-2-1 (5.11).

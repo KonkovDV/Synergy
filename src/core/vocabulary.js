@@ -223,18 +223,54 @@ export const ACTIVE_GESTURE_IDS = ACTIVE_GESTURES.map(g => g.id);
 export const CLOSING_GESTURES = GESTURES.filter(g => g.command === COMMAND.CLOSE);
 export const OPENING_GESTURE = GESTURES.find(g => g.command === COMMAND.OPEN);
 
-/** Grip names come from the gestures that select them. */
-export const GRIP_NAME = Object.fromEntries(CLOSING_GESTURES.map(g => [g.grip, g.name]));
+/**
+ * 6.3.2 — THE GRIPS OF THE HAND. A myoelectric hand of two channels has grips of its own — power, pinch, lateral — and
+ * takes the next one by a signal (Motorica: the opening signal again at the open hand; other hands: a co-contraction),
+ * whatever dictionary a gesture recognizer speaks. Where the closing gestures of the set are grips (Синергия, UBI4) the
+ * hand has those, as before. The sets of the task's СПППР name movements of the wrist: their one closing class, wrist
+ * flexion, closes the hand but is no grip — there the hand keeps the three grips of the «Синергия» set (names, poses).
+ * Until 6.3.2 the hand took its grips, their names and the pose of «Сжатие» from the closing gestures alone, so in the
+ * default set (since 6.0) it had one grip called «Сгибание», never switched it, and closed into the half-bent fingers of
+ * a wrist flexion instead of a fist — and the suite, pinned to the «Синергия» set (tests/pin-set.mjs), never saw it.
+ */
+const NATIVE_GRIPS = ['fist', 'pinch', 'key'].map(id => SYNERGY.gestures.find(g => g.grip === id));
+const SET_GRIPS = CLOSING_GESTURES.map(g => g.grip).filter((id, i, all) => all.indexOf(id) === i);
+/** The closing gestures of this set are grips of a hand (two or more); false — its one closing class only closes it. */
+export const GRIPS_ARE_GESTURES = SET_GRIPS.length >= 2;
+/** The order the levels were balanced on; a set that lacks one goes on with its own grips (UBI4: no lateral grip). */
+const GRIP_ORDER = ['fist', 'pinch', 'key', 'indication'];
+/**
+ * The grips of the two-channel hand in the order it switches them, at most three: { grip, name, pose, cue, use }.
+ * `HAND.twoChannelGrips` (config.js) is their ids.
+ */
+export const HAND_GRIPS = Object.freeze((GRIPS_ARE_GESTURES
+  ? [...GRIP_ORDER.filter(id => SET_GRIPS.includes(id)), ...SET_GRIPS.filter(id => !GRIP_ORDER.includes(id))].slice(0, 3).map(id => CLOSING_GESTURES.find(g => g.grip === id))
+  : NATIVE_GRIPS).map(({ grip, name, pose, cue, use }) => Object.freeze({ grip, name, pose, cue, use })));
+
+/** Grip names: of the hand's own grips, then of the grips only a gesture of the set selects. */
+export const GRIP_NAME = Object.fromEntries([...CLOSING_GESTURES.map(g => [g.grip, g.name]), ...HAND_GRIPS.map(g => [g.grip, g.name])]);
+/** The pose a grip closes into (finger flexions, as `pose` of a gesture). */
+export const GRIP_POSE = Object.freeze(Object.fromEntries([...CLOSING_GESTURES.map(g => [g.grip, g.pose]), ...HAND_GRIPS.map(g => [g.grip, g.pose])]));
+/**
+ * The closing gesture of the set that selects a grip in the gesture scheme — or, in a set whose closing class is no grip
+ * (the task's СПППР), that one class: there every object is taken by it.
+ */
+export const gripGesture = grip => CLOSING_GESTURES.find(g => g.grip === grip) ?? CLOSING_GESTURES[0];
+/**
+ * How a hint names «the gesture that closes the hand»: the one closing class of a СПППР set by its name («Сгибание»),
+ * else «жест хвата» — the set has several, and the object says which.
+ */
+export const closingGestureWord = () => (GRIPS_ARE_GESTURES ? 'жест хвата' : `«${CLOSING_GESTURES[0].name}»`);
 
 /**
- * Hand pose shown for a two-channel command: close → the first (power) grip, switch → the next grip
- * (co-contraction changes the grip), open → the opening gesture.
+ * Hand pose shown for a two-channel command: close → the first (power) grip of the hand, switch → its next grip
+ * (the grip changes), open → the opening gesture.
  */
 export const COMMAND_POSE = Object.freeze({
   rest: GESTURE_BY_ID.rest.pose,
-  close: CLOSING_GESTURES[0].pose,
+  close: HAND_GRIPS[0].pose,
   open: OPENING_GESTURE.pose,
-  switch: (CLOSING_GESTURES[1] ?? CLOSING_GESTURES[0]).pose,
+  switch: (HAND_GRIPS[1] ?? HAND_GRIPS[0]).pose,
   wrist: GESTURE_BY_ID.rest.pose, // the fingers do not move; drawHand bends the wrist by the gesture's `wrist`
 });
 
@@ -242,7 +278,8 @@ export const COMMAND_POSE = Object.freeze({
 export function gestureLegend() {
   const names = command => GESTURES.filter(g => g.command === command).map(g => g.name).join(', ');
   const wrist = names(COMMAND.WRIST);
-  return `Жесты: ${names(COMMAND.CLOSE)} — закрыть нужным хватом · ${names(COMMAND.OPEN)} — раскрыть${wrist ? ` · ${wrist} — запястье, кисть стоит` : ''} · ${names(COMMAND.REST)} — ничего не делать`;
+  // 6.3.2: «нужным хватом» only where the gestures are grips; the one closing class of a СПППР set just closes the hand
+  return `Жесты: ${names(COMMAND.CLOSE)} — ${GRIPS_ARE_GESTURES ? 'закрыть нужным хватом' : 'закрыть кисть'} · ${names(COMMAND.OPEN)} — раскрыть${wrist ? ` · ${wrist} — запястье, кисть стоит` : ''} · ${names(COMMAND.REST)} — ничего не делать`;
 }
 
 /** Skills the trainer measures (Prahm et al. 2018; Tabor et al. 2017). */

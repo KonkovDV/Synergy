@@ -94,7 +94,8 @@ function hold(pipe, f, ms, t0 = 0) {
 }
 
 test('5.32 both on: the second channel later than the first — the hand stands («hold») or goes on with the first («first»)', () => {
-  assert.equal(BOTH_ON.defaultMode, 'hold', 'the default law of the game does not change');
+  // 6.3.2 — the experts of Motorica, 09.11 (answer 2): «если оба канала превышают порог, выполняется первая команда».
+  assert.equal(BOTH_ON.defaultMode, 'first', 'the default law is the prosthesis\'s');
   const run = bothOn => {
     const p = new SignalPipeline({ scheme: 'proportional', params: bothOn ? { bothOn } : {} });
     const steps = [];
@@ -104,7 +105,7 @@ test('5.32 both on: the second channel later than the first — the hand stands 
     steps.push(hold(p, { a: 0, b: 0 }, 600, 1848).command);      // both off
     return steps;
   };
-  assert.deepEqual(run(), [COMMAND.CLOSE, COMMAND.REST, COMMAND.OPEN, COMMAND.REST], 'no setting — «hold»');
+  assert.deepEqual(run(), [COMMAND.CLOSE, COMMAND.CLOSE, COMMAND.OPEN, COMMAND.REST], 'no setting — «first» (6.3.2)');
   assert.deepEqual(run('hold'), [COMMAND.CLOSE, COMMAND.REST, COMMAND.OPEN, COMMAND.REST]);
   assert.deepEqual(run('first'), [COMMAND.CLOSE, COMMAND.CLOSE, COMMAND.OPEN, COMMAND.REST], 'the first command goes on; when it ends, the one still on leads');
   const first = new SignalPipeline({ scheme: 'proportional', params: { bothOn: 'first' } });
@@ -157,9 +158,10 @@ test('Q&A 04.11 both on: the sport mode — the later channel takes over; when i
 
 test('5.32 both on: the setting is saved, checked on import and said in words', () => {
   assert.equal(parseState(JSON.stringify({ version: 4, settings: { bothOn: 'first' } })).settings.bothOn, 'first');
-  assert.equal(parseState(JSON.stringify({ version: 4, settings: { bothOn: 'race' } })).settings.bothOn, 'hold', 'an unknown law from a backup is dropped');
+  assert.equal(parseState(JSON.stringify({ version: 4, settings: { bothOn: 'race' } })).settings.bothOn, 'first', 'an unknown law from a backup is dropped');
   assert.match(bothOnText('first'), /продолжает первую команду/);
-  assert.match(bothOnText('first'), /скажет протезист/);
+  assert.match(bothOnText('first'), /протезист/);
+  assert.match(bothOnText('first'), /«Моторики»/, '6.3.2: the law of the prosthesis (answer 2 of the experts, 09.11)');
   assert.match(bothOnText('hold'), /останавливается/);
 });
 

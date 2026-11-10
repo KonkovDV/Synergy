@@ -1,19 +1,30 @@
 // «Мастерская» — the functional task: grasp → transport → release (task-specific transfer).
-// Force is dosed by how strongly you squeeze; the hand then holds on its own (relax!),
-// B lowers excess force, a wrong grip is switched the way that hand is set (open again, or co-contraction) or by a gesture.
+// Force is dosed by how strongly (or, at a threshold, how long) you squeeze; the hand then holds on its own (relax!).
+// B opens the hand at once (answer 1г of the experts, 09.11): too strong a grip is let go and taken again. A wrong grip is
+// switched the way that hand is set (open again, or co-contraction) or by a gesture.
 import { Game, SeparationMeter, StabilityMeter, clamp01, pct, cleanPair } from './base.js';
 import { blindBlock } from '../core/guidance.js';
-import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES, rateControl } from '../core/vocabulary.js';
+import { SCHEME, COMMAND, GRIP_NAME, OPENING_GESTURE, CLOSING_GESTURES, GRIPS_ARE_GESTURES, gripGesture, closingGestureWord, rateControl } from '../core/vocabulary.js';
 import { reachableBand, offThreshold } from '../core/signal.js';
-import { SIGNAL, SESSION } from '../config.js';
+import { SIGNAL, SESSION, HAND } from '../config.js';
 import { COLORS, text, textWidth, scaledPx, circle, fillRound, roundRect, drawHand, drawGauge, panel, backdrop, scene, lookKey, handShadow } from '../render/draw.js';
 import { BRAND, linear, radial, glow, softShadow, lightTrail, wavePoints, rgba, mix, glassPlate, cachedLayer } from '../render/fx.js';
 import { drawBionic, drawHeld, bionicTip, bionicHolds, bionicGraspShift, bionicAspect, skinTint, workshopPlace } from '../render/bionic.js';
 import { sprite, spriteMeta, drawSprite, spriteAspect } from '../render/sprites.js';
 
-/** The first of these grips the gesture set has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by «Щипок»). */
-/** A grip the set actually has; a set without «щепоть» takes the power grip (the СППР set of the meetup, 5.31). */
-const gripOf = (...ids) => ids.find(id => GRIP_NAME[id]) ?? CLOSING_GESTURES[0]?.grip ?? 'fist';
+/**
+ * The first of these grips the two-channel hand has (5.29: the UBI4 set has no lateral «Ключ» — a card is taken by
+ * «Щипок»), else its power grip. 6.3.2: the grips of the hand (HAND.twoChannelGrips), not the closing gestures of the
+ * set — in the set of the task every object fell to its one closing class, and the Workshop never asked for a switch.
+ */
+const gripOf = (...ids) => ids.find(id => HAND.twoChannelGrips.includes(id)) ?? HAND.twoChannelGrips[0];
+/**
+ * The grip an object is taken with in a scheme: the hand's own in the two-channel schemes; in the gesture scheme the
+ * grip a gesture of the set selects — in a set of the task's СПППР that is its one closing class for every object.
+ */
+export const objectGrip = (kind, scheme) => (scheme === SCHEME.GESTURE ? gripGesture(OBJECTS[kind].grip).grip : OBJECTS[kind].grip);
+/** The gesture scheme of a set whose one closing class is no grip: there is nothing to choose — no grip badge, no «хват». */
+const oneGesture = scheme => scheme === SCHEME.GESTURE && !GRIPS_ARE_GESTURES;
 
 /**
  * Object catalog: force window [min,max], breakAt, grip, contact closure. Conditional units, not newtons. `art` — the
@@ -109,9 +120,10 @@ export class GripGame extends Game {
     // Challenge point: the green window widens or narrows around its centre; breaking stays above it.
     const center = (bmin + bmax) / 2, half = this.adapt.widen((bmax - bmin) / 2);
     const min = Math.max(0.05, center - half), max = Math.min(0.97, center + half);
-    this.current = { kind, ...base, min, max, breakAt: Math.max(breakAt, max + 0.06), limit: this.adapt.widen(this.level.limit),
+    this.current = { kind, ...base, grip: objectGrip(kind, this.scheme), min, max, breakAt: Math.max(breakAt, max + 0.06), limit: this.adapt.widen(this.level.limit),
       phase: 'arrive', t: 0, restFor: 0, liftForce: 0, x: -0.4, needSwitchAt: null, spill: 0, spilled: false };
-    this.hint = `${this.current.name}: хват «${GRIP_NAME[this.current.grip]}», сила в зелёной зоне`;
+    this.hint = oneGesture(this.scheme) ? `${this.current.name}: держите ${closingGestureWord()} до зелёной зоны`
+      : `${this.current.name}: хват «${GRIP_NAME[this.current.grip]}», сила в зелёной зоне`;
   }
 
   step(dt, intent, hand) {
@@ -148,7 +160,7 @@ export class GripGame extends Game {
     if (hand.grip !== o.grip) {
       o.needSwitchAt ??= this.time;
       this.hint = this.scheme === SCHEME.GESTURE
-        ? `Покажите жест «${GRIP_NAME[o.grip]}» при раскрытой кисти`
+        ? `Покажите жест «${gripGesture(o.grip).name}» при раскрытой кисти`
         : hand.switchMode === 'open'
           ? `Нужен хват «${GRIP_NAME[o.grip]}»: раскройте кисть, отпустите и снова держите B ${String(hand.holdOpenS).replace('.', ',')} с`
           : `Нужен хват «${GRIP_NAME[o.grip]}»: раскройте кисть, затем коактивация (A+B разом), затем покой`;
@@ -159,9 +171,10 @@ export class GripGame extends Game {
       const inWindow = hand.force >= o.min && hand.force <= o.max;
       const resting = intent.relaxed;
       o.restFor = resting && hand.inContact ? o.restFor + dt : 0;
-      if (!hand.inContact) this.hint = this.say('Сожмите (A), чтобы взять предмет', `Покажите «${GRIP_NAME[o.grip]}», чтобы взять предмет`);
-      else if (hand.force < o.min) this.hint = this.say('Слабо — добавьте силы (A)', this.rate ? 'Слабо — держите жест хвата ещё' : 'Слабо — жест сильнее');
-      else if (hand.force > o.max) this.hint = this.say('Сильно! Ослабьте раскрытием (B) — коротко', `Сильно! Ослабьте: коротко «${OPENING_GESTURE.name}»`);
+      if (!hand.inContact) this.hint = this.say('Сожмите (A), чтобы взять предмет', `Покажите «${gripGesture(o.grip).name}», чтобы взять предмет`);
+      else if (hand.force < o.min) this.hint = this.say('Слабо — добавьте силы (A)', this.rate ? `Слабо — держите ${closingGestureWord()} ещё` : 'Слабо — жест сильнее');
+      // 6.3.2 — the opening signal opens at once (answer 1г, 09.11): an excess is not lowered, the object is taken again.
+      else if (hand.force > o.max) this.hint = this.say('Сильно! Раскройте (B) и возьмите слабее', `Сильно! «${OPENING_GESTURE.name}» — и возьмите слабее`);
       else this.hint = 'Отлично — расслабьтесь, протез удержит сам';
       if (inWindow && o.restFor >= LIFT_REST_S) {
         o.phase = 'carry'; o.t = 0; o.liftForce = hand.force; this.stability.segment(); this.emit('lift');
@@ -176,7 +189,8 @@ export class GripGame extends Game {
     o.x = clamp01(o.t / this.level.carry);
     this.hint = o.heavy ? this.say('Тяжело! Подхватывайте (A) коротко, не выходя из зоны', 'Тяжело! Подхватывайте жестом коротко, не выходя из зоны') : 'Несите спокойно: не напрягайте мышцы';
     if (o.hot) {
-      const leak = this.scheme === SCHEME.GESTURE ? intent.command === COMMAND.OPEN
+      // 6.3.2: an opening of one packet the stream has not confirmed is the recognizer's, not a leak of the person
+      const leak = this.scheme === SCHEME.GESTURE ? intent.command === COMMAND.OPEN && intent.confirmed !== false
         : intent.co || intent.b >= HOT.leakShare * (intent.on?.[1] ?? this.onThreshold);
       o.spill = leak ? o.spill + dt : Math.max(0, o.spill - HOT.settlePerS * dt);
       if (leak) o.spilled = true;
@@ -262,7 +276,7 @@ export class GripGame extends Game {
       if (!hand.armed) return { a: 0, b: 0 };
       return { a: 0.75, b: 0.75 };
     }
-    if (hand.force > o.max) return this.openTarget(0.3);
+    if (hand.force > o.max) return this.openTarget(0.3); // let go and take it again (answer 1г, 09.11)
     // Rate control (threshold, the СПППР stream): let go ahead of the centre by what the force gains while the relaxation
     // reaches the hand — a frame of the channels, a packet and a dwell of the stream.
     const want = this.scheme === SCHEME.THRESHOLD ? hand.force < center - 0.04 : this.rate ? hand.force < center - 0.07 : hand.force < center - 0.03;
@@ -411,12 +425,15 @@ export class GripGame extends Game {
       fillRound(ctx, gx, gy, 22, gh, 11, COLORS.track);
       text(ctx, '?', gx + 11, gy + gh / 2, { size: 18, color: COLORS.muted, display: true });
     }
-    // Grip badge: the grip in hand over the grip needed.
-    const need = o ? GRIP_NAME[o.grip] : '';
-    panel(ctx, w - 150, 12, 138, 48, 14);
-    if (deco) fillRound(ctx, w - 150, 12, 5, 48, 2.5, hand.grip === o?.grip ? COLORS.good : COLORS.warn);
-    text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 79, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 124, outline: true });
-    text(ctx, o ? `Нужен: ${need}` : '', w - 79, 46, { size: 12, color: COLORS.muted, maxWidth: 124, outline: true });
+    // Grip badge: the grip in hand over the grip needed. 6.3.2: not where there is nothing to choose — the gesture scheme
+    // of a СПППР set has one closing class, and the badge read «Хват: Сгибание · Нужен: Сгибание» for the whole exercise.
+    if (!oneGesture(this.scheme)) {
+      const need = o ? GRIP_NAME[o.grip] : '';
+      panel(ctx, w - 150, 12, 138, 48, 14);
+      if (deco) fillRound(ctx, w - 150, 12, 5, 48, 2.5, hand.grip === o?.grip ? COLORS.good : COLORS.warn);
+      text(ctx, `Хват: ${GRIP_NAME[hand.grip] ?? hand.grip}`, w - 79, 28, { size: 13, weight: 700, color: hand.grip === o?.grip ? COLORS.goodInk : COLORS.warnInk, maxWidth: 124, outline: true });
+      text(ctx, o ? `Нужен: ${need}` : '', w - 79, 46, { size: 12, color: COLORS.muted, maxWidth: 124, outline: true });
+    }
     text(ctx, `${Math.min(this.results.length + 1, this.total)} / ${this.total}`, w / 2, 22, { size: 13, weight: 700, color: COLORS.muted, display: true, outline: true });
     if (this.level.practice) text(ctx, 'не тест Box and Blocks', w / 2, h - 14, { size: 12, weight: 700, color: deco ? '#e7eef3' : COLORS.muted, maxWidth: w - 24, outline: deco ? 'rgba(10, 18, 26, 0.85)' : true }); // on the dark bench: light ink with a dark rim (26.10: a light rim in the light theme fused the letters)
     // over the basket (and in it) the name would sit on «корзина»: it has been read on the way

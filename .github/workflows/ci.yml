@@ -35,6 +35,16 @@ jobs:
           node tests/e2e/layout.mjs   # 8 viewports × text 100/130/200 %: overflow, overlap, targets, focus
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with: { name: web-build, path: dist/ }
+  ios-check:
+    # 6.3.2 — the iPhone app without a Mac: its Swift is type-checked against the SDK stubs (ios/stubs) and its own logic
+    # unit-tested (tests/ios/main.swift) in the official Swift image, pinned by digest like the actions. Minutes of
+    # macOS cost ten Linux ones, so the real Xcode build stays in ios.yml (by hand and on a release tag).
+    runs-on: ubuntu-24.04
+    container: swift:6.2.1-noble@sha256:0e4716bd34384d22963a63afbdbc93be3129dfd0753185aa1ded27755abdcae8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - run: sh tools/check-ios.sh
   windows:
     # The jury and the external audit run Windows: tests and the build must not need sh or python3.
     runs-on: windows-2025

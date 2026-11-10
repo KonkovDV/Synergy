@@ -131,10 +131,12 @@ test('09.11: the CLI emulator takes --decimals and says the step in --stats; a w
   assert.match(bad.stderr, /--decimals: 5/);
 });
 
-test('09.11, question 2: the onboarding does not pick a scheme for everyone — it sends the person to their prosthesis', () => {
+test('09.11, question 2: the onboarding starts a beginner with the threshold scheme (the experts\' answer) and keeps their own', () => {
   const src = readFileSync(join(root, 'src/ui/onboarding.js'), 'utf8');
   assert.doesNotMatch(src, /Не уверены — выберите «Пропорциональный»/);
-  assert.match(src, /ту же схему, что у вашего протеза/);
+  // 6.3.2 — answer 2 of the experts: a beginner starts with the threshold scheme; proportional only on prototypes
+  assert.match(src, /начинать с пороговой схемы/);
+  assert.match(src, /Если у вашего протеза другая схема, выберите её/);
 });
 
 test('09.11, audit: the change of the weekly check is the Agresti–Caffo interval — the false «it changed» stays near 5 %', () => {

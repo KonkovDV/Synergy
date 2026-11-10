@@ -1,7 +1,7 @@
 // Interactive tutorial «Первые шаги»: each step waits for the asked command (or gesture) held for a
 // moment, with live feedback — a novice learns rest, A, B, graded force and co-contraction before
 // the first game. Pure step logic (UI in ui/tutorial.js), tested in tests/core.test.mjs.
-import { COMMAND, SCHEME, CLOSING_GESTURES, OPENING_GESTURE } from './vocabulary.js';
+import { COMMAND, SCHEME, GESTURES, CLOSING_GESTURES, OPENING_GESTURE, GRIPS_ARE_GESTURES } from './vocabulary.js';
 import { LOCK, GRIP_SWITCH } from '../config.js';
 
 const rest = { id: 'rest', title: 'Покой', text: 'Полностью расслабьте руку. Протез держит позицию сам — это и есть покой.', holdS: 1.2, check: i => i.relaxed };
@@ -43,16 +43,22 @@ const lockSteps = holdS => [
   { id: 'unlock', title: 'Открыть замок · снова A+B', text: `Ещё раз напрягите обе мышцы и держите ${sec(holdS)} — замок откроется.`, holdS, check: both, lock: 'off' },
 ];
 
-/** Gesture scheme: the power grip, the opening gesture, then a second grip — all taken from GESTURES. */
-const gestureStep = g => ({ id: g.id, title: `Жест «${g.name}»`, text: `${g.cue} и держите. ${g.use}.`, holdS: 1, check: i => i.gesture === g.id });
+/**
+ * Gesture scheme: the gesture that closes the hand, the opening gesture, then — where the closing gestures are grips —
+ * a second grip; all taken from GESTURES. 6.3.2: in a set of the task's СПППР the «second grip» repeated «Сгибание»
+ * (the set has one closing class), and the movements of the wrist — four of the six gestures of the task — were never
+ * shown before «Сейф», the skill check and «Созвездие» asked for them. There every wrist movement of the set has its
+ * step (the hand on the screen stands still at them, as the prosthesis does: the step's picture shows the movement).
+ */
+const gestureStep = g => ({ id: g.id, gesture: g.id, title: `Жест «${g.name}»`, text: `${g.cue} и держите. ${g.use}.`, holdS: 1, check: i => i.gesture === g.id });
+const AFTER_OPENING = GRIPS_ARE_GESTURES ? [CLOSING_GESTURES[1]] : GESTURES.filter(g => g.command === COMMAND.WRIST);
 const GESTURE_STEPS = [
   rest,
   { ...gestureStep(CLOSING_GESTURES[0]), tip: 'Нет датчиков? Удерживайте кнопку жеста внизу экрана.' },
   relax,
   gestureStep(OPENING_GESTURE),
   { ...relax, id: 'relax2' },
-  gestureStep(CLOSING_GESTURES[1] ?? CLOSING_GESTURES[0]),
-  { ...relax, id: 'relax3' },
+  ...AFTER_OPENING.flatMap((g, k) => [gestureStep(g), { ...relax, id: `relax${k + 3}` }]),
 ];
 
 export function tutorialSteps(scheme, { lockHoldS = LOCK.holdDefaultS, gripSwitch = GRIP_SWITCH.defaultMode, holdOpenS = GRIP_SWITCH.holdDefaultS } = {}) {

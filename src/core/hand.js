@@ -2,14 +2,15 @@
 // (transfer to the prosthesis is shown only for trainers with its task — Garske et al. 2021, a viewpoint):
 //  • CLOSE moves fingers with speed ∝ intensity; after contact the grip force grows;
 //  • REST keeps position and force (non-backdrivable drive — the hand holds by itself);
-//  • OPEN first releases force, then opens the fingers;
+//  • OPEN opens the fingers at once: the grip is let go with the first movement (answer 1г of the experts, 09.11 — «сигнал
+//    раскрытия сразу открывает»; until 6.3.2 the opening first lowered the force, then opened);
 //  • the grip switches the way the person's prosthesis does it (GRIP_SWITCH): «open» — at full opening a new
 //    opening signal held for holdOpenS (Motorica); «co» — a co-contraction, re-armed only after full relaxation.
 //  • 07.11 (answer 3 of the experts): on the СПППР stream the intensity is the clarity of a gesture, not its force — the
 //    grip force grows while the closing gesture is held (rate control, as in the threshold scheme), at a speed that
 //    follows the clarity only up to SPPPR.fullSpeedAt.
 import { HAND, GRIP_SWITCH } from '../config.js';
-import { COMMAND, SCHEME, GESTURE_BY_ID, COMMAND_POSE, rateControl } from './vocabulary.js';
+import { COMMAND, SCHEME, GESTURE_BY_ID, COMMAND_POSE, GRIP_POSE, rateControl } from './vocabulary.js';
 import { clarityRate } from './spppr.js';
 
 const OPEN_POSE = COMMAND_POSE.open;
@@ -54,7 +55,14 @@ export class BionicHand {
     switch (intent.command) {
       case COMMAND.SWITCH: if (this.switchMode === 'co') this.trySwitch(); break; // «open»: A+B is the lock, the hand holds
       case COMMAND.CLOSE: this.close(speed, intent, dt, rate); break;
-      case COMMAND.OPEN: this.open(speed, dt, rate); break;
+      case COMMAND.OPEN:
+        // 6.3.2 — the stream reacts on its first packet (answer 5 of the experts, 09.11), and a free hand opens at once.
+        // A held object is let go by an opening the next packet confirmed: one wrong packet of the recognizer must not
+        // drop it (at 10 Hz on the emulator's average stream it dropped 6 % of the objects of «Мастерская»). Serial hands
+        // guard a grip the same way (auto grip, slip control); with two channels every opening is confirmed.
+        if (intent.confirmed === false && this.force > 0) break;
+        this.open(speed, dt);
+        break;
       default: break; // REST — hold
     }
   }
@@ -109,18 +117,23 @@ export class BionicHand {
     }
   }
 
-  open(speed, dt, rate = false) {
-    if (this.force > 0) {
-      // On the stream a fading opening does not keep releasing the grip either: an object is not let go by a lost signal.
-      this.force = Math.max(0, this.force - HAND.forceDropRate * (rate ? speed : Math.max(0.3, speed)) * dt);
-      return;
-    }
+  /**
+   * 6.3.2 — the experts of Motorica, 09.11 (answer 1г): the opening signal opens the hand at once; it does not first lower
+   * the force. The fingers leave the object with the first movement, so the force is gone, and too strong a grip is
+   * corrected the way a real hand does it: open and take the object again. Speed 0 — the fading inertia of a silent СПППР
+   * stream — does not open: an object is not let go by a lost signal.
+   */
+  open(speed, dt) {
+    if (!(speed > 0)) return;
+    this.force = 0;
     this.closure = Math.max(0, this.closure - HAND.openSpeed * speed * dt);
   }
 
   /** Finger flexions for rendering: open pose blended toward the grip pose. */
   pose() {
-    const target = GESTURE_BY_ID[this.grip]?.pose ?? COMMAND_POSE.close;
+    // 6.3.2: the pose of the grip itself (vocabulary.js GRIP_POSE). The pose of the gesture with the grip's id was the same
+    // thing only in the «Синергия» set; in the task's set there is no gesture «fist», and the hand closed half-way.
+    const target = GRIP_POSE[this.grip] ?? COMMAND_POSE.close;
     return OPEN_POSE.map((open, i) => lerp(open, target[i], this.closure));
   }
 }

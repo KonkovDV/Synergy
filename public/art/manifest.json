@@ -339,18 +339,20 @@
   "gesture-abduction": {
    "w": 256,
    "h": 256,
-   "bytes": 8320,
+   "bytes": 8464,
    "alpha": true,
-   "sha256": "8e4b016cda645b58508c8e3e65c731df4bcbe634743b3c624eb452d2b39e38b0",
-   "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
+   "sha256": "51f786945b4424fdd417bc89f12c524e008d536fdce96fbac2d66fab5ae01c9d",
+   "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab",
+   "fixed": "tools/fix-deviation-art.py (6.3.2): tilt towards the arrow, one hand in both pictures"
   },
   "gesture-adduction": {
    "w": 256,
    "h": 256,
-   "bytes": 8876,
+   "bytes": 6752,
    "alpha": true,
-   "sha256": "a75fbbd2bf303aa0e3a1123b5aab232ee22f11da5c2b586896f435e84f90ffa2",
-   "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
+   "sha256": "f061485476874b2e723ae31c2bf5bb845b2900d227530954801afc0fcea90ebd",
+   "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab",
+   "fixed": "tools/fix-deviation-art.py (6.3.2): tilt towards the arrow, one hand in both pictures"
   },
   "gesture-coact": {
    "w": 256,
@@ -1964,7 +1966,7 @@
   ],
   "splash": "android/res/drawable-xxhdpi/splash_bird.png"
  },
- "total_bytes": 4512738,
+ "total_bytes": 4510758,
  "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)",
  "layout": {
   "pet-chick-happy": {

@@ -26,7 +26,7 @@ test('ответ № 16: a launch names the arm and the prosthesis thresholds �
 test('ответ № 16: the page, the Android app and the iPhone app accept the same shapes', async () => {
   const { readFileSync } = await import('node:fs');
   const LEVEL_255 = '25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]';
-  for (const f of ['src/services/host.js', 'android/src/ru/synergy/trainer/MainActivity.java', 'ios/Synergy/SynergyApp.swift']) {
+  for (const f of ['src/services/host.js', 'android/src/ru/synergy/trainer/MainActivity.java', 'ios/Synergy/LaunchRequest.swift']) { // 6.3.2: LaunchRequest has its own file
     const text = readFileSync(f, 'utf8');
     assert.ok(text.includes(LEVEL_255), `${f}: a threshold is 0…255 by one pattern`);
     assert.ok(text.includes('left|right') || text.includes("'left' || side === 'right'"), `${f}: the arm`);

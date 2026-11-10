@@ -241,8 +241,9 @@ export function progressScreen(app) {
           h('p', { class: 'note' }, 'Игровая статистика каждого упражнения — её можно показать протезисту или реабилитологу. Файл содержит ответы о самочувствии (сведения о здоровье): отправляйте его только тем, кому доверяете.'),
           // 5.14 — a period for the visit or the coordinator's call (about every three months in the first year).
           h('p', { class: 'outfit-label' }, 'Период отчёта'),
-          segmented(REPORT_PERIODS.map(d => ({ value: String(d ?? 'all'), label: d ? `${d} дн.` : 'Всё' })), String(period),
-            v => { app.reportPeriod = v === 'all' ? null : Number(v); }, 'Период отчёта'),
+          // 6.3.2: four options in two rows of two (class `period`) — in three columns «Всё» sat alone under an empty cell
+          h('div', { class: 'period' }, segmented(REPORT_PERIODS.map(d => ({ value: String(d ?? 'all'), label: d ? `${d} дн.` : 'Всё' })), String(period),
+            v => { app.reportPeriod = v === 'all' ? null : Number(v); }, 'Период отчёта')),
           h('button', { class: `btn ${runs.length ? 'primary' : 'ghost'}`, onclick: () => printHtml(`Синергия — отчёт ${dayKey()}`, reportHtml(app.state, id => GAME_BY_ID[id]?.title ?? id, { periodDays: app.reportPeriod })) }, 'Отчёт для специалиста · PDF'),
           h('div', { class: 'row-actions' },
             h('button', { class: 'btn ghost', onclick: () => download(`synergy-report-${dayKey()}.json`, JSON.stringify(buildReport(app.state, { periodDays: app.reportPeriod }), null, 2), 'application/json') }, 'Отчёт JSON'),

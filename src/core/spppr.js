@@ -8,9 +8,11 @@
 //              phone clock serves only to draw between packets (lower envelope of arrival − timestamp).
 //   SppprDecoder — softmax → joystick. Probabilities are smoothed on MCU time; the axes are differences of probabilities
 //              (x = flexion − extension, y = pronation − supination, z = abduction − adduction; vocabulary.js `axis`);
-//              the dominant axis becomes the command with hysteresis and a dwell on MCU time, so a single wrong packet
-//              is forgiven; between packets the axes go on along their slope (jitter 10–100+ ms without jerks); after
-//              200 ms without a packet the speed fades (inertia), much later the link counts as lost.
+//              the dominant axis becomes the command with hysteresis on the first packet that shows it (answer 5 of the
+//              experts, 09.11: a quick reaction matters more), and the next packet takes back a command it does not
+//              confirm (a rollback); a dwell on MCU time can be set instead (SPPPR.dwellMs, 50 ms until 6.3.2: one
+//              wrong packet was forgiven); between packets the axes go on along their slope (jitter 10–100+ ms without
+//              jerks); after 200 ms without a packet the speed fades (inertia), much later the link counts as lost.
 import { SPPPR } from '../config.js';
 import { plural } from './format.js';
 import { SPPPR_SET, SPPPR_SETS, GESTURE_BY_ID, GESTURE_CLASS_ORDER, CLOSING_GESTURES, OPENING_GESTURE, COMMAND } from './vocabulary.js';
@@ -217,6 +219,8 @@ export class SppprDecoder {
     this.p = null; this.raw = null; this.axes = { x: 0, y: 0, z: 0 }; this.slope = { x: 0, y: 0, z: 0 };
     this.lastTs = null; this.lastArrival = null; this.lastText = null;
     this.dir = NEUTRAL; this.dirSince = null; this.cand = null; this.candSince = null;
+    // 6.3.2: a later raw packet agreed with the current direction (true for the neutral of a fresh stream)
+    this.dirConfirmed = true;
     // 6.2: the MCU time when the movement of the current command showed up in the stream — the first packet of the run
     // of raw packets pointing at it (`history`, see datedStart) — not when the dwell confirmed it a packet later (a whole
     // 100 ms at 10 Hz), nor when the smoothing caught up (≈ 20 ms later at 50 Hz, nothing at 10 Hz: a rate's own lag).
@@ -294,15 +298,19 @@ export class SppprDecoder {
 
   /**
    * The dominant axis decides the direction: it becomes a command at `enter`, stays one down to `exit`, and a change
-   * must hold `dwellMs` on the MCU clock while the smoothed AND the newest raw packet agree. One wrong packet cannot win:
-   * the next packet disagrees with it, even when the smoothing still remembers it (50–100 ms a packet). A candidate that
-   * does not last is a forgiven noise (counted).
+   * needs the smoothed AND the newest raw packet to agree, held `dwellMs` on the MCU clock. 6.3.2 (answer 5 of the
+   * experts, 09.11): the dwell is 0 — the first such packet is the command. It is confirmed when a later raw packet agrees
+   * with it; until then the next packet that disagrees decides alone (the smoothing and the hysteresis do not hold an
+   * unconfirmed command), so a wrong packet is a command of its own packet and is taken back by the next one — a
+   * rollback. With a dwell, a candidate that did not last is a forgiven noise. Both are single wrong packets of the
+   * recognizer and go to one counter (`forgiven`; the stream line and the report call it «откаты» since 6.3.2).
    */
   updateDirection(ts) {
     const smooth = this.choose(this.axes), raw = this.choose(axesOf(this.raw));
     this.history.push({ ts, cls: raw });
     if (this.history.length > 16) this.history.shift();
-    const candidate = smooth === raw ? smooth : this.dir;
+    if (raw === this.dir && this.dirSince !== null && ts > this.dirSince) this.dirConfirmed = true;
+    const candidate = !this.dirConfirmed && raw !== this.dir ? raw : smooth === raw ? smooth : this.dir;
     if (candidate === this.dir) {
       if (this.cand !== null) this.stats.forgiven++;
       this.cand = null;
@@ -314,8 +322,12 @@ export class SppprDecoder {
     }
     if (ts - this.candSince >= this.params.dwellMs) {
       if (candidate !== NEUTRAL) this.stats.switches++;
+      // A direction no later packet agreed with: the game reacted to a packet the stream did not confirm (a rollback).
+      if (this.dirSince !== null && !this.dirConfirmed) this.stats.forgiven++;
       // the newest raw packet agrees with the candidate here (a candidate needs it), so its run dates the movement
       this.dir = candidate; this.dirSince = ts; this.onsetTs = Math.min(this.datedStart(candidate) ?? this.candSince, this.candSince); this.cand = null;
+      // a dwell held the candidate over packets that agreed with it; without one the next packet has to
+      this.dirConfirmed = this.params.dwellMs > 0;
     }
   }
 
@@ -374,6 +386,10 @@ export class SppprDecoder {
       gesture, confidence: this.dir === NEUTRAL ? this.p[NEUTRAL] : this.p[this.dir], effort,
       axes: { x: dead(axes.x) * fade, y: dead(axes.y) * fade, z: dead(axes.z) * fade },
       probs: alignedProbs(this.p), stable: true, uncertain: sorted[0] - sorted[1] < P.uncertainMargin,
+      // 6.3.2 — the command is taken on its first packet (answer 5 of the experts, 09.11); it is confirmed once the next
+      // packet agrees (or a dwell held it). What cannot be undone waits for that: a held object is let go and a note of
+      // «Ритм» is judged by a confirmed command, dated by its first packet (core/hand.js, games/rhythm.js).
+      confirmed: this.dirConfirmed,
       coact: Math.min(this.p[xi], this.p[xe]), link: age > P.lossMs ? 'inertia' : 'ok', ageMs: Math.round(age),
       // 6.2 — when the current command started, on the phone's clock: the MCU time of its first packet plus the clock
       // offset (the least delayed arrival), so a packet held back by the radio is dated when it was measured. A game

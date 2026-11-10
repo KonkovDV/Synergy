@@ -34,20 +34,20 @@ export function onboardingScreen(app, { safety = false } = {}) {
       h('h1', {}, 'Безопасно'),
       h('p', { class: 'lead' }, 'Комфорт и самочувствие важнее очков.')),
       safetyList(),
-      h('p', { class: 'note' }, 'Нет датчиков? Встроенный эмулятор ЭМГ на экране: удерживайте площадки A и B, высота пальца — сила.')],
+      h('p', { class: 'note' }, 'Нет датчиков? Посмотреть игры можно на эмуляторе ЭМГ на экране: удерживайте площадки A и B, высота пальца — уровень сигнала.')],
     () => [h('div', { class: 'onb-hero' }, trails(), cover('prosthesis', () => h('div', { class: 'onb-art small' }, mio('focus', 84))),
       h('h1', {}, 'Ваш протез'),
       h('p', { class: 'lead' }, 'Несколько вопросов — и можно начинать.')),
       h('p', {}, 'Как вы управляете протезом?'),
       segmented(Object.entries(SCHEME_INFO).map(([value, i]) => ({ value, label: i.name, sub: i.short })), s.scheme, v => { s.scheme = v; }, 'Схема управления'),
-      // 09.11 — the advice named one scheme for everyone, while the organizers' reference is the threshold EMG of «Инди» and
-      // «Манифесто» (written answers of 23.10). Which scheme a beginner starts with is question 2 of the checkpoint of 09.11;
-      // until the answer the note sends the person to their own prosthesis.
-      h('p', { class: 'note' }, 'Выберите ту же схему, что у вашего протеза, — её знает протезист. Сменить можно в настройках.'),
+      // 6.3.2 — the experts of Motorica, 09.11 (answer 2): a beginner starts with the threshold scheme; serial hands are
+      // two-channel threshold ones, the proportional mode is only on prototypes under trial. The threshold scheme is the
+      // default (core/storage.js); the person's own hand still decides — the prosthetist knows its scheme.
+      h('p', { class: 'note' }, 'Новичку эксперты «Моторики» советуют начинать с пороговой схемы: так управляются серийные протезы. Пропорциональная — только у прототипов на испытаниях. Если у вашего протеза другая схема, выберите её; сменить можно в настройках.'),
       h('p', {}, 'На какой руке протез?'),
       segmented([{ value: 'right', label: 'Правая' }, { value: 'left', label: 'Левая' }], s.side, v => { s.side = v; }, 'Рука с протезом'),
       h('p', {}, 'Протез уже есть?'),
-      segmented([{ value: 'yes', label: 'Есть' }, { value: 'waiting', label: 'Жду протез', sub: 'учусь заранее' }], s.prosthesis, v => { s.prosthesis = v; }, 'Протез уже есть?'),
+      segmented([{ value: 'yes', label: 'Есть' }, { value: 'waiting', label: 'Жду протез', sub: 'его делают' }], s.prosthesis, v => { s.prosthesis = v; }, 'Протез уже есть?'),
       h('p', {}, 'Кто будет заниматься?'),
       segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { s.audience = v; }, 'Кто занимается'),
       h('label', { class: 'row' }, h('span', {}, 'Как к вам обращаться (необязательно)'), h('input', { type: 'text', maxlength: 24, value: s.name, oninput: e => { s.name = e.target.value.trim(); } })),

@@ -506,7 +506,13 @@ test('5.32: «Первая команда» is written into the four states, not
   const app = fresh();
   const screen = settingsScreen(app);
   const times = re => (textOf(screen.node).match(re) || []).length;
-  assert.equal(times(/первую команду/g), 0);
+  // 6.3.2: «Первая команда» is the default (answer 2 of the experts, 09.11) — the stricter «Кисть стоит» says none of it
+  assert.equal(app.settings.bothOn, 'first');
+  assert.ok(times(/первую команду/g) >= 2, 'the default: the law note and the four-state line both say it');
+  const before = times(/первую команду/g);
+  nodes(screen.node).find(n => n.tag === 'button' && textOf(n).includes('Кисть стоит')).on.click();
+  assert.equal(app.settings.bothOn, 'hold');
+  assert.ok(times(/первую команду/g) < before, 'the stricter law takes it out of the note and the four states');
   const pick = nodes(screen.node).find(n => n.tag === 'button' && textOf(n).includes('Первая команда'));
   pick.on.click();
   assert.equal(app.settings.bothOn, 'first');

@@ -243,19 +243,31 @@ test('ТЗ мышцы-антагонисты: flexors and extensors together can
   assert.ok(f.a > 0.4 && f.b > 0.4, 'both channels are on for the two-channel schemes');
 });
 
-test('ТЗ ошибки классификации: a single wrong packet is forgiven, a held movement is not', () => {
+test('ТЗ ошибки классификации: a single wrong packet is a command of its own packet, never confirmed; a held movement is confirmed', () => {
+  // 6.3.2 — answer 5 of the experts (09.11): a quick reaction matters more, so the first packet is the command. A wrong
+  // one is taken back by the next packet (a rollback, counted); what cannot be undone waits for a confirmed command
+  // (core/hand.js, games/rhythm.js). Until 6.3.2 a dwell of 50 ms forgave it: the command never changed.
   for (const step of [10, 20, 50, 100]) {
     const d = new SppprDecoder();
-    let ts = 0, closed = false;
+    let ts = 0, packets = 0, confirmed = false;
     for (let i = 0; i < 40; i++) {
       d.push(packet(ts += step, i === 20 ? { flexion: 0.9 } : {}), ts);
-      closed ||= d.frame(ts).gesture !== 'rest';
+      const f = d.frame(ts);
+      if (f.gesture !== 'rest') { packets++; confirmed ||= f.confirmed; }
     }
-    assert.equal(closed, false, `${step} ms a packet: one packet of flexion among neutral`);
-    assert.ok(d.stats.forgiven >= 1 || step === 10, 'counted as forgiven');
+    assert.ok(packets <= 1, `${step} ms a packet: one packet of flexion among neutral is a command for that packet at most (${packets})`);
+    assert.equal(confirmed, false, `${step} ms: and it is never confirmed`);
+    assert.ok(d.stats.forgiven === packets, `${step} ms: counted as a rollback`);
     for (let i = 0; i < Math.max(2, Math.ceil(150 / step)); i++) d.push(packet(ts += step, { flexion: 0.9 }), ts);
-    assert.equal(d.frame(ts).gesture, 'flexion', `${step} ms: a flexion held 150 ms (or two packets) becomes the command`);
+    assert.equal(d.frame(ts).gesture, 'flexion', `${step} ms: a held flexion is the command`);
+    assert.equal(d.frame(ts).confirmed, true, `${step} ms: and the packets after the first confirm it`);
   }
+  // With a dwell (the law until 6.3.2) the wrong packet is forgiven, not acted on.
+  const old = new SppprDecoder({ params: { dwellMs: 50 } });
+  let ts = 0, closed = false;
+  for (let i = 0; i < 40; i++) { old.push(packet(ts += 100, i === 20 ? { flexion: 0.9 } : {}), ts); closed ||= old.frame(ts).gesture !== 'rest'; }
+  assert.equal(closed, false);
+  assert.equal(old.stats.forgiven, 1);
 });
 
 test('ТЗ Jitter: packets every 10–100+ ms — the joystick sampled at 60 fps rises without steps back or jerks', () => {
@@ -372,7 +384,7 @@ test('ТЗ конвейер: flexion closes, extension opens, the wrist states s
   assert.equal(rest.command, COMMAND.REST);
 });
 
-test('ТЗ отклик: from the first packet of a contraction to the command — smoothing and the 50 ms dwell, not the 90 ms debounce', () => {
+test('ТЗ отклик: from the first packet of a contraction to the command — the first packet itself, not the 90 ms debounce', () => {
   const latency = step => {
     const d = new SppprDecoder();
     const pipe = new SignalPipeline({ scheme: 'gesture' });
@@ -387,13 +399,13 @@ test('ТЗ отклик: from the first packet of a contraction to the command �
     }
     return null;
   };
-  // The task packet sets frame.stable, so gestureStableMs (90) is not added. What remains is the probability
-  // smoothing and dwellMs on the MCU clock, landed on a packet.
-  assert.equal(latency(20), 80, '50 Hz');
-  assert.equal(latency(1000 / 30), 99, '30 Hz — the 100 ms the documents quote');
-  // Q&A of the organizers (04.11.2026): the СПППР sends at 10 Hz with up to 100 ms of its own delay. dwellMs is confirmed
-  // only by the next packet, so forgiving one wrong packet costs a whole interval here (LIMITS.md).
-  assert.equal(latency(100), 200, '10 Hz — the rate the organizers named: two packets');
+  // The task packet sets frame.stable, so gestureStableMs (90) is not added. 6.3.2 — answer 5 of the experts (09.11),
+  // «важнее обеспечить быструю реакцию на сигнал»: no dwell, the first packet of the contraction is the command — one
+  // packet interval after the last neutral one. Until 6.3.2 the 50 ms dwell made it 80, 99 and 200 ms.
+  assert.equal(latency(20), 20, '50 Hz');
+  assert.equal(latency(1000 / 30), 33, '30 Hz');
+  // Q&A of the organizers (04.11.2026): the СПППР sends at 10 Hz with up to 100 ms of its own delay; the game adds none.
+  assert.equal(latency(100), 100, '10 Hz — the rate the organizers named: the first packet');
 });
 
 test('ТЗ управление только сигналом: «старт» и «дальше» без касания — сгибание, удержанное на потоке СПППР, после нейтрали', async () => {

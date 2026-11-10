@@ -34,7 +34,7 @@
   "node": "v22.23.4"
  },
  "apk": {
-  "file": "release/Synergy-6.3.1.apk",
+  "file": "release/Synergy-6.3.2.apk",
   "bytes": 5230441,
   "kb": 5108,
   "sha256": "d5ec3a4934bfb28eec65495b795506f7b76d9587e12514800921885b17f1f150"

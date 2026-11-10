@@ -121,7 +121,8 @@ export function settingsScreen(app, { back = null } = {}) {
     const coNote = h('p', { class: 'note', hidden: s.gripSwitch === 'open' }, 'Сейчас хват меняет коактивация A+B. В протезах «Моторики» хват меняет повторное раскрытие, а A+B — блокировка. Время удержания появится, если выбрать «Снова раскрыть».');
     if (s.gripSwitch !== 'open') hold.hidden = true;
     const pick = v => { app.updateSettings({ gripSwitch: v }); hold.hidden = v !== 'open'; openNote.hidden = v !== 'open'; coNote.hidden = v === 'open'; paintStates(); };
-    // 5.32 — the second channel later than the first: the hand stands, goes on with the first command or takes the later one (BOTH_ON).
+    // 5.32 — the second channel later than the first: the hand goes on with the first command (the default since 6.3.2, answer 2
+    // of the experts, 09.11), stands, or takes the later one (BOTH_ON).
     const bothNote = h('p', { class: 'note' }, bothOnText(s.bothOn));
     const pickBoth = v => { app.updateSettings({ bothOn: v }); bothNote.textContent = bothOnText(v); paintStates(); refreshPreview(); };
     return [
@@ -132,7 +133,7 @@ export function settingsScreen(app, { back = null } = {}) {
         segmented([{ value: 'open', label: 'Снова раскрыть', sub: 'как у «Моторики»' }, { value: 'co', label: 'Коактивация', sub: 'A+B разом' }], s.gripSwitch, pick, 'Смена хвата')),
       hold, openNote, coNote,
       h('div', { class: 'row' }, h('span', {}, 'Второй канал позже первого'),
-        segmented([{ value: 'hold', label: 'Кисть стоит', sub: 'как раньше' }, { value: 'first', label: 'Первая команда', sub: 'классический режим' }, { value: 'latest', label: 'Вторая команда', sub: 'спортивный режим' }], s.bothOn ?? BOTH_ON.defaultMode, pickBoth, 'Второй канал включился позже первого')),
+        segmented([{ value: 'first', label: 'Первая команда', sub: 'как у «Моторики»' }, { value: 'hold', label: 'Кисть стоит', sub: 'строже' }, { value: 'latest', label: 'Вторая команда', sub: 'спортивный режим' }], s.bothOn ?? BOTH_ON.defaultMode, pickBoth, 'Второй канал включился позже первого')),
       bothNote,
       signalParamsBox(),
     ];
@@ -225,7 +226,7 @@ export function settingsScreen(app, { back = null } = {}) {
         // 5.14 — people wait 3–6 months for a prosthesis (the customer's annual report): «жду протез» trains the control
         // on the emulator and shows the path to the prosthesis instead of tasks that need one.
         h('div', { class: 'row' }, h('span', {}, 'Протез уже есть?'),
-          segmented([{ value: 'yes', label: 'Есть' }, { value: 'waiting', label: 'Жду протез', sub: 'учусь заранее' }], s.prosthesis, v => app.updateSettings({ prosthesis: v }), 'Протез уже есть?'))),
+          segmented([{ value: 'yes', label: 'Есть' }, { value: 'waiting', label: 'Жду протез', sub: 'его делают' }], s.prosthesis, v => app.updateSettings({ prosthesis: v }), 'Протез уже есть?'))),
       section('Источник сигнала',
         segmented([{ value: 'touch', label: 'Эмулятор на экране', sub: 'без датчиков' }, { value: 'bridge', label: 'Внешний', sub: 'эмулятор / датчики / протез' }], s.source, v => {
           app.updateSettings({ source: v }); bridgeBox.hidden = v !== 'bridge'; if (rateBox) rateBox.hidden = v !== 'touch'; refreshPreview();

@@ -405,6 +405,14 @@ output { color: var(--accent); font-weight: 700 }
 .checkin-advice { min-height: 48px }
 .tut-canvas { width: min(320px, 100%); height: auto; aspect-ratio: 4 / 3; display: block; margin: 0 auto }
 .tut-ring { width: 64px; height: 64px }
+/* 6.3.2: the step's progress ring beside its title, the words above the live picture (ui/tutorial.js) */
+.tut-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 4px 0 6px }
+.tut-head h2 { margin: 0; text-align: left }
+.tut-head .tut-ring { width: 40px; height: 40px; margin: 0; flex: none }
+.tut-head .tut-ring::after { inset: 8px }
+.tutorial .lead { margin: 0 0 10px }
+/* a first lesson is not the place for packets a second and jitter: the settings and the games show the stream line */
+.tutorial .meter-stream { display: none }
 
 .pin-input { font-size: 2rem; letter-spacing: 0.5em; text-align: center;              min-height: 60px; border-radius: 14px; border: 2px solid var(--line); background: var(--bg2); color: var(--text); margin: 12px auto; display: block }
 table.data { width: 100%; border-collapse: collapse; font-size: 0.8125rem }
@@ -902,7 +910,7 @@ table.data th { font-size: 0.75rem }
 .frame > .frame-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px }
 .frame > .frame-dock { flex: none }
 .frame .tut-canvas { width: auto; max-width: 100%; height: clamp(110px, 28dvh, 240px) }
-.frame .tut-ring { width: clamp(40px, 8dvh, 64px); height: clamp(40px, 8dvh, 64px) }
+.frame .tut-head .tut-ring { width: clamp(32px, 5dvh, 40px); height: clamp(32px, 5dvh, 40px) }
 .frame .row-actions { margin-top: 8px }
 @media (orientation: landscape) and (max-height: 540px) {
   .frame { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 42%); grid-template-rows: auto minmax(0, 1fr) }
@@ -1600,3 +1608,21 @@ body {
 @keyframes fb-nest-breathe { 0%, 100% { transform: none } 50% { transform: scaleY(1.015) } }
 @keyframes fb-nest-perk { 0%, 100% { transform: none } 30% { transform: scale(.98, 1.045) } 60% { transform: scale(1.03, .97) } 80% { transform: scale(.995, 1.005) } }
 @keyframes fb-nest-rock { 0%, 100% { transform: none } 25% { transform: rotate(-3deg) } 50% { transform: rotate(2.5deg) } 75% { transform: rotate(-1.5deg) } }
+
+/* ── 6.3.2 — seams found on the screenshots of the audit of 09.11.2026 (docs/AUDIT.md §61) ── */
+/* The focus ring of the round header buttons stays inside them: outside (2 + 3 px) the top edge of the screen and the
+   progress line cut it, and it touched a three-digit score. */
+.play-top .icon-btn:focus-visible, .top-bar .icon-btn:focus-visible { outline-offset: -3px }
+.score { margin-left: 4px }
+/* An option alone in the last row takes the row: «Сильная усталость» (3 options in 2 columns) left an empty cell. Only on
+   a phone, where the check-in's options go in two columns (three fit from ≈ 470 px of width). */
+@media (max-width: 460px) { .checkin .segmented > .seg:last-child:nth-child(odd) { grid-column: 1 / -1 } }
+/* The report period: four short options — two rows of two at any text size (in three columns «Всё» stood alone). */
+.period .segmented { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+/* The cover's line is not hyphenated («био-ническим протезом» in the first words the person reads). The title keeps
+   hyphenation: at 320 px and 200 % text «СИНЕРГИЯ» does not fit a line. */
+.onb-hero .lead { hyphens: manual; -webkit-hyphens: manual; text-wrap: balance }
+/* 6.3.2 — iOS (Safari, the home-screen PWA and the app's WKWebView): a long press on a picture opens the system menu
+   «Скопировать · Сохранить», and holding a pad is how the on-screen emulator is played. Android takes the menu away in
+   ui/controls.js (contextmenu), iOS fires no such event — only this property stops it. Text stays selectable elsewhere. */
+.controls, .controls *, img.pic, .pet-pic, .stage-canvas, .tut-canvas { -webkit-touch-callout: none }

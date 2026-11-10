@@ -6,7 +6,7 @@ import { SafeGame } from './safe.js';
 import { AssessmentGame } from './assess.js';
 import { DuoGame, DUO_SCHEMES } from './duo.js';
 import { StarsGame } from './stars.js';
-import { SCHEME, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET, SPPPR_SET, rateControl } from '../core/vocabulary.js';
+import { SCHEME, CLOSING_GESTURES, OPENING_GESTURE, GESTURE_SET, SPPPR_SET, GRIPS_ARE_GESTURES, rateControl } from '../core/vocabulary.js';
 
 const ALL = [SCHEME.THRESHOLD, SCHEME.PROPORTIONAL, SCHEME.GESTURE];
 /** id, title and skills come from the game class only (5.10: three copies had drifted — «Мастерская» measured
@@ -14,7 +14,11 @@ const ALL = [SCHEME.THRESHOLD, SCHEME.PROPORTIONAL, SCHEME.GESTURE];
 const meta = Game => ({ Game, id: Game.id, title: Game.title, skills: Game.skills });
 // Gesture-scheme instructions (5.11): the lists spoke of A/B under six gesture pads. Names come from the vocabulary,
 // so the 28.10 set changes them too.
-const GRASP = () => `жест хвата (например, «${CLOSING_GESTURES[0].name}»)`, OPEN = () => `«${OPENING_GESTURE.name}»`;
+// 6.3.2: a set of the task's СПППР has one gesture that closes the hand, so it is named, not given «as an example».
+const GRASP = () => (GRIPS_ARE_GESTURES ? `жест хвата (например, «${CLOSING_GESTURES[0].name}»)` : `«${CLOSING_GESTURES[0].name}»`), OPEN = () => `«${OPENING_GESTURE.name}»`;
+/** The same at the start of a sentence and for «кольца — …»: «Жест хвата» or «Сгибание». */
+const GRASP_WORD = () => (GRIPS_ARE_GESTURES ? 'жест хвата' : `«${CLOSING_GESTURES[0].name}»`);
+const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
 /** 07.11 (answer 3): the gesture scheme of the task's sets reads probabilities — force and height come from holding a gesture. */
 const RATE = () => rateControl(SCHEME.GESTURE);
 
@@ -23,8 +27,8 @@ export const GAMES = [
     ...meta(GripGame), schemes: ALL,
     tagline: 'Взять, перенести, отпустить — и не раздавить яйцо',
     teaches: 'Дозирование силы хвата, удержание без напряжения, отпускание и смена хвата — как в протезе. Самая близкая к протезу задача.',
-    how: ['Сожмите (A) до зелёной зоны и расслабьтесь — протез держит сам', 'Слишком сильно? Коротко B ослабит хват', 'Над корзиной раскройте кисть (B)', 'Другой хват — снова B у раскрытой кисти (или A+B: Настройки → «Смена хвата»)'],
-    howGesture: () => [RATE() ? `Держите ${GRASP()}, пока сила дойдёт до зелёной зоны, и расслабьтесь — протез держит сам` : `Покажите ${GRASP()} до зелёной зоны и расслабьтесь — протез держит сам`, `Слишком сильно? Коротко покажите ${OPEN()}`, `Над корзиной — ${OPEN()}`, 'Хват — тот, что написан у предмета: смените жест при раскрытой кисти'],
+    how: ['Сожмите (A) до зелёной зоны и расслабьтесь — протез держит сам', 'Слишком сильно? Раскройте (B) и возьмите снова', 'Над корзиной раскройте кисть (B)', 'Другой хват — снова B у раскрытой кисти (или A+B: Настройки → «Смена хвата»)'],
+    howGesture: () => [RATE() ? `Держите ${GRASP()}, пока сила дойдёт до зелёной зоны, и расслабьтесь — протез держит сам` : `Покажите ${GRASP()} до зелёной зоны и расслабьтесь — протез держит сам`, `Слишком сильно? Покажите ${OPEN()} и возьмите снова`, `Над корзиной — ${OPEN()}`, ...(GRIPS_ARE_GESTURES ? ['Хват — тот, что написан у предмета: смените жест при раскрытой кисти'] : [])],
   },
   {
     ...meta(FlightGame), schemes: ALL,
@@ -33,8 +37,8 @@ export const GAMES = [
     // No «птицу» here: the egg and the chick (the first days) leave the flight to the glider.
     how: ['A — выше, B — ниже, покой — середина', 'Оранжевые кольца — канал A, голубые — канал B, белые — расслабление', 'В «потоке» держите высоту ровно до конца', 'Зелёная линия — летите вдоль неё. Со 2-го уровня это подъём и удержание, с 5-го — медленная волна'],
     howGesture: () => (RATE()
-      ? [`Жест хвата — набрать высоту, ${OPEN()} — снизиться, покой — держать высоту`, `Оранжевые кольца — выше середины, голубые — ниже, белые — середина`, 'В «потоке» держите высоту ровно до конца — в покое', 'Чем чётче жест, тем быстрее набор высоты; отпускайте чуть раньше цели']
-      : [`Жест хвата — выше, ${OPEN()} — ниже, покой — середина`, `Оранжевые кольца — жест хвата, голубые — ${OPEN()}, белые — покой`, 'В «потоке» держите высоту ровно до конца', 'Зелёная линия — летите вдоль неё. Со 2-го уровня это подъём и удержание, с 5-го — медленная волна']),
+      ? [`${cap(GRASP_WORD())} — набрать высоту, ${OPEN()} — снизиться, покой — держать высоту`, `Оранжевые кольца — выше середины, голубые — ниже, белые — середина`, 'В «потоке» держите высоту ровно до конца — в покое', 'Чем чётче жест, тем быстрее набор высоты; отпускайте чуть раньше цели']
+      : [`${cap(GRASP_WORD())} — выше, ${OPEN()} — ниже, покой — середина`, `Оранжевые кольца — ${GRASP_WORD()}, голубые — ${OPEN()}, белые — покой`, 'В «потоке» держите высоту ровно до конца', 'Зелёная линия — летите вдоль неё. Со 2-го уровня это подъём и удержание, с 5-го — медленная волна']),
   },
   {
     ...meta(RhythmGame), schemes: ALL,

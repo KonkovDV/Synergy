@@ -5,9 +5,9 @@ import { h, toast } from './dom.js';
 import { topBar, signalMeter } from './widgets.js';
 import { TutorialRun } from '../core/tutorial.js';
 import { createTwoChannelPads, createGesturePads } from './controls.js';
-import { SCHEME } from '../core/vocabulary.js';
+import { SCHEME, GESTURE_BY_ID } from '../core/vocabulary.js';
 import { ACHIEVEMENTS } from '../core/progress.js';
-import { drawHand, drawGauge, circle, COLORS } from '../render/draw.js';
+import { drawHand, drawGauge, circle, panel, COLORS } from '../render/draw.js';
 import { drawSprite } from '../render/sprites.js';
 import { drawBionic, roomPlace, skinTint } from '../render/bionic.js';
 import { clearTints } from '../render/sprites.js';
@@ -45,9 +45,12 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
     app.say(run.passed ? 'Обучение пройдено. Отлично!' : 'Обучение завершено. Шаги можно пройти снова в настройках.', { interrupt: true });
   };
   const live = h('p', { class: 'sr-only', role: 'status' });
+  let body = null; // the scroll area of the step (set once the screen is built)
   const showStep = () => {
     const step = run.step;
     if (!step) return;
+    // 6.3.2: a new step starts at its words — after «Пропустить шаг» at the bottom the title was above the fold
+    if (body) body.scrollTop = 0;
     counter.textContent = `Шаг ${run.index + 1} из ${run.steps.length}`;
     title.textContent = step.title; text.textContent = step.text; tip.textContent = '';
     live.textContent = `${counter.textContent}. ${step.title}. ${step.text}`; // for a screen reader without the app's voice (5.11)
@@ -58,7 +61,9 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
   // until 5.9 the pads were below the fold on most phones and the instruction scrolled away to press them.
   const node = h('div', { class: 'screen tutorial frame' },
     topBar('Первые шаги', () => app.go(from, from === 'settings' ? { back: 'tutorial' } : {})),
-    h('main', { class: 'frame-body center' }, counter, canvas, ring, title, text, tip, live,
+    // 6.3.2: the step's words first, the live picture under them. With six gesture pads and the stream panel in the dock
+    // the picture took the whole body, and «what to do» began below the fold of a 150 px scroll area.
+    body = h('main', { class: 'frame-body center' }, counter, h('div', { class: 'tut-head' }, ring, title), text, canvas, tip, live,
       h('div', { class: 'row-actions' },
         h('button', { class: 'btn ghost', onclick: () => { if (run.step?.lock === 'off') locked = false; run.skipStep(); if (run.done) finish(); else showStep(); } }, 'Пропустить шаг'),
         h('button', { class: 'btn ghost', onclick: finish }, 'Завершить обучение'))),
@@ -95,6 +100,15 @@ export function tutorialScreen(app, { from = 'home' } = {}) {
         drawHand(ctx, { x: 150, y: 228, size: 92, pose, skin: app.profile.skin, glow: lit, mirror });
       }
       if (locked && !drawSprite(ctx, 'ico-lock', 214, 76, 56)) padlock(ctx, 214, 70, COLORS.goodInk); // 5.16: the lock of the illustrations
+      // 6.3.2 — the movement a gesture step asks for, as its picture: the hand above is the prosthesis, and at a movement
+      // of the wrist it stands still (the set of the task), so without the picture the step showed nothing to repeat.
+      const cue = run.step?.gesture ? GESTURE_BY_ID[run.step.gesture] : null;
+      if (cue) {
+        panel(ctx, 8, 8, 72, 72, 14);
+        if (!drawSprite(ctx, `gesture-${cue.id}`, 44, 44, 64, { sx: mirror ? -1 : 1 })) {
+          drawHand(ctx, { x: 44, y: 66, size: 22, pose: cue.pose, skin: 'icon', sleeve: false, mirror, wrist: cue.wrist ?? 0, roll: cue.roll ?? 0, dev: cue.dev ?? 0 });
+        }
+      }
       const band = run.step?.band;
       // The channel of the step: B on «Раскрытие» (5.11 — the gauge always showed A, empty while B was working).
       const ch = run.step?.id === 'open' ? 'b' : 'a';

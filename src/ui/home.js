@@ -120,7 +120,9 @@ export function homeScreen(app) {
   const ticked = validEverydayId(p.days[today]?.everyday);
   const everydayCard = s.prosthesis === 'waiting'
     ? h('section', { class: 'card waiting-card' }, h('h2', { class: 'with-art' }, sectionArt('waiting', 32), 'Пока протез делают'),
-      h('p', {}, 'Учитесь управлению заранее: все игры работают на экранном эмуляторе. Как обычно проходит путь к протезу — у Мио.'),
+      // 6.3.2 — the experts of Motorica, 09.11 (answer 11): no access to the EMG sensors while the hand is made, and training
+      // the control logic on the on-screen emulator without EMG is not useful. The card no longer offers it.
+      h('p', {}, 'Тренировки начнутся с протезом и датчиками. Пока его делают — «Азбука протеза» и путь к протезу у Мио.'),
       h('button', { class: 'btn ghost', onclick: () => app.go('faq', { topic: 'path', from: 'home' }) }, sectionArt('path', 24), 'Путь к протезу'))
     : !p.tutorialDone || resting ? null
       : h('section', { class: `card everyday ${ticked ? 'done' : ''}`, 'data-tour': 'home.everyday' },

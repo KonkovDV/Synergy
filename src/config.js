@@ -1,10 +1,10 @@
 // Single source of tunable parameters (DRY). Values are training-game defaults,
 // not clinical prescriptions and not Motorica firmware settings.
-import { CLOSING_GESTURES } from './core/vocabulary.js';
+import { HAND_GRIPS } from './core/vocabulary.js';
 
 export const APP = {
   name: 'Синергия',
-  version: '6.3.1',
+  version: '6.3.2',
   storageKey: 'synergy.v4',
   ageRating: '0+',          // information product category, 436-ФЗ ст. 12 (no content restricted for children)
 };
@@ -74,7 +74,11 @@ export const SPPPR = {
   deadZone: 0.10,     // |axis| below this is no motion (the axes are differences of probabilities, −1…1)
   enter: 0.18,        // the dominant axis must reach this to become a command…
   exit: 0.10,         // …and stays one down to this (hysteresis)
-  dwellMs: 50,        // a new direction must hold this long on the MCU clock: one wrong packet is forgiven
+  // 6.3.2 — the experts of Motorica, 09.11 (answer 5): «для СПППР важнее обеспечить быструю реакцию на сигнал». A new
+  // direction becomes a command on the first packet that shows it (the smoothed and the raw packet agree), and the next
+  // packet takes it back if it does not confirm it (a rollback, counted). Until 6.3.2 a direction had to hold 50 ms on the
+  // MCU clock — at 10 Hz the second packet confirmed it, 100 ms later, and one wrong packet was forgiven.
+  dwellMs: 0,
   riseMs: 0,          // 6.2: «Ритм» dates a command this much before its first packet, beyond half a packet — the stream's own
                       // rise of a probability to `enter`. 0 keeps the judging the levels were balanced on: an onset on the
                       // beat is judged ≈ 45–55 ms late on the emulator at any rate, as at 30–50 Hz before. Real СПППР — К.2
@@ -112,15 +116,11 @@ export const HAND = {
   closeSpeed: 2.4,          // closure units / s at intensity 1 (proportional speed)
   openSpeed: 2.6,
   forceRiseRate: 1.4,       // max force growth / s (motor limit)
-  forceDropRate: 1.8,       // force release / s at intensity 1 when opening
   thresholdForceRate: 0.35, // force growth / s in the threshold scheme: a 250 ms human reaction overshoots ≤ 0.09
-  // Preferred order is the one the levels were balanced on (fist, pinch, key); a set that lacks one
-  // falls through to its own closing grips (СППР has only the power grip).
-  twoChannelGrips: ['fist', 'pinch', 'key', 'indication']
-    .filter(id => CLOSING_GESTURES.some(g => g.grip === id))
-    .concat(CLOSING_GESTURES.map(g => g.grip).filter(id => !['fist', 'pinch', 'key', 'indication'].includes(id)))
-    .filter((id, i, all) => all.indexOf(id) === i)
-    .slice(0, 3),
+  // The grips the two-channel hand switches, in order (core/vocabulary.js HAND_GRIPS): the order the levels were balanced
+  // on (fist, pinch, key); a set that lacks one goes on with its own grips. 6.3.2: a set of the task's СПППР has no grips
+  // (its closing class is wrist flexion) — the hand keeps its own three; until then it had one, named «Сгибание».
+  twoChannelGrips: HAND_GRIPS.map(g => g.grip),
 };
 
 export const SESSION = {
@@ -282,14 +282,17 @@ export const GRIP_SWITCH = { defaultMode: 'open', holdDefaultS: 1, minS: 0.1, ma
  * 5.32 — what the hand does when the second channel switches on later than the first, outside the co-contraction window
  * (`coOnsetWindowMs`). 'hold' — the game's model until now: two commands at once, the hand stands. 'first' — the first
  * command goes on while its channel stays on; the later one is not executed. That is how Motorica's expert described
- * the prosthesis at the meetup («выполнит первую пришедшую команду») and Momo's FIRST_OVER policy (hcilab, MIT). Which
- * law a given hand follows is the prosthetist's word, so the default stays 'hold'.
+ * the prosthesis at the meetup («выполнит первую пришедшую команду») and Momo's FIRST_OVER policy (hcilab, MIT). Until
+ * 6.3.2 the default stayed 'hold': which law a given hand follows was the prosthetist's word.
  * Q&A of the organizers (04.11.2026) named the modes of the prosthesis: classic — the first signal keeps control until it
  * drops under its threshold, the second does not take over ('first'); sport — the second may take over before the first
  * is done ('latest'). Both above the thresholds may also lock the hand when the lock is on (here: the co-contraction and
  * LOCK). They add that the game follows the task, so these are settings, not a new default.
+ * 6.3.2 — the experts of Motorica, 09.11 (answer 2): «если оба канала превышают порог, выполняется первая команда». The
+ * default is 'first'; both at once (the co-contraction window) is still the lock (answer 1д: «да»). 'hold' — the strict
+ * law of the game until 6.3.2 — and 'latest', the sport mode, stay settings.
  */
-export const BOTH_ON = { modes: ['hold', 'first', 'latest'], defaultMode: 'hold' };
+export const BOTH_ON = { modes: ['first', 'hold', 'latest'], defaultMode: 'first' };
 
 export const HANDS_FREE = { confirmS: 1.0, minS: 0.6, maxS: 2.5, leaveExtraS: 0.2 }; // leaving a screen (results) holds a bit longer than a start
 

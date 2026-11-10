@@ -199,7 +199,7 @@ test('5.30 iOS: SynergyNative has the methods of the Android bridge; links pass 
   for (const m of iosMethods.filter(m => m !== 'nightMode')) assert.match(swift, new RegExp(`case "${m}"`), `${m} is handled`);
   assert.match(swift, /nightMode: \(\) => !!window\.__synergyNight/, 'nightMode() answers at once, as on Android');
   assert.match(swift, /func themeChanged\(\)/, 'and follows the system theme');
-  const app = readFileSync('ios/Synergy/SynergyApp.swift', 'utf8');
+  const app = readFileSync('ios/Synergy/LaunchRequest.swift', 'utf8'); // 6.3.2: LaunchRequest has its own file
   // 5.32: the gesture sets come from the web's own list — the shells kept «synergy|ubi4» after spr8 joined it (5.31).
   for (const [field, pattern] of [['game', '[a-z]{2,16}'], ['level', '[1-9][0-9]?'], ['gestures', GESTURE_SET_IDS.join('|')], ['side', 'left|right'],
     ['closeThreshold', '25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]'], ['openThreshold', '25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]']]) {
@@ -207,7 +207,13 @@ test('5.30 iOS: SynergyNative has the methods of the Android bridge; links pass 
     assert.ok(java.includes(pattern), `Android: ${pattern}`);
   }
   const view = readFileSync('ios/Synergy/GameView.swift', 'utf8');
-  assert.ok(!/name: "synergyHost"/.test(view + swift), 'the standalone app registers no «synergyHost» (services/host.js would think it is embedded)');
+  // 6.3.2: «synergyHost» only for a launch that asked to be returned to (x-success), and only once the page has loaded —
+  // a page that finds it at its start would wait for the host's signal frames (services/host.js, App.hostFed).
+  assert.ok(!/\.add\([^)]*(hostName|"synergyHost")/.test(view), 'the view registers no «synergyHost» of its own (services/host.js would think it is embedded)');
+  const finish = swift.slice(swift.indexOf('didFinish navigation'), swift.indexOf('webViewWebContentProcessDidTerminate'));
+  assert.match(finish, /guard returnURL != nil, !hostListening/, 'only a launch with x-success, once');
+  assert.match(finish, /add\(self, name: NativeBridge\.hostName\)/);
+  assert.equal([...swift.matchAll(/add\(self, name: NativeBridge\.hostName\)/g)].length, 1, 'nowhere else');
   assert.match(swift, /runJavaScriptConfirmPanelWithMessage/, 'confirm() of the settings works (WKWebView ignores it without a UI delegate)');
   const spec = readFileSync('ios/project.yml', 'utf8');
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'));

@@ -121,7 +121,7 @@ Motorica Start уже передаёт сигнал протеза своей и
 
 ## iOS (Swift)
 
-[ios/SynergyHostView.swift](ios/SynergyHostView.swift) — `UIViewRepresentable` для SwiftUI: `WKWebView` с `loadFileURL`, обработчик `synergyHost`, запуск упражнения после `synergy:ready`, `pushFrame`. Обработчик снимается в `dismantleUIView`: контроллер держит его сильной ссылкой.
+[ios/SynergyHostView.swift](ios/SynergyHostView.swift) — `UIViewRepresentable` для SwiftUI: `WKWebView` с `loadFileURL`, обработчик `synergyHost`, запуск упражнения после `synergy:ready`, `pushFrame`. Обработчик снимается в `dismantleUIView`: контроллер держит его сильной ссылкой. С 6.3.2 пример проходит проверку типов по заглушкам SDK (`sh tools/check-ios.sh`). Для постоянного origin прогресса лучше отдавать файлы игры через `WKURLSchemeHandler`, как это делает само приложение (`ios/Synergy/BundleSchemeHandler.swift`). Основной путь интеграции на iOS — роутинг ссылками, с ответом по `x-success` (`docs/INTEGRATION.md`, «iPhone: ответ вызвавшему приложению»).
 
 ## Flutter
 

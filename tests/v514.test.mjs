@@ -93,7 +93,8 @@ test('faq: questions are unique, answers are not empty, numbers come from the co
   assert.match(text('howmuch'), new RegExp(`у детей — ${CHILD.dailySoftCapMin}`));
   for (const s of PET.stages.filter(s => s.from > 0)) assert.match(text('grow'), new RegExp(`с ${s.from}-го дня`));
   assert.match(text('transfer'), /подтверждён слабо/, 'honest about transfer');
-  assert.match(text('waiting'), /не доказана/, 'no promise of a medical effect');
+  // 6.3.2 — answer 11 of the experts (09.11): training without EMG on the on-screen emulator is not useful
+  assert.match(text('waiting'), /не полезна/, 'no promise of a medical effect');
 });
 
 test('tutorial: the prosthesis lock — hold A+B as long as the person\'s prosthesis asks, then unlock', () => {

@@ -307,9 +307,11 @@ export class FlightGame extends Game {
     const alt = target?.kind === 'trace' ? traceTarget(this.time, target.at, target.goal)
       : target?.kind === 'sine' ? sineTarget(this.time, target.at, target) : target ? target.alt : 0.5;
     if (this.scheme === SCHEME.THRESHOLD) {
-      const lead = target && target.kind === 'ring' ? 0.02 : 0.015;
-      if (this.alt < alt - lead) return { a: 0.6, b: 0 };
-      if (this.alt > alt + lead) return { a: 0, b: 0.6 };
+      // 6.3.2 — «Первая команда» is the default law (answer 2 of the experts, 09.11): the first channel keeps the hand until
+      // it drops under its threshold, so a reversal lets it go ahead by the relaxation (≈ 0.14 s) and waits for it.
+      const lead = (target && target.kind === 'ring' ? 0.02 : 0.015) + climbRate(this.levelNumber) * 0.14;
+      if (this.alt < alt - lead) return intent?.bOn ? { a: 0, b: 0 } : { a: 0.6, b: 0 };
+      if (this.alt > alt + lead) return intent?.aOn ? { a: 0, b: 0 } : { a: 0, b: 0.6 };
       return { a: 0, b: 0 };
     }
     if (this.rate) {

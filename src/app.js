@@ -318,7 +318,8 @@ export class App {
       this.bridge?.stop();
       this.bridge = new BridgeSource({ url, onStatus: s => this.screen?.onBridgeStatus?.(s), swap: () => this.settings.swapChannels, hostOrigin: this.launch?.hostOrigin ?? null,
         thresholds: this.bridge?.rawThresholds ?? this.launchThresholds ?? null, onThresholds: () => this.screen?.onThresholds?.(),
-        lead: () => ({ side: this.settings.side, two: this.settings.prostheses === 'two' }) }); // 5.30: two prostheses
+        lead: () => ({ side: this.settings.side, two: this.settings.prostheses === 'two' }), // 5.30: two prostheses
+        channels: () => this.inputScheme() !== 'gesture' }); // 6.3.2: amplitudes before a СПППР stream in a scheme of two channels
       this.bridge.start();
     } else if (this.bridge) {
       this.ble?.disconnect(); this.ble = null;

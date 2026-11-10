@@ -58,26 +58,35 @@ test('answer 3 (audit 07.11): a silent stream does not keep squeezing or letting
    * The force of a hand whose gesture stream goes silent at 1.5 s: [at the silence, 0.5 s later, at the loss]. `p` is sent
    * from `from` ms; before it the stream says neutral.
    */
-  const silence = (p, start = 0, from = 0) => {
+  const silence = (p, start = 0, from = 0, { object = true, closure = 0.3 } = {}) => {
     const d = new SppprDecoder(), pipe = new SignalPipeline({ scheme: 'gesture' }), hand = new BionicHand();
-    hand.setObject(0.3); hand.closure = 0.3; hand.force = start;
+    if (object) hand.setObject(0.3);
+    hand.closure = closure; hand.force = start;
     const rest = [0.94, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01];
-    let ts = 5000; const at = {};
+    let ts = 5000; const at = {}, shut = {};
     for (let now = 0; now <= 3000; now += 16) {
       if (now <= 1500 && now % 100 < 16) d.push(JSON.stringify(sppprPacket(ts += 100, now >= from ? p : rest)), now);
       hand.update(pipe.process(d.frame(now), now), 0.016);
-      for (const k of [1504, 2000, 2992]) if (now === k) at[k] = hand.force;
+      for (const k of [1504, 2000, 2992]) if (now === k) { at[k] = hand.force; shut[k] = hand.closure; }
     }
-    return [at[1504], at[2000], at[2992]];
+    return Object.assign([at[1504], at[2000], at[2992]], { closure: [shut[1504], shut[2000], shut[2992]] });
   };
   const [squeezed, later, lost] = silence([0.1, 0.85, 0.01, 0.01, 0.01, 0.01, 0.01]);
   assert.ok(lost - squeezed < 0.1, `the inertia only: ${squeezed.toFixed(3)} → ${lost.toFixed(3)} (was +0.18 with the floor of the channels)`);
   assert.ok(Math.abs(lost - later) < 0.02, `and then it holds: ${later.toFixed(3)} → ${lost.toFixed(3)}`);
-  // An opening begun just before the silence of a heavy grip: the grip eases while the opening is seen and for the 200 ms
-  // of the last value (the task), then holds instead of letting go (the floor of the channels released it to zero).
-  const [, eased, kept] = silence([0.1, 0.01, 0.85, 0.01, 0.01, 0.01, 0.01], 1, 1300);
-  assert.ok(Math.abs(kept - eased) < 0.02, `a faded opening does not keep releasing: ${eased.toFixed(3)} → ${kept.toFixed(3)}`);
-  assert.ok(kept > 0.2, `the object is still held when the link is lost: ${kept.toFixed(3)}`);
+  // 6.3.2 — an opening the next packet confirmed lets a held object go at once (answer 1г of the experts, 09.11: the
+  // opening does not first lower the force; until 6.3.2 the grip eased here and was kept at the loss).
+  const opened = [0.1, 0.01, 0.85, 0.01, 0.01, 0.01, 0.01];
+  assert.equal(silence(opened, 1, 1300)[0], 0, 'two packets of the opening: the object is let go');
+  // One packet of it just before the silence is not confirmed (answer 5: the hand reacts on the first packet, but what
+  // cannot be undone waits for the next one): the held object stays held, also when the link is lost.
+  const single = silence(opened, 1, 1400);
+  assert.equal(single[2], 1, `one opening packet does not drop a held object: ${single[2]}`);
+  // A free hand opens on that first packet, slows with the inertia and holds: a silent stream does not keep opening it.
+  const free = silence([0.66, 0.01, 0.3, 0.01, 0.01, 0.01, 0.01], 0, 1300, { object: false, closure: 1 }).closure;
+  assert.ok(free[0] < 1, `the free hand began to open: ${free[0].toFixed(3)}`);
+  assert.ok(Math.abs(free[2] - free[1]) < 0.02, `and then it holds: ${free[1].toFixed(3)} → ${free[2].toFixed(3)}`);
+  assert.ok(free[2] > 0.2, `not opened all the way by a lost signal: ${free[2].toFixed(3)}`);
 });
 
 test('answer 3: «Полёт» on the stream — the gesture climbs, rest holds the altitude; no follow segments of a force level', () => {
@@ -159,9 +168,9 @@ test('answer 12: a game played again today that peaks 25 % lower is a sign of fa
   const early = tired.map(r => ({ ...r, durationS: 60 }));
   assert.equal(peakDecline(early), null, `not before ${WELLBEING.fatigueMinMinutes} active minutes`);
   assert.equal(peakDecline(tired.map(r => ({ ...r, demo: true }))), null, 'the demo is not the person');
-  // The safety advice of the results screen and of the rounds of a block: the score first, then the peak, then the cap.
-  const advice = adviseStop(tired, 15 * 60, 30, [], id => id);
-  assert.equal(advice.reason, 'peak');
+  // 6.3.2 — the experts of Motorica, 09.11 (answer 7в): a falling peak is not a reason to offer rest — the person decides.
+  // The peak stays in the records (above); the safety advice reads the score and the cap only.
+  assert.equal(adviseStop(tired, 15 * 60, 30, [], id => id), null);
   assert.equal(adviseStop(tired.slice(0, 2), 31 * 60, 30).reason, 'cap');
   // Audit 07.11: the rounds of one block end a minute apart and differ by their tasks — not a session to compare.
   const at = s => `2026-11-07T10:00:${String(s).padStart(2, '0')}.000Z`;

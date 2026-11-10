@@ -35,6 +35,8 @@ export function readFrame(f) {
     if (finite(f.coact)) frame.coact = clamp(f.coact);
     if (f.link === 'ok' || f.link === 'inertia') frame.link = f.link;
     if (finite(f.ageMs) && f.ageMs >= 0) frame.ageMs = Math.round(f.ageMs);
+    // 6.3.2: a command of one packet the next packet has not confirmed yet (answer 5 of the experts, 09.11)
+    if (f.confirmed === false) frame.confirmed = false;
     // 6.2: when the command started (the phone clock, dated by the MCU's) and the packet period. A date from the future
     // is the frame's own time; one older than SINCE_MAX_MS or a period outside 1…1000 ms is not taken.
     if (finite(f.since) && f.since >= f.t - SINCE_MAX_MS) {
@@ -362,6 +364,8 @@ export class SignalPipeline {
       ...(frame.axes ? { axes: frame.axes } : {}), ...(frame.coact !== undefined ? { coact: frame.coact } : {}), ...(frame.link ? { link: frame.link, ageMs: frame.ageMs ?? 0 } : {}),
       // 6.2 — when the decoder's current command started (phone ms, dated by the MCU clock) and the packet period:
       // «Ритм» judges the movement there, not when the dwell confirmed it.
-      ...(Number.isFinite(frame.since) ? { since: frame.since, packetMs: frame.packetMs ?? null } : {}) };
+      ...(Number.isFinite(frame.since) ? { since: frame.since, packetMs: frame.packetMs ?? null } : {}),
+      // 6.3.2 — the command is taken on its first packet and the next one has not confirmed it yet (answer 5, 09.11).
+      ...(frame.confirmed === false ? { confirmed: false } : {}) };
   }
 }

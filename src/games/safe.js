@@ -258,9 +258,13 @@ export class SafeGame extends Game {
     // door centre, the lamps used to overlap the card on short fields (landscape, small phones).
     const n = this.code.length, lw = Math.min(34, (w - 40) / n), lampR = lw * 0.32;
     const cw = Math.min(w * 0.6, 240), ch = Math.max(84, Math.min(h * 0.24, 112)), x0 = w / 2 - cw / 2, y0 = 10;
-    const lampY = y0 + ch + lampR + 8, footer = 24;
-    const R = Math.max(16, Math.min(w * 0.32, (h - lampY - lampR - 12 - footer) / 2.3));
-    const cx = w / 2, cy = lampY + lampR + 10 + R * 1.15;
+    // 6.3.2 (audit 09.11, J6): the feet of the safe (0.14 of its half-width under the body) and the «Протез видит» line
+    // under them are part of its height — the line used to sit on the feet; and a safe limited by the width stands in the
+    // middle of the room that is left, not right under the lamps with half the field empty below it.
+    const lampY = y0 + ch + lampR + 8, footer = 26, tall = 2.3 * 1.07;
+    const room0 = h - lampY - lampR - 12 - footer;
+    const R = Math.max(16, Math.min(w * 0.32, room0 / tall));
+    const cx = w / 2, cy = lampY + lampR + 10 + R * 1.15 + Math.max(0, room0 - tall * R) / 2;
     const open = this.openedAt !== undefined ? Math.min(1, (this.time - this.openedAt) * 2) : 0;
     // 5.32 — the vault room (docs/GAME_VISUALS.md): a light from above onto the safe, light trails on the wall; cached.
     // the body and the door ring do not move: they are part of the cached room, only the dial turns in the frame
@@ -285,7 +289,11 @@ export class SafeGame extends Game {
         // 5.16: the relaxed hand of the illustrations beside the word (the first gesture of the vocabulary is rest).
         drawSprite(ctx, `gesture-${GESTURES[0].id}`, x0 + cw * 0.13, y0 + ch * 0.4, Math.min(ch * 0.5, cw * 0.18), { sx: this.cueFlip() ? -1 : 1, alpha: 0.75 });
         text(ctx, 'Покой', w / 2, y0 + ch * 0.42, { size: 24, weight: 800, color: COLORS.muted, display: true });
-        text(ctx, this.scheme === SCHEME.GESTURE ? poseHint(this.index) : 'расслабьтесь перед следующей цифрой', w / 2, y0 + ch * 0.7, { size: 12, color: COLORS.muted, maxWidth: cw - 16 });
+        // 6.3.2: the card says what to do — the first sentence of the pose hint («Если удобно, поверните предплечье.»), on
+        // up to two lines at its size; the whole hint is the line under the field. On one line it shrank to ≈ 9 px.
+        const sub = this.scheme === SCHEME.GESTURE ? `${poseHint(this.index).split('. ')[0].replace(/\.$/, '')}.` : 'расслабьтесь перед следующей цифрой';
+        const subLines = wrapLines(ctx, sub, cw - 20, { size: 12 }, 2);
+        subLines.forEach((line, k) => text(ctx, line, w / 2, y0 + ch * (0.7 + (k - (subLines.length - 1) / 2) * 0.15), { size: 12, color: COLORS.muted, maxWidth: cw - 16 }));
       } else {
         const size = ch * 0.27, px = w / 2 - cw * 0.22, py = y0 + ch * 0.5;
         // The words sit between the hold ring and the card edge: a fixed column ran into the ring on a narrow phone.
@@ -319,7 +327,7 @@ export class SafeGame extends Game {
     if (intent && !this.retention) {
       const seen = intent.gesture ? GESTURE_BY_ID[intent.gesture]?.name : COMMAND_NAME[intent.command];
       // The word carries the meaning (colour only adds to it): amber ink when the command flickers.
-      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''} · ${this.steady ? 'стабильно' : 'мерцает'}`, w / 2, Math.min(h - 10, cy + R * 1.15 + 14), { size: 13, color: this.steady ? COLORS.muted : COLORS.warnInk, maxWidth: w - 16, outline: deco });
+      text(ctx, `Протез видит: ${seen ?? '—'}${intent.uncertain ? ' (неуверенно)' : ''} · ${this.steady ? 'стабильно' : 'мерцает'}`, w / 2, Math.min(h - 10, cy + R * 1.15 * 1.14 + 14), { size: 13, color: this.steady ? COLORS.muted : COLORS.warnInk, maxWidth: w - 16, outline: deco });
     }
     this.renderParticles(ctx);
   }
