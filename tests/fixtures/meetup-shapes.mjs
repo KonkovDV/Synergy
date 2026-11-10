@@ -1,4 +1,4 @@
-// Synthetic two-channel traces in the shape read off the meetup graphs (docs/MEETUP_PLAN.md F7).
+// Synthetic two-channel traces in the shape read off the meetup graphs (docs/TASK.md F7).
 // Not Motorica's recordings: rest near 2, a peak inside 20–35, rise 0.15 s, fall 0.4 s, 15 % into the other channel.
 export const MEETUP_SHAPE = Object.freeze({
   rest: 2,

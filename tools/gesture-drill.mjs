@@ -13,7 +13,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // Tests that name a gesture on purpose: each one is a step of the replacement checklist (docs/INTEGRATION.md).
 const EXPECTED = ['vocabulary: bridge synonyms point to existing gestures',
   // 6.0: the generated pictures of the bionic hand are drawn per grip (src/render/bionic.js, 26.10). A grip that leaves the
-  // set leaves its picture without a gesture — step 4а of the replacement checklist (PLAN.md C.3), not a second source of names.
+  // set leaves its picture without a gesture — step 4а of the replacement checklist (docs/dev/PLAN.md C.3), not a second source of names.
   '26.10 grips of the bionic hand: every grip picture is in the catalogue, is a gesture of a set and has its palm light'];
 const TRIPOD = "{ id: 'tripod', name: 'Трипод', command: 'close', grip: 'tripod', pose: [0.6, 0.6, 0.6, 0.2, 0.2], introducedAt: 5, cue: 'Сведите большой, указательный и средний пальцы', use: 'Трёхпальцевый хват: ручка, крышка' },";
 

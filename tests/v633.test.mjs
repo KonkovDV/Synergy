@@ -1,6 +1,6 @@
 import './pin-tz.mjs'; // the set of the published task — the product's default: this file runs on it whatever the runner chose
 // 6.3.3 — the experts of Motorica, 09.11 (answer 4г): «2 жеста + нейтраль» means ANY two gestures and neutral. Until 6.3.3
-// the set «СПППР · 2 жеста» knew only flexion and extension (LIMITS.md, PLAN.md «После ответов экспертов 09.11», п. 1).
+// the set «СПППР · 2 жеста» knew only flexion and extension (LIMITS.md, docs/dev/PLAN.md «После ответов экспертов 09.11», п. 1).
 // Now the pair is chosen — settings, the host's address (?pair=), SYNERGY_GESTURE_PAIR, `--pair` of the emulator — and
 // the dictionary of the stream, the decoder, the two channels of the stream and the emulator follow it.
 import test from 'node:test';
