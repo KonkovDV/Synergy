@@ -1,5 +1,5 @@
-// docs/evidence.json — the numbers of a build in one place (5.17, the practice of the team's repositories: Mandat
-// build_evidence.py, RepairFlow attest.py). The e2e scripts leave their summaries in tools/.cache/evidence/; this
+// docs/evidence.json — the numbers of a build in one place (5.17).
+// The e2e scripts leave their summaries in tools/.cache/evidence/; this
 // script adds the tests, the release files and the pictures, writes docs/evidence.json and the README table between
 // <!-- evidence:begin --> and <!-- evidence:end -->, and sets the APK size and the test count wherever NUMBER_DOCS quote
 // them (6.0, 04.11). The submission gate checks that they agree.

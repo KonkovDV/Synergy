@@ -1,8 +1,8 @@
-// Drill for the day the organizers publish their 7 gestures (PLAN C.3): copy the code to a temp dir,
+// Drill for the day the organizers publish their 7 gestures: copy the code to a temp dir,
 // replace the gesture «Класс» (thumb) with «Трипод» (tripod) in src/core/vocabulary.js ONLY, run the suite.
 // Passes when the only failures are the expected reminders (EXPECTED below) — everything else derives
 // from vocabulary.js. Usage: node tools/gesture-drill.mjs
-import { cpSync, mkdtempSync, readFileSync, writeFileSync, rmSync, readdirSync, symlinkSync, existsSync } from 'node:fs';
+import { cpSync, mkdtempSync, mkdirSync, statSync, readFileSync, writeFileSync, rmSync, readdirSync, symlinkSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { writeEvidence } from './evidence.mjs';
 import { tmpdir } from 'node:os';
@@ -29,6 +29,18 @@ try {
   cpSync(join(root, 'ios'), join(tmp, 'ios'), { recursive: true, filter: src => !src.includes('.xcodeproj') });
   cpSync(join(root, '.github'), join(tmp, '.github'), { recursive: true }); // the same test checks how CI fetches XcodeGen
   for (const file of ['package.json', 'index.html']) cpSync(join(root, file), join(tmp, file));
+  // README.md and LIMITS.md: tests/v634.test.mjs reads the documents the README links (6.3.4). What they link to and the
+  // copy does not carry (release files, the licence, the video) is an empty file there: the link test asks only whether
+  // the target exists.
+  for (const file of ['README.md', 'LIMITS.md']) {
+    cpSync(join(root, file), join(tmp, file));
+    for (const [, target] of readFileSync(join(root, file), 'utf8').matchAll(/\]\(([^)\s]+)\)/g)) {
+      const path = decodeURIComponent(target.split('#')[0]);
+      if (!path || /^(https?:|mailto:)/.test(target) || !existsSync(join(root, path)) || existsSync(join(tmp, path))) continue;
+      if (statSync(join(root, path)).isDirectory()) mkdirSync(join(tmp, path), { recursive: true });
+      else { mkdirSync(dirname(join(tmp, path)), { recursive: true }); writeFileSync(join(tmp, path), ''); }
+    }
+  }
   // The documents the tests read: the rules (checked against the code, 5.13), the host examples (against the contract,
   // 5.15) and the documents they link to — the text documents only, not the screenshots.
   for (const f of readdirSync(join(root, 'docs')).filter(f => f.endsWith('.md'))) cpSync(join(root, 'docs', f), join(tmp, 'docs', f));

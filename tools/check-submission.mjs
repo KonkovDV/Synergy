@@ -237,7 +237,7 @@ const shallow = history && execFileSync('git', ['rev-parse', '--is-shallow-repos
 if (shallow) warn('история git неполная (shallow clone): дату первого коммита не проверить — git fetch --unshallow');
 else if (history) {
   const firstCommit = execFileSync('git', ['log', '--reverse', '--format=%cs', '--max-parents=0'], { cwd: root, encoding: 'utf8' }).trim().split('\n')[0];
-  if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md («До и после 28.10»)`);
+  if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md («Хронология разработки»)`);
 }
 
 for (const w of warnings) console.log(`⚠ ${w}`);
