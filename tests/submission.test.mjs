@@ -97,7 +97,7 @@ function copyRelease(dir) {
   }
   const ev = JSON.parse(readFileSync(join(root, 'docs/evidence.json'), 'utf8'));
   // No APK of this version recorded anywhere yet (the toolchain could not be fetched): the size the pitch quotes.
-  const quotedKb = Number([...readFileSync(join(root, 'docs/PITCH.md'), 'utf8').matchAll(APK_SIZE)][0]?.[1] ?? 0);
+  const quotedKb = Number([...readFileSync(join(root, 'README.md'), 'utf8').matchAll(APK_SIZE)][0]?.[1] ?? 0);
   writeFileSync(join(dir, 'release', `Synergy-${VERSION}.apk`), fakeApk('Synergy Debug', ev.apk?.bytes ?? quotedKb * 1024));
   writeFileSync(join(dir, 'release', 'synergy-standalone.html'), '<!doctype html><title>stand-in</title>');
 }
@@ -135,8 +135,8 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['an older APK in git', () => { writeFileSync(join(dir, 'release', 'Synergy-0.0.1.apk'), 'x'); git(dir, 'add', 'release/Synergy-0.0.1.apk'); }, 'старые APK в git'],
       ['a build folder in git', () => { mkdirSync(join(dir, 'dist'), { recursive: true }); writeFileSync(join(dir, 'dist', 'app.js'), '//'); git(dir, 'add', '-f', 'dist/app.js'); }, 'артефакты сборки в git'],
       ['README table edited by hand', () => edit(dir, 'README.md', s => s.replace('каждая пара цветов', 'почти каждая пара цветов')), 'расходится с docs/evidence.json'],
-      ['an old axe count in the pitch', () => edit(dir, 'docs/PITCH.md', s => `${s}\nНоль нарушений на 28 состояниях экранов светлой темы и 10 тёмной.\n`), 'а axe —'],
-      ['an old layout run in the jury strategy', () => edit(dir, 'docs/AI_USAGE.md', s => `${s}\nЛинтер: 37 состояний × 7 экранов.\n`), 'а линтер раскладки —'],
+      ['an old axe count in the pitch', () => edit(dir, 'submission/AI_REPORT.md', s => `${s}\nНоль нарушений на 28 состояниях экранов светлой темы и 10 тёмной.\n`), 'а axe —'],
+      ['an old layout run in the jury strategy', () => edit(dir, 'submission/AI_REPORT.md', s => `${s}\nЛинтер: 37 состояний × 7 экранов.\n`), 'а линтер раскладки —'],
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
       ['stale citation metadata', () => edit(dir, 'CITATION.cff', s => s.replace(/^version: .*$/m, 'version: 5.11.0')), 'версия CITATION.cff'],
       ['stale iPhone version', () => edit(dir, 'ios/project.yml', s => s.replace(/MARKETING_VERSION: "[^"]+"/, 'MARKETING_VERSION: "5.11.0"')), 'версия ios/project.yml'],
@@ -147,9 +147,9 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['«Fitts\' law measured»', () => edit(dir, 'README.md', s => `${s}\n${FITTS_LAW}\n`), 'по мотивам теста Фиттса'],
       ['«complies with WCAG»', () => edit(dir, 'README.md', s => `${s}\n${WCAG_CLAIM}\n`), 'соответствует WCAG'],
       // 5.19 — a grade of one's own product only beside a measured report (the team's MicroPhoenix rule).
-      ['a state-of-the-art grade of ourselves', () => edit(dir, 'docs/PITCH.md', s => `${s}\n${SOTA_CLAIM}\n`), 'о себе — назвать измеренное'],
+      ['a state-of-the-art grade of ourselves', () => edit(dir, 'submission/AI_REPORT.md', s => `${s}\n${SOTA_CLAIM}\n`), 'о себе — назвать измеренное'],
       ['a readiness grade', () => edit(dir, 'README.md', s => `${s}\n${READY_CLAIM}\n`), 'прототип геймджема'],
-      ['«no competitors» on a slide', () => edit(dir, 'tools/build-deck.py', s => `${s}\n# ${UNIQUE_CLAIM}\n`), 'есть свои игры'],
+      ['«no competitors» on a slide', () => edit(dir, 'tools/build-docs.py', s => `${s}\n# ${UNIQUE_CLAIM}\n`), 'есть свои игры'],
       ['a field result without its session', () => edit(dir, 'docs/USABILITY_RESULTS.md', s => s.replace('|---|---|---|---|---|---|---|---|\n', '|---|---|---|---|---|---|---|---|\n| в среднем | | | | 90 % | 81 | нет | |\n')), 'строка без ссылки на сессию'],
       ['stale APK name in README', () => edit(dir, 'README.md', s => `${s}\nrelease/Synergy-0.0.1.apk\n`), 'Synergy-0.0.1.apk'],
       ['stale version in the LIMITS title', () => edit(dir, 'LIMITS.md', s => s.replace(/^# Границы «Синергии» \S+/m, '# Границы «Синергии» 0.0.1')), '«Синергии» 0.0.1'],
@@ -161,7 +161,7 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       // 6.0 — the set of the task is published (docs/dev/MEMORY.md): a document that still calls the set a hypothesis, or a
       // published line that differs from vocabulary.js, fails the gate.
       ['gesture set published, docs still say «гипотеза»', () => edit(dir, 'docs/TASK.md', s => `${s}\n| «7 жестов» | состав — гипотеза команды |\n`), 'назван гипотезой'],
-      ['published set differs from vocabulary.js', () => edit(dir, 'docs/dev/MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, thumb')), 'набор организатора в docs/dev/MEMORY.md'],
+      ['published set differs from vocabulary.js', () => edit(dir, 'docs/TASK.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, thumb')), 'набор организатора в docs/dev/MEMORY.md'],
     ];
     for (const [name, plant, message] of cases) {
       plant();
@@ -178,7 +178,7 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
 test('submission gate: a published set must equal vocabulary.js', () => {
   const dir = copyRepo();
   try {
-    edit(dir, 'docs/dev/MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, tripod'));
+    edit(dir, 'docs/TASK.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, tripod'));
     for (const f of ['docs/TASK.md']) edit(dir, f, s => s.replace(/состав/gi, 'набор'));
     const r = gate(dir);
     assert.equal(r.status, 1, r.stdout);

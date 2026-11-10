@@ -191,17 +191,17 @@ for (const f of ['lab/lab7.py', 'bridge/ws_bridge.py'].filter(f => existsSync(jo
 }
 
 // 3a. The gesture set: «состав — гипотеза» in the documents until the organizers publish their 7 gestures,
-// then the published set is recorded in docs/dev/MEMORY.md and must be exactly the set in vocabulary.js (PLAN C.3).
-const gestureLine = read('docs/dev/MEMORY.md').match(/^Набор жестов организатора:\s*(.+)$/m)?.[1]?.trim();
+// then the published set is recorded in docs/TASK.md and must be exactly the set in vocabulary.js (PLAN C.3).
+const gestureLine = read('docs/TASK.md').match(/^Набор жестов организатора:\s*(.+)$/m)?.[1]?.trim();
 const hypothesis = new RegExp(`состав${W}[^.\n]{0,120}гипотез`, 'i');
 const hypothesisDocs = ['docs/TASK.md'].filter(f => existsSync(join(root, f)) && hypothesis.test(read(f)));
-if (!gestureLine) warn('docs/dev/MEMORY.md: нет строки «Набор жестов организатора: …» (до 28.10 — «не опубликован»)');
+if (!gestureLine) warn('docs/TASK.md: нет строки «Набор жестов организатора: …» (до 28.10 — «не опубликован»)');
 else if (/^не опубликован/i.test(gestureLine)) {
   if (!hypothesisDocs.includes('docs/TASK.md')) fail('набор жестов не опубликован, а docs/TASK.md не называет состав гипотезой');
 } else {
-  for (const f of hypothesisDocs) fail(`${f}: состав 7 жестов назван гипотезой, а набор организатора уже записан в docs/dev/MEMORY.md`);
+  for (const f of hypothesisDocs) fail(`${f}: состав 7 жестов назван гипотезой, а набор организатора уже записан в docs/TASK.md`);
   const published = gestureLine.split(/[\s,;]+/).filter(Boolean);
-  if ([...published].sort().join() !== [...GESTURE_IDS].sort().join()) fail(`vocabulary.js (${GESTURE_IDS.join(', ')}) ≠ набор организатора в docs/dev/MEMORY.md (${published.join(', ')})`);
+  if ([...published].sort().join() !== [...GESTURE_IDS].sort().join()) fail(`vocabulary.js (${GESTURE_IDS.join(', ')}) ≠ набор организатора в docs/TASK.md (${published.join(', ')})`);
 }
 
 // 3b. Documents name the current release (README kept «Synergy-5.0.0.apk» and a 5.0.0 badge through 5.2.0).
@@ -231,7 +231,7 @@ const shallow = history && execFileSync('git', ['rev-parse', '--is-shallow-repos
 if (shallow) warn('история git неполная (shallow clone): дату первого коммита не проверить — git fetch --unshallow');
 else if (history) {
   const firstCommit = execFileSync('git', ['log', '--reverse', '--format=%cs', '--max-parents=0'], { cwd: root, encoding: 'utf8' }).trim().split('\n')[0];
-  if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md; ответ организатора на вопрос PLAN 0.6 записать в docs/dev/MEMORY.md`);
+  if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md; ответ организатора на вопрос PLAN 0.6 записать в docs/TASK.md`);
 }
 
 for (const w of warnings) console.log(`⚠ ${w}`);
