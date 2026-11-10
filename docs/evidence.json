@@ -1,52 +1,52 @@
 {
- "version": "6.3.1",
- "generated": "2026-11-09T09:07:05.232Z",
+ "version": "6.3.4",
+ "generated": "2026-11-10T12:57:42.936Z",
  "tests": {
-  "total": 599,
-  "failed": 0,
-  "at": "2026-11-09T09:07:05.231Z",
-  "platform": "linux 6.18.44-fc-v310",
+  "total": 624,
+  "failed": 4,
+  "at": "2026-11-10T12:57:42.935Z",
+  "platform": "linux 6.18.44-fc-v338",
   "node": "v22.23.4"
  },
  "a11y": {
-  "light": 37,
+  "light": 39,
   "dark": 10,
   "violations": 0,
   "errors": 0,
   "browser": "153.0.8010.12",
   "axe": "4.14.0",
-  "source": "298051dc09043ffc",
-  "at": "2026-11-09T08:43:56.789Z",
-  "platform": "linux 6.18.44-fc-v310",
+  "source": "dfac588dbfdc59d2",
+  "at": "2026-11-10T12:34:01.735Z",
+  "platform": "linux 6.18.44-fc-v338",
   "node": "v22.23.4"
  },
  "layout": {
-  "states": 81,
+  "states": 83,
   "viewports": 8,
   "scales": 3,
-  "combinations": 1944,
-  "findings": 0,
+  "combinations": 1992,
+  "findings": 4,
   "errors": 0,
-  "seconds": 1172,
-  "source": "298051dc09043ffc",
-  "at": "2026-11-09T09:05:22.587Z",
-  "platform": "linux 6.18.44-fc-v310",
+  "seconds": 1279,
+  "source": "dfac588dbfdc59d2",
+  "at": "2026-11-10T12:57:14.105Z",
+  "platform": "linux 6.18.44-fc-v338",
   "node": "v22.23.4"
  },
  "apk": {
-  "file": "release/Synergy-6.3.2.apk",
-  "bytes": 5230441,
-  "kb": 5108,
-  "sha256": "d5ec3a4934bfb28eec65495b795506f7b76d9587e12514800921885b17f1f150"
+  "file": "release/Synergy-6.3.4.apk",
+  "bytes": 5231165,
+  "kb": 5109,
+  "sha256": "1cc8cb1ba29e4fef29642ea0eb277122b95bdd6ab78939210a4ea1155fa25a0c"
  },
  "html": {
   "file": "release/synergy-standalone.html",
-  "bytes": 6868395,
-  "kb": 6707,
-  "sha256": "b754613bbf077d498eb64ad25274a766ce99bc4dadf2572d5c962374580189e4"
+  "bytes": 6875369,
+  "kb": 6714,
+  "sha256": "c2dbe8e36fdadf8c861cdbeb56c1cbe4f52534b0752f201c95bedd50d5c573f0"
  },
  "art": {
   "pictures": 244,
-  "bytes": 4512738
+  "bytes": 4509408
  }
 }
