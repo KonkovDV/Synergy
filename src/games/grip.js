@@ -368,13 +368,21 @@ export class GripGame extends Game {
     }
     pill(ctx, 'корзина', bx, by + s * 0.42, deco);
     const startX = w * 0.42;
-    let ox = startX, oy = objY, handX = startX, holding = null;
+    let ox = startX, oy = objY, handX = startX, holding = null, handOy = null;
     if (o) {
       if (o.phase === 'arrive') ox = startX + o.x * w;
       if (o.phase === 'carry' || o.phase === 'release' || (o.phase === 'done' && o.delivered)) {
         const k = o.phase === 'carry' ? o.x : 1;
-        ox = startX + (bx - startX) * k; handX = ox; oy = objY - s * 0.5 * Math.sin(Math.PI * Math.min(1, k)) - (o.phase === 'release' ? s * 0.25 : 0);
-        if (o.phase === 'done') oy = by - s * 0.15;
+        // 6.3.3, the last audit: the thing is lifted, carried level and stops above the basket (it used to come down to
+        // the belt beside the basket, jump up for the release and appear inside at once, the open hand with it). Let
+        // go, it falls into the basket while the hand stays above and draws back.
+        const rise = Math.min(1, k / 0.3), hover = objY - s * HOVER * rise * rise * (3 - 2 * rise);
+        ox = startX + (bx - startX) * k; handX = ox; oy = hover; handOy = hover;
+        if (o.phase === 'done') {
+          const fall = Math.min(1, o.t / 0.22), back = Math.min(1, o.t / 0.5);
+          oy = hover + (by - s * 0.15 - hover) * fall * fall;
+          handOy = hover - s * 0.3 * back * (2 - back);
+        }
       }
       // its shadow stays on the belt and fades as it rises
       const lift = Math.max(0, objY - oy) / (s * 0.8);
@@ -387,13 +395,14 @@ export class GripGame extends Game {
       if (o.phase === 'done' && o.delivered) drawBasket(ctx, bx, by, s, deco, 0);
       // 5.17 — the sparks belong to the delivery, not to the mistake (feedback after a good try teaches more); a crushed
       // thing stays a still drawing.
-      if (o.phase === 'done' && o.delivered && !o.bursted) { o.bursted = true; this.burst(ox, oy, COLORS.good, 12, 140, 260, 0.6); }
+      if (o.phase === 'done' && o.delivered && !o.bursted && o.t >= 0.2) { o.bursted = true; this.burst(ox, by - s * 0.15, COLORS.good, 12, 140, 260, 0.6); }
     }
     // Hand from above (fingers down) with its shadow on the belt; a soft scan light points at the object to take.
     // 5.32: the hand is a generated picture hanging from an arm (render/bionic.js); its fingertips reach the top of the
     // object, so the fist closes over it. The drawn hand stands in until the pictures load.
-    const fingerReach = s * 1.72, hy = oy - fingerReach - s * 0.1, pose = hand.pose(), held = { grip: hand.grip, amount: hand.closure };
-    const ht = s * 2.6, handTop = oy - s * 0.18 - bionicTip(pose, held) * ht;
+    const hoy = handOy ?? oy; // where the hand works: at the thing, or above the basket once the thing is let go
+    const fingerReach = s * 1.72, hy = hoy - fingerReach - s * 0.1, pose = hand.pose(), held = { grip: hand.grip, amount: hand.closure };
+    const ht = s * 2.6, handTop = hoy - s * 0.18 - bionicTip(pose, held) * ht;
     // A pinch, a point or a key has no hanging picture yet: the drawn hand is lower, and the scan light must start there.
     const usePicture = bionicHolds('hang', pose, hand.grip, hand.closure);
     if (deco) handShadow(ctx, handX, beltY + 2, s, 0.12);
@@ -509,6 +518,9 @@ function paintBench(g, w, h, beltY, beltH, deco) {
 }
 
 /** The basket: a teal crate with a darker rim and slots; `lit` 0..1 makes the rim glow (time to let go). */
+/** How high above the belt line of a thing the hand carries it, in sizes `s`: clear of the basket's rim. */
+const HOVER = 1.0;
+
 function drawBasket(ctx, bx, by, s, deco, lit) {
   const x = bx - s * 0.7, y = by - s * 0.55, ww = s * 1.4, hh = s * 0.75;
   if (deco) softShadow(ctx, bx, by + s * 0.22, s * 0.85, s * 0.12, 0.3);

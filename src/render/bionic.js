@@ -2,7 +2,7 @@
 // open palm, rest, fist — standing on its socket («Две руки», «Первые шаги») or hanging from an arm («Мастерская»).
 // The pose of the hand model picks the two nearest pictures. Until the pictures load, a game draws its drawn hand.
 // Also the generated room of the hands: a studio with a glossy table, by day and by night.
-import { BRAND, glow, mix } from './fx.js';
+import { BRAND, glow, mix, linear } from './fx.js';
 import { SKIN_COLORS } from './draw.js';
 import { sprite, drawSprite, drawTinted, spriteAspect, spriteMeta } from './sprites.js';
 
@@ -138,13 +138,37 @@ export function drawBionic(ctx, x, y, ht, pose, { kind = 'stand', mirror = false
   return true;
 }
 
-/** The arm above a hanging picture, up to `armTo`: the top rows of the rest picture stretched (the same in every pose). */
+/**
+ * The rest of the prosthesis above a hanging hand (6.3.3, the last audit: the forearm of the picture stretched to the top
+ * of the field read as an arm three hands long). A forearm prosthesis is a hand, a wrist and a socket on the residual
+ * limb: above the picture goes a short forearm (its top rows, the same in every pose) and the socket — graphite, a
+ * little wider toward the elbow, a mint ring at the wrist, a lighter rim where the arm goes in. About as long as the
+ * hand, as on a real prosthesis; it does not reach for the top of the field (`armTo` only cuts it there).
+ */
+const FOREARM = 0.1, SOCKET = 0.5, ARM_WIDTH = 0.478; // of `ht`; the arm across the picture's top edge, of its width
 function drawArm(ctx, x, top, ht, armTo, sx) {
   const img = sprite(BIONIC.hang.pics.rest), aspect = bionicAspect('hang');
   if (!img || !aspect) return;
-  const wd = ht / aspect, iw = img.naturalWidth ?? img.width;
+  const wd = ht / aspect, iw = img.naturalWidth ?? img.width, aw = wd * ARM_WIDTH;
+  const wrist = top - ht * FOREARM, end = wrist - ht * SOCKET;
   ctx.save(); ctx.translate(x, 0); ctx.scale(sx, 1);
-  ctx.drawImage(img, 0, 2, iw, 3, -wd / 2, armTo, wd, top - armTo + 1);
+  ctx.drawImage(img, 0, 2, iw, 3, -wd / 2, wrist, wd, top - wrist + 1);
+  ctx.restore();
+  if (typeof ctx.quadraticCurveTo !== 'function') return; // a canvas without paths (tests): the forearm alone
+  ctx.save();
+  if (typeof ctx.rect === 'function' && typeof ctx.clip === 'function') { ctx.beginPath(); ctx.rect(x - wd, armTo, wd * 2, top - armTo); ctx.clip(); }
+  const w0 = aw * 1.06, w1 = aw * 1.34, r = w1 * 0.3;
+  // the shell of the socket: narrow at the wrist, wider and rounded at the elbow end
+  ctx.beginPath();
+  ctx.moveTo(x - w0 / 2, wrist); ctx.lineTo(x - w1 / 2, end + r);
+  ctx.quadraticCurveTo(x - w1 / 2, end, x - w1 / 2 + r, end); ctx.lineTo(x + w1 / 2 - r, end);
+  ctx.quadraticCurveTo(x + w1 / 2, end, x + w1 / 2, end + r); ctx.lineTo(x + w0 / 2, wrist); ctx.closePath();
+  ctx.fillStyle = linear(ctx, x - w1 / 2, 0, x + w1 / 2, 0, [[0, '#3b4c5a'], [0.3, '#2a3a47'], [0.8, '#1b2732'], [1, '#141d26']], '#2a3a47');
+  ctx.fill();
+  // a sheen down the lit side, the rim of the opening, the ring at the wrist
+  ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(x - w0 * 0.32, end + r, Math.max(2, aw * 0.07), wrist - end - r - 4);
+  ctx.fillStyle = '#56687a'; ctx.fillRect(x - w1 / 2 + r * 0.6, end + 2, w1 - r * 1.2, Math.max(2, aw * 0.05));
+  ctx.fillStyle = BRAND.mint; ctx.fillRect(x - w0 / 2, wrist - 2, w0, 3);
   ctx.restore();
 }
 
