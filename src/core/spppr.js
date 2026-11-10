@@ -61,6 +61,19 @@ export function dictionaryNote(streamClasses, setId, keys = streamClasses) {
   return keys > streamClasses ? `поток похож на «${dictionaryName(streamClasses)}» — нужен набор «${fit.name}»`
     : `поток: ${dictionaryName(streamClasses)} — нужен набор «${fit.name}»`;
 }
+/**
+ * 6.3.4 — the words under «Частота пакетов» in the settings, from the decoder's own rule (SPPPR.dwellMs): since 6.3.2 the
+ * command comes with the first packet of a movement and a disagreeing next packet takes it back (answer 5 of the experts,
+ * 09.11). Until 6.3.4 the settings still said «жест подтверждает следующий пакет, через 100 мс» — the rule of 6.3.1, next
+ * to a stream line that counted the rollbacks.
+ */
+export function streamRateNote(params = SPPPR) {
+  const rule = params.dwellMs > 0
+    ? `жест становится командой, когда держится ${params.dwellMs} мс по часам микроконтроллера, — так одиночный ошибочный пакет командой не становится`
+    : 'команда приходит с первым же пакетом движения; если следующий пакет с ней не согласен, она снимается — это «откат» в строке потока';
+  return `СПППР шлёт 10 пакетов в секунду: ${rule}. «Ритм» судит удар по часам микроконтроллера — по пакету, в котором движение началось.`;
+}
+
 /** Class index → [axis, sign] (null for neutral). */
 const AXIS = BY_ORDER.map(g => g.axis);
 const AXES = ['x', 'y', 'z'];

@@ -236,7 +236,7 @@ def build():
     # 5 — the demo (dark).
     s = d.slide(NAVY, v[5]["voice"])
     d.title(s, "Демо — 2 минуты на телефоне", color=WHITE, sub="Онбординг → гнездо Жар-птицы → план дня → итоги с наградами", subcolor="C9D6E0")
-    hero = ROOT / "docs" / "screenshots" / "v516-hero.jpg"
+    hero = ROOT / "docs" / "screenshots" / "hero.jpg"
     with Image.open(hero) as im:
         hh = 4.75; hw = hh * im.width / im.height  # by height: the whole strip between the subtitle and the footnote
     d.picture(s, png(hero, 2000), (W - hw) / 2, 1.95, h=hh)

@@ -171,15 +171,20 @@ test('5.30 Android: launch extras and synergy:// links become a checked query of
     const harness = join(dir, 'Harness.java');
     writeFileSync(harness, `package ru.synergy.trainer;
 public class Harness { public static void main(String[] a) {
-  String[][] cases = { {"grip", "2", "ubi4", null, null, null}, {"duo", null, null, null, null, null}, {"../x", "2", "ubi4", null, null, null}, {"grip", "100", "evil", null, null, null}, {null, null, null, null, null, null}, {"check", "0", "synergy", null, null, null}, {"grip", "3", "spr8", null, null, null}, {"safe", "1", "tz2", null, null, null},
-    {"grip", "2", null, "left", "60", "45"}, {"grip", null, null, "up", "60", null}, {null, null, null, "right", "256", "45"}, {null, null, null, null, "0", "255"} };
-  for (String[] c : cases) System.out.println("[" + MainActivity.launchQuery(c[0], c[1], c[2], c[3], c[4], c[5]) + "]"); } }`);
+  String[][] cases = { {"grip", "2", "ubi4", null, null, null, null}, {"duo", null, null, null, null, null, null}, {"../x", "2", "ubi4", null, null, null, null}, {"grip", "100", "evil", null, null, null, null}, {null, null, null, null, null, null, null}, {"check", "0", "synergy", null, null, null, null}, {"grip", "3", "spr8", null, null, null, null}, {"safe", "1", "tz2", null, null, null, null},
+    {"grip", "2", null, null, "left", "60", "45"}, {"grip", null, null, null, "up", "60", null}, {null, null, null, null, "right", "256", "45"}, {null, null, null, null, null, "0", "255"},
+    {"safe", "1", "tz2", "pronation,supination", null, null, null}, {"grip", null, "tz2", "flexion,flexion", null, null, null}, {"grip", null, "tz2", "neutral,flexion", null, null, null}, {"grip", null, "tz2", "pronation,supination&embed=1", null, null, null}, {"grip", null, "tz2", "fist,pinch", null, null, null} };
+  for (String[] c : cases) System.out.println("[" + MainActivity.launchQuery(c[0], c[1], c[2], c[3], c[4], c[5], c[6]) + "]"); } }`);
     const built = javac(join(dir, 'classes'), join(dir, 'stubs'), [...walk('android/src'), harness]);
     assert.equal(built.status, 0, built.stderr);
     const run = spawnSync('java', ['-cp', [join(dir, 'stubs'), join(dir, 'classes')].join(process.platform === 'win32' ? ';' : ':'), 'ru.synergy.trainer.Harness'], { encoding: 'utf8' });
     assert.deepEqual(run.stdout.trim().split(/\r?\n/), ['[?game=grip&level=2&gestures=ubi4&self=1]', '[?game=duo&self=1]', '[?level=2&gestures=ubi4&self=1]', '[?game=grip&self=1]', '[]', '[?game=check&gestures=synergy&self=1]', '[?game=grip&level=3&gestures=spr8&self=1]', '[?game=safe&level=1&gestures=tz2&self=1]',
       // 6.1 (Q&A of 04.11, answer 16): the arm and the thresholds; a wrong side or a lone or out-of-range threshold is dropped
-      '[?game=grip&level=2&side=left&closeThreshold=60&openThreshold=45&self=1]', '[?game=grip&self=1]', '[?side=right&self=1]', '[?closeThreshold=0&openThreshold=255&self=1]']);
+      '[?game=grip&level=2&side=left&closeThreshold=60&openThreshold=45&self=1]', '[?game=grip&self=1]', '[?side=right&self=1]', '[?closeThreshold=0&openThreshold=255&self=1]',
+      // 6.3.3 (answer 4г of 09.11): the pair of «2 жеста» — two different movements of the task's dictionary; the same
+      // movement twice, the neutral, a tail after the pair and grips of another set are dropped. This harness had six
+      // arguments while launchQuery took seven: where there was no JDK the test was skipped and nobody saw it.
+      '[?game=safe&level=1&gestures=tz2&pair=pronation,supination&self=1]', '[?game=grip&gestures=tz2&self=1]', '[?game=grip&gestures=tz2&self=1]', '[?game=grip&gestures=tz2&self=1]', '[?game=grip&gestures=tz2&self=1]']);
     const manifest = readFileSync('android/AndroidManifest.xml', 'utf8');
     assert.match(manifest, /android:scheme="synergy" android:host="play"/);
     assert.match(manifest, /android:launchMode="singleTask"/, 'a second link reaches onNewIntent, not a second copy of the game');

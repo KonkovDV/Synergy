@@ -133,6 +133,9 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       // 6.3.3 — the organizers (10.11) ask for the APK in release/ of the repository: one left out of git fails the gate
       ['release APK not in git', () => git(dir, 'rm', '-q', '--cached', `release/Synergy-${version}.apk`), `release/Synergy-${version}.apk не в git`],
       ['an older APK in git', () => { writeFileSync(join(dir, 'release', 'Synergy-0.0.1.apk'), 'x'); git(dir, 'add', 'release/Synergy-0.0.1.apk'); }, 'старые APK в git'],
+      // 6.3.4 — the screencast and the documents of the upload are kept in submission/ under the version of the build
+      ['a screencast of another version in git', () => { writeFileSync(join(dir, 'submission', 'Synergy-0.0.1-screencast.mp4'), 'x'); git(dir, 'add', '-f', 'submission/Synergy-0.0.1-screencast.mp4'); }, 'материалы сдачи другой версии в git: submission/Synergy-0.0.1-screencast.mp4'],
+      ['a document of another version in git', () => { writeFileSync(join(dir, 'submission', 'Synergy-0.0.1-ai-report.docx'), 'x'); git(dir, 'add', '-f', 'submission/Synergy-0.0.1-ai-report.docx'); }, 'материалы сдачи другой версии в git'],
       ['a build folder in git', () => { mkdirSync(join(dir, 'dist'), { recursive: true }); writeFileSync(join(dir, 'dist', 'app.js'), '//'); git(dir, 'add', '-f', 'dist/app.js'); }, 'артефакты сборки в git'],
       ['README table edited by hand', () => edit(dir, 'README.md', s => s.replace('каждая пара цветов', 'почти каждая пара цветов')), 'расходится с docs/evidence.json'],
       ['an old axe count in the pitch', () => edit(dir, 'docs/PITCH.md', s => `${s}\nНоль нарушений на 28 состояниях экранов светлой темы и 10 тёмной.\n`), 'а axe —'],
@@ -196,12 +199,21 @@ test('submission gate (5.31): the organizer\'s deck in git is named; tools/pack.
     const r = gate(dir);
     assert.equal(r.status, 0, r.stdout);
     assert.match(r.stdout, /материалы не для продукта в git: 1 \(напр\. docs\/Презентация\.pptx\)/);
+    // 6.3.4 — the screencast of this build in submission/ is the product's own file (the task: the repository carries the
+    // source code, the screencast and the documentation): it is not counted, a video anywhere else still is.
+    const version = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).version;
+    writeFileSync(join(dir, 'submission', `Synergy-${version}-screencast.mp4`), 'x');
+    writeFileSync(join(dir, 'docs', 'meetup.mp4'), 'x');
+    git(dir, 'add', '-f', `submission/Synergy-${version}-screencast.mp4`, 'docs/meetup.mp4');
+    const own = gate(dir);
+    assert.equal(own.status, 0, own.stdout);
+    assert.match(own.stdout, /материалы не для продукта в git: 2 /, 'the deck and the other video — not the screencast of the build');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
   const pack = readFileSync(join(root, 'tools/pack.sh'), 'utf8');
   assert.match(pack, /--filter=blob:limit=10m/, 'no big blob in the history of the archive');
-  assert.match(pack, /'!\*\.pptx' '!\*\.mp4'/, 'no deck or video in its working tree');
+  assert.match(pack, /'!\*\.pptx' '!\*\.mp4' '!\*\.mov' '\/submission\/Synergy-\*-screencast\.mp4'/, 'no deck or video in its working tree, but the screencast of the build');
   assert.match(pack, /-name '\*\.pptx'.*-size \+10M/, 'and the unpacked archive is checked for them');
 });
 
