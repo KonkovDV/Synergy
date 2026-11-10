@@ -2,7 +2,8 @@
 // module for the reader (tools/check-submission.mjs) and the writers (tools/set-test-count.mjs, tools/evidence.mjs):
 // 6.0, 04.11 — the whole pictures grew the APK from 3668 to 5093 КБ, the size was still typed by hand in four
 // documents, and CI went red on the gate. The writer now uses the very pattern the gate reads.
-export const NUMBER_DOCS = ['README.md', 'docs/JURY_STRATEGY.md', 'docs/AI_USAGE.md', 'docs/PITCH.md', 'MEMORY.md'];
+// 6.3.3: the report on AI and the technical documentation of the upload (submission/, built into .docx by tools/build-docs.py)
+export const NUMBER_DOCS = ['README.md', 'docs/JURY_STRATEGY.md', 'docs/AI_USAGE.md', 'docs/PITCH.md', 'MEMORY.md', 'submission/AI_REPORT.md', 'submission/TECH_DOCS.md'];
 
 // Documents that quote the accessibility and layout runs as current (MEMORY.md keeps the history of older runs).
 export const RUN_DOCS = NUMBER_DOCS.filter(doc => doc !== 'MEMORY.md');

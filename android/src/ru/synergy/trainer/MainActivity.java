@@ -102,11 +102,25 @@ public class MainActivity extends Activity {
      * 6.1 — what the prosthesis app knows (Q&A of 04.11, answer 16): side (left, right) and the two thresholds
      * closeThreshold and openThreshold, 0–255, both or none. The keys are ours: question К.3 asks Motorica for theirs.
      */
-    static String launchQuery(String game, String level, String gestures, String side, String closeThreshold, String openThreshold) {
+    /**
+     * 6.3.3 — the pair of «2 жеста + нейтраль» (answer 4г of the experts, 09.11: any two gestures): two different keys of
+     * the task's dist, the closing one first — synergy://play?gestures=tz2&pair=pronation,supination. The same keys as
+     * LaunchRequest.pairPattern (iPhone); the page checks the pair again (core/gesture-set.js, vocabulary.js isPair).
+     */
+    static final String PAIR_KEY = "flexion|extension|pronation|supination|adduction|abduction";
+
+    static boolean isPair(String pair) {
+        if (pair == null || !pair.matches("(" + PAIR_KEY + "),(" + PAIR_KEY + ")")) return false;
+        int comma = pair.indexOf(',');
+        return !pair.substring(0, comma).equals(pair.substring(comma + 1));
+    }
+
+    static String launchQuery(String game, String level, String gestures, String pair, String side, String closeThreshold, String openThreshold) {
         StringBuilder q = new StringBuilder();
         if (game != null && game.matches("[a-z]{2,16}")) q.append("&game=").append(game);
         if (level != null && level.matches("[1-9][0-9]?")) q.append("&level=").append(level);
         if (gestures != null && gestures.matches("tz|tz2|synergy|ubi4|spr8")) q.append("&gestures=").append(gestures);
+        if (isPair(pair)) q.append("&pair=").append(pair);
         if (side != null && side.matches("left|right")) q.append("&side=").append(side);
         if (closeThreshold != null && openThreshold != null && closeThreshold.matches(LEVEL_255) && openThreshold.matches(LEVEL_255)) {
             q.append("&closeThreshold=").append(closeThreshold).append("&openThreshold=").append(openThreshold);
@@ -128,10 +142,10 @@ public class MainActivity extends Activity {
         Uri link = intent.getData();
         if (link != null && "synergy".equals(link.getScheme())) {
             return page + launchQuery(link.getQueryParameter("game"), link.getQueryParameter("level"), link.getQueryParameter("gestures"),
-                link.getQueryParameter("side"), link.getQueryParameter("closeThreshold"), link.getQueryParameter("openThreshold"));
+                link.getQueryParameter("pair"), link.getQueryParameter("side"), link.getQueryParameter("closeThreshold"), link.getQueryParameter("openThreshold"));
         }
         return page + launchQuery(intent.getStringExtra("game"), extra(intent, "level"), intent.getStringExtra("gestures"),
-            intent.getStringExtra("side"), extra(intent, "closeThreshold"), extra(intent, "openThreshold"));
+            intent.getStringExtra("pair"), intent.getStringExtra("side"), extra(intent, "closeThreshold"), extra(intent, "openThreshold"));
     }
 
     /** A second launch (another game from the host's list, a link) while the app is open: open what it asks. */

@@ -1,6 +1,6 @@
 import './pin-set.mjs'; // the suite of earlier releases speaks the «Синергия» set; the task's set is read by name below
 // 29.10 — whole pictures instead of collages (docs/GAME_VISUALS.md §12, docs/REGEN.md): the jobs the team generates in
-// ChatGPT name pictures the code reads, the documents carry every prompt, and the code prefers a whole picture to two
+// the generator's sheets name the pictures the code reads, the documents carry every prompt, and the code prefers a whole picture to two
 // laid together — a bird in its look, a hand holding a thing, the gesture of a card.
 import test from 'node:test';
 import assert from 'node:assert/strict';

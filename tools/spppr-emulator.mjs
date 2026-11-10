@@ -12,11 +12,16 @@
 //          flag — 0.001 with the sum kept exact)
 //          --script cycle|flexion,extension,… (cycle: every state of the dictionary 2 s, neutral between)  --effort 0..1 (0.7)
 //          --loss 0..1  --malformed 0..1 (broken packets to see the hard contract refuse them)  --reboot-every S
+//          --pair pronation,supination (6.3.3: the two gestures of «2 жеста + нейтраль» — any two, answer 4г of the experts,
+//          09.11; the closing one first; implies --classes 3)
 //          --stats (counters to stderr at the end)
 process.env.SYNERGY_GESTURE_SET ??= 'tz';
+const pairAt = process.argv.indexOf('--pair');
+const pairWanted = pairAt >= 0 ? process.argv[pairAt + 1] ?? '' : null;
+if (pairWanted !== null) process.env.SYNERGY_GESTURE_PAIR = pairWanted;
 const { SppprEmulator, STREAM_RATES_HZ } = await import('../src/input/spppr-emulator.js');
 const { SppprDecoder, SPPPR_DICTIONARIES, SPPPR_WIRE, dictionaryName } = await import('../src/core/spppr.js');
-const { SPPPR_SET } = await import('../src/core/vocabulary.js');
+const { SPPPR_SET, GESTURE_PAIR, PAIR_GESTURES } = await import('../src/core/vocabulary.js');
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i >= 0 && args[i + 1] !== undefined && !args[i + 1].startsWith('--') ? args[i + 1] : fallback; };
@@ -29,7 +34,11 @@ if (opt('loss') !== undefined) profile.loss = Number(opt('loss'));
 if (opt('malformed') !== undefined) profile.malformed = Number(opt('malformed'));
 if (opt('reboot-every') !== undefined) profile.rebootEvery = Number(opt('reboot-every'));
 const sizes = SPPPR_DICTIONARIES.map(d => d.length);
-const classes = Number(opt('classes', SPPPR_WIRE.length));
+if (pairWanted !== null && GESTURE_PAIR.join(',') !== pairWanted.split(/[\s,;+]+/).filter(Boolean).join(',')) {
+  console.error(`--pair: ${pairWanted} — два разных жеста словаря ТЗ через запятую, первый закрывает кисть: ${PAIR_GESTURES.map(g => g.id).join(', ')}`);
+  process.exit(2);
+}
+const classes = Number(opt('classes', pairWanted !== null ? SPPPR_DICTIONARIES[0].length : SPPPR_WIRE.length));
 if (!sizes.includes(classes)) { console.error(`--classes: ${opt('classes')} — словарь СПППР бывает ${sizes.join(' или ')} классов`); process.exit(2); }
 const rateHz = Number(opt('rate', STREAM_RATES_HZ[0]));
 if (!STREAM_RATES_HZ.includes(rateHz)) { console.error(`--rate: ${opt('rate')} — эмулятор шлёт ${STREAM_RATES_HZ.join(' или ')} пакетов в секунду`); process.exit(2); }
@@ -74,7 +83,7 @@ function finish() {
   if (flag('stats')) {
     const s = check.summary();
     console.error(`пакетов принято ${s.packets}, отклонено ${s.rejected} (${Object.entries(check.stats.errors).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(', ') || 'нет'}), ` +
-      `поздних ${s.stale}, обрывов > 200 мс ${s.gaps}, перезапусков МК ${s.reboots}, прощено шумов ${s.forgiven}; ${s.rateHz} пак/с, джиттер ${s.jitterMs} мс, макс. пауза ${s.maxGapMs} мс; ` +
+      `поздних ${s.stale}, обрывов > 200 мс ${s.gaps}, перезапусков МК ${s.reboots}, откатов ${s.forgiven}; ${s.rateHz} пак/с, джиттер ${s.jitterMs} мс, макс. пауза ${s.maxGapMs} мс; ` +
       `ключей в пакете ${s.keys ?? '—'}, словарь ${dictionaryName(s.classes) ?? '—'}, округление ${check.stats.decimals ? `до ${check.stats.decimals} ${check.stats.decimals === 1 ? 'знака' : 'знаков'}` : 'нет'}`);
   }
 }
@@ -86,5 +95,6 @@ function readHelp() {
   --rate 10|50 (пакетов в секунду; 10 — номинал потока, по умолчанию)
   --classes 7|3 (словарь: семь состояний или «2 жеста + нейтраль»; ключей в пакете всегда семь, незнакомые классы — 0)
   --decimals 1|2|3 (устройство округляет вероятности и не подгоняет сумму; без флага — 0,001, сумма ровно 1)
+  --pair pronation,supination (пара «2 жестов + нейтраль»: любые два жеста словаря ТЗ, первый закрывает кисть; с ним --classes 3)
   --loss 0..1  --malformed 0..1  --reboot-every S  --stats`;
 }

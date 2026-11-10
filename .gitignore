@@ -9,6 +9,5 @@ __pycache__/
 *.keystore.local
 *.keystore
 *.jks
-# Release files (5.17): tools/build-apk.sh puts them here, tools/pack.sh carries them in the archive.
-release/*.apk
-release/*.html
+# Release files: tools/build-apk.sh puts them in release/. 6.3.3 — they are tracked, one version at a time: the organizers
+# ask for the APK in release/ of the repository (10.11), and the jury opens the GitLab repository, not our archive.

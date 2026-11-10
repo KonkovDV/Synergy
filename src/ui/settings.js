@@ -3,10 +3,10 @@
 import { fmtPct, fmtFixed, count, FORMS } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { bottomNav, topBar, segmented, sliderRow, toggleRow, signalMeter, signalTraceView, BRIDGE_STATUS, icon } from './widgets.js';
-import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS, GESTURE_CLASS_ORDER } from '../core/vocabulary.js';
+import { SCHEME_INFO, twoChannelControls, GESTURE_SET, GESTURE_SETS, GESTURE_CLASS_ORDER, GESTURE_PAIR, PAIR_GESTURES, isPair } from '../core/vocabulary.js';
 import { dictionaryName } from '../core/spppr.js';
 import { streamsSpppr } from '../input/spppr-source.js';
-import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet } from '../core/gesture-set.js';
+import { GESTURE_SET_IDS, gestureSetSource, saveGestureSet, gesturePairSource, saveGesturePair } from '../core/gesture-set.js';
 import { CalibrationRecorder, CALIBRATION_STEPS, thresholdForRest, shownRippleIssues } from '../core/calibration.js';
 import { defaultCalibration, thresholdShares, latencyNote } from '../core/signal.js';
 import { download, reminderIcs, reminderTime, CHILD_REMINDER } from '../services/report.js';
@@ -185,7 +185,33 @@ export function settingsScreen(app, { back = null } = {}) {
         toast(`Набор жестов «${GESTURE_SETS[v].name}»: перезапускаем игру`);
         setTimeout(() => globalThis.location?.reload?.(), 600);
       }, 'Набор жестов'),
-      h('p', { class: 'note' }, `Сейчас: ${GESTURE_SET.source}. Прежние упражнения сохраняются; в отчёте видно, в каком наборе каждое.`));
+      h('p', { class: 'note' }, `Сейчас: ${GESTURE_SET.source}. Прежние упражнения сохраняются; в отчёте видно, в каком наборе каждое.`),
+      GESTURE_SET.id === 'tz2' ? gesturePairRow() : null);
+  }
+
+  // 6.3.3 — the experts of Motorica, 09.11 (answer 4г): «2 жеста + нейтраль» is any two gestures and neutral. Which two —
+  // as the recognizer of this person was trained: the first closes the hand, the second opens it. A change reloads the
+  // page, as a change of the set does (the dictionary of the stream is fixed at load, core/gesture-set.js).
+  function gesturePairRow() {
+    const [closeId, openId] = GESTURE_PAIR;
+    const name = id => PAIR_GESTURES.find(g => g.id === id)?.name ?? id;
+    if (gesturePairSource(isPair) === 'address') {
+      return h('p', { class: 'note' }, `Пару жестов «${name(closeId)} / ${name(openId)}» задало приложение, которое открыло игру.`);
+    }
+    const choose = ids => {
+      if (ids.join() === GESTURE_PAIR.join()) return;
+      if (!saveGesturePair(ids, isPair)) { toast('Не удалось сохранить выбор: хранилище браузера недоступно'); return; }
+      toast(`Пара жестов «${name(ids[0])} / ${name(ids[1])}»: перезапускаем игру`);
+      setTimeout(() => globalThis.location?.reload?.(), 600);
+    };
+    // Picking for one role the gesture of the other swaps them: the pair stays two different movements.
+    const options = PAIR_GESTURES.map(g => ({ value: g.id, label: g.name }));
+    return h('div', { class: 'gesture-pair' },
+      h('div', { class: 'row' }, h('span', {}, 'Жест закрытия'),
+        segmented(options, closeId, v => choose(v === openId ? [v, closeId] : [v, openId]), 'Пара жестов: какой жест закрывает кисть')),
+      h('div', { class: 'row' }, h('span', {}, 'Жест раскрытия'),
+        segmented(options, openId, v => choose(v === closeId ? [openId, v] : [closeId, v]), 'Пара жестов: какой жест раскрывает кисть')),
+      h('p', { class: 'note' }, `«2 жеста + нейтраль» — два любых жеста (ответ экспертов «Моторики» 09.11). Выберите пару, на которой обучен распознаватель вашего протеза. Сейчас: ${name(closeId).toLowerCase()} закрывает кисть, ${name(openId).toLowerCase()} раскрывает.`));
   }
 
   // 6.0 — the СПППР stream of the task, live: the counters and the last packet as it came (the hard contract is visible).
@@ -281,7 +307,11 @@ export function settingsScreen(app, { back = null } = {}) {
           h('input', { type: 'time', value: s.reminder, ...(s.audience === 'child' ? { min: CHILD_REMINDER.from, max: CHILD_REMINDER.to } : {}), onchange: e => app.updateSettings({ reminder: reminderTime(e.target.value, s.audience === 'child') }) })),
         h('button', { class: 'btn ghost', 'data-return': 'habit', onclick: () => download('synergy-reminder.ics', reminderIcs(s.reminder, new Date(), s.weeklyGoal, { child: s.audience === 'child' }), 'text/calendar') }, 'Добавить в календарь (.ics)'),
         h('label', { class: 'row' }, h('span', {}, 'Имя'), h('input', { type: 'text', value: s.name, maxlength: 24, onchange: e => app.updateSettings({ name: e.target.value.trim() }) })),
-        h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы'), h('input', { type: 'text', value: s.petName, maxlength: 16, placeholder: PET.defaultName, onchange: e => app.updateSettings({ petName: e.target.value.trim() }) })),
+        // 6.3.3 — the experts of Motorica, 09.11 (answer 10): adults rather follow their progress in numbers; the choice is
+        // the person's. The bird keeps counting the same training days, so it is there again when chosen.
+        h('div', { class: 'row' }, h('span', {}, 'Как отмечать прогресс'),
+          segmented([{ value: 'firebird', label: 'Жар-птица', sub: 'растёт от дней тренировок' }, { value: 'numbers', label: 'Только цифры', sub: 'без питомца' }], s.companion ?? 'firebird', v => { app.updateSettings({ companion: v }); app.go('settings'); }, 'Как отмечать прогресс')),
+        s.companion === 'numbers' ? null : h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы'), h('input', { type: 'text', value: s.petName, maxlength: 16, placeholder: PET.defaultName, onchange: e => app.updateSettings({ petName: e.target.value.trim() }) })),
         // 5.13: the hint tours once more — for a new person on this device, or before a demo.
         h('button', { class: 'btn ghost', disabled: !Object.keys(s.tours ?? {}).length, onclick: () => { app.updateSettings({ tours: {} }); toast('Подсказки появятся на главной и в «Прогрессе»'); app.go('settings'); } }, 'Показать подсказки снова')),
       // Sound and vibration have their own section (5.11, design review: they sat under «Привычка»).

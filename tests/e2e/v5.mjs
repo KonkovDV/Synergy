@@ -285,6 +285,43 @@ for (const [scheme, game] of [['proportional', 'grip'], ['gesture', 'safe'], ['g
   audited.push(`landscape-${game}`);
   for (const v of r.violations) a11y.push({ screen: `landscape-${game}`, rule: v.id, impact: v.impact, nodes: v.nodes.slice(0, 3).map(n => n.target.join(' ')) });
 }
+// 6.3.3 — on a page of its own: the steps above run in the demo profile, which saves nothing, and a reload in their middle
+// would leave it. Answer 4г of the experts (09.11) — the pair of «2 жеста + нейтраль» in the settings: picking for the
+// closing role the opening gesture swaps them (the page reloads with the new pair); answer 10 — progress in numbers only.
+const own = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+own.on('pageerror', e => errors.push(`6.3.3: ${e.message}`));
+const goOn = (n, q = {}) => own.evaluate(([a, b]) => window.Synergy.go(a, b), [n, q]);
+const auditOwn = async screen => {
+  audited.push(screen);
+  if (!(await own.evaluate(() => !!window.axe))) await own.evaluate(axeSource);
+  await own.evaluate(() => Promise.all(document.getAnimations().filter(a => a.effect?.target?.closest?.('#toasts')).map(a => a.finished.catch(() => null))));
+  const r = await own.evaluate(() => window.axe.run({ include: [document], exclude: [['.toast.out']] }, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] }));
+  for (const v of r.violations) a11y.push({ screen, rule: v.id, impact: v.impact, nodes: v.nodes.slice(0, 3).map(n => n.target.join(' ')) });
+};
+await own.goto(base); await own.waitForTimeout(400);
+for (let i = 0; i < 2; i++) { await own.getByRole('button', { name: 'Дальше' }).click(); await own.waitForTimeout(350); }
+await own.getByRole('button', { name: 'Пропустить обучение' }).click(); await own.waitForTimeout(400);
+await own.keyboard.press('Escape');
+await goOn('settings'); await own.waitForTimeout(300);
+await own.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click(); await own.waitForTimeout(600); // saved (300 ms) before the reload
+await own.evaluate(() => { localStorage.setItem('synergy.gestureSet', 'tz2'); localStorage.setItem('synergy.gesturePair', 'pronation,supination'); });
+await own.reload(); await own.waitForTimeout(600); await goOn('settings'); await own.waitForTimeout(300);
+const pairRow = await own.evaluate(() => ({ groups: [...document.querySelectorAll('[role=radiogroup]')].map(g => g.getAttribute('aria-label') ?? '').filter(l => /^Пара жестов/.test(l)).length, note: document.querySelector('.gesture-pair .note')?.textContent ?? '' }));
+if (pairRow.groups !== 2 || !/пронация закрывает кисть, супинация раскрывает/.test(pairRow.note)) errors.push(`settings: the pair of «2 жеста» (${JSON.stringify(pairRow)})`);
+await auditOwn('settings-pair');
+await own.getByRole('radiogroup', { name: 'Пара жестов: какой жест закрывает кисть' }).getByRole('radio', { name: /Супинация/ }).click(); await own.waitForTimeout(1600);
+const swapped = await own.evaluate(() => localStorage.getItem('synergy.gesturePair'));
+if (swapped !== 'supination,pronation') errors.push(`settings: the pair did not swap (${swapped})`);
+await own.evaluate(() => { localStorage.removeItem('synergy.gestureSet'); localStorage.removeItem('synergy.gesturePair'); });
+await own.reload(); await own.waitForTimeout(600); await goOn('settings'); await own.waitForTimeout(300);
+await own.evaluate(() => document.querySelectorAll('details.fold:not([open])').forEach(d => { d.open = true; }));
+await own.getByRole('radiogroup', { name: 'Как отмечать прогресс' }).getByRole('radio', { name: /Только цифры/ }).click(); await own.waitForTimeout(300);
+await goOn('home'); await own.waitForTimeout(500); await own.keyboard.press('Escape');
+const numbersHome = await own.evaluate(() => ({ card: !!document.querySelector('.pet-card.numbers'), bird: !!document.querySelector('[data-tour="home.pet"]'), nest: !!document.querySelector('[data-tour="nav.nest"]') }));
+if (!numbersHome.card || numbersHome.bird || numbersHome.nest) errors.push(`home: progress in numbers only (${JSON.stringify(numbersHome)})`);
+await auditOwn('home-numbers');
+await own.close();
+
 console.log(JSON.stringify({ errors, a11y }, null, 1));
 // 5.17 — the numbers of this run for docs/evidence.json (tools/evidence.mjs): states audited, light and dark.
 writeEvidence('e2e-a11y', { light: audited.filter(s => !s.startsWith('dark-')).length, dark: audited.filter(s => s.startsWith('dark-')).length, violations: a11y.length, errors: errors.length, browser: browser.version(), axe: require('axe-core/package.json').version });

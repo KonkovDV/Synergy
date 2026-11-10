@@ -8,6 +8,7 @@ import { SignalTrace, traceSummary } from '../core/signaltrace.js';
 import { SIGNAL_TRACE } from '../config.js';
 import { picture } from './pictures.js';
 import { stickVector } from '../core/joystick.js';
+import { withPet } from '../core/pet.js';
 
 /**
  * Line icons drawn in SVG (5.8): emoji and symbols (⌂ 📈 ⚙ ← ✕ Ⅱ) render differently on every platform —
@@ -50,7 +51,9 @@ export function bottomNav(app, active) {
   // 5.16: the illustrated icons of the sections (public/art/nav-*); the line icon stands in for a missing picture.
   const item = (id, glyph, label) => h('button', { class: `nav-item ${active === id ? 'active' : ''}`, 'aria-current': active === id ? 'page' : null, 'data-tour': `nav.${id}`, onclick: () => app.go(id) },
     h('span', { class: 'nav-icon', 'aria-hidden': 'true' }, picture(`nav-${glyph}`, 28, 'nav-art', () => icon(glyph))), h('span', { class: 'nav-label' }, label));
-  return h('nav', { class: 'bottom-nav', 'aria-label': 'Разделы' }, item('home', 'home', 'Главная'), item('nest', 'bird', 'Жар-птица'), item('progress', 'progress', 'Прогресс'), item('settings', 'settings', 'Настройки'));
+  // 6.3.3: progress in numbers only (answer 10 of the experts, 09.11) — no section of the bird
+  const pet = withPet(app.settings);
+  return h('nav', { class: `bottom-nav${pet ? '' : ' three'}`, 'aria-label': 'Разделы' }, item('home', 'home', 'Главная'), pet ? item('nest', 'bird', 'Жар-птица') : null, item('progress', 'progress', 'Прогресс'), item('settings', 'settings', 'Настройки'));
 }
 
 /** The arrow is the screen's «back»: the Android button, the browser back gesture and Esc press it too (App.handleBack). */

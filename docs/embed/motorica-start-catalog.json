@@ -6,15 +6,15 @@
       "android": {
         "packageName": "ru.synergy.trainer",
         "launcherActivity": "ru.synergy.trainer.MainActivity",
-        "versionName": "6.3.2",
-        "versionCode": 52,
+        "versionName": "6.3.3",
+        "versionCode": 53,
         "usesMotoricaControl": false
       },
       "ios": {
         "bundleId": "ru.synergy.trainer",
         "urlScheme": "synergy",
-        "versionName": "6.3.2",
-        "versionCode": 52,
+        "versionName": "6.3.3",
+        "versionCode": 53,
         "appStoreUrl": ""
       }
     }

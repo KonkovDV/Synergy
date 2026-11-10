@@ -10,7 +10,7 @@ import { BRAND, glow, radial, clearLayers } from '../render/fx.js';
 import { clearTints } from '../render/sprites.js';
 import { gameArt, mio } from './art.js';
 import { useFlier, loadSprites, roomPictures } from './pictures.js';
-import { petStageIndex, wornItems } from '../core/pet.js';
+import { petStageIndex, wornItems, withPet } from '../core/pet.js';
 import { PET, SESSION } from '../config.js';
 import { LiveAnnouncer } from '../core/announce.js';
 import { MusicPlayer, offsetClock } from '../core/music.js';
@@ -42,8 +42,9 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
   const s = app.settings;
   // 5.16+: in «Полёт» the player's Firebird flies through the rings once it has wings (fledgling on); the egg and the
   // chick leave it to the glider. The game reads the sprite `flight-flier` (render/sprites.js). 26.10: in its outfit.
-  const stage = PET.stages[petStageIndex(trainingDays(app.profile))];
-  useFlier('flight-flier', stage.id, wornItems(app.profile, stage.id));
+  // 6.3.3: progress in numbers only (answer 10 of the experts) — no bird in the sky either: the glider flies.
+  const stage = withPet(s) ? PET.stages[petStageIndex(trainingDays(app.profile))] : PET.stages[0];
+  useFlier('flight-flier', stage.id, withPet(s) ? wornItems(app.profile, stage.id) : {});
   let session = app.createSession({ game, level, retention, demo, plan, pose, quick });
   // Procedural music (only «Ритм» has a song): scheduled on the audio clock, heard when the note reaches the line.
   const musicFor = sess => { const song = s.sound && s.music ? sess.game.music() : null; return song ? new MusicPlayer(song, { clock: offsetClock(audioClock, s.audioOffsetMs), play: playMusic }) : null; };
@@ -104,10 +105,23 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
 
   const controls = h('div', { class: 'controls', role: 'region', 'aria-label': 'Управление' });
   let shownRemote = null; // whether the lab's remote is on the screen (a «bridge-hello» may come after the screen opened)
+  let demoPads = null;    // 6.3.3: the pads of the emulator the autopilot presses in a demo
   const renderControls = () => {
     // 6.3.2: in the gesture scheme of a set of the task the autopilot drives the emulator of the СПППР stream, not of the EMG
-    if (demo) controls.replaceChildren(h('p', { class: 'pads-note' }, `Демо: автопилот управляет эмулятором ${session.scheme === SCHEME.GESTURE && STREAM_SET ? 'потока СПППР' : 'ЭМГ'} — тот же путь сигнала, что у вас. Результат не сохраняется.`));
-    else {
+    const demoNote = () => h('p', { class: 'pads-note' }, `Демо: автопилот нажимает площадки эмулятора ${session.scheme === SCHEME.GESTURE && STREAM_SET ? 'потока СПППР' : 'ЭМГ'} — тот же путь сигнала, что у вас: смотрите, когда и как сильно. Результат не сохраняется.`);
+    if (demo) {
+      // 6.3.3 — the demo shows the pads it presses (the organizers, 10.11: the emulator in the frame next to the game): the
+      // person sees when to squeeze, when to open and how strongly. They follow the autopilot and take no touch (inert);
+      // a stand-in emulator keeps their own handlers away from the real one. «Две руки» keeps the note alone.
+      const quiet = { setTarget() {} };
+      demoPads = session.game.constructor.bimanual ? null
+        : session.scheme === SCHEME.GESTURE ? createGesturePads(quiet) : createTwoChannelPads(quiet, { keys: false });
+      if (demoPads) {
+        demoPads.classList.add('demo-pads'); demoPads.setAttribute('inert', ''); demoPads.setAttribute('aria-hidden', 'true');
+        demoPads.querySelectorAll?.('[tabindex], button').forEach(el => el.setAttribute('tabindex', '-1')); // nothing to focus in a hidden part
+      }
+      controls.replaceChildren(demoNote(), ...(demoPads ? [demoPads] : []));
+    } else {
       // 5.30 — «Две руки»: a pair of pads per arm (keys: left F/D, right J/K); the left arm is `emulator`, the right `emulator2`.
       const duo = session.game.constructor.bimanual;
       const pads = duo ? createDuoPads(app.emulator, app.emulator2)
@@ -286,6 +300,7 @@ export function playScreen(app, { game, level, retention = false, plan = false, 
 
   function tick(now, dt) {
     const intent = session.runner.step(now, dt);
+    demoPads?.follow?.(app.emulator.target);
     if (s.showMeters) meter.update(intent);
     if (bridgeMode) { updateBridge(app.bridge?.status ?? 'idle'); updateQuality(); }
     if (phase === 'intro') {

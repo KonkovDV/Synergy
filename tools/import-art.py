@@ -1,6 +1,6 @@
 """Imports the team's illustrations (5.16) into the product: cut-outs, light WebP files, launcher icons, the splash.
 
-Source: the 144 PNG of the graphics package (docs/DESIGN.md §6 — one prompt, one file name; generated with AI, see
+Source: the 144 PNG of the graphics package (docs/DESIGN.md §6 — one prompt, one file name; generated from prompts, see
 docs/AI_USAGE.md). The pictures are drawn on white. A picture that stands on a card gets an alpha matte: a neural
 subject mask (rembg, `isnet-general-use`) keeps white parts of the subject opaque (Мио, the egg, the white shell of
 the hand), and outside the mask the known white background is divided out (colour-to-alpha), so soft shadows,

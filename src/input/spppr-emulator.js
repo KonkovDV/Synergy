@@ -14,7 +14,7 @@
 // EmgEmulator. Deterministic for a seed. The game reads it through EmulatorDriver (spppr-driver.js: the one line to
 // replace with the MCU's driver).
 import { SPPPR, GESTURE_CONFUSION, STREAM_RATES_HZ } from '../config.js';
-import { SPPPR_SET, GESTURE_BY_ID, COMMAND } from '../core/vocabulary.js';
+import { SPPPR_SET, STREAM_SET, GESTURE_BY_ID, CLOSING_GESTURES, OPENING_GESTURE, COMMAND } from '../core/vocabulary.js';
 import { SPPPR_WIRE, sppprPacket, sppprDictionary } from '../core/spppr.js';
 import { createRng } from '../core/rng.js';
 
@@ -22,7 +22,11 @@ const IDS = SPPPR_SET.classOrder;
 const N = IDS.length;
 const index = id => IDS.indexOf(id);
 const by = cmd => SPPPR_SET.gestures.find(g => g.command === cmd)?.id;
-const CLOSE = index(by(COMMAND.CLOSE)), OPEN = index(by(COMMAND.OPEN));
+// The classes the two channels {a, b} of a target produce: the flexors and the extensors. 6.3.3 — in «2 жеста + нейтраль»
+// the pair chosen for it (answer 4г of the experts, 09.11): a device of that pair knows no other movement.
+const own = g => (STREAM_SET && index(g?.id) > 0 ? index(g.id) : -1);
+const CLOSE = own(CLOSING_GESTURES[0]) > 0 ? own(CLOSING_GESTURES[0]) : index(by(COMMAND.CLOSE));
+const OPEN = own(OPENING_GESTURE) > 0 ? own(OPENING_GESTURE) : index(by(COMMAND.OPEN));
 /**
  * The least probability a class the device knows gets in a packet: a softmax is never exactly zero, and the decoder tells a
  * two-gesture device by its exact zeros (core/spppr.js DICTIONARY_MIN_PACKETS). Above the 0.001 the packet is rounded to.
@@ -135,8 +139,9 @@ export class SppprEmulator {
       const i = index(g) > 0 ? index(g) : index(taskClassOf(g));
       if (i > 0 && this.known[i]) want[i] = level(this.target.effort ?? 0.6);
     } else if (!g) {
-      if ((this.target.a ?? 0) > 0.02) want[CLOSE] = level(this.target.a);
-      if ((this.target.b ?? 0) > 0.02) want[OPEN] = level(this.target.b);
+      // 6.3.3: a device knows its own dictionary only — a «2 жеста» device of another pair does not see the flexors
+      if ((this.target.a ?? 0) > 0.02 && this.known[CLOSE]) want[CLOSE] = level(this.target.a);
+      if ((this.target.b ?? 0) > 0.02 && this.known[OPEN]) want[OPEN] = level(this.target.b);
     }
     this.want = want;
   }
@@ -256,7 +261,8 @@ export class SppprEmulator {
   }
 }
 
-/** A gesture of another set → the class of the task that does the same to the hand (close → flexion, open → extension). */
+/** A gesture of another set → the class of the task that does the same to the hand (close → flexion, open → extension;
+ *  in «2 жеста + нейтраль» — the gestures of its pair). */
 function taskClassOf(gesture) {
   const cmd = GESTURE_BY_ID[gesture]?.command;
   return cmd === COMMAND.CLOSE ? IDS[CLOSE] : cmd === COMMAND.OPEN ? IDS[OPEN] : 'rest';

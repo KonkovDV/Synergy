@@ -55,7 +55,11 @@ test('flight: the Firebird flies once it has wings — the egg and the chick lea
   }
   assert.match(readFileSync('src/games/flight.js', 'utf8'), /drawSprite\(ctx, 'flight-flier'/, 'the game draws the sprite and falls back to the glider');
   // 26.10: it flies in its outfit — every head and chest thing has a box on the happy picture it flies as
-  assert.match(readFileSync('src/ui/play.js', 'utf8'), /useFlier\('flight-flier', stage\.id, wornItems\(app\.profile, stage\.id\)\)/);
+  // 6.3.3: progress in numbers only (answer 10 of the experts) — no bird in the sky: the stage of the egg, the glider flies
+  const play = readFileSync('src/ui/play.js', 'utf8');
+  assert.match(play, /useFlier\('flight-flier', stage\.id, withPet\(s\) \? wornItems\(app\.profile, stage\.id\) : \{\}\)/);
+  assert.match(play, /const stage = withPet\(s\) \? PET\.stages\[petStageIndex\(trainingDays\(app\.profile\)\)\] : PET\.stages\[0\]/);
+  assert.equal(petFlyer(PET.stages[0].id), null, 'the first stage flies as the glider');
   for (const st of PET.stages) {
     const name = petFlyer(st.id);
     if (!name) continue;
@@ -123,10 +127,15 @@ test('evidence: the README table is rendered from docs/evidence.json — words a
 
 // The gesture drill runs the suite in a copy without git and without the repository files (tools/gesture-drill.mjs).
 const inGit = (() => { try { execFileSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: 'pipe' }); return existsSync('.gitignore'); } catch { return false; } })();
-test('release files: built by tools/build-apk.sh and carried by the archive, never tracked by git', { skip: !inGit && 'not a repository (the gesture drill copy)' }, () => {
+// 6.3.3 — the organizers, 10.11: «положите APK в папку release/ репозитория и напишите в README, как ее установить». Until
+// 6.3.2 the release files were kept out of git and carried by the archive; the jury opens the repository.
+test('release files: built by tools/build-apk.sh and tracked by git, one version at a time', { skip: !inGit && 'not a repository (the gesture drill copy)' }, () => {
   const tracked = execFileSync('git', ['ls-files', 'release'], { encoding: 'utf8' }).split('\n').filter(Boolean);
-  assert.deepEqual(tracked.filter(f => /\.(apk|html)$/.test(f)), []);
-  assert.match(readFileSync('.gitignore', 'utf8'), /^release\/\*\.apk$/m);
+  const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
+  if (existsSync(`release/Synergy-${version}.apk`)) assert.ok(tracked.includes(`release/Synergy-${version}.apk`), 'the APK of this version is in git');
+  assert.deepEqual(tracked.filter(f => f.endsWith('.apk') && f !== `release/Synergy-${version}.apk`), [], 'no older APK in git');
+  assert.doesNotMatch(readFileSync('.gitignore', 'utf8'), /^release\/\*\.apk$/m);
+  assert.match(readFileSync('README.md', 'utf8'), /Как установить APK/);
   assert.match(readFileSync('tools/build-apk.sh', 'utf8'), /cp "\$OUT\/synergy\.apk" "\$ROOT\/release\/Synergy-\$VERSION\.apk"/);
   assert.match(readFileSync('tools/pack.sh', 'utf8'), /cp "\$ROOT\/release\/Synergy-\$VERSION\.apk"/);
 });

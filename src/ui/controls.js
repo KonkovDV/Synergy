@@ -125,7 +125,14 @@ export function createTwoChannelPads(emulator, { forceOrder = false, keys = true
   const hint = keys ? h('p', { class: 'pads-keys' }, 'Клавиатура: F — A, J — B, пробел — A+B, «+» и «−» — сила') : null;
   // 5.30 — «Две руки» asks no co-contraction: each arm has A and B only (a 36 px A+B between them was too narrow).
   const middle = withCo ? [co] : [];
-  return h('div', { class: `pads two${withCo ? '' : ' no-co'}` }, ...(right ? [B.el, ...middle, A.el] : [A.el, ...middle, B.el]), hint);
+  const node = h('div', { class: `pads two${withCo ? '' : ' no-co'}` }, ...(right ? [B.el, ...middle, A.el] : [A.el, ...middle, B.el]), hint);
+  // 6.3.3 — the demo shows the pads pressed by the autopilot (play.js): the level of each channel, the pads lit while on.
+  node.follow = t => {
+    const a = t?.gesture ? 0 : t?.a ?? 0, b = t?.gesture ? 0 : t?.b ?? 0;
+    A.show(a); B.show(b);
+    A.el.classList.toggle('on', a > 0.02); B.el.classList.toggle('on', b > 0.02); co.classList.toggle('on', a > 0.02 && b > 0.02);
+  };
+  return node;
 }
 
 /**
@@ -161,9 +168,13 @@ export function createGesturePads(emulator, { mirror = false } = {}) {
     return el;
   });
   emulator.setTarget({ gesture: 'rest', effort: 0 });
+  // 6.3.3 — the demo lights the key of the gesture the autopilot makes (play.js)
+  const follow = t => keys.forEach((el, i) => el.classList.toggle('on', t?.gesture === ACTIVE_GESTURES[i].id && (t?.effort ?? 0) > 0));
   // 5.30: a set with more than six gestures (UBI4: seven) marks itself — a short landscape screen drops the icons (styles/app.css).
-  return h('div', { class: 'pads gestures', ...(ACTIVE_GESTURES.length > 6 ? { 'data-many': '' } : {}), style: { '--word': longestWord(ACTIVE_GESTURES.map(g => g.name)) } }, ...keys, h('p', { class: 'pads-note' }, 'Удерживайте жест; выше палец — сильнее'),
+  const node = h('div', { class: 'pads gestures', ...(ACTIVE_GESTURES.length > 6 ? { 'data-many': '' } : {}), style: { '--word': longestWord(ACTIVE_GESTURES.map(g => g.name)) } }, ...keys, h('p', { class: 'pads-note' }, 'Удерживайте жест; выше палец — сильнее'),
     h('p', { class: 'pads-keys' }, `Клавиатура: цифры 1–${GESTURES.length} — жесты по порядку (1 — покой)`)); // 5.30: a computer
+  node.follow = follow;
+  return node;
 }
 
 /**

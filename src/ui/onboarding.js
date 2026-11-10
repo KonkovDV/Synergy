@@ -16,8 +16,9 @@ export function onboardingScreen(app, { safety = false } = {}) {
   const dots = h('div', { class: 'dots' });
   const next = h('button', { class: 'btn primary big' });
   // A draft, saved once through updateSettings (5.10: fields were written into the live settings one by one).
-  const s = { scheme: app.settings.scheme, side: app.settings.side, audience: app.settings.audience, name: app.settings.name, petName: app.settings.petName };
+  const s = { scheme: app.settings.scheme, side: app.settings.side, audience: app.settings.audience, name: app.settings.name, petName: app.settings.petName, companion: app.settings.companion };
 
+  const petRow = h('label', { class: 'row', hidden: s.companion === 'numbers' }, h('span', {}, 'Имя Жар-птицы (необязательно)'), h('input', { type: 'text', maxlength: 16, value: s.petName, placeholder: PET.defaultName, oninput: e => { s.petName = e.target.value.trim(); } }));
   const pages = [
     // Each page opens with a cover (the sample's onboarding, the brand's dark cover with light trails): Мио, the title, one line.
     // 5.16: the three covers of the illustrations (the egg in its nest, the bird with the shield, Мио with the phone).
@@ -51,8 +52,11 @@ export function onboardingScreen(app, { safety = false } = {}) {
       h('p', {}, 'Кто будет заниматься?'),
       segmented([{ value: 'adult', label: 'Взрослый' }, { value: 'child', label: 'Ребёнок', sub: 'с родителем' }], s.audience, v => { s.audience = v; }, 'Кто занимается'),
       h('label', { class: 'row' }, h('span', {}, 'Как к вам обращаться (необязательно)'), h('input', { type: 'text', maxlength: 24, value: s.name, oninput: e => { s.name = e.target.value.trim(); } })),
+      // 6.3.3 — the experts of Motorica, 09.11 (answer 10): adults rather follow numbers; the person chooses.
+      h('p', {}, 'Как отмечать прогресс?'),
+      segmented([{ value: 'firebird', label: 'Жар-птица', sub: 'растёт от дней тренировок' }, { value: 'numbers', label: 'Только цифры', sub: 'без питомца' }], s.companion, v => { s.companion = v; petRow.hidden = v === 'numbers'; }, 'Как отмечать прогресс'),
       // 5.13 (the sample's naming screen): a name of one's own makes the bird one's own; the field is optional.
-      h('label', { class: 'row' }, h('span', {}, 'Имя Жар-птицы (необязательно)'), h('input', { type: 'text', maxlength: 16, value: s.petName, placeholder: PET.defaultName, oninput: e => { s.petName = e.target.value.trim(); } }))],
+      petRow],
   ];
 
   const render = () => {

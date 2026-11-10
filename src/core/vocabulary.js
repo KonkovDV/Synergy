@@ -1,6 +1,6 @@
 // Ubiquitous language of the trainer. Every module names things exactly as below;
 // docs/GLOSSARY.md mirrors this file for designers, clinicians and jury.
-import { selectedGestureSet } from './gesture-set.js';
+import { selectedGestureSet, selectedGesturePair } from './gesture-set.js';
 
 /** Commands a control scheme can produce from two EMG channels or a gesture. */
 export const COMMAND = Object.freeze({
@@ -164,18 +164,36 @@ const TZ = {
 
 /**
  * 04.11 — the second dictionary of the СПППР. The organizers' Q&A (answer 22, docs/TASK.md): a СПППР is «2 gestures +
- * neutral» or «6 gestures + neutral», and answer 23 asks every mode to be fully playable. Which two is not said (question
- * К.1, PLAN.md); the task trains the antagonists and forms the joystick as flexion − extension, so the two are flexion and
- * extension. These are the very gesture objects of TZ — names, wire keys, axes, pictures — so nothing is said twice.
- * Its packet's `dist` holds exactly neutral, flexion and extension (core/spppr.js also takes the seven with the wrist at 0).
+ * neutral» or «6 gestures + neutral», and answer 23 asks every mode to be fully playable. The task trains the antagonists
+ * and forms the joystick as flexion − extension, so the pair by default is flexion and extension.
+ * 6.3.3 — the experts of Motorica, 09.11 (answer 4г): «2 жеста + нейтраль» means ANY two gestures and neutral. The pair
+ * is chosen in the settings (or by the host's address, ?pair=pronation,supination — core/gesture-set.js): the first
+ * gesture closes the hand, the second opens it. They are the gesture objects of TZ — names, wire keys, axes, pictures —
+ * with the command of their place in the pair, so nothing is said twice; the default pair is TZ's own objects unchanged.
+ * Its packet's `dist` holds exactly neutral and the pair (core/spppr.js also takes the seven with the others at 0).
  */
-const TZ_PAIR = ['rest', 'flexion', 'extension'];
+const PAIR_IDS = Object.freeze(TZ.gestures.filter(g => g.command !== COMMAND.REST).map(g => g.id));
+/** The gestures a pair may take: the six movements of the task's dictionary, in its order. */
+export const PAIR_GESTURES = Object.freeze(PAIR_IDS.map(id => TZ.gestures.find(g => g.id === id)));
+/** The pair the task reads (the joystick's flexion − extension): flexion closes, extension opens. */
+export const DEFAULT_PAIR = Object.freeze(['flexion', 'extension']);
+/** Two different movements of the task's dictionary, the closing one first. */
+export const isPair = ids => Array.isArray(ids) && ids.length === 2 && ids[0] !== ids[1] && ids.every(id => PAIR_IDS.includes(id));
+/** The pair of this page load: [closing, opening] ids. */
+export const GESTURE_PAIR = Object.freeze([...(selectedGesturePair(isPair) ?? DEFAULT_PAIR)]);
+const inPair = (g, command) => (g.command === command ? g : {
+  ...g, command, grip: command === COMMAND.CLOSE ? 'fist' : null, introducedAt: 1,
+  use: command === COMMAND.CLOSE ? 'Жест закрытия пары: кисть протеза закрывается, сила хвата растёт, пока жест держится' : 'Жест раскрытия пары: кисть раскрывается и отпускает предмет',
+});
+const [PAIR_CLOSE, PAIR_OPEN] = GESTURE_PAIR.map(id => TZ.gestures.find(g => g.id === id));
+const TZ_PAIR = ['rest', ...GESTURE_PAIR];
 const TZ2 = {
   id: 'tz2', name: 'СПППР · 2 жеста', short: '3 состояния · СПППР', size: 3,
-  text: 'Поток СПППР «2 жеста + нейтраль»: сгибание закрывает кисть, разгибание раскрывает; чем чётче жест, тем быстрее движение, а сила хвата набирается временем.',
-  source: 'ответы организаторов 04.11.2026 (№ 22): СПППР «2 жеста + нейтраль»',
+  text: `Поток СПППР «2 жеста + нейтраль»: ${PAIR_CLOSE.name.toLowerCase()} закрывает кисть, ${PAIR_OPEN.name.toLowerCase()} раскрывает; чем чётче жест, тем быстрее движение, а сила хвата набирается временем.`,
+  source: 'ответы организаторов 04.11.2026 (№ 22) и экспертов 09.11 (№ 4г): СПППР «2 любых жеста + нейтраль»',
   classOrder: TZ_PAIR,
-  gestures: TZ.gestures.filter(g => TZ_PAIR.includes(g.id)),
+  pair: GESTURE_PAIR,
+  gestures: [TZ.gestures[0], inPair(PAIR_CLOSE, COMMAND.CLOSE), inPair(PAIR_OPEN, COMMAND.OPEN)],
 };
 
 /** Every set, by id (no prototype: ids come from settings and addresses). The published set first. */

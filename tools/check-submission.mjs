@@ -123,9 +123,15 @@ function trackedFiles() {
 const { history, files: tracked } = trackedFiles();
 if (!history) warn('нет истории git (папка без .git): файлы взяты по .gitignore, история не проверяется — для сдачи соберите архив npm run pack, в нём история');
 // Build outputs must not be tracked: the archive excludes them and the receiver rebuilds (dist/ hole of 5.1.0).
-// 5.17: the release APK and HTML too — built by tools/build-apk.sh, carried by the archive, ≈ 4 MB of history a release.
-const builds = tracked.filter(f => /^(dist|android\/build|node_modules|tools\/\.cache)\//.test(f) || /^release\/.*\.(apk|html)$/.test(f));
+const builds = tracked.filter(f => /^(dist|android\/build|node_modules|tools\/\.cache)\//.test(f));
 if (builds.length) fail(`артефакты сборки в git (${builds.length}, напр. ${builds[0]}): git rm -r --cached`);
+// 6.3.3 — the organizers, 10.11: «положите APK в папку release/ репозитория и напишите в README, как ее установить».
+// The jury opens the repository, so the APK of this version and the page of the same build are tracked (5.17–6.3.2 kept
+// them out of git and carried them in the archive); an APK of another version is not.
+const releaseTracked = tracked.filter(f => /^release\/.*\.(apk|html)$/.test(f));
+for (const f of [`release/Synergy-${version}.apk`, 'release/synergy-standalone.html']) if (existsSync(join(root, f)) && !releaseTracked.includes(f)) fail(`${f} не в git — организаторы просят APK в release/ репозитория: git add ${f}`);
+const oldTracked = releaseTracked.filter(f => f.endsWith('.apk') && f !== `release/Synergy-${version}.apk`);
+if (oldTracked.length) fail(`старые APK в git: ${oldTracked.join(', ')} — git rm`);
 const missing = tracked.filter(f => !existsSync(join(root, f)));
 if (missing.length) warn(`в git, но нет на диске: ${missing.length} (напр. ${missing[0]})`);
 // 5.31 — the organizer's materials (the meetup deck: logos, photos and video of people) are not part of the product.

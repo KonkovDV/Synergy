@@ -676,3 +676,41 @@ test('6.1 result (Q&A of 04.11, answer 16): an exercise on the external source r
     assert.equal('channels' in sent.filter(m => m.type === 'synergy:result').at(-1), false);
   } finally { delete globalThis.SynergyHost; }
 });
+
+// 6.3.3 — the experts of Motorica, 09.11 (answer 10): adults rather follow their progress in numbers; the choice is the
+// team's. The person chooses in the onboarding or the settings; without the bird the screens keep their numbers.
+test('6.3.3 answer 10: «Только цифры» — the home shows numbers instead of the bird, the bar has no nest; the bird is the default', async () => {
+  const { homeScreen } = await import('../src/ui/home.js');
+  const { settingsScreen } = await import('../src/ui/settings.js');
+  const { SAFETY_VERSION } = await import('../src/core/wellbeing.js');
+  const { DEFAULT_SETTINGS, SETTINGS_RULES } = await import('../src/core/storage.js');
+  const { withPet } = await import('../src/core/pet.js');
+  globalThis.location ??= { protocol: 'https:', search: '' }; // the «Данные» section names where the page was opened from
+  assert.equal(DEFAULT_SETTINGS.companion, 'firebird', 'the bird stays the default');
+  assert.ok(SETTINGS_RULES.companion('numbers') && SETTINGS_RULES.companion('firebird') && !SETTINGS_RULES.companion('cat'));
+  assert.equal(withPet({}), true);
+  assert.equal(withPet({ companion: 'numbers' }), false);
+  const app = fresh();
+  app.profile.onboarded = true; app.profile.safetySeen = SAFETY_VERSION;
+  const navItems = node => byClass(node, 'nav-item').map(n => n.attrs['data-tour']);
+  const withBird = homeScreen(app).node;
+  assert.equal(byClass(withBird, 'pet-card').length, 1);
+  assert.equal(byClass(withBird, 'numbers').length, 0);
+  assert.deepEqual(navItems(withBird), ['nav.home', 'nav.nest', 'nav.progress', 'nav.settings']);
+  app.updateSettings({ companion: 'numbers' });
+  const numbers = homeScreen(app).node;
+  const card = byClass(numbers, 'numbers');
+  assert.equal(card.length, 1, 'one card of numbers in the place of the bird');
+  assert.equal(card[0].attrs['data-tour'], undefined, 'the tour step about the bird finds no anchor and is skipped');
+  assert.match(textOf(card[0]), /Прогресс в цифрах/);
+  assert.match(textOf(card[0]), /с тренировкой/);
+  assert.match(textOf(card[0]), /мин активной игры сегодня/);
+  assert.doesNotMatch(textOf(numbers), /Гнездо и наряды|Жар-птица/, 'no bird on the home');
+  assert.deepEqual(navItems(numbers), ['nav.home', 'nav.progress', 'nav.settings'], 'no section of the bird');
+  assert.ok(byClass(numbers, 'bottom-nav')[0].attrs.class.includes('three'));
+  const settings = textOf(settingsScreen(app).node);
+  assert.match(settings, /Как отмечать прогресс/);
+  assert.doesNotMatch(settings, /Имя Жар-птицы/, 'no name field for a bird that is not shown');
+  app.updateSettings({ companion: 'firebird' });
+  assert.match(textOf(settingsScreen(app).node), /Имя Жар-птицы/);
+});

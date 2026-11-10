@@ -10,7 +10,7 @@ import { overDailyCap, capAdvice, safetyOutdated } from '../core/wellbeing.js';
 import { gameArt, badgeArt, starRow, trails, firebird, sectionArt, dayArt } from './art.js';
 import { picture } from './pictures.js';
 import { touchableBird } from './petcard.js';
-import { petState, petName, wornItems } from '../core/pet.js';
+import { petState, petName, wornItems, withPet } from '../core/pet.js';
 import { everydayTask, validEverydayId } from '../core/everyday.js';
 import { missionText, missionXp } from '../core/missions.js';
 import { questText } from '../core/quests.js';
@@ -58,7 +58,7 @@ export function homeScreen(app) {
   // 5.16: the light waves of bg-hero lie over the brand gradient as a soft texture (the dark text stays on the green).
   const head = h('section', { class: 'hero' }, picture('bg-hero', 600, 'hero-bg', () => trails('light')),
     h('div', { class: 'hero-top' },
-      h('div', { class: 'avatar' }, firebird(pet.stage.id, pet.mood, 52, { items: worn })),
+      h('div', { class: 'avatar' }, withPet(s) ? firebird(pet.stage.id, pet.mood, 52, { items: worn }) : sectionArt('xp', 40)),
       h('div', {},
         h('p', { class: 'eyebrow' }, SCHEME_INFO[s.scheme].short),
         h('h1', {}, s.name ? `Привет, ${s.name}!` : 'Привет!')),
@@ -184,9 +184,23 @@ export function homeScreen(app) {
         h('i', { style: { width: `${Math.round(100 * p.mission.done / p.mission.target)}%` } })),
       h('small', {}, `${p.mission.done} из ${p.mission.target} · награда +${missionXp(p.mission)} XP`),
       h('button', { class: 'btn ghost', onclick: () => app.go('goals') }, 'Все цели'))
-    : h('div', { class: 'pet-goal' }, h('p', {}, `${name} предлагает цели на неделю — по вашим навыкам. Без срока.`),
+    : h('div', { class: 'pet-goal' }, h('p', {}, withPet(s) ? `${name} предлагает цели на неделю — по вашим навыкам. Без срока.` : 'Цели на неделю — по вашим навыкам. Без срока.'),
       h('button', { class: 'btn ghost', onclick: () => app.go('goals') }, 'Выбрать цель'));
-  const petCard = h('section', { class: 'card pet-card', 'data-tour': 'home.pet' },
+  // 6.3.3 — progress in numbers only (answer 10 of the experts, 09.11): the same place without the bird — the numbers an
+  // adult follows and the goal of the week; the section «Весь прогресс» has the rest.
+  const runsDone = app.state.runs.filter(r => !r.demo).length;
+  const tile = (value, label) => h('div', {}, h('b', {}, String(value)), h('small', {}, label));
+  const numbersCard = () => h('section', { class: 'card pet-card numbers' },
+    h('div', { class: 'pet-info' },
+      h('p', { class: 'eyebrow' }, 'Прогресс в цифрах'),
+      h('div', { class: 'stats' },
+        tile(trainingDays(p), `${count(trainingDays(p), FORMS.days).replace(/^\d+\s/, '')} с тренировкой`),
+        tile(Math.round(secondsToday(p, today) / 60), 'мин активной игры сегодня'),
+        tile(runsDone, 'упражнений всего'),
+        tile(`${week.done}/${week.goal}`, 'дней этой недели')),
+      h('button', { class: 'btn ghost nest-link', onclick: () => app.go('progress') }, 'Весь прогресс')),
+    goalRow);
+  const petCard = !withPet(s) ? numbersCard() : h('section', { class: 'card pet-card', 'data-tour': 'home.pet' },
     petButton,
     h('div', { class: 'pet-info' },
       h('p', { class: 'eyebrow' }, pet.stage.name),

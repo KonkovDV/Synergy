@@ -83,7 +83,8 @@ function copyRepo() {
 }
 
 /**
- * The release files are built, not tracked (5.17): the copy gets them the way the archive does (tools/pack.sh). When
+ * The release files are built by tools/build-apk.sh and, since 6.3.3, tracked (the organizers ask for the APK in release/ of
+ * the repository): the copy gets them from release/ and commits them, as the repository does. When
  * this version is not built here (a fresh clone, CI before tools/build-apk.sh, Windows CI), the copy gets stand-ins of
  * the size docs/evidence.json records: a debug-signed APK and a page. The gate then sees «another build» (5.27: a
  * warning in a draft, an error in the strict gate — CI cannot rebuild the team's binary byte for byte).
@@ -129,7 +130,10 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
     const cases = [
       ['no APK', () => rmSync(join(dir, 'release', `Synergy-${version}.apk`)), `нет release/Synergy-${version}.apk`],
       ['unsigned APK', () => writeFileSync(join(dir, 'release', `Synergy-${version}.apk`), Buffer.from([0x50, 0x4b, 0x05, 0x06, ...new Array(18).fill(0)])), 'не подписан'],
-      ['release APK tracked in git', () => git(dir, 'add', '-f', `release/Synergy-${version}.apk`), 'артефакты сборки в git'],
+      // 6.3.3 — the organizers (10.11) ask for the APK in release/ of the repository: one left out of git fails the gate
+      ['release APK not in git', () => git(dir, 'rm', '-q', '--cached', `release/Synergy-${version}.apk`), `release/Synergy-${version}.apk не в git`],
+      ['an older APK in git', () => { writeFileSync(join(dir, 'release', 'Synergy-0.0.1.apk'), 'x'); git(dir, 'add', 'release/Synergy-0.0.1.apk'); }, 'старые APK в git'],
+      ['a build folder in git', () => { mkdirSync(join(dir, 'dist'), { recursive: true }); writeFileSync(join(dir, 'dist', 'app.js'), '//'); git(dir, 'add', '-f', 'dist/app.js'); }, 'артефакты сборки в git'],
       ['README table edited by hand', () => edit(dir, 'README.md', s => s.replace('каждая пара цветов', 'почти каждая пара цветов')), 'расходится с docs/evidence.json'],
       ['an old axe count in the pitch', () => edit(dir, 'docs/PITCH.md', s => `${s}\nНоль нарушений на 28 состояниях экранов светлой темы и 10 тёмной.\n`), 'а axe —'],
       ['an old layout run in the jury strategy', () => edit(dir, 'docs/JURY_STRATEGY.md', s => `${s}\nЛинтер: 37 состояний × 7 экранов.\n`), 'а линтер раскладки —'],

@@ -9,6 +9,14 @@ import { PET } from '../config.js';
 /** The pet's name everywhere it is mentioned (5.13: four screens repeated the fallback). */
 export const petName = settings => settings?.petName || PET.defaultName;
 
+/**
+ * 6.3.3 — the experts of Motorica, 09.11 (answer 10): adults rather follow their progress in numbers and measures; the
+ * choice is the team's. The person chooses how progress is marked: the Firebird (the default) or numbers only. Without
+ * the bird every screen keeps its numbers — training days, minutes, level, goals, achievements — and drops the bird,
+ * its nest and its gifts; the bird's growth goes on counting the same training days, so it is there when chosen again.
+ */
+export const withPet = settings => settings?.companion !== 'numbers';
+
 /** Stage index for a number of training days. */
 export function petStageIndex(days) {
   let i = 0;

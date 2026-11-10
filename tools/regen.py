@@ -4,7 +4,7 @@ The audit of 29.10 found pictures made of two or three separate pictures that re
 on it (a kokoshnik slid off the crest, a lantern hanging in the air, another light and scale), the hand of «Мастерская»
 with a thing laid under its fingertips (the egg hung under the fingers, nothing held it), the hanging pinch, key and
 point stitched from the arm of one picture and the hand of another, and the seven states of the task's gesture set drawn
-by code as small dark hands. Each is generated again as ONE picture, by the team in ChatGPT (Image 2.5), from the jobs
+by code as small dark hands. Each is generated again as ONE picture, by the team in an image generator, from the jobs
 below: a prompt, the reference picture to attach (made here from the catalogue, so the design stays the same) and the
 names the cells become.
 
@@ -14,7 +14,7 @@ names the cells become.
   python tools/regen.py --import DIR --flip hold-coin,hand-down-key   cells drawn as a left hand, mirrored
 
 The key is the flat magenta of the other generated pictures (tools/import-generated.py unkey); a PNG with a real alpha
-channel (ChatGPT can give a transparent background) is taken as it is. Every picture is matched to what it replaces or
+channel (a generator can give a transparent background) is taken as it is. Every picture is matched to what it replaces or
 stands beside, so nothing jumps when it appears: a bird in its look on the nest of the bird without it (nest width,
 centre and bottom), a hand holding a thing on the arm of the hanging hands (arm width and axis), a hanging grip on the
 wrist band and the socket of the hanging hands. Prints what the game needs that it cannot measure itself.
@@ -531,7 +531,7 @@ PRIORITY = {1: "Сначала", 2: "Потом", 3: "Если останетс�
 def markdown(all_jobs: list[dict]) -> str:
     out = ["# Перегенерация составных картинок (29.10.2026)", "",
            "Создано `python tools/regen.py --docs`; не править руками. Почему и как устроено — docs/GAME_VISUALS.md §12.", "",
-           "**Как делать.** Один лист — одно сообщение в ChatGPT (Image 2.5): приложите эталон листа и вставьте промпт целиком. "
+           "**Как делать.** Один лист — одно сообщение генератору изображений: приложите эталон листа и вставьте промпт целиком. "
            "Эталоны делает `python tools/regen.py --refs ПАПКА` (файл `<лист>.jpg`). Готовую картинку сохраните под именем листа "
            "(`tz-gestures.png`, `hold-1.png` …) в одну папку и выполните `python tools/regen.py --import ПАПКА`. Или загрузите "
            "листы в отдельную ветку `art-inbox` (не в main: лист весит 2–3 МБ и остался бы в истории архива) — импорт — той же командой `python tools/regen.py --import`.", "",

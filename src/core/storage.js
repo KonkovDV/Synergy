@@ -63,6 +63,7 @@ export const DEFAULT_SETTINGS = {
   fadedFeedback: true,      // затухающие подсказки: опытный игрок видит шкалу не в каждой попытке
   adaptRest: true,          // подстройка покоя под дрейф датчиков (только внешний источник)
   audience: 'adult',        // adult | child (короче план, ниже дневной лимит)
+  companion: 'firebird',    // firebird | numbers — как отмечать прогресс (6.3.3, ответ экспертов 09.11 № 10: взрослым — цифры)
   parentPin: '',            // хэш PIN родителя (детский режим): ворота, а не защита данных
   pinLock: { fails: 0, until: 0 }, // тормоз перебора PIN
   // Accessibility (Game Accessibility Guidelines, WCAG 2.2 / ГОСТ Р 52872-2019)
@@ -94,6 +95,7 @@ export const SETTINGS_RULES = {
   prostheses: oneOf('one', 'two'),
   bothOn: oneOf(...BOTH_ON.modes),
   audience: oneOf('adult', 'child'),
+  companion: oneOf('firebird', 'numbers'),
   prosthesis: oneOf('yes', 'waiting'),
   lockHoldS: range(LOCK.minS, LOCK.maxS),
   gripSwitch: oneOf('open', 'co'),

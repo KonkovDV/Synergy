@@ -91,13 +91,13 @@
 
 **5.16:** промпты ниже — исходная версия 5.12. Набор 5.16 сделан по расширенному файлу промптов команды (144 промпта, один стиль и один персонаж в каждом; эталоны стиля, птицы, Мио и кисти — первыми) встроенным генератором изображений среды разработки. Отбор и проверка описаны в `docs/AI_USAGE.md` и `docs/ART.md`. Вывод 5.12 «векторный рисунок кодом» остаётся в силе для элементов управления — стрелок, паузы, площадок A и B, полосок сигнала, звёзд на холсте: они меняются вместе с темой и контрастом.
 
-Исследование 2026: для векторных иконок и иллюстраций интерфейса лучше всего подходит **Recraft V4** (векторный SVG на выходе, бренд-кит с цветами и стилем) ([обзор](https://pasqualepillitteri.it/en/news/769/recraft-ai-v4-review-2026-vector-svg-midjourney-dalle), [сравнение генераторов иконок](https://iconly.ai/blog/best-ai-icon-generators/)); **Midjourney** — для поиска стиля (только растр, нужна доработка); **GPT Image** и **Nano Banana** — растровые, без отдельных тестов для 3D-иконок ([рейтинг 2026](https://resources.rework.com/tools/ai-tools/best-ai-image-generators-2026)). Вывод для продукта: векторный «мягкий 3D» кодом — одинаковый стиль во всех элементах, смена темы, сотни байт вместо сотен килобайт, без лицензионных вопросов генератора. В среде разработки генератора изображений нет; публичный бесплатный сервис отдавал низкое качество с водяным знаком — в продукт не взят.
+Исследование 2026: для векторных иконок и иллюстраций интерфейса лучше всего подходит генератор с векторным выводом (SVG) и бренд-китом с цветами и стилем; растровые генераторы — для поиска стиля, их результат нужно дорабатывать-иконок ([рейтинг 2026](https://resources.rework.com/tools/ai-tools/best-ai-image-generators-2026)). Вывод для продукта: векторный «мягкий 3D» кодом — одинаковый стиль во всех элементах, смена темы, сотни байт вместо сотен килобайт, без лицензионных вопросов генератора. В среде разработки генератора изображений нет; публичный бесплатный сервис отдавал низкое качество с водяным знаком — в продукт не взят.
 
 Если команда захочет добавить сгенерированные иллюстрации (например, для видео и презентации), промпты ниже уже в нужном стиле. Перед использованием: проверить условия генератора (права на коммерческое использование), записать модель и промпт в `docs/AI_USAGE.md`, сохранить WebP ≤ 40 КБ и альтернативный текст, проверить контраст текста поверх.
 
 **Общий стиль (добавлять к каждому):** `soft 3D clay render, glossy, rounded geometric shapes, studio lighting from top-left, soft contact shadow, isolated on plain white background, brand palette: mint green #16E182, teal #1FD0A6, cyan #2FA6E0, blue #2F6FE0, violet #5B4FD6, graphite #05101A, coral accent #FF7A45, no text, no logo, no watermark, centered, 1:1`
 
-| Элемент | Промпт (Recraft V4 — стиль «3D icon», вектор; Midjourney — `--style raw --stylize 100`; GPT Image — 1024×1024, прозрачный фон) |
+| Элемент | Промпт (векторный генератор — стиль «3D icon»; растровый — 1024×1024, прозрачный фон) |
 |---|---|
 | Мио | `cute round robot coach mascot, sphere body with green-to-blue gradient, dark glossy visor face with glowing mint eyes and a small smile, two antenna bulbs (coral left, blue right), small arms, waving` |
 | Мастерская | `black graphite bionic robotic gripper gently holding a white egg, fingertips glowing green` |
@@ -110,7 +110,7 @@
 | Жар-птица (по стадиям) | `firebird pet growing in 5 stages: glowing golden egg with a green-blue zigzag band; fluffy amber chick in a cracked shell; round teal fledgling with a coral crest; young firebird with green wings and a peacock fan tail spread behind its body; majestic firebird with a wide peacock-eye fan of curved plumes behind it and a warm golden glow in green-blue-violet with coral and amber eye spots; cute, big friendly eyes, consistent character design sheet` |
 | Награды | `gold medal with blue and green ribbon` · `golden trophy with graphite base` · `glossy gold star` |
 
-Согласованность серии: в Recraft — один стиль и бренд-кит на всю серию; в Midjourney — `--sref` первой удачной картинки и фиксированный `--seed`; в GPT Image — первая картинка как образец для остальных.
+Согласованность серии: один стиль и бренд-кит на всю серию, первая удачная картинка — образец для остальных, зерно генерации фиксировано.
 
 ## 7. Игровые сцены
 

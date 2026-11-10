@@ -3,7 +3,7 @@
 import { h, toast } from './dom.js';
 import { topBar } from './widgets.js';
 import { firebird } from './art.js';
-import { petName, petState, wornItems } from '../core/pet.js';
+import { petName, petState, wornItems, withPet } from '../core/pet.js';
 import { missionText, missionXp, missionKey, takeMission, dropMission } from '../core/missions.js';
 import { trainingDays, dayKey, weekIndex } from '../core/progress.js';
 import { PLAN_CATALOG } from '../games/registry.js';
@@ -36,8 +36,8 @@ export function goalsScreen(app) {
       topBar('Цели', () => app.go('home')),
       h('main', { class: 'scroll' },
         h('section', { class: 'card goal-intro' },
-          h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, pet.mood, 72, { items: wornItems(p, pet.stage.id) })),
-          h('p', {}, `${name} предлагает цели на эту неделю — по вашим навыкам. Шаги отмечают сами упражнения. Срока нет. Не подходит — скажите почему: будет другая, без штрафа.`)),
+          withPet(app.settings) ? h('span', { class: 'pet-art', 'aria-hidden': 'true' }, firebird(pet.stage.id, pet.mood, 72, { items: wornItems(p, pet.stage.id) })) : null,
+          h('p', {}, `${withPet(app.settings) ? `${name} предлагает цели` : 'Цели'} на эту неделю — по вашим навыкам. Шаги отмечают сами упражнения. Срока нет. Не подходит — скажите почему: будет другая, без штрафа.`)),
         p.mission ? card(p.mission, true) : null,
         p.mission ? h('p', { class: 'note' }, 'Новую цель можно взять, когда эта будет выполнена или снята.') : h('h2', {}, 'Цели недели'),
         !p.mission && !offers.length ? h('p', { class: 'note' }, 'На этой неделе подходящие цели кончились. В понедельник список обновится.') : null,

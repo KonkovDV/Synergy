@@ -47,3 +47,21 @@ test('ответ № 16: the result returns the thresholds of the exercise in th
   // Never more than the contract: a run carries no health notes and no name.
   assert.deepEqual(Object.keys(resultMessage(run, '6.1.0', { channels: ch })).sort(), ['at', 'channels', 'durationS', 'game', 'level', 'protocol', 'retention', 'scheme', 'score', 'skills', 'stars', 'type', 'version']);
 });
+
+// 6.3.3 — the experts of Motorica, 09.11 (answer 4г): «2 жеста + нейтраль» is any two gestures. A host opens the game in
+// its pair (?gestures=tz2&pair=pronation,supination); the Android and iPhone apps pass only known shapes on, so both
+// carry the pair with the keys of the task's dictionary, two different ones, and the page checks it again.
+test('6.3.3 answer 4г: the Android and iPhone apps pass the pair of «2 жеста» on, with the keys of the task\'s dictionary', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { PAIR_GESTURES } = await import('../src/core/vocabulary.js');
+  const keys = PAIR_GESTURES.map(g => g.wire).join('|');
+  const java = readFileSync('android/src/ru/synergy/trainer/MainActivity.java', 'utf8');
+  const swift = readFileSync('ios/Synergy/LaunchRequest.swift', 'utf8');
+  assert.ok(java.includes(`PAIR_KEY = "${keys}"`), 'Android: the keys of the dictionary');
+  assert.match(java, /if \(isPair\(pair\)\) q\.append\("&pair="\)/);
+  assert.match(java, /getQueryParameter\("pair"\)/);
+  assert.match(java, /getStringExtra\("pair"\)/);
+  assert.ok(swift.includes(`pairKey = "${keys}"`), 'iPhone: the keys of the dictionary');
+  assert.match(swift, /\("pair", pair\)/);
+  assert.match(swift, /Set\(both\.split\(separator: ","\)\)\.count == 2/, 'iPhone: two different gestures');
+});

@@ -778,6 +778,7 @@ small { font-size: max(0.75rem, 0.83em) }
 .top-bar { grid-template-columns: 52px minmax(0, 1fr) 52px }
 .top-bar h1 { overflow-wrap: anywhere }
 .bottom-nav { grid-template-columns: repeat(4, minmax(0, 1fr)) } /* 5.14: four sections — the nest joined */
+.bottom-nav.three { grid-template-columns: repeat(3, minmax(0, 1fr)) } /* 6.3.3: progress in numbers — no section of the bird */
 .level-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 4.25rem), 1fr)) }
 .skins { grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr)) }
 .skin { min-width: 0 }
@@ -988,6 +989,7 @@ table.data th { font-size: 0.75rem }
   .bottom-nav { top: 0; bottom: 0; left: 0; transform: none; width: calc(84px + env(safe-area-inset-left)); max-width: none; grid-template-columns: 1fr; grid-auto-rows: min-content; align-content: center; gap: 4px;
     border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left) }
   .nav-item { flex-direction: column; min-height: 64px; gap: 2px }
+  .bottom-nav.three { grid-template-columns: 1fr }
   .screen:has(> .bottom-nav) { padding-left: calc(88px + env(safe-area-inset-left)) }
   :root { --nav-space: 0px }
   .sticky-actions { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 6px) }
@@ -1022,6 +1024,8 @@ table.data th { font-size: 0.75rem }
 .pet-card .xp-track { background: #1b2a37; margin: 2px 0 4px }
 .pet-progress small { display: block; font-size: 0.8125rem }
 @media (max-width: 359px) { .pet-card { grid-template-columns: 1fr } }
+.pet-card.numbers { grid-template-columns: 1fr } /* 6.3.3: progress in numbers — the card without the bird */
+.pet-card.numbers .stats { margin: 8px 0 10px }
 /* The bird's path: a vertical journey with a rail through the stage nodes (Finch / Duolingo-like), any text size. */
 .pet-path { list-style: none; margin: 0; padding: 0; display: grid }
 .pet-path li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 12px 6px 6px; border-radius: 20px; position: relative }

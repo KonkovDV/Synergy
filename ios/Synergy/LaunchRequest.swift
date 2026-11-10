@@ -11,6 +11,13 @@ struct LaunchRequest: Equatable {
     var game: String?
     var level: String?
     var gestures: String?
+    /**
+     * 6.3.3 — the pair of «2 жеста + нейтраль» (answer 4г of the experts, 09.11: any two gestures): two different keys of
+     * the task's dist, the closing one first. The same keys as MainActivity.PAIR_KEY; the page checks the pair again.
+     */
+    var pair: String?
+    static let pairKey = "flexion|extension|pronation|supination|adduction|abduction"
+    static let pairPattern = "^(" + pairKey + "),(" + pairKey + ")$"
     /** 6.1 — what the prosthesis app knows (Q&A of 04.11, answer 16): the arm and the two thresholds, 0–255, both or none. */
     var side: String?
     var closeThreshold: String?
@@ -39,6 +46,9 @@ struct LaunchRequest: Equatable {
         game = LaunchRequest.matching(value("game"), "^[a-z]{2,16}$")
         level = LaunchRequest.matching(value("level"), "^[1-9][0-9]?$")
         gestures = LaunchRequest.matching(value("gestures"), "^(tz|tz2|synergy|ubi4|spr8)$")
+        if let both = LaunchRequest.matching(value("pair"), LaunchRequest.pairPattern), Set(both.split(separator: ",")).count == 2 {
+            pair = both
+        }
         side = LaunchRequest.matching(value("side"), "^(left|right)$")
         if let close = LaunchRequest.matching(value("closeThreshold"), LaunchRequest.level255),
            let open = LaunchRequest.matching(value("openThreshold"), LaunchRequest.level255) {
@@ -49,7 +59,7 @@ struct LaunchRequest: Equatable {
 
     /** self=1: the app opened its own exercise — not a host waiting for «synergy:close» (services/host.js). */
     var queryItems: [URLQueryItem] {
-        let items = [("game", game), ("level", level), ("gestures", gestures), ("side", side),
+        let items = [("game", game), ("level", level), ("gestures", gestures), ("pair", pair), ("side", side),
                      ("closeThreshold", closeThreshold), ("openThreshold", openThreshold)].compactMap { name, value in
             value.map { URLQueryItem(name: name, value: $0) }
         }

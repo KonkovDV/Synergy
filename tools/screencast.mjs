@@ -88,6 +88,12 @@ const ACT = {
     await page.getByRole('button', { name: 'Пропустить обучение' }).click(); await wait(1200);
     await page.keyboard.press('Escape'); // the hint tour of the home screen
   },
+  // 6.3.3 — the training mode (the organizers, 10.11): the first steps pass with the keys of the emulator's pads.
+  tutorial: async () => {
+    await go('tutorial'); await wait(2600);        // «Покой» passes by itself
+    await hold('KeyF', 2400); await wait(2600);   // «Сжатие · A», then «Снова покой»
+    await hold('KeyJ', 2400); await wait(1400);   // «Раскрытие · B»
+  },
   stream1: async () => {
     await go('settings'); await wait(300);
     await show('.meter', 'start'); await wait(700);
@@ -105,10 +111,14 @@ const ACT = {
     await hold('Digit4', 1500);
   },
   rhythm: async () => { await go('play', { game: 'rhythm', level: 2, demo: true }); await wait(700); await start(); },
-  grip: async () => { await scheme(/Пропорц/); await go('play', { game: 'grip', level: 3, demo: true }); await wait(700); await start(); },
+  // 6.3.3 — a whole level with the emulator in the frame (the organizers, 10.11): the demo presses the pads of the emulator
+  // (ui/play.js), in the threshold scheme — the scheme of serial hands (answer 2 of the experts, 09.11).
+  grip: async () => {
+    await scheme(/Порог/); await go('play', { game: 'grip', level: 1, demo: true }); await wait(700); await start();
+    await page.waitForSelector('.results', { timeout: 60000 });
+  },
   results: async () => {
-    await go('play', { game: 'safe', level: 1, demo: true }); await wait(600); await start();
-    await page.waitForSelector('.results', { timeout: 60000 }); await wait(1800); // the score and the stars first
+    await wait(1800); // the score and the stars of the level just played first
     await page.evaluate(() => [...document.querySelectorAll('.results p, .results li, .results div')].find(x => /^Команды каналов/.test(x.textContent ?? ''))?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
     await wait(2700); // then the line of the channels, long enough to read
   },

@@ -10,8 +10,10 @@ const tool = readFileSync('tools/screencast.mjs', 'utf8');
 // The shape of docs/evidence.json (tools/evidence.mjs) — the plan is checked on its own, as the gesture drill copies code.
 const ev = { version: '9.9.9', tests: { total: 1234, failed: 0 }, apk: { kb: 4321 }, a11y: { light: 30, dark: 9, violations: 0 }, layout: { combinations: 999, findings: 0 } };
 
-test('screencast: 75–100 s in scenes of 4 s and more, every scene played by the tool, every chapter named', () => {
-  assert.ok(plannedSeconds() >= 75 && plannedSeconds() <= 100, `${plannedSeconds()} s`);
+// 6.3.3 — the organizers, 10.11: the video shows the training mode and a whole level played with the emulator in the frame:
+// two minutes and a bit (75–100 s until 6.3.2).
+test('screencast: 110–160 s in scenes of 4 s and more, every scene played by the tool, every chapter named', () => {
+  assert.ok(plannedSeconds() >= 110 && plannedSeconds() <= 160, `${plannedSeconds()} s`);
   const acts = [...tool.matchAll(/^ {2}(\w+): async/gm)].map(m => m[1]);
   for (const s of SCENES) {
     assert.ok(s.seconds >= 4, `${s.id}: ${s.seconds} s`);

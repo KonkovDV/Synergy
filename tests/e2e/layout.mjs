@@ -451,6 +451,24 @@ const STATES = [
     await p.keyboard.press('Escape');
     await p.getByRole('button', { name: 'Выбрать дни и время' }).waitFor({ timeout: 4000 });
   }],
+  // 6.3.3 — answer 4г of the experts (09.11): the pair of «2 жеста + нейтраль» in the settings (two rows of six movements).
+  ['settings-pair', async p => {
+    await p.evaluate(() => { localStorage.setItem('synergy.gestureSet', 'tz2'); localStorage.setItem('synergy.gesturePair', 'pronation,supination'); });
+    await p.goto(base); await p.waitForTimeout(400);
+    await go(p, 'settings');
+    await p.getByRole('radiogroup', { name: 'Схема управления' }).getByRole('radio', { name: /Жесты/ }).click();
+    // every fold open, as in the other states of the settings: a closed <details> keeps the boxes of its content in
+    // Chromium, and at the end of the page they lie under the bar — a «covered» that nobody can see
+    const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click();
+  }],
+  // 6.3.3 — answer 10 of the experts (09.11): progress in numbers only — the home without the bird, three sections below.
+  ['home-numbers', async p => {
+    await p.evaluate(() => { localStorage.removeItem('synergy.gestureSet'); localStorage.removeItem('synergy.gesturePair'); });
+    await p.goto(base); await p.waitForTimeout(400);
+    await go(p, 'settings'); const closed = p.locator('details.fold:not([open]) > summary'); while (await closed.count()) await closed.first().click();
+    await p.getByRole('radiogroup', { name: 'Как отмечать прогресс' }).getByRole('radio', { name: /Только цифры/ }).click();
+    await go(p, 'home'); await p.keyboard.press('Escape');
+  }],
 ];
 const go = (p, name, params = {}) => p.evaluate(([n, q]) => window.Synergy.go(n, q), [name, params]);
 /** «Азбука протеза» (5.15): every card of «Сила и хват» turned, then its check. */

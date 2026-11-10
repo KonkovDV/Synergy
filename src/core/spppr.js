@@ -15,7 +15,7 @@
 //              jerks); after 200 ms without a packet the speed fades (inertia), much later the link counts as lost.
 import { SPPPR } from '../config.js';
 import { plural } from './format.js';
-import { SPPPR_SET, SPPPR_SETS, GESTURE_BY_ID, GESTURE_CLASS_ORDER, CLOSING_GESTURES, OPENING_GESTURE, COMMAND } from './vocabulary.js';
+import { SPPPR_SET, SPPPR_SETS, STREAM_SET, GESTURE_BY_ID, GESTURE_CLASS_ORDER, CLOSING_GESTURES, OPENING_GESTURE, COMMAND } from './vocabulary.js';
 
 const BY_ORDER = SPPPR_SET.classOrder.map(id => SPPPR_SET.gestures.find(g => g.id === id));
 /** The keys of `dist`, in the task's class order (0 neutral … 6 abduction). */
@@ -25,7 +25,10 @@ const wireOf = id => BY_ORDER.find(g => g.id === id).wire;
  * The dictionaries a СПППР may have (Q&A of 04.11, answer 22), smallest first: the keys a packet's `dist` holds, in the
  * task's class order — «2 gestures + neutral» (3 classes) and the seven states. From the sets of vocabulary.js.
  */
-export const SPPPR_DICTIONARIES = Object.freeze(SPPPR_SETS.map(set => Object.freeze(set.classOrder.map(wireOf))).sort((x, y) => x.length - y.length));
+// 6.3.3: the pair of «2 жеста» is chosen (answer 4г of the experts, 09.11) and its set lists the closing gesture first; the
+// keys of a dictionary stay in the task's class order whatever the pair.
+const inTaskOrder = keys => [...keys].sort((x, y) => SPPPR_WIRE.indexOf(x) - SPPPR_WIRE.indexOf(y));
+export const SPPPR_DICTIONARIES = Object.freeze(SPPPR_SETS.map(set => Object.freeze(inTaskOrder(set.classOrder.map(wireOf)))).sort((x, y) => x.length - y.length));
 /** The dictionary of `classes` keys (3 or 7); another number is the full one. */
 export const sppprDictionary = classes => SPPPR_DICTIONARIES.find(d => d.length === classes) ?? SPPPR_WIRE;
 /** Class indexes outside the smallest dictionary (the four wrist movements «2 жеста + нейтраль» does not know). */
@@ -193,10 +196,14 @@ export const clarityRate = (clarity, full = SPPPR.fullSpeedAt) => (Number.isFini
 /**
  * The class a decoded state means in the gesture set the game speaks. In the task's set — itself; in another set the
  * flexors close with its first grip, the extensors open, a wrist movement is rest (the hand of that set does not turn).
+ * 6.3.3 — a dictionary of the СПППР the game speaks (the seven states, or «2 жеста + нейтраль» with the pair chosen for
+ * it) has its own closing and opening movement: a class outside it does nothing to the hand. Before, a flexion in a
+ * stream of seven closed the hand whatever the pair, as it does in the sets of another source.
  */
 export function gestureInSet(classIndex) {
   const g = BY_ORDER[classIndex];
   if (GESTURE_BY_ID[g.id]) return g.id;
+  if (STREAM_SET) return 'rest';
   if (g.command === COMMAND.CLOSE) return CLOSING_GESTURES[0]?.id ?? 'rest';
   if (g.command === COMMAND.OPEN) return OPENING_GESTURE?.id ?? 'rest';
   return 'rest';
@@ -422,9 +429,17 @@ function axesOf(p) {
   return axes;
 }
 
-/** Class indexes of the flexors and the extensors (the x axis). */
+/**
+ * Class indexes of the closing and the opening movement — the antagonists that are the two channels of the stream: the
+ * flexors and the extensors (the x axis). 6.3.3 — in «2 жеста + нейтраль» the pair chosen for it (answer 4г of the
+ * experts, 09.11): its closing gesture is channel A, its opening one channel B, and co-activation is both of them at once.
+ */
+const ANTAGONISTS = (() => {
+  const own = STREAM_SET ? [CLOSING_GESTURES[0], OPENING_GESTURE].map(g => BY_ORDER.findIndex(c => c.id === g?.id)) : [-1, -1];
+  return own.every(i => i > 0) ? own : [AXIS.findIndex(ax => ax && ax[0] === 'x' && ax[1] > 0), AXIS.findIndex(ax => ax && ax[0] === 'x' && ax[1] < 0)];
+})();
 function antagonists() {
-  return [AXIS.findIndex(ax => ax && ax[0] === 'x' && ax[1] > 0), AXIS.findIndex(ax => ax && ax[0] === 'x' && ax[1] < 0)];
+  return ANTAGONISTS;
 }
 
 /** The probabilities in the class order of the set the game speaks (what the meter under the field shows). */

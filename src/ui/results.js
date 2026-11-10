@@ -2,7 +2,7 @@
 import { count, fmtNum, fmtPct, fmtFixed, FORMS, isGamePercent } from '../core/format.js';
 import { h, toast } from './dom.js';
 import { gameArt, badgeArt, starRow, firebird, evolution, achievementArt, giftArt, skinArt, sectionArt } from './art.js';
-import { petStageUp, petState, petName, petReaction, wornItems, PET_ITEM_BY_ID, PET_PLACES, PLACE_NAMES } from '../core/pet.js';
+import { petStageUp, petState, petName, petReaction, wornItems, withPet, PET_ITEM_BY_ID, PET_PLACES, PLACE_NAMES } from '../core/pet.js';
 import { missionText } from '../core/missions.js';
 import { questText } from '../core/quests.js';
 import { skillBar, handsFreeText } from './widgets.js';
@@ -52,7 +52,7 @@ export function resultsAction({ run, plan, demo, next, stopAdvice, restS, titleO
 }
 
 /** Rewards of a run, shown on the screen (5.10): toasts covered the stars and the score and vanished in 3 s. */
-function rewardList(report) {
+function rewardList(report, pet = true) {
   if (!report) return [];
   const goal = report.mission;
   return [
@@ -61,7 +61,8 @@ function rewardList(report) {
     ...(report.quests ?? []).map(q => ({ art: 'done', text: `Миссия выполнена: ${questText(q).title} · +${Math.round(q.xp)} XP` })),
     // 5.16: the medal of that achievement, the gift itself and the hand in the new look (the badge stands in).
     ...report.achievements.map(id => ({ art: 'medal', pic: () => achievementArt(id, true, 32), text: `Достижение: ${ACHIEVEMENTS.find(a => a.id === id)?.name ?? id}` })),
-    ...(report.items ?? []).map(id => ({ art: 'gift', pic: () => giftArt(id, 32), text: `Подарок Жар-птице: ${PET_ITEM_BY_ID[id]?.name ?? id}` })),
+    // 6.3.3: without the bird (answer 10 of the experts) its gifts are not named — the achievement above is the news
+    ...(pet ? report.items ?? [] : []).map(id => ({ art: 'gift', pic: () => giftArt(id, 32), text: `Подарок Жар-птице: ${PET_ITEM_BY_ID[id]?.name ?? id}` })),
     ...report.skins.map(id => ({ art: 'palette', pic: () => skinArt(id, 32), text: `Новый облик: ${SKINS.find(sk => sk.id === id)?.name ?? id}` })),
     ...(report.levelUp ? [{ art: 'levelup', text: `Уровень игрока: ${report.level}` }] : []),
     ...(goal && !goal.completed ? [{ art: 'done', text: `Цель: ${goal.done} из ${goal.target}` }] : []),
@@ -268,13 +269,13 @@ export function resultsScreen(app, { run, report: lastReport, planBonus = 0, cal
   const next = plan && !demo ? app.nextPlanItem() : null;
   const planDone = plan && !demo && !next;
   const name = petName(app.settings);
-  const rewards = rewardList(report);
+  const rewards = rewardList(report, withPet(app.settings));
   const best = report && !demo ? levelBest(app.state.runs, run) : null;
   // Жар-птица (5.12): the first run of a day is a training day — it may move the bird to its next stage.
   const grown = report && !demo ? petStageUp(trainingDays(app.profile), app.runsToday().length === 1) : null;
   // 5.13: the bird reacts to what this run did (the sample's animations): a new stage — it grows before your eyes;
   // a goal, a gift or a good result — a little celebration. Shown only for those moments, wearing its things.
-  const moment = report && !demo && (grown || report.items?.length || report.mission?.completed);
+  const moment = report && !demo && withPet(app.settings) && (grown || report.items?.length || report.mission?.completed);
   const petCard = moment ? (() => {
     const pet = petState(trainingDays(app.profile), { trainedToday: true, name });
     const play = petReaction({ grown, stars: run.stars, planDone, goalDone: !!report.mission?.completed, items: report.items?.length ?? 0 });

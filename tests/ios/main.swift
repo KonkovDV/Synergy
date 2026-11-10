@@ -19,6 +19,12 @@ let launch = LaunchRequest(url: URL(string: "synergy://launch?x-success=motorica
 check(launch != nil && launch?.game == nil && launch?.queryItems.isEmpty == true, "synergy://launch (the catalog of Motorica Start) opens the home screen")
 check(launch?.returnURL?.absoluteString == "motorica://back", "…and may ask to be returned to as well")
 check(LaunchRequest(url: URL(string: "synergy://play")!)?.queryItems.isEmpty == true, "a play link without a query opens the home screen")
+// 6.3.3 — the pair of «2 жеста + нейтраль» (answer 4г of the experts): two different keys of the task's dist pass, nothing else
+let paired = LaunchRequest(url: URL(string: "synergy://play?gestures=tz2&pair=pronation,supination")!)!
+check(item(paired, "pair") == "pronation,supination" && item(paired, "gestures") == "tz2", "a pair of the task's dictionary passes")
+for bad in ["flexion,flexion", "fist,open", "flexion", "flexion,extension,pronation", "FLEXION,extension"] {
+    check(LaunchRequest(url: URL(string: "synergy://play?gestures=tz2&pair=\(bad)")!).map { item($0, "pair") } == .some(nil), "pair «\(bad)» is refused")
+}
 check(LaunchRequest(url: URL(string: "https://example.com/play?game=grip")!) == nil, "another scheme is not a launch")
 check(LaunchRequest(url: URL(string: "synergy://play?game=Grip%20X&level=0&gestures=evil&closeThreshold=60")!).map { $0.queryItems.isEmpty } == true,
       "unknown shapes are dropped; one threshold without the other is dropped")
