@@ -1,5 +1,5 @@
 import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
-// 5.31 — the meetup deck of 21.10.2026 in the game (docs/MEETUP_PLAN.md): isolation counted the way it is measured,
+// 5.31 — the meetup deck of 21.10.2026 in the game (docs/TASK.md): isolation counted the way it is measured,
 // hot tea for the expert's example of boiling water, the four states of two channels, the words of the prosthesis app.
 import test from 'node:test';
 import assert from 'node:assert/strict';

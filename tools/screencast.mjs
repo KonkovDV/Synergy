@@ -39,7 +39,7 @@ const ev = JSON.parse(readFileSync(join(ROOT, 'docs', 'evidence.json'), 'utf8'))
 const unclean = [ev.version !== version && `docs/evidence.json — версия ${ev.version}, а package.json — ${version}`,
   ev.a11y?.violations !== 0 && `axe: ${ev.a11y?.violations} нарушений`, ev.layout?.findings !== 0 && `линтер раскладки: ${ev.layout?.findings} находок`,
   ev.tests?.failed !== 0 && `тесты: ${ev.tests?.failed} упали`].filter(Boolean);
-if (unclean.length && !flag('draft')) { console.error(`screencast: доказательства этой сборки не чистые, а ролик их цитирует:\n  ${unclean.join('\n  ')}\nсначала прогоны (PLAN.md B.F) и node tools/evidence.mjs, или --draft`); process.exit(1); }
+if (unclean.length && !flag('draft')) { console.error(`screencast: доказательства этой сборки не чистые, а ролик их цитирует:\n  ${unclean.join('\n  ')}\nсначала прогоны (docs/dev/PLAN.md B.F) и node tools/evidence.mjs, или --draft`); process.exit(1); }
 const values = evidenceValues(ev);
 const ffmpeg = ['ffmpeg', '/usr/bin/ffmpeg'].find(bin => spawnSync(bin, ['-version']).status === 0);
 if (!ffmpeg) { console.error('screencast: нужен ffmpeg (сборка H.264): apt install ffmpeg или https://ffmpeg.org'); process.exit(1); }

@@ -136,7 +136,7 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['a build folder in git', () => { mkdirSync(join(dir, 'dist'), { recursive: true }); writeFileSync(join(dir, 'dist', 'app.js'), '//'); git(dir, 'add', '-f', 'dist/app.js'); }, 'артефакты сборки в git'],
       ['README table edited by hand', () => edit(dir, 'README.md', s => s.replace('каждая пара цветов', 'почти каждая пара цветов')), 'расходится с docs/evidence.json'],
       ['an old axe count in the pitch', () => edit(dir, 'docs/PITCH.md', s => `${s}\nНоль нарушений на 28 состояниях экранов светлой темы и 10 тёмной.\n`), 'а axe —'],
-      ['an old layout run in the jury strategy', () => edit(dir, 'docs/JURY_STRATEGY.md', s => `${s}\nЛинтер: 37 состояний × 7 экранов.\n`), 'а линтер раскладки —'],
+      ['an old layout run in the jury strategy', () => edit(dir, 'docs/AI_USAGE.md', s => `${s}\nЛинтер: 37 состояний × 7 экранов.\n`), 'а линтер раскладки —'],
       ['version mismatch', () => edit(dir, 'src/config.js', s => s.replace(`version: '${version}'`, "version: '0.0.1'")), 'версия src/config.js'],
       ['stale citation metadata', () => edit(dir, 'CITATION.cff', s => s.replace(/^version: .*$/m, 'version: 5.11.0')), 'версия CITATION.cff'],
       ['stale iPhone version', () => edit(dir, 'ios/project.yml', s => s.replace(/MARKETING_VERSION: "[^"]+"/, 'MARKETING_VERSION: "5.11.0"')), 'версия ios/project.yml'],
@@ -158,10 +158,10 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
       ['manifest declares a medical app', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"games",', '"games", "medical",')), 'категория «medical»'],
       ['PWA locked to portrait', () => edit(dir, 'public/manifest.webmanifest', s => s.replace('"display"', '"orientation": "portrait",\n  "display"')), 'WCAG 1.3.4'],
       ['APK locked to portrait', () => edit(dir, 'android/AndroidManifest.xml', s => s.replace('android:exported="true"', 'android:exported="true"\n            android:screenOrientation="portrait"')), 'AndroidManifest.xml: ориентация'],
-      // 6.0 — the set of the task is published (MEMORY.md): a document that still calls the set a hypothesis, or a
+      // 6.0 — the set of the task is published (docs/dev/MEMORY.md): a document that still calls the set a hypothesis, or a
       // published line that differs from vocabulary.js, fails the gate.
       ['gesture set published, docs still say «гипотеза»', () => edit(dir, 'docs/TASK.md', s => `${s}\n| «7 жестов» | состав — гипотеза команды |\n`), 'назван гипотезой'],
-      ['published set differs from vocabulary.js', () => edit(dir, 'MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, thumb')), 'набор организатора в MEMORY.md'],
+      ['published set differs from vocabulary.js', () => edit(dir, 'docs/dev/MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, thumb')), 'набор организатора в docs/dev/MEMORY.md'],
     ];
     for (const [name, plant, message] of cases) {
       plant();
@@ -178,8 +178,8 @@ test('submission gate: a clean copy passes, every planted mistake fails it', () 
 test('submission gate: a published set must equal vocabulary.js', () => {
   const dir = copyRepo();
   try {
-    edit(dir, 'MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, tripod'));
-    for (const f of ['docs/JURY_STRATEGY.md', 'docs/TASK.md']) edit(dir, f, s => s.replace(/состав/gi, 'набор'));
+    edit(dir, 'docs/dev/MEMORY.md', s => s.replace(/^Набор жестов организатора:.*$/m, 'Набор жестов организатора: rest, fist, open, pinch, point, key, tripod'));
+    for (const f of ['docs/TASK.md']) edit(dir, f, s => s.replace(/состав/gi, 'набор'));
     const r = gate(dir);
     assert.equal(r.status, 1, r.stdout);
     assert.ok(r.stdout.includes('≠ набор организатора'), r.stdout);
