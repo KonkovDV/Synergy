@@ -57,7 +57,7 @@ export const SCENES = Object.freeze([
     text: 'Кнопки под здоровую руку, озвучивание. axe: 0 нарушений в {a11yLight} состояниях светлой темы и {a11yDark} тёмной.' },
   { id: 'outro', chapter: 'outro', seconds: 6,
     title: 'Код, тесты и документы — в репозитории',
-    text: '{tests} автотестов, раскладка — {layout} сочетаний без находок, APK {apkKb} КБ. Каждое требование ТЗ — docs/TZ_COMPLIANCE.md.' },
+    text: '{tests} автотестов, раскладка проверена на {layout} сочетаниях экрана и текста, APK {apkKb} КБ. Каждое требование ТЗ — docs/TZ_COMPLIANCE.md.' },
 ]);
 
 /** The placeholders of the captions, from docs/evidence.json (the numbers of this very build). */
