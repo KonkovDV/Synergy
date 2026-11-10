@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark status bar icons on the light bar (API 23+). -->
+    <style name="Synergy" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:statusBarColor">@color/splash_bg</item>
+        <item name="android:colorAccent">#0a9d63</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

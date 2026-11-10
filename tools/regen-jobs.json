@@ -1,0 +1,645 @@
+[
+ {
+  "id": "tz-gestures",
+  "priority": 1,
+  "kind": "gestures",
+  "grid": [
+   4,
+   2
+  ],
+  "title": "Жесты ТЗ: нейтраль, шесть движений кисти, коактивация",
+  "why": "В наборе ТЗ (по умолчанию) шесть жестов из семи рисовались кодом — маленькие тёмные кисти со стрелками; коактивация в «Сейфе» — тоже.",
+  "names": [
+   "gesture-rest",
+   "gesture-flexion",
+   "gesture-extension",
+   "gesture-pronation",
+   "gesture-supination",
+   "gesture-adduction",
+   "gesture-abduction",
+   "gesture-coact"
+  ],
+  "ref": {
+   "top": [
+    "hand-rest",
+    "hand-close",
+    "hand-open"
+   ]
+  },
+  "attach": "Эталон: кисть игры стоя — покой, кулак, ладонь.",
+  "prompt": "One landscape image, 3:2. A sheet of 8 pictures in a grid of 4 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows the bionic hand of the game: copy its design exactly in every cell — a right-hand bionic prosthetic hand with a glossy white shell, matte dark graphite finger joints and fingertip pads, a small round softly glowing mint-green (#16E182) sensor light in the centre of the palm, a slim cyan (#25C2C4) band at the wrist and a white forearm socket. The same hand, the same size and the same light in every cell, shown from the forearm socket to the fingertips. Each cell shows one wrist movement of a prosthesis training game; where it says so, a thick glossy mint-green (#16E182) curved arrow with a rounded head floats beside the hand and shows the direction of the movement — simple and bold, readable at 48 pixels. Top row, then bottom row, left to right:\n1) NEUTRAL — the hand upright on its socket, palm facing the viewer, relaxed: the fingers gently bent about forty degrees and loosely together, the thumb relaxed beside the index finger; no arrow.\n2) FLEXION — seen from the side, the thumb side towards the viewer, the forearm upright; the hand bent forward at the wrist about sixty degrees towards the palm side, the fingers relaxed and slightly curled; a curved arrow along the bend, pointing forward and down.\n3) EXTENSION — seen from the side like the previous one; the hand bent backwards at the wrist about fifty degrees towards the back of the hand, the fingers straight; a curved arrow along the bend, pointing back and down.\n4) PRONATION — the forearm lying horizontally and pointing to the right, seen from the side; the palm faces down to the floor; a curved arrow wraps around the wrist and shows the palm turning down.\n5) SUPINATION — like the previous one, but the palm faces up to the ceiling, as if a coin lay on it; a curved arrow wraps around the wrist the other way and shows the palm turning up.\n6) ADDUCTION — the hand upright, palm facing the viewer, tilted sideways at the wrist about thirty degrees towards the little finger, to the viewer's left (a right hand facing the viewer has its thumb on the viewer's right); a short curved arrow beside the fingertips points to the left.\n7) ABDUCTION — like the previous one, but tilted towards the thumb, to the viewer's right; a short curved arrow beside the fingertips points to the right.\n8) COACTIVATION — the hand upright, palm facing the viewer, clenched into a firm fist; two thin glowing rings around the forearm socket just below the wrist band, one coral (#FF7A45) and one sky blue (#5AC8FA), both lit; no arrow.\nSoft 3D clay render, rounded geometric shapes, studio lighting from the top left, clean and friendly, high detail. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "hold-1",
+  "priority": 1,
+  "kind": "holds",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Мастерская: кисть держит предмет (1 из 2)",
+  "why": "Кисть и предмет были двумя картинками: предмет висел под кончиками пальцев, пальцы его не обхватывали.",
+  "names": [
+   "hold-sponge",
+   "hold-apple",
+   "hold-egg",
+   "hold-cup",
+   "hold-can",
+   "hold-dumbbell"
+  ],
+  "ref": {
+   "top": [
+    "hand-down-open",
+    "hand-down-rest",
+    "hand-down-close"
+   ],
+   "bottom": [
+    "obj-sponge",
+    "obj-apple",
+    "obj-egg",
+    "obj-cup",
+    "obj-can",
+    "obj-dumbbell"
+   ]
+  },
+  "attach": "Эталон: висящая кисть (ладонь, покой, кулак) и шесть предметов.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the bionic hand of the game hanging from above (open, relaxed, fist) and, in its bottom row, the six things it holds. In every cell the SAME hand — a right-hand bionic prosthetic hand with a glossy white shell, matte dark graphite finger joints and fingertip pads, a small round softly glowing mint-green (#16E182) sensor light in the centre of the palm, a slim cyan (#25C2C4) band at the wrist and a white forearm socket — hangs straight down from above: its white forearm socket enters exactly vertically from the top edge of the cell, centred in the cell, the palm facing the viewer, the same size in every cell. The hand holds one thing, copied exactly from the reference — its shape, colours and size next to the hand. Top row, then bottom row, left to right: 1) the yellow kitchen sponge with a mint top, held in a firm power grip: the four fingers wrap around it from the front and the sides, the fingertips curl under its middle and the thumb holds the other side, parts of it show between the fingers; 2) the red apple with a green leaf, held in a firm power grip: the four fingers wrap around it from the front and the sides, the fingertips curl under its middle and the thumb holds the other side, parts of it show between the fingers; 3) the white egg, held in a firm power grip: the four fingers wrap around it from the front and the sides, the fingertips curl under its middle and the thumb holds the other side, parts of it show between the fingers, gently, without squeezing; 4) the white paper cup with a mint stripe, held in a firm power grip: the four fingers wrap around it from the front and the sides, the fingertips curl under its middle and the thumb holds the other side, parts of it show between the fingers; 5) the orange can with a white band, held in a firm power grip: the four fingers wrap around it from the front and the sides, the fingertips curl under its middle and the thumb holds the other side, parts of it show between the fingers; 6) the small grey dumbbell, held by its handle, held in a firm power grip: the four fingers wrap around it from the front and the sides, the fingertips curl under its middle and the thumb holds the other side, parts of it show between the fingers. The thing does not float: it is clearly held, the fingers in front of it where they wrap it. Soft 3D clay render, rounded geometric shapes, studio lighting from the top left, clean and friendly, high detail. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "hold-2",
+  "priority": 1,
+  "kind": "holds",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Мастерская: кисть держит предмет (2 из 2)",
+  "why": "Кисть и предмет были двумя картинками: предмет висел под кончиками пальцев, пальцы его не обхватывали.",
+  "names": [
+   "hold-cube",
+   "hold-coin",
+   "hold-berry",
+   "hold-ring",
+   "hold-card",
+   "hold-key"
+  ],
+  "ref": {
+   "top": [
+    "hand-down-open",
+    "hand-down-rest",
+    "hand-down-close"
+   ],
+   "bottom": [
+    "obj-cube",
+    "obj-coin",
+    "obj-berry",
+    "obj-ring",
+    "obj-card",
+    "obj-key"
+   ]
+  },
+  "attach": "Эталон: висящая кисть (ладонь, покой, кулак) и шесть предметов.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the bionic hand of the game hanging from above (open, relaxed, fist) and, in its bottom row, the six things it holds. In every cell the SAME hand — a right-hand bionic prosthetic hand with a glossy white shell, matte dark graphite finger joints and fingertip pads, a small round softly glowing mint-green (#16E182) sensor light in the centre of the palm, a slim cyan (#25C2C4) band at the wrist and a white forearm socket — hangs straight down from above: its white forearm socket enters exactly vertically from the top edge of the cell, centred in the cell, the palm facing the viewer, the same size in every cell. The hand holds one thing, copied exactly from the reference — its shape, colours and size next to the hand. Top row, then bottom row, left to right: 1) the cornflower-blue toy cube, held in a firm power grip: the four fingers wrap around it from the front and the sides, the fingertips curl under its middle and the thumb holds the other side, parts of it show between the fingers; 2) the golden coin with a star, held upright facing the viewer, held in a precision pinch between the tip of the thumb and the tip of the index finger, the other three fingers gently curled; 3) the raspberry, held in a precision pinch between the tip of the thumb and the tip of the index finger, the other three fingers gently curled, without squeezing; 4) the chunky glossy yellow-orange toy ring, held in a precision pinch between the tip of the thumb and the tip of the index finger, the other three fingers gently curled; 5) the light-blue bank card with a gold chip, held in a lateral key grip: the four fingers curled into the palm, the thing clamped between the pad of the thumb and the side of the bent index finger, most of it hanging below the hand; 6) the golden key, held in a lateral key grip: the four fingers curled into the palm, the thing clamped between the pad of the thumb and the side of the bent index finger, most of it hanging below the hand. The thing does not float: it is clearly held, the fingers in front of it where they wrap it. Soft 3D clay render, rounded geometric shapes, studio lighting from the top left, clean and friendly, high detail. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-egg-1",
+  "priority": 2,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, яйцо: молодильные яблоки, фонарик, азбука",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-egg-happy-nest-apples",
+   "pet-egg-happy-nest-lantern",
+   "pet-egg-happy-nest-book",
+   "pet-egg-waiting-nest-apples",
+   "pet-egg-waiting-nest-lantern",
+   "pet-egg-waiting-nest-book"
+  ],
+  "ref": {
+   "top": [
+    "pet-egg-happy-nest",
+    "pet-egg-waiting-nest"
+   ],
+   "bottom": [
+    "gift-apples",
+    "gift-lantern",
+    "gift-book"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same egg sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — three glossy golden-yellow apples with small mint leaves; middle — a small mint-teal lantern with a handle and a warm glowing cream light inside; right — a small open book with cream pages, a mint-green cover and a little golden star on its bookmark. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed egg of the reference three times; bottom row: the calm egg of the reference three times. Each column wears one thing — left — with three small glossy golden-yellow apples with mint leaves lying on the front rim of the nest, in front of the egg; middle — with a small mint-teal lantern with a handle and a warm glowing light standing in the nest beside the egg, on the viewer's right; right — with a small open book with cream pages and a mint-green cover leaning on the front rim of the nest, on the viewer's left. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-chick-1",
+  "priority": 1,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, птенец: бант, венок, звезда во лбу",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-chick-happy-nest-bow",
+   "pet-chick-happy-nest-wreath",
+   "pet-chick-happy-nest-star",
+   "pet-chick-waiting-nest-bow",
+   "pet-chick-waiting-nest-wreath",
+   "pet-chick-waiting-nest-star"
+  ],
+  "ref": {
+   "top": [
+    "pet-chick-happy-nest",
+    "pet-chick-waiting-nest"
+   ],
+   "bottom": [
+    "gift-bow",
+    "gift-wreath",
+    "gift-star"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same newly hatched chick sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a sky-blue ribbon bow with mint edges; middle — a mint headband wreath of white and pale-yellow daisies and small sky-blue flowers; right — a glossy golden five-point star with a soft glow. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed chick of the reference three times; bottom row: the calm chick of the reference three times. Each column wears one thing — left — with a small sky-blue ribbon bow with mint edges on the top of its head, at the side of its crest; middle — with a small mint wreath of white and pale-yellow daisies and tiny sky-blue flowers resting on its head around the base of its crest; right — with a small glossy golden five-point star with a soft glow on its forehead, just above the eyes. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-chick-2",
+  "priority": 1,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, птенец: кокошник, молодильные яблоки, фонарик",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-chick-happy-nest-kokoshnik",
+   "pet-chick-happy-nest-apples",
+   "pet-chick-happy-nest-lantern",
+   "pet-chick-waiting-nest-kokoshnik",
+   "pet-chick-waiting-nest-apples",
+   "pet-chick-waiting-nest-lantern"
+  ],
+  "ref": {
+   "top": [
+    "pet-chick-happy-nest",
+    "pet-chick-waiting-nest"
+   ],
+   "bottom": [
+    "gift-kokoshnik",
+    "gift-apples",
+    "gift-lantern"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same newly hatched chick sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a mint-teal kokoshnik headdress: a tall rounded arch with golden swirl ornaments and small white pearls along its edge; middle — three glossy golden-yellow apples with small mint leaves; right — a small mint-teal lantern with a handle and a warm glowing cream light inside. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed chick of the reference three times; bottom row: the calm chick of the reference three times. Each column wears one thing — left — with a small mint-teal kokoshnik headdress with golden swirl ornaments and white pearls along its edge, standing upright on its head in front of the crest, the crest feathers rising behind it; middle — with three small glossy golden-yellow apples with mint leaves lying on the front rim of the nest, in front of the bird; right — with a small mint-teal lantern with a handle and a warm glowing light standing in the nest beside the bird, on the viewer's right. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-chick-3",
+  "priority": 1,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, птенец: азбука",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-chick-happy-nest-book",
+   "-",
+   "-",
+   "pet-chick-waiting-nest-book",
+   "-",
+   "-"
+  ],
+  "ref": {
+   "top": [
+    "pet-chick-happy-nest",
+    "pet-chick-waiting-nest"
+   ],
+   "bottom": [
+    "gift-book"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same newly hatched chick sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a small open book with cream pages, a mint-green cover and a little golden star on its bookmark. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed chick of the reference three times; bottom row: the calm chick of the reference three times. Each column wears one thing — left — with a small open book with cream pages and a mint-green cover leaning on the front rim of the nest, on the viewer's left; middle — with a small open book with cream pages and a mint-green cover leaning on the front rim of the nest, on the viewer's left; right — with a small open book with cream pages and a mint-green cover leaning on the front rim of the nest, on the viewer's left (the repeated columns are second takes of the same picture). The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-fledgling-1",
+  "priority": 2,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, подлёток: бант, венок, звезда во лбу",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-fledgling-happy-nest-bow",
+   "pet-fledgling-happy-nest-wreath",
+   "pet-fledgling-happy-nest-star",
+   "pet-fledgling-waiting-nest-bow",
+   "pet-fledgling-waiting-nest-wreath",
+   "pet-fledgling-waiting-nest-star"
+  ],
+  "ref": {
+   "top": [
+    "pet-fledgling-happy-nest",
+    "pet-fledgling-waiting-nest"
+   ],
+   "bottom": [
+    "gift-bow",
+    "gift-wreath",
+    "gift-star"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same fledgling sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a sky-blue ribbon bow with mint edges; middle — a mint headband wreath of white and pale-yellow daisies and small sky-blue flowers; right — a glossy golden five-point star with a soft glow. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed fledgling of the reference three times; bottom row: the calm fledgling of the reference three times. Each column wears one thing — left — with a small sky-blue ribbon bow with mint edges on the top of its head, at the side of its crest; middle — with a small mint wreath of white and pale-yellow daisies and tiny sky-blue flowers resting on its head around the base of its crest; right — with a small glossy golden five-point star with a soft glow on its forehead, just above the eyes. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-fledgling-2",
+  "priority": 2,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, подлёток: кокошник, оберег, бусы",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-fledgling-happy-nest-kokoshnik",
+   "pet-fledgling-happy-nest-amulet",
+   "pet-fledgling-happy-nest-beads",
+   "pet-fledgling-waiting-nest-kokoshnik",
+   "pet-fledgling-waiting-nest-amulet",
+   "pet-fledgling-waiting-nest-beads"
+  ],
+  "ref": {
+   "top": [
+    "pet-fledgling-happy-nest",
+    "pet-fledgling-waiting-nest"
+   ],
+   "bottom": [
+    "gift-kokoshnik",
+    "gift-amulet",
+    "gift-beads"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same fledgling sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a mint-teal kokoshnik headdress: a tall rounded arch with golden swirl ornaments and small white pearls along its edge; middle — a round golden amulet with a teal enamel centre and a little golden four-petal flower, on a thin golden cord; right — a string of small glossy beads in mint, sky blue and gold. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed fledgling of the reference three times; bottom row: the calm fledgling of the reference three times. Each column wears one thing — left — with a small mint-teal kokoshnik headdress with golden swirl ornaments and white pearls along its edge, standing upright on its head in front of the crest, the crest feathers rising behind it; middle — with a round golden amulet with a teal enamel centre and a little golden flower on a thin golden cord around its neck, lying on its chest; right — with a necklace of small glossy mint, sky-blue and gold beads around its neck, lying on its chest. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-fledgling-3",
+  "priority": 2,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, подлёток: молодильные яблоки, фонарик, азбука",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-fledgling-happy-nest-apples",
+   "pet-fledgling-happy-nest-lantern",
+   "pet-fledgling-happy-nest-book",
+   "pet-fledgling-waiting-nest-apples",
+   "pet-fledgling-waiting-nest-lantern",
+   "pet-fledgling-waiting-nest-book"
+  ],
+  "ref": {
+   "top": [
+    "pet-fledgling-happy-nest",
+    "pet-fledgling-waiting-nest"
+   ],
+   "bottom": [
+    "gift-apples",
+    "gift-lantern",
+    "gift-book"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same fledgling sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — three glossy golden-yellow apples with small mint leaves; middle — a small mint-teal lantern with a handle and a warm glowing cream light inside; right — a small open book with cream pages, a mint-green cover and a little golden star on its bookmark. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed fledgling of the reference three times; bottom row: the calm fledgling of the reference three times. Each column wears one thing — left — with three small glossy golden-yellow apples with mint leaves lying on the front rim of the nest, in front of the bird; middle — with a small mint-teal lantern with a handle and a warm glowing light standing in the nest beside the bird, on the viewer's right; right — with a small open book with cream pages and a mint-green cover leaning on the front rim of the nest, on the viewer's left. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-young-1",
+  "priority": 1,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, юная: бант, венок, звезда во лбу",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-young-happy-nest-bow",
+   "pet-young-happy-nest-wreath",
+   "pet-young-happy-nest-star",
+   "pet-young-waiting-nest-bow",
+   "pet-young-waiting-nest-wreath",
+   "pet-young-waiting-nest-star"
+  ],
+  "ref": {
+   "top": [
+    "pet-young-happy-nest",
+    "pet-young-waiting-nest"
+   ],
+   "bottom": [
+    "gift-bow",
+    "gift-wreath",
+    "gift-star"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same young firebird sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a sky-blue ribbon bow with mint edges; middle — a mint headband wreath of white and pale-yellow daisies and small sky-blue flowers; right — a glossy golden five-point star with a soft glow. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed young firebird of the reference three times; bottom row: the calm young firebird of the reference three times. Each column wears one thing — left — with a small sky-blue ribbon bow with mint edges on the top of its head, at the side of its crest; middle — with a small mint wreath of white and pale-yellow daisies and tiny sky-blue flowers resting on its head around the base of its crest; right — with a small glossy golden five-point star with a soft glow on its forehead, just above the eyes. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-young-2",
+  "priority": 1,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, юная: кокошник, оберег, бусы",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-young-happy-nest-kokoshnik",
+   "pet-young-happy-nest-amulet",
+   "pet-young-happy-nest-beads",
+   "pet-young-waiting-nest-kokoshnik",
+   "pet-young-waiting-nest-amulet",
+   "pet-young-waiting-nest-beads"
+  ],
+  "ref": {
+   "top": [
+    "pet-young-happy-nest",
+    "pet-young-waiting-nest"
+   ],
+   "bottom": [
+    "gift-kokoshnik",
+    "gift-amulet",
+    "gift-beads"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same young firebird sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a mint-teal kokoshnik headdress: a tall rounded arch with golden swirl ornaments and small white pearls along its edge; middle — a round golden amulet with a teal enamel centre and a little golden four-petal flower, on a thin golden cord; right — a string of small glossy beads in mint, sky blue and gold. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed young firebird of the reference three times; bottom row: the calm young firebird of the reference three times. Each column wears one thing — left — with a small mint-teal kokoshnik headdress with golden swirl ornaments and white pearls along its edge, standing upright on its head in front of the crest, the crest feathers rising behind it; middle — with a round golden amulet with a teal enamel centre and a little golden flower on a thin golden cord around its neck, lying on its chest; right — with a necklace of small glossy mint, sky-blue and gold beads around its neck, lying on its chest. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-young-3",
+  "priority": 1,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, юная: молодильные яблоки, фонарик, азбука",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-young-happy-nest-apples",
+   "pet-young-happy-nest-lantern",
+   "pet-young-happy-nest-book",
+   "pet-young-waiting-nest-apples",
+   "pet-young-waiting-nest-lantern",
+   "pet-young-waiting-nest-book"
+  ],
+  "ref": {
+   "top": [
+    "pet-young-happy-nest",
+    "pet-young-waiting-nest"
+   ],
+   "bottom": [
+    "gift-apples",
+    "gift-lantern",
+    "gift-book"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same young firebird sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — three glossy golden-yellow apples with small mint leaves; middle — a small mint-teal lantern with a handle and a warm glowing cream light inside; right — a small open book with cream pages, a mint-green cover and a little golden star on its bookmark. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed young firebird of the reference three times; bottom row: the calm young firebird of the reference three times. Each column wears one thing — left — with three small glossy golden-yellow apples with mint leaves lying on the front rim of the nest, in front of the bird; middle — with a small mint-teal lantern with a handle and a warm glowing light standing in the nest beside the bird, on the viewer's right; right — with a small open book with cream pages and a mint-green cover leaning on the front rim of the nest, on the viewer's left. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-firebird-1",
+  "priority": 2,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, жар-птица: бант, венок, звезда во лбу",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-firebird-happy-nest-bow",
+   "pet-firebird-happy-nest-wreath",
+   "pet-firebird-happy-nest-star",
+   "pet-firebird-waiting-nest-bow",
+   "pet-firebird-waiting-nest-wreath",
+   "pet-firebird-waiting-nest-star"
+  ],
+  "ref": {
+   "top": [
+    "pet-firebird-happy-nest",
+    "pet-firebird-waiting-nest"
+   ],
+   "bottom": [
+    "gift-bow",
+    "gift-wreath",
+    "gift-star"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same grown firebird sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a sky-blue ribbon bow with mint edges; middle — a mint headband wreath of white and pale-yellow daisies and small sky-blue flowers; right — a glossy golden five-point star with a soft glow. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed grown firebird of the reference three times; bottom row: the calm grown firebird of the reference three times. Each column wears one thing — left — with a small sky-blue ribbon bow with mint edges on the top of its head, at the side of its crest; middle — with a small mint wreath of white and pale-yellow daisies and tiny sky-blue flowers resting on its head around the base of its crest; right — with a small glossy golden five-point star with a soft glow on its forehead, just above the eyes. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-firebird-2",
+  "priority": 2,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, жар-птица: кокошник, оберег, бусы",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-firebird-happy-nest-kokoshnik",
+   "pet-firebird-happy-nest-amulet",
+   "pet-firebird-happy-nest-beads",
+   "pet-firebird-waiting-nest-kokoshnik",
+   "pet-firebird-waiting-nest-amulet",
+   "pet-firebird-waiting-nest-beads"
+  ],
+  "ref": {
+   "top": [
+    "pet-firebird-happy-nest",
+    "pet-firebird-waiting-nest"
+   ],
+   "bottom": [
+    "gift-kokoshnik",
+    "gift-amulet",
+    "gift-beads"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same grown firebird sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — a mint-teal kokoshnik headdress: a tall rounded arch with golden swirl ornaments and small white pearls along its edge; middle — a round golden amulet with a teal enamel centre and a little golden four-petal flower, on a thin golden cord; right — a string of small glossy beads in mint, sky blue and gold. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed grown firebird of the reference three times; bottom row: the calm grown firebird of the reference three times. Each column wears one thing — left — with a small mint-teal kokoshnik headdress with golden swirl ornaments and white pearls along its edge, standing upright on its head in front of the crest, the crest feathers rising behind it; middle — with a round golden amulet with a teal enamel centre and a little golden flower on a thin golden cord around its neck, lying on its chest; right — with a necklace of small glossy mint, sky-blue and gold beads around its neck, lying on its chest. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "pet-firebird-3",
+  "priority": 2,
+  "kind": "looks",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Жар-птица в гнезде, жар-птица: молодильные яблоки, фонарик, азбука",
+  "why": "Вещь лежала на птице отдельной картинкой: другой свет и масштаб, кокошник съезжал с хохолка, фонарик висел в воздухе.",
+  "names": [
+   "pet-firebird-happy-nest-apples",
+   "pet-firebird-happy-nest-lantern",
+   "pet-firebird-happy-nest-book",
+   "pet-firebird-waiting-nest-apples",
+   "pet-firebird-waiting-nest-lantern",
+   "pet-firebird-waiting-nest-book"
+  ],
+  "ref": {
+   "top": [
+    "pet-firebird-happy-nest",
+    "pet-firebird-waiting-nest"
+   ],
+   "bottom": [
+    "gift-apples",
+    "gift-lantern",
+    "gift-book"
+   ]
+  },
+  "attach": "Эталон: птица этой стадии в гнезде (радость, спокойная) и вещи листа.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, in its top row, the same grown firebird sitting in its nest — left: overjoyed with its wings raised, right: awake and calm — and, in its bottom row, the things to wear: left — three glossy golden-yellow apples with small mint leaves; middle — a small mint-teal lantern with a handle and a warm glowing cream light inside; right — a small open book with cream pages, a mint-green cover and a little golden star on its bookmark. Copy the character, its nest, the two moods, the camera, the scale and the light EXACTLY from the reference. Top row: the overjoyed grown firebird of the reference three times; bottom row: the calm grown firebird of the reference three times. Each column wears one thing — left — with three small glossy golden-yellow apples with mint leaves lying on the front rim of the nest, in front of the bird; middle — with a small mint-teal lantern with a handle and a warm glowing light standing in the nest beside the bird, on the viewer's right; right — with a small open book with cream pages and a mint-green cover leaning on the front rim of the nest, on the viewer's left. The thing is part of the picture, not a sticker: it sits naturally where it belongs, follows the shape of the head or the chest, has the same soft light and shading as the bird and the right size for it; nothing else changes. In every cell the nest is centred horizontally, has the same size (about 60 % of the cell width) and its bottom is at the same height, just above the bottom of the cell. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "hang-grips",
+  "priority": 2,
+  "kind": "hang-grips",
+  "grid": [
+   3,
+   1
+  ],
+  "title": "Мастерская: висящая кисть — щепоть, ключ, указательный",
+  "why": "Эти три кисти склеены: предплечье от одной картинки, кисть ниже полосы — от другой.",
+  "names": [
+   "hand-down-pinch",
+   "hand-down-key",
+   "hand-down-point"
+  ],
+  "ref": {
+   "top": [
+    "hand-down-open",
+    "hand-down-rest",
+    "hand-down-close"
+   ]
+  },
+  "attach": "Эталон: висящая кисть игры — ладонь, покой, кулак.",
+  "prompt": "One landscape image, 3:2. Premium product render of three identical right-hand bionic prosthetic hands hanging straight down from above side by side in one row, fingers pointing down toward the floor, copied exactly from the attached reference — the same design, the same size, the same straight front camera angle with the palm facing the viewer, the same long white forearm socket entering from the top edge of the image; evenly spaced with wide empty gaps between them, each fully visible down to the fingertips. Left hand: precision pinch — the tips of the thumb and the index finger touch and form a small rounded ring, the middle, ring and little fingers gently curved and relaxed. Middle hand: lateral key grip — the four fingers curled into the palm, the pad of the thumb pressed flat against the side of the bent index finger, as when holding a key. Right hand: index point — the index finger straight and pointing down, the other three fingers curled into the palm, the thumb folded over the middle finger. Every hand: a right-hand bionic prosthetic hand with a glossy white shell, matte dark graphite finger joints and fingertip pads, a small round softly glowing mint-green (#16E182) sensor light in the centre of the palm, a slim cyan (#25C2C4) band at the wrist and a white forearm socket. Soft 3D clay render, rounded geometric shapes, studio lighting from the top left, clean and friendly, high detail. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "fly-fledgling",
+  "priority": 3,
+  "kind": "flight",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Полёт: подлёток в наряде",
+  "why": "В «Полёте» вещь дорисовывалась на летящую птицу отдельной картинкой.",
+  "names": [
+   "pet-fledgling-happy-bow",
+   "pet-fledgling-happy-wreath",
+   "pet-fledgling-happy-star",
+   "pet-fledgling-happy-kokoshnik",
+   "pet-fledgling-happy-amulet",
+   "pet-fledgling-happy-beads"
+  ],
+  "ref": {
+   "top": [
+    "pet-fledgling-happy"
+   ],
+   "bottom": [
+    "gift-bow",
+    "gift-wreath",
+    "gift-star",
+    "gift-kokoshnik",
+    "gift-amulet",
+    "gift-beads"
+   ]
+  },
+  "attach": "Эталон: радостная птица этой стадии (крылья вверх) и шесть вещей.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, at the top, the same fledgling overjoyed with its wings raised high, and below it six things. In every cell copy the bird of the reference EXACTLY — the design, the pose with raised wings, the camera, the scale, the light — with one thing worn, the thing copied from the reference. Top row, then bottom row, left to right: 1) with a small sky-blue ribbon bow with mint edges on the top of its head, at the side of its crest; 2) with a small mint wreath of white and pale-yellow daisies and tiny sky-blue flowers resting on its head around the base of its crest; 3) with a small glossy golden five-point star with a soft glow on its forehead, just above the eyes; 4) with a small mint-teal kokoshnik headdress with golden swirl ornaments and white pearls along its edge, standing upright on its head in front of the crest, the crest feathers rising behind it; 5) with a round golden amulet with a teal enamel centre and a little golden flower on a thin golden cord around its neck on its chest; 6) with a necklace of small glossy mint, sky-blue and gold beads around its neck on its chest. The thing is part of the picture, not a sticker: it sits naturally, follows the shape of the head or the chest and has the same soft light as the bird. No nest. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "fly-young",
+  "priority": 3,
+  "kind": "flight",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Полёт: юная в наряде",
+  "why": "В «Полёте» вещь дорисовывалась на летящую птицу отдельной картинкой.",
+  "names": [
+   "pet-young-happy-bow",
+   "pet-young-happy-wreath",
+   "pet-young-happy-star",
+   "pet-young-happy-kokoshnik",
+   "pet-young-happy-amulet",
+   "pet-young-happy-beads"
+  ],
+  "ref": {
+   "top": [
+    "pet-young-happy"
+   ],
+   "bottom": [
+    "gift-bow",
+    "gift-wreath",
+    "gift-star",
+    "gift-kokoshnik",
+    "gift-amulet",
+    "gift-beads"
+   ]
+  },
+  "attach": "Эталон: радостная птица этой стадии (крылья вверх) и шесть вещей.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, at the top, the same young firebird overjoyed with its wings raised high, and below it six things. In every cell copy the bird of the reference EXACTLY — the design, the pose with raised wings, the camera, the scale, the light — with one thing worn, the thing copied from the reference. Top row, then bottom row, left to right: 1) with a small sky-blue ribbon bow with mint edges on the top of its head, at the side of its crest; 2) with a small mint wreath of white and pale-yellow daisies and tiny sky-blue flowers resting on its head around the base of its crest; 3) with a small glossy golden five-point star with a soft glow on its forehead, just above the eyes; 4) with a small mint-teal kokoshnik headdress with golden swirl ornaments and white pearls along its edge, standing upright on its head in front of the crest, the crest feathers rising behind it; 5) with a round golden amulet with a teal enamel centre and a little golden flower on a thin golden cord around its neck on its chest; 6) with a necklace of small glossy mint, sky-blue and gold beads around its neck on its chest. The thing is part of the picture, not a sticker: it sits naturally, follows the shape of the head or the chest and has the same soft light as the bird. No nest. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ },
+ {
+  "id": "fly-firebird",
+  "priority": 3,
+  "kind": "flight",
+  "grid": [
+   3,
+   2
+  ],
+  "title": "Полёт: жар-птица в наряде",
+  "why": "В «Полёте» вещь дорисовывалась на летящую птицу отдельной картинкой.",
+  "names": [
+   "pet-firebird-happy-bow",
+   "pet-firebird-happy-wreath",
+   "pet-firebird-happy-star",
+   "pet-firebird-happy-kokoshnik",
+   "pet-firebird-happy-amulet",
+   "pet-firebird-happy-beads"
+  ],
+  "ref": {
+   "top": [
+    "pet-firebird-happy"
+   ],
+   "bottom": [
+    "gift-bow",
+    "gift-wreath",
+    "gift-star",
+    "gift-kokoshnik",
+    "gift-amulet",
+    "gift-beads"
+   ]
+  },
+  "attach": "Эталон: радостная птица этой стадии (крылья вверх) и шесть вещей.",
+  "prompt": "One landscape image, 3:2. A sheet of 6 pictures in a grid of 3 columns × 2 rows, each centred in its own equal cell. Every subject is complete, sits inside its cell with wide empty margins and never touches or crosses a cell border. The attached reference shows, at the top, the same grown firebird overjoyed with its wings raised high, and below it six things. In every cell copy the bird of the reference EXACTLY — the design, the pose with raised wings, the camera, the scale, the light — with one thing worn, the thing copied from the reference. Top row, then bottom row, left to right: 1) with a small sky-blue ribbon bow with mint edges on the top of its head, at the side of its crest; 2) with a small mint wreath of white and pale-yellow daisies and tiny sky-blue flowers resting on its head around the base of its crest; 3) with a small glossy golden five-point star with a soft glow on its forehead, just above the eyes; 4) with a small mint-teal kokoshnik headdress with golden swirl ornaments and white pearls along its edge, standing upright on its head in front of the crest, the crest feathers rising behind it; 5) with a round golden amulet with a teal enamel centre and a little golden flower on a thin golden cord around its neck on its chest; 6) with a necklace of small glossy mint, sky-blue and gold beads around its neck on its chest. The thing is part of the picture, not a sticker: it sits naturally, follows the shape of the head or the chest and has the same soft light as the bird. No nest. Style: cute stylised 3D character illustration, soft clay and vinyl-toy render, smooth matte surfaces with a subtle soft feather texture, rounded shapes, pastel mint-teal palette with warm coral and gold accents, soft studio light from the top left, gentle ambient occlusion, high detail, friendly. Background: a perfectly flat solid magenta (#FF00FF) chroma-key colour in every cell and between the cells — no shadows on the background, no floor, no gradient, no grid lines, no frames, no reflections of the magenta on the subject, no text, no labels, no numbers, no logo, no watermark."
+ }
+]

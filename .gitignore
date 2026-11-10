@@ -1,0 +1,13 @@
+node_modules
+tools/.cache/
+android/build/
+dist/
+.dist-build.lock
+__pycache__/
+*.pyc
+.DS_Store
+*.keystore.local
+*.keystore
+*.jks
+# Release files: tools/build-apk.sh puts them in release/. 6.3.3 — they are tracked, one version at a time: the organizers
+# ask for the APK in release/ of the repository (10.11), and the jury opens the GitLab repository, not our archive.

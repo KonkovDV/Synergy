@@ -1,0 +1,68 @@
+// «Покой в движении» (5.20): hold both channels quiet while the arm is raised and turned. False triggers when the
+// arm moves are the complaint in the Motorica Start reviews; position itself is the person's own movement — the app
+// only counts whether the muscles stayed off (Teh & Hargrove 2020: training across positions, here as rest).
+// Pure: tests/v520.test.mjs.
+
+export const REST_MOTION = Object.freeze({
+  prompts: Object.freeze([
+    Object.freeze({ id: 'raise', text: 'Поднимите руку вперёд, если удобно, и держите покой', s: 6 }),
+    Object.freeze({ id: 'turn', text: 'Поверните предплечье ладонью вверх, если удобно — покой', s: 6 }),
+    Object.freeze({ id: 'down', text: 'Опустите руку вдоль тела — покой', s: 6 }),
+  ]),
+});
+
+/** Gesture practice (IEEE TNSRE 2025): recognition training that includes arm motion is more reliable.
+ *  The app does not measure the pose and does not claim a benefit. */
+export const POSE_HINTS = Object.freeze([
+  'Если удобно, чуть поднимите руку. Позу игра не проверяет.',
+  'Если удобно, поверните предплечье. Позу игра не проверяет.',
+  'Если удобно, опустите руку. Позу игра не проверяет.',
+]);
+export const poseHint = index => POSE_HINTS[Math.abs(index | 0) % POSE_HINTS.length];
+
+/** Seconds of all prompts. The rest pause must be at least this long, or the last prompt is cut off. */
+export const restMotionSeconds = (prompts = REST_MOTION.prompts) => prompts.reduce((sum, p) => sum + p.s, 0);
+
+/**
+ * Who is asked to move the arm during the pause (20.10, medical review). Sensors only. Not a child. Not a short pause.
+ * Only after a check-in that allowed an ordinary plan («go»): moderate pain already shortened the day, and this block
+ * is not a reason to load the arm further. A skipped check-in does not count as permission.
+ */
+export function restMotionAllowed({ source, audience, restS, checkinAction }) {
+  return source === 'bridge' && audience !== 'child' && restS >= restMotionSeconds() && checkinAction === 'go';
+}
+
+export class RestMotion {
+  constructor(prompts = REST_MOTION.prompts) {
+    this.prompts = prompts;
+    this.index = 0;
+    this.t = 0;
+    this.quiet = 0;
+    this.slip = 0;
+  }
+
+  get prompt() { return this.prompts[this.index] ?? null; }
+  get done() { return this.index >= this.prompts.length; }
+
+  /**
+   * One moment: `relaxed` is both channels off. Time past the last prompt is not counted — a stalled frame used to add
+   * its whole gap (a 100 s step became 100 s of «покой») and skip every prompt the person never saw.
+   */
+  step(dt, relaxed) {
+    if (this.done || !(dt > 0)) return;
+    let left = dt;
+    while (left > 0 && !this.done) {
+      const take = Math.min(left, this.prompt.s - this.t);
+      this.t += take;
+      if (relaxed) this.quiet += take; else this.slip += take;
+      left -= take;
+      if (this.t >= this.prompt.s - 1e-9) { this.t = 0; this.index++; }
+    }
+  }
+
+  /** Quiet share 0..1 and seconds the muscles were on. Saved on the day once, by the rest screen. */
+  summary() {
+    const total = this.quiet + this.slip;
+    return { quiet: total ? Math.round(this.quiet / total * 100) / 100 : 0, slipS: Math.round(this.slip * 10) / 10, done: this.done };
+  }
+}

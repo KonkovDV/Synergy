@@ -1,0 +1,76 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+permissions: { contents: read }
+# Actions are pinned to commit SHAs (OpenSSF Scorecard «Pinned-Dependencies»); Dependabot bumps them.
+# Runner images are pinned too: ubuntu-latest moves to Ubuntu 26 from 19.10.2026, and Playwright 1.56 installs its
+# browser dependencies for Ubuntu 22.04 and 24.04.
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false, fetch-depth: 0 }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22, cache: npm }
+      - run: npm ci --ignore-scripts   # no install scripts in jobs that hold tokens and secrets (esbuild works without)
+      - run: npm test
+      - run: npm run test:ubi4   # 5.29–5.30: the whole suite on the UBI4 gesture set of Motorica Start
+      - run: npm run test:tz     # 6.0, 04.11: every level of four games, three schemes, on both dictionaries of the СПППР stream
+      - run: node tools/gesture-drill.mjs
+      - run: npm run build
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with: { distribution: temurin, java-version: '17' }
+      - run: sh tools/build-apk.sh   # 5.17: release/ is built, not tracked — the gate checks the APK of this very commit
+      - run: node tools/check-submission.mjs --draft
+      - name: e2e (mobile smoke + axe-core accessibility audit + layout audit, Playwright)
+        run: |
+          npm i --no-save --ignore-scripts playwright@1.56.1   # Playwright has no install scripts; browsers come next
+          npx playwright install --with-deps chromium
+          # The scripts serve dist/ (or the source) themselves: tools/static-server.mjs, no Python
+          node tests/e2e/v5.mjs /tmp/shots
+          node tests/e2e/smoke.mjs /tmp/shots
+          node tests/e2e/embed.mjs    # 5.15: the example host of another origin (docs/embed/README.md)
+          node tests/e2e/layout.mjs   # 8 viewports × text 100/130/200 %: overflow, overlap, targets, focus
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with: { name: web-build, path: dist/ }
+  ios-check:
+    # 6.3.2 — the iPhone app without a Mac: its Swift is type-checked against the SDK stubs (ios/stubs) and its own logic
+    # unit-tested (tests/ios/main.swift) in the official Swift image, pinned by digest like the actions. Minutes of
+    # macOS cost ten Linux ones, so the real Xcode build stays in ios.yml (by hand and on a release tag).
+    runs-on: ubuntu-24.04
+    container: swift:6.2.1-noble@sha256:0e4716bd34384d22963a63afbdbc93be3129dfd0753185aa1ded27755abdcae8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - run: sh tools/check-ios.sh
+  windows:
+    # The jury and the external audit run Windows: tests and the build must not need sh or python3.
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false, fetch-depth: 0 }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22, cache: npm }
+      - run: npm ci --ignore-scripts   # no install scripts in jobs that hold tokens and secrets (esbuild works without)
+      - run: npm test
+      - run: npm run build
+  lab:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with: { python-version: '3.12' }
+      - run: python -m unittest bridge/test_ws_bridge.py   # Red Team: Origin/token, frame limits (stdlib only)
+      - run: pip install -r lab/requirements.txt && python -m unittest lab/test_lab7.py
+  dependency-review:
+    # The action needs a public repository or GitHub Advanced Security on a private one.
+    if: github.event_name == 'pull_request' && !github.event.repository.private
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with: { fail-on-severity: moderate }

@@ -1,0 +1,11 @@
+name: Идея
+description: Предложить улучшение
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes: { label: Какая проблема пользователя протеза решается? }
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes: { label: Предложение и как измерить пользу }

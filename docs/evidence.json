@@ -1,0 +1,52 @@
+{
+ "version": "6.3.4",
+ "generated": "2026-11-10T17:52:24.901Z",
+ "tests": {
+  "total": 624,
+  "failed": 0,
+  "at": "2026-11-10T17:48:31.844Z",
+  "platform": "linux 6.18.44-fc-v338",
+  "node": "v22.23.4"
+ },
+ "a11y": {
+  "light": 39,
+  "dark": 10,
+  "violations": 0,
+  "errors": 0,
+  "browser": "153.0.8010.12",
+  "axe": "4.14.0",
+  "source": "ffedb1fa3fc2054e",
+  "at": "2026-11-10T17:26:29.340Z",
+  "platform": "linux 6.18.44-fc-v338",
+  "node": "v22.23.4"
+ },
+ "layout": {
+  "states": 83,
+  "viewports": 8,
+  "scales": 3,
+  "combinations": 1992,
+  "findings": 0,
+  "errors": 0,
+  "seconds": 1250,
+  "source": "ffedb1fa3fc2054e",
+  "at": "2026-11-10T17:43:46.051Z",
+  "platform": "linux 6.18.44-fc-v338",
+  "node": "v22.23.4"
+ },
+ "apk": {
+  "file": "release/Synergy-6.3.4.apk",
+  "bytes": 5231538,
+  "kb": 5109,
+  "sha256": "417bcf9c5d35ded8e99386b060e62f5f6624ac5abd9472fb90d8f623a96a206d"
+ },
+ "html": {
+  "file": "release/synergy-standalone.html",
+  "bytes": 6876379,
+  "kb": 6715,
+  "sha256": "de524d96d1abf3930dd0a0629f16088a0e88bc861be4cf669400eaae6c7aac47"
+ },
+ "art": {
+  "pictures": 244,
+  "bytes": 4509408
+ }
+}
