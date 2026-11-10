@@ -1,4 +1,4 @@
-"""Write lab/requirements.txt in hash-checking form (5.29, docs/AUDIT.md §36).
+"""Write lab/requirements.txt in hash-checking form (5.29).
 
 Each line `name==version` gets the SHA-256 of every file PyPI publishes for that release (all platforms), the form
 `pip-compile --generate-hashes` writes. pip then installs in hash-checking mode: a replaced file on the index fails the

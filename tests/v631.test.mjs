@@ -1,5 +1,5 @@
 import './pin-tz.mjs'; // the set of the task — imported FIRST (tests/pin-tz.mjs)
-// 6.3.1 — the audit before the second checkpoint (09.11.2026, docs/AUDIT.md §60; the questions — submission/CHECKPOINT-2.md).
+// 6.3.1 — the audit before the second checkpoint (09.11.2026).
 // Each test failed on 6.3.0:
 //   • the hard contract of the СПППР refused a packet whose Σ dist missed 1 by more than 0.02. A recognizer that rounds
 //     every probability and does not fix the sum misses it by up to 7 × half a step: in a simulation of the audit 2.3 %

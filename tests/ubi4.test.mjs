@@ -1,5 +1,5 @@
 import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
-// 5.29, third pass — the UBI4 gesture set of Motorica Start in the game (docs/RESEARCH.md §19, docs/AUDIT.md §37).
+// 5.29, third pass — the UBI4 gesture set of Motorica Start in the game (docs/RESEARCH.md §19).
 // Facts below are read from the public branch kmm_ubi4_integrationV3 of Motorica Start (20.10.2026): assets/config.json
 // (GESTURES_ID, GESTURE_SEQUENCE, GESTURES_VP) — numbers and joint names only, nothing copied. The whole suite also runs
 // on this set (npm run test:ubi4); here the set is checked against those facts and in a child process with the set on.

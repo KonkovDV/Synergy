@@ -124,7 +124,7 @@ test('ответ № 24: «Ритм» judges an onset on the beat the same at 10
   const ms = Object.fromEntries(Object.entries(at).map(([k, v]) => [k, Math.round(v * 1000)]));
   // 6.1.0: +52, +53 and +86 ms — at 10 Hz an onset on time was judged a third of the «отлично» window later
   assert.ok(Math.abs(at[10] - at[50]) <= 0.02 && Math.abs(at[30] - at[50]) <= 0.02, `mean onset error by rate: ${JSON.stringify(ms)}`);
-  // what is left is the classifier's rise to the threshold the levels were balanced on (SPPPR.riseMs, К.2) — not a rate
+  // what is left is the classifier's rise to the threshold the levels were balanced on (SPPPR.riseMs) — not a rate
   for (const v of Object.values(at)) assert.ok(v > 0 && v < 0.08, `mean onset error by rate: ${JSON.stringify(ms)}`);
 });
 

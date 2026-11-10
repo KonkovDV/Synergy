@@ -1,9 +1,9 @@
 # Как вносить изменения
 
-1. Прочитайте `MEMORY.md` → `PLAN.md` → только файлы, относящиеся к задаче (`docs/ARCHITECTURE.md` — карта слоёв).
+1. Прочитайте `README.md` и `docs/ARCHITECTURE.md` (карта слоёв), затем только файлы, относящиеся к задаче.
 2. Принципы обязательны: **DRY** (параметры — `src/config.js`, словарь — `src/core/vocabulary.js`, формат кадров — `parseExternal()`), **KISS** (ванильный JS, без фреймворков и новых зависимостей в продукте), **SOLID** (новая игра = файл + строка в `registry.js`), **единый язык** (`docs/GLOSSARY.md`).
 3. Сначала тест, который падает на старом коде, затем код.
-4. Никаких медицинских обещаний в текстах; метрики — «игровые». Утверждение о статье — только после сверки с её страницей (`PLAN.md` C.2.8).
+4. Никаких медицинских обещаний в текстах; метрики — «игровые». Утверждение о статье — только после сверки с её страницей.
 5. Ветка → pull request по шаблону; CI должен быть зелёным. Версии GitHub Actions обновляет Dependabot — проверяйте его PR.
 
 ## Готово, когда
@@ -18,6 +18,6 @@
 | Встраивание на Kotlin или React Native | `npm run verify:embed` |
 | Зависимость, workflow или скрипт загрузки | `npm run check:supply-chain`; Python лаборатории — версия в `lab/requirements.txt`, затем `python3 tools/pip-hashes.py` |
 | Числа в документах | `node tools/set-test-count.mjs`, затем `node tools/evidence.mjs` |
-| Выпуск | раздел B.F `PLAN.md`: версия во всех местах, включая `CITATION.cff`; APK; `npm run pack` |
+| Выпуск | версия во всех местах, включая `CITATION.cff` (их сверяет `npm run check:submission`); запись в `CHANGELOG.md`; APK — `sh tools/build-apk.sh` |
 
 Перед pull request: `node tools/check-submission.mjs --draft` — без ошибок. Предупреждения о пустом `AUTHORS.md`, дате первого коммита и отладочной подписи APK ожидаемы до сдачи.

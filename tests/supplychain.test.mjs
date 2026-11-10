@@ -1,5 +1,5 @@
 import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
-// 5.29 — supply chain (OpenSSF Scorecard practices, docs/AUDIT.md §36). The rules were kept by hand since 5.9: actions
+// 5.29 — supply chain (OpenSSF Scorecard practices). The rules were kept by hand since 5.9: actions
 // pinned to commit SHAs, no install scripts in jobs with tokens, checkout without stored credentials, exact versions,
 // a lockfile from the npm registry, downloads checked by SHA-256. tools/supply-chain.mjs now checks them, and the gate
 // calls it. Each rule is proven by a planted mistake in a temp copy of the files it reads.

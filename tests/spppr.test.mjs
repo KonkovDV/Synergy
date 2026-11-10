@@ -59,7 +59,7 @@ test('ТЗ контракт жёсткий: a broken packet is refused with its 
 });
 
 // Q&A of the organizers (04.11.2026), answer 22: a СПППР has «2 gestures + neutral» or «6 gestures + neutral». Which two
-// is not said (question К.1 of PLAN.md); the task trains the antagonists and builds the joystick on flexion − extension.
+// is not said; the task trains the antagonists and builds the joystick on flexion − extension.
 const PAIR = { neutral: 0.2, flexion: 0.7, extension: 0.1 };
 test('ответ № 22 (04.11): «2 жеста + нейтраль» — exactly neutral, flexion and extension is the second dictionary; the contract stays hard', () => {
   assert.deepEqual(SPPPR_DICTIONARIES, [['neutral', 'flexion', 'extension'], SPPPR_WIRE], 'the smaller dictionary first; both in the task\'s class order');

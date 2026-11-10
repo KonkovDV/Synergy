@@ -6,7 +6,7 @@
 //   in:  ?game=<id>&level=<n> — open that exercise (after the safety onboarding); ?embed=1 — embedded without a game;
 //        6.1: ?side=left|right — the arm with the prosthesis; ?closeThreshold=<0…255>&openThreshold=<0…255> — its
 //        thresholds in the units of Motorica Start (Q&A of 04.11, answer 16: the host passes the arm, the thresholds and
-//        the stream; the keys are ours, question К.3);
+//        the stream; the keys are ours);
 //        window.Synergy.start(game, level); postMessage {type:'synergy-start'|'synergy-frame'|'synergy-ping'} (5.15)
 //   out: synergy:ready (once the first screen is up, and on a ping), synergy:result (each exercise), synergy:close
 //        (the person is done: «Вернуться в приложение», or back on the home screen) — through the first native channel

@@ -115,7 +115,7 @@ const UBI4 = {
 };
 
 /**
- * 5.31 — the third hypothesis for «7 жестов»: the states on the meetup slide «СППР» (22.10.2026, docs/MEETUP_PLAN.md F8).
+ * 5.31 — the third hypothesis for «7 жестов»: the states on the meetup slide «СППР» (22.10.2026).
  * Not the published task and not the default; 6.0 keeps it for old addresses, the task's set is TZ below. Grab closes; extension opens (slide «4 состояния» shows that pose open);
  * the other five move the wrist and do not change the grip. `roll` 1 — pronation, −1 — supination (a sign, like `wrist`).
  */

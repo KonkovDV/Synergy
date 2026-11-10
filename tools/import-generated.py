@@ -1,5 +1,5 @@
 """Imports the generated pictures of 5.32 — the bionic hands, the rooms of «Две руки» and «Мастерская», the basket
-(docs/ART.md; the prompts and the model in docs/GAME_VISUALS.md §7–8, docs/AI_USAGE.md).
+(docs/ART.md; the prompts and the model in docs/GAME_VISUALS.md §7–8, submission/AI_REPORT.md).
 
 Hands: one sheet with three hands in a row — rest, fist, open palm — on a flat magenta key. One sheet, not three
 pictures: the three poses come out of the generator as one design, one scale and one light.

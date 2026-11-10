@@ -3,7 +3,7 @@ doc, docx or txt, readable and copyable (message of 10.11). Built by code from t
 deck: the source of truth stays in git (Markdown), the .docx files are rebuilt from it.
 
   submission/TECH_DOCS.md + docs/ARCHITECTURE.md (the principles) + docs/INTEGRATION.md + docs/TZ_COMPLIANCE.md
-  + LIMITS.md                                    → Synergy-<version>-tech-docs.docx
+  + README.md («Границы проекта»)               → Synergy-<version>-tech-docs.docx
   submission/AI_REPORT.md                        → Synergy-<version>-ai-report.docx
 
 Usage: python3 tools/build-docs.py [OUT_DIR]   (needs pandoc and python-docx; default: submission/)
@@ -65,7 +65,8 @@ def tech_markdown() -> str:
         "## 6. Интеграция с приложением протеза\n\nИз `docs/INTEGRATION.md`: контракт кадра, поток СПППР по ТЗ, встраивание, транспорты, мост, калибровка.\n\n"
         + shift(section(read("docs/INTEGRATION.md"), "## Контракт кадра", "## Электробезопасность"), 1),
         "## 7. Соответствие ТЗ\n\n" + shift(re.sub(r"^# .*\n", "", read("docs/TZ_COMPLIANCE.md"), count=1), 1),
-        "## 8. Чего продукт не делает\n\n" + shift(re.sub(r"^# .*\n", "", read("LIMITS.md"), count=1), 1),
+        # 6.3.3: the short «Границы проекта» of the README; the full register stays in LIMITS.md of the repository.
+        "## 8. Границы проекта\n\n" + re.search(r"^## Границы проекта\n\n(.*?)(?=^## )", read("README.md"), re.S | re.M)[1],
     ]
     return clean("\n\n".join(parts))
 

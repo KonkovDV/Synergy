@@ -1,4 +1,4 @@
-// The findings of the audit of 06.11.2026 (docs/AUDIT.md §57): each one is a test that failed on the code before its fix. Runs on every gesture set (npm run test:ubi4, test:tz): nothing here names a gesture.
+// The findings of the audit of 06.11.2026: each one is a test that failed on the code before its fix. Runs on every gesture set (npm run test:ubi4, test:tz): nothing here names a gesture.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

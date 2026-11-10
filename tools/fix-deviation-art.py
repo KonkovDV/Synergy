@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Corrects the two pictures of the wrist deviations of the task's gesture set (6.3.2, docs/AUDIT.md §61, docs/ART.md).
+"""Corrects the two pictures of the wrist deviations of the task's gesture set (6.3.2, docs/ART.md).
 
 docs/REGEN.md asks for: ADDUCTION — a right hand, palm to the viewer (thumb on the viewer's right), tilted towards the
 little finger (the viewer's left), the arrow pointing left; ABDUCTION — the same hand tilted towards the thumb, the

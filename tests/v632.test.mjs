@@ -1,5 +1,5 @@
 import './pin-tz.mjs'; // the set of the published task — the product's default: this file runs on it whatever the runner chose
-// 6.3.2 — audit of 09.11.2026, evening (docs/AUDIT.md §61). Since 6.0 the product starts in the gesture set of the task,
+// 6.3.2 — audit of 09.11.2026, evening. Since 6.0 the product starts in the gesture set of the task,
 // while the suite of earlier releases stays pinned to the «Синергия» set (tests/pin-set.mjs). In the default set the hand
 // of the two channels took its grips, their names and the pose of «Сжатие» from the closing gestures — and the task's
 // set has one, wrist flexion: one grip called «Сгибание», no grip switch in «Мастерская», a hand that closed half-way

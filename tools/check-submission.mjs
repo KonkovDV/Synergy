@@ -159,7 +159,7 @@ const BANNED = [
   // External audit 18.10.2026: a game metric is not «Fitts' law measured»; automated checks are not «compliance».
   [new RegExp(`(пропускн${W} способност${W} по закону Фиттса|измерил${W} закон${W} Фиттса)`, 'i'), '«по закону Фиттса» — говорить «игровая пропускная способность по мотивам теста Фиттса»'],
   [new RegExp(`(приложени${W}|игра|продукт|Синерги${W})»? (полностью )?соответству${W} WCAG`, 'i'), '«соответствует WCAG» — без ручной проверки со скринридером говорить «ориентир WCAG 2.2, автоматические проверки»'],
-  // 5.19 — the rule of the team's MicroPhoenix plan: a grade of one's own product only beside a measured report.
+  // 5.19 — a grade of one's own product only beside a measured report.
   // «SOTA» as the state of research («SOTA на октябрь 2026») stays; «SOTA-решение» about ourselves does not.
   [new RegExp(`SOTA-(решени|продукт|игр|приложени|уровн)|(решени${W}|продукт${W}|игр${W}|приложени${W}) уровня SOTA`, 'i'), '«SOTA-решение» о себе — назвать измеренное: тесты, axe, линтер (docs/evidence.json)'],
   // «10/10» as a count of checks («встраивание — 10/10») is a measurement; as a grade it is not.
@@ -197,17 +197,17 @@ for (const f of ['lab/lab7.py', 'bridge/ws_bridge.py'].filter(f => existsSync(jo
 }
 
 // 3a. The gesture set: «состав — гипотеза» in the documents until the organizers publish their 7 gestures,
-// then the published set is recorded in MEMORY.md and must be exactly the set in vocabulary.js (PLAN C.3).
-const gestureLine = read('MEMORY.md').match(/^Набор жестов организатора:\s*(.+)$/m)?.[1]?.trim();
+// then the published set is recorded in docs/TASK.md and must be exactly the set in vocabulary.js (PLAN C.3).
+const gestureLine = read('docs/TASK.md').match(/^Набор жестов организатора:\s*(.+)$/m)?.[1]?.trim();
 const hypothesis = new RegExp(`состав${W}[^.\n]{0,120}гипотез`, 'i');
-const hypothesisDocs = ['docs/JURY_STRATEGY.md', 'docs/TASK.md'].filter(f => existsSync(join(root, f)) && hypothesis.test(read(f)));
-if (!gestureLine) warn('MEMORY.md: нет строки «Набор жестов организатора: …» (до 28.10 — «не опубликован»)');
+const hypothesisDocs = ['docs/TASK.md'].filter(f => existsSync(join(root, f)) && hypothesis.test(read(f)));
+if (!gestureLine) warn('docs/TASK.md: нет строки «Набор жестов организатора: …» (до 28.10 — «не опубликован»)');
 else if (/^не опубликован/i.test(gestureLine)) {
-  if (!hypothesisDocs.includes('docs/JURY_STRATEGY.md')) fail('набор жестов не опубликован, а docs/JURY_STRATEGY.md не называет состав гипотезой');
+  if (!hypothesisDocs.includes('docs/TASK.md')) fail('набор жестов не опубликован, а docs/TASK.md не называет состав гипотезой');
 } else {
-  for (const f of hypothesisDocs) fail(`${f}: состав 7 жестов назван гипотезой, а набор организатора уже записан в MEMORY.md`);
+  for (const f of hypothesisDocs) fail(`${f}: состав 7 жестов назван гипотезой, а набор организатора уже записан в docs/TASK.md`);
   const published = gestureLine.split(/[\s,;]+/).filter(Boolean);
-  if ([...published].sort().join() !== [...GESTURE_IDS].sort().join()) fail(`vocabulary.js (${GESTURE_IDS.join(', ')}) ≠ набор организатора в MEMORY.md (${published.join(', ')})`);
+  if ([...published].sort().join() !== [...GESTURE_IDS].sort().join()) fail(`vocabulary.js (${GESTURE_IDS.join(', ')}) ≠ набор организатора в docs/TASK.md (${published.join(', ')})`);
 }
 
 // 3b. Documents name the current release (README kept «Synergy-5.0.0.apk» and a 5.0.0 badge through 5.2.0).
@@ -237,7 +237,7 @@ const shallow = history && execFileSync('git', ['rev-parse', '--is-shallow-repos
 if (shallow) warn('история git неполная (shallow clone): дату первого коммита не проверить — git fetch --unshallow');
 else if (history) {
   const firstCommit = execFileSync('git', ['log', '--reverse', '--format=%cs', '--max-parents=0'], { cwd: root, encoding: 'utf8' }).trim().split('\n')[0];
-  if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md; ответ организатора на вопрос PLAN 0.6 записать в MEMORY.md`);
+  if (firstCommit < '2026-10-28') warn(`первый коммит ${firstCommit} раньше старта разработки 28.10 — раскрыто в docs/TASK.md («До и после 28.10»)`);
 }
 
 for (const w of warnings) console.log(`⚠ ${w}`);

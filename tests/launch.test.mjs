@@ -2,7 +2,7 @@ import './pin-set.mjs'; // the suite of earlier releases speaks the «Синер
 // Q&A of the organizers (04.11.2026): embedding is launch and data exchange by routing (answer 15); Motorica Start passes
 // the game the side of the arm, the thresholds and the stream of the two EMG sensors, and the game may return the
 // sensitivity and the thresholds (answer 16). Until 6.1 a launch carried only the game, the level and the gesture set,
-// and a result only the score. The keys are ours — the open code of Motorica Start passes none yet (question К.3).
+// and a result only the score. The keys are ours — the open code of Motorica Start passes none yet.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseLaunch, resultMessage, channelsMessage } from '../src/services/host.js';

@@ -81,7 +81,7 @@ export const SPPPR = {
   dwellMs: 0,
   riseMs: 0,          // 6.2: «Ритм» dates a command this much before its first packet, beyond half a packet — the stream's own
                       // rise of a probability to `enter`. 0 keeps the judging the levels were balanced on: an onset on the
-                      // beat is judged ≈ 45–55 ms late on the emulator at any rate, as at 30–50 Hz before. Real СПППР — К.2
+                      // beat is judged ≈ 45–55 ms late on the emulator at any rate, as at 30–50 Hz before. Real СПППР — not measured
   rampMs: 120,        // speed ramps up after a new direction (Simon et al. 2011, a decision-based velocity ramp)…
   rampFloor: 0.4,     // …from this share
   // 07.11, answer 3 of the experts: a probability is how much a contraction looks like the pattern, and co-adaptation of

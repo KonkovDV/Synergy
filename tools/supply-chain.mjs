@@ -1,4 +1,4 @@
-// Supply chain of the repository (5.29, docs/AUDIT.md §36): the rules the team kept by hand since 5.9, now checked.
+// Supply chain of the repository (5.29): the rules the team kept by hand since 5.9, now checked.
 // Sources: OpenSSF Scorecard checks Pinned-Dependencies, Token-Permissions, Dangerous-Workflow; GitHub's hardening guide
 // for Actions; dependency cooldowns (Dependabot `cooldown`, 7 days: most malicious releases of 2024–2025 were live for
 // less than a week). The product itself has no runtime dependencies (CONTRIBUTING.md, KISS).

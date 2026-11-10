@@ -1,4 +1,4 @@
-// 15 minutes of the emulator with no JavaScript errors, a living frame loop and a bounded heap (docs/MEETUP_PLAN.md M-15).
+// 15 minutes of the emulator with no JavaScript errors, a living frame loop and a bounded heap (docs/TASK.md M-15).
 // Not part of npm test. Usage: node tests/e2e/soak.mjs    SOAK_S=60 node tests/e2e/soak.mjs
 import { createRequire } from 'node:module';
 import { baseUrl } from '../../tools/static-server.mjs';

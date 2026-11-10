@@ -1,5 +1,5 @@
 import './pin-tz.mjs'; // the set of the task — imported FIRST (tests/pin-tz.mjs)
-// The organizers' answers that the code did not keep yet (docs/AUDIT.md §57): four values of Stream 1 in one message,
+// The organizers' answers that the code did not keep yet: four values of Stream 1 in one message,
 // losses of the stream, the settings a host gets back — and the Red Team cases found next to them.
 import test from 'node:test';
 import assert from 'node:assert/strict';

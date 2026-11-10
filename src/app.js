@@ -160,7 +160,7 @@ export class App {
     // 6.1 — what the prosthesis app knows (Q&A of 04.11, answer 16). The arm is kept: it is the same person's prosthesis.
     if (this.launch.side && this.launch.side !== this.settings.side) { this.settings.side = this.launch.side; this.save(); }
     // Its thresholds, in the units of the frames (0…1, A closes): the external source starts with them until the host sends
-    // its own. They do not switch the source — an APK opened by an intent has no stream from the host yet (К.3).
+    // its own. They do not switch the source — an APK opened by an intent has no stream from the host yet.
     this.launchThresholds = this.launch.thresholds ? [this.launch.thresholds.close / HOST_LEVEL_MAX, this.launch.thresholds.open / HOST_LEVEL_MAX] : null;
     // 5.15 — the exercise a host asked for waits for the safety onboarding (and «Первые шаги», if taken) and opens on
     // the way home; before, it was lost when the onboarding came first.

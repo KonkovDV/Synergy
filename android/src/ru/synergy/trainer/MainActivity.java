@@ -100,7 +100,7 @@ public class MainActivity extends Activity {
      * synergy://play?game=grip&level=2&gestures=ubi4. Extras or query: game, level, gestures. Only known shapes pass —
      * a game id, a level 1–99, a gesture set — the page checks them again (services/host.js parseLaunch).
      * 6.1 — what the prosthesis app knows (Q&A of 04.11, answer 16): side (left, right) and the two thresholds
-     * closeThreshold and openThreshold, 0–255, both or none. The keys are ours: question К.3 asks Motorica for theirs.
+     * closeThreshold and openThreshold, 0–255, both or none. The keys are ours: Motorica has not named theirs.
      */
     /**
      * 6.3.3 — the pair of «2 жеста + нейтраль» (answer 4г of the experts, 09.11: any two gestures): two different keys of

@@ -960,6 +960,8 @@ table.data th { font-size: 0.75rem }
   .frame .gkey { padding-block: 2px } /* the icon sits above the name here; 4 px of padding put «Ключ» 2 px past a 320 px-tall screen */
   .play-screen .pads.gestures, .frame .pads.gestures { gap: 4px }
   .frame .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  /* 6.3.3: a demo shows the pads it presses; on a 320 px-tall screen its note took their room and a pad left the screen */
+  .play-screen .pads-note { display: none }
 }
 /* 5.11 — design review. Warning cards look like warnings (the later `.card` border used to win). */
 .card.warn-card { border: 1.5px solid var(--warn); background: var(--tint-yellow) }
@@ -1469,7 +1471,7 @@ h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
 .level.rec { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px }
 
 /* The signal bar: a deeper track with an inner shadow, rounded fills with a light edge. */
-/* Height stays 14 px. A border under the top bar also grew it by 1 px; the line is a shadow now (docs/AUDIT.md §53 LAY-1). */
+/* Height stays 14 px. A border under the top bar also grew it by 1 px; the line is a shadow now. */
 .meter-bar { box-shadow: inset 0 1px 3px rgba(5, 16, 26, .14) }
 .meter-bar .fill { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45) }
 .meter-chip { box-shadow: var(--shadow-1); transition: background-color .12s ease }
@@ -1613,7 +1615,7 @@ body {
 @keyframes fb-nest-perk { 0%, 100% { transform: none } 30% { transform: scale(.98, 1.045) } 60% { transform: scale(1.03, .97) } 80% { transform: scale(.995, 1.005) } }
 @keyframes fb-nest-rock { 0%, 100% { transform: none } 25% { transform: rotate(-3deg) } 50% { transform: rotate(2.5deg) } 75% { transform: rotate(-1.5deg) } }
 
-/* ── 6.3.2 — seams found on the screenshots of the audit of 09.11.2026 (docs/AUDIT.md §61) ── */
+/* ── 6.3.2 — seams found on the screenshots of the audit of 09.11.2026 ── */
 /* The focus ring of the round header buttons stays inside them: outside (2 + 3 px) the top edge of the screen and the
    progress line cut it, and it touched a three-digit score. */
 .play-top .icon-btn:focus-visible, .top-bar .icon-btn:focus-visible { outline-offset: -3px }

@@ -1,5 +1,5 @@
 import './pin-set.mjs'; // 6.0: the suite of earlier releases speaks the «Синергия» set (tests/pin-set.mjs)
-// 5.27 — the role-by-role audit of 21.10.2026 (docs/AUDIT.md §33): an offline launch by a host's address, the
+// 5.27 — the role-by-role audit of 21.10.2026: an offline launch by a host's address, the
 // calibration judged against rest noise, the electrical safety of home-made sensors.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -126,7 +126,7 @@ test('5.27 electrical safety: the external source names battery power for home-m
   assert.match(firmware, /now - last < PERIOD_MS/, 'the timer survives the millis() wrap');
 });
 
-// ── Second pass of the 5.27 audit (docs/AUDIT.md §33): prosthetist, medic, rehabilitation specialist ──────────────────
+// ── Second pass of the 5.27 audit: prosthetist, medic, rehabilitation specialist ──────────────────
 
 test('5.27 signal: after a dropout the gesture starts from rest — the gesture before the loss is not replayed', () => {
   const p = new SignalPipeline({ scheme: 'gesture' });

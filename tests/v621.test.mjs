@@ -1,5 +1,5 @@
 import './pin-tz.mjs'; // the set of the task — imported FIRST (tests/pin-tz.mjs)
-// 6.2.1 — the audit of 06.11, evening (docs/AUDIT.md §58). Each test failed on 6.2.0:
+// 6.2.1 — the audit of 06.11, evening. Each test failed on 6.2.0:
 //   • answer 25 of the organizers («потерю больше 1–2 секунд считать критической и выходить»): a silent СПППР stream
 //     was declared lost 1.8 s after its last packet and paused 2.8 s after it — the watchdog waited a second time on top
 //     of the decoder's own limit, and the pause counted one more second from there;
