@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 5.16: the dark system theme gets the splash on the app's dark background (the sample has a light and a dark splash). -->
+    <color name="splash_bg">#071019</color>
+</resources>

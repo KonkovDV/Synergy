@@ -1,0 +1,47 @@
+name: Release
+on:
+  push: { tags: ['v*'] }
+# contents: write — the release; id-token + attestations — signed build provenance (SLSA, Sigstore).
+permissions: { contents: write, id-token: write, attestations: write }
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with: { distribution: temurin, java-version: '17' }
+      - run: npm ci --ignore-scripts && npm test   # no install scripts in the job that receives the signing key
+      - name: Build and sign APK with the team key (repository secrets)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          SYNERGY_KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          SYNERGY_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "Нет секрета KEYSTORE_BASE64: релиз без своего ключа запрещён"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          SYNERGY_KEYSTORE="$RUNNER_TEMP/release.keystore" VERIFY_API=1 sh tools/build-apk.sh
+          rm -f "$RUNNER_TEMP/release.keystore"
+      - name: Release files and SBOM (CycloneDX)
+        run: |
+          mkdir -p out
+          cp android/build/synergy.apk "out/Synergy-${GITHUB_REF_NAME#v}.apk"
+          cp dist/synergy-standalone.html out/
+          npm sbom --sbom-format cyclonedx --omit dev > out/synergy-sbom.cdx.json
+          (cd out && sha256sum * > SHA256SUMS)
+      # Artifact attestations need a public repository (or GitHub Enterprise Cloud for a private one).
+      - if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: |
+            out/*.apk
+            out/*.html
+      - name: Publish release assets
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          # The notes are this version's sections of CHANGELOG.md, not the whole history.
+          awk -v head="## ${GITHUB_REF_NAME#v} " 'index($0, "## ") == 1 { keep = index($0, head) == 1 } keep' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          test -s "$RUNNER_TEMP/notes.md" || { echo "В CHANGELOG.md нет раздела ${GITHUB_REF_NAME#v}"; exit 1; }
+          gh release create "$GITHUB_REF_NAME" out/* --title "Синергия ${GITHUB_REF_NAME}" --notes-file "$RUNNER_TEMP/notes.md"

@@ -1,0 +1,15 @@
+version: 2
+# cooldown (5.29): a new release is proposed after 7 days, not on the day it appears. Most malicious releases of 2024–2025
+# (chalk, Nx, tj-actions, rspack…) were removed within a week; security updates are not delayed. tools/supply-chain.mjs
+# checks it.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown:
+      default-days: 7
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    cooldown:
+      default-days: 7

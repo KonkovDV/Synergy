@@ -1,0 +1,105 @@
+// GameRunner — one training step: source → pipeline → hand → game. Shared by the app loop
+// and the headless tests, so what is tested is exactly what the player runs (DRY).
+// 05.11: the runner also counts how often each channel's command starts while the exercise runs (core/channeluse.js) —
+// one place for every game, the two-handed one included.
+import { ChannelUse, sumUses } from '../core/channeluse.js';
+
+export function toEmulatorTarget(t) {
+  // One movement at a time (answer 4 of the experts, 07.11: the СПППР does not recognize compound gestures).
+  return t.gesture ? { gesture: t.gesture, effort: t.effort ?? 0.6, a: 0, b: 0 } : { a: t.a ?? 0, b: t.b ?? 0, gesture: null };
+}
+
+export class GameRunner {
+  /**
+   * @param {object} p
+   * @param {import('./base.js').Game} p.game
+   * @param {import('../core/signal.js').SignalPipeline} p.pipeline
+   * @param {import('../core/hand.js').BionicHand} p.hand
+   * @param {{sample(now:number):object|null}} p.source
+   * @param {import('../input/emulator.js').EmgEmulator} [p.emulator] driven by the autopilot in demo mode
+   * @param {import('../core/signalquality.js').SignalQualityMonitor} [p.quality] 5.30: watches an external source's frames
+   * @param {import('../core/fatigue.js').PeakMeter} [p.peaks] 07.11: the peak of each channel of an external source
+   */
+  constructor({ game, pipeline, hand, source, emulator = null, autopilot = false, quality = null, peaks = null }) {
+    Object.assign(this, { game, pipeline, hand, source, emulator, autopilot, quality, peaks });
+    this.intent = null;
+    this.signalLost = false;
+    this.uses = new ChannelUse();
+  }
+
+  /** How long the source has given no data (SignalPipeline.silentMs): the play screen pauses a lasting loss on it. */
+  silentMs(now) { return this.pipeline.silentMs(now); }
+
+  step(now, dt) {
+    if (this.autopilot && this.emulator && this.intent) this.emulator.setTarget(toEmulatorTarget(this.game.autopilot(this.intent, this.hand)));
+    const frame = this.source.sample(now);
+    this.quality?.push(frame);
+    if (!this.game.paused) this.peaks?.add(frame);
+    this.intent = this.pipeline.process(frame, now);
+    this.signalLost = !this.intent.valid;
+    this.hand.update(this.intent, dt);
+    // No signal → the exercise freezes (not a failure of the user, cf. v3 watchdog).
+    // The hand follows real time (control law); only the game world runs at the chosen pace.
+    if (!this.signalLost && !this.game.paused && !this.game.done) {
+      this.game.update(dt * this.game.speed, this.intent, this.hand);
+      this.uses.add(this.intent, dt);
+    }
+    return this.intent;
+  }
+}
+
+/**
+ * 5.30 — the runner of a two-handed game (games/duo.js): one pipeline, hand and source per prosthesis. The game gets
+ * the leading side's intent with `sides = { left, right }` and both hands; the exercise freezes while either arm has no
+ * signal (each prosthesis has its own watchdog). `pipeline` and `hand` are the leading side's, as GameRunner's are —
+ * the app reads them after the exercise (thresholds, rest adaptation).
+ */
+export class DuoRunner {
+  /**
+   * @param {object} p
+   * @param {import('./base.js').Game} p.game
+   * @param {{left: object, right: object}} p.pipelines
+   * @param {{left: object, right: object}} p.hands
+   * @param {{left: {sample(now:number):object|null}, right: {sample(now:number):object|null}}} p.sources
+   * @param {{left?: object, right?: object}} [p.emulators] driven by the autopilot in demo mode
+   * @param {'left'|'right'} [p.lead]
+   * @param {{left?: object, right?: object}} [p.qualities] 5.30: a signal quality monitor per external prosthesis
+   */
+  constructor({ game, pipelines, hands, sources, emulators = {}, autopilot = false, lead = 'right', qualities = null }) {
+    Object.assign(this, { game, pipelines, hands, sources, emulators, autopilot, lead, qualities });
+    this.pipeline = pipelines[lead];
+    this.hand = hands[lead];
+    this.source = sources[lead];
+    this.emulator = emulators[lead] ?? null;
+    this.intent = null;
+    this.signalLost = false;
+    this.sideUses = { left: new ChannelUse(), right: new ChannelUse() };
+  }
+
+  /** The uses of both arms: each arm's commands start on its own, the run keeps their sum. */
+  get uses() { return { summary: () => sumUses([this.sideUses.left.summary(), this.sideUses.right.summary()]) }; }
+
+  /** The longer silence of the two arms: the exercise freezes while either has no signal. */
+  silentMs(now) { return Math.max(this.pipelines.left.silentMs(now), this.pipelines.right.silentMs(now)); }
+
+  step(now, dt) {
+    if (this.autopilot && this.intent) {
+      const t = this.game.autopilot(this.intent, this.hands);
+      for (const side of ['left', 'right']) if (this.emulators[side] && t?.[side]) this.emulators[side].setTarget(toEmulatorTarget(t[side]));
+    }
+    const sides = {};
+    for (const side of ['left', 'right']) {
+      const frame = this.sources[side].sample(now);
+      this.qualities?.[side]?.push(frame);
+      sides[side] = this.pipelines[side].process(frame, now);
+      this.hands[side].update(sides[side], dt);
+    }
+    this.intent = { ...sides[this.lead], valid: sides.left.valid && sides.right.valid, sides };
+    this.signalLost = !this.intent.valid;
+    if (!this.signalLost && !this.game.paused && !this.game.done) {
+      this.game.update(dt * this.game.speed, this.intent, this.hands);
+      for (const side of ['left', 'right']) this.sideUses[side].add(sides[side], dt);
+    }
+    return this.intent;
+  }
+}

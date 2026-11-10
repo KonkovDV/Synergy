@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="splash_bg">#f3f5f7</color>
+    <!-- 5.16: a light window with the splash instead of the black Material window; the status bar in the page's colour. -->
+    <style name="Synergy" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="android:statusBarColor">@color/splash_bg</item>
+        <item name="android:colorAccent">#0a9d63</item>
+    </style>
+</resources>

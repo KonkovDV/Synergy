@@ -1,0 +1,1634 @@
+/* Синергия — дизайн 5.12: mobile-first, one-handed.
+   Layout: gradient header with the mascot, cards, tinted tiles, onboarding covers, a bottom bar with the current
+   section in a filled square. Colour and type: white and light-grey surfaces, the green → teal → blue → violet
+   gradient, near-black ink, Unbounded for titles and numbers, Inter for text, light trails on dark covers.
+   No logo or name of another brand is used: the product is «Синергия».
+   Rules kept from 5.x: solid surfaces under text (every token pair ≥ 4.5:1 — tests/design.test.mjs), decoration only
+   behind content, ≥ 48 px targets, primary actions in the thumb zone, motion off with .rm / prefers-reduced-motion,
+   gradients flattened by .hc and forced colours. Channels: A — coral, B — blue, A+B — violet; text uses «-ink». */
+
+/* Fonts (SIL OFL 1.1, subsets — public/fonts/OFL.txt). Preloaded by index.html; inlined in the standalone file. */
+@font-face { font-family: "Unbounded"; src: url("../public/fonts/unbounded-cyr.woff2") format("woff2"); font-weight: 500 800; font-display: block; unicode-range: U+0400-045F, U+2116 }
+@font-face { font-family: "Unbounded"; src: url("../public/fonts/unbounded-lat.woff2") format("woff2"); font-weight: 500 800; font-display: block; unicode-range: U+0020-007E, U+00A0-00FF, U+2009, U+2013-2026, U+202F, U+20BD, U+2190-2192, U+2212, U+2248, U+2264-2265 }
+@font-face { font-family: "Inter"; src: url("../public/fonts/inter-cyr.woff2") format("woff2"); font-weight: 400 800; font-display: block; unicode-range: U+0400-045F, U+2116 }
+@font-face { font-family: "Inter"; src: url("../public/fonts/inter-lat.woff2") format("woff2"); font-weight: 400 800; font-display: block; unicode-range: U+0020-007E, U+00A0-00FF, U+2009, U+2013-2026, U+202F, U+20BD, U+2190-2192, U+2212, U+2248, U+2264-2265 }
+
+/* ===== Tokens ===== */
+:root {
+  color-scheme: light;
+  --bg: #f3f5f7; --bg2: #e8edf0; --card: #ffffff; --card2: #f3f5f7; --line: #e1e6ea; --line-strong: #c6d0d8;
+  --text: #05101a; --muted: #56616d; --accent: #16e182; --accent-ink: #0a7a47; --on-accent: #05101a; --focus: #05101a;
+  --a: #ff7a45; --a-ink: #b53d0d; --b: #3b82f6; --b-ink: #1d5fbf; --violet: #6d4ef0; --co-ink: #5b3fd6;
+  --good: #16e182; --good-ink: #0a7a47; --warn: #f5a524; --warn-ink: #8a4f00; --bad: #ef4444; --bad-ink: #c21b2e;
+  --track: #e6ebef; --star-empty: #d0d9e0; --switch-off: #e8edf0; --switch-edge: #6f7b87; --switch-knob: #56616d;
+  --tint-green: #e3faef; --tint-teal: #ddf6f3; --tint-blue: #e4eefc; --tint-violet: #ece8fd; --tint-coral: #fde9e3; --tint-yellow: #fdf3d8;
+  --deco-green: #c7f3df; --deco-teal: #bfeee8; --deco-blue: #d3e4fb; --deco-violet: #e2dcfc; --deco-coral: #fcdccf; --deco-yellow: #fae6b0;
+  --ico-green: #0a7047; --ico-teal: #0b6b63; --ico-blue: #1d5fbf; --ico-violet: #5b3fd6; --ico-coral: #b53d0d; --ico-yellow: #7a5200;
+  --heat-0: #e8edf0; --heat-1: #c2f3dc; --heat-2: #7fe9b8; --heat-3: #2fd88f; --heat-4: #0aa865;
+  --grad-primary: linear-gradient(120deg, #16e182 0%, #1fd0a6 55%, #25c2c4 100%);
+  --grad-hero: linear-gradient(125deg, #16e182 0%, #1fd0a6 38%, #25c2c4 66%, #2fa6e0 100%);
+  --grad-cover: radial-gradient(120% 90% at 85% 0%, #1b4e8f 0%, transparent 55%), radial-gradient(90% 80% at 0% 100%, #0f6b55 0%, transparent 60%), linear-gradient(160deg, #0b1d2b 0%, #071019 100%);
+  --grad-good: linear-gradient(90deg, #16e182 0%, #25c2c4 100%);
+  --grad-a: linear-gradient(0deg, #f2622e 0%, #ffa06b 100%);
+  --grad-b: linear-gradient(0deg, #2f6fe0 0%, #7fb0ff 100%);
+  --hero-text: #05101a; --hero-muted: #0b2a2a; --hero-track: #ffffff; --hero-ring: #05101a; --cover-text: #ffffff; --cover-muted: #d6e2ea;
+  --banner-bg: #05101a; --banner-text: #ffffff; --banner-btn: #16e182; --banner-btn-text: #05101a;
+  --shadow-1: 0 1px 2px rgba(5, 16, 26, .05), 0 6px 18px rgba(5, 16, 26, .06);
+  --shadow-2: 0 2px 6px rgba(5, 16, 26, .06), 0 18px 40px rgba(5, 16, 26, .12);
+  --glow-accent: 0 8px 22px rgba(22, 225, 130, .32);
+  --backdrop: rgba(5, 16, 26, .55);
+  --spring: cubic-bezier(.2, .9, .25, 1.25);
+  --radius: 22px; --tap: 52px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-display: "Unbounded", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* Dark: by the system setting (unless light is chosen) or by choice — the brand's dark covers. Two copies, one set of values. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #071019; --bg2: #0e1a24; --card: #101c27; --card2: #15232f; --line: #213140; --line-strong: #34495a;
+    --text: #eef3f6; --muted: #a3b3c0; --accent-ink: #3ef0a0; --focus: #eef3f6;
+    --a: #ff8a52; --a-ink: #ffb084; --b: #4d94ff; --b-ink: #8ab8ff; --violet: #8a6dff; --co-ink: #c3b3ff;
+    --good-ink: #4cf0a6; --warn-ink: #ffd27a; --bad-ink: #ff9aa4;
+    --track: #1b2a37; --star-empty: #34495a; --switch-off: #15232f; --switch-edge: #8a9caa; --switch-knob: #a3b3c0;
+    --tint-green: #0d2a22; --tint-teal: #0c2829; --tint-blue: #0f2238; --tint-violet: #1a1838; --tint-coral: #2e1a17; --tint-yellow: #2b2414;
+    --deco-green: #12382c; --deco-teal: #113637; --deco-blue: #152d4a; --deco-violet: #231f4a; --deco-coral: #3d221d; --deco-yellow: #3a301a;
+    --ico-green: #4cf0a6; --ico-teal: #5fe3d4; --ico-blue: #8ab8ff; --ico-violet: #c3b3ff; --ico-coral: #ffb084; --ico-yellow: #ffd27a;
+    --heat-0: #15232f; --heat-1: #0f4a35; --heat-2: #0e7a52; --heat-3: #12b36f; --heat-4: #3ef0a0;
+    --banner-bg: #1b2a37; --banner-text: #ffffff; --banner-btn: #16e182; --banner-btn-text: #05101a;
+    --shadow-1: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 6px 18px rgba(0, 0, 0, .35);
+    --shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 16px 36px rgba(0, 0, 0, .5);
+    --backdrop: rgba(2, 6, 10, .72);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #071019; --bg2: #0e1a24; --card: #101c27; --card2: #15232f; --line: #213140; --line-strong: #34495a;
+  --text: #eef3f6; --muted: #a3b3c0; --accent-ink: #3ef0a0; --focus: #eef3f6;
+  --a: #ff8a52; --a-ink: #ffb084; --b: #4d94ff; --b-ink: #8ab8ff; --violet: #8a6dff; --co-ink: #c3b3ff;
+  --good-ink: #4cf0a6; --warn-ink: #ffd27a; --bad-ink: #ff9aa4;
+  --track: #1b2a37; --star-empty: #34495a; --switch-off: #15232f; --switch-edge: #8a9caa; --switch-knob: #a3b3c0;
+  --tint-green: #0d2a22; --tint-teal: #0c2829; --tint-blue: #0f2238; --tint-violet: #1a1838; --tint-coral: #2e1a17; --tint-yellow: #2b2414;
+  --deco-green: #12382c; --deco-teal: #113637; --deco-blue: #152d4a; --deco-violet: #231f4a; --deco-coral: #3d221d; --deco-yellow: #3a301a;
+  --ico-green: #4cf0a6; --ico-teal: #5fe3d4; --ico-blue: #8ab8ff; --ico-violet: #c3b3ff; --ico-coral: #ffb084; --ico-yellow: #ffd27a;
+  --heat-0: #15232f; --heat-1: #0f4a35; --heat-2: #0e7a52; --heat-3: #12b36f; --heat-4: #3ef0a0;
+  --banner-bg: #1b2a37; --banner-text: #ffffff; --banner-btn: #16e182; --banner-btn-text: #05101a;
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 6px 18px rgba(0, 0, 0, .35);
+  --shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 16px 36px rgba(0, 0, 0, .5);
+  --backdrop: rgba(2, 6, 10, .72);
+}
+/* High contrast (Settings → Доступность, or the system asks for more contrast): black, white, yellow — above any theme. */
+:root.hc {
+  color-scheme: dark;
+  --bg: #000; --bg2: #000; --card: #000; --card2: #101010; --line: #ffffff; --line-strong: #ffffff;
+  --text: #ffffff; --muted: #e8ecff; --accent: #ffe14d; --accent-ink: #ffe14d; --on-accent: #000; --focus: #ffe14d;
+  --a: #ffb547; --a-ink: #ffb547; --b: #5ad1ff; --b-ink: #5ad1ff; --violet: #e879f9; --co-ink: #f0abfc;
+  --good: #3fe0a0; --good-ink: #3fe0a0; --warn: #ffcc4d; --warn-ink: #ffcc4d; --bad: #ff6b6b; --bad-ink: #ff8a8a;
+  --track: #333; --star-empty: #555; --switch-off: #000; --switch-edge: #fff; --switch-knob: #fff;
+  --tint-green: #000; --tint-teal: #000; --tint-blue: #000; --tint-violet: #000; --tint-coral: #000; --tint-yellow: #000;
+  --deco-green: #000; --deco-teal: #000; --deco-blue: #000; --deco-violet: #000; --deco-coral: #000; --deco-yellow: #000;
+  --ico-green: #fff; --ico-teal: #fff; --ico-blue: #fff; --ico-violet: #fff; --ico-coral: #fff; --ico-yellow: #fff;
+  --heat-0: #222; --heat-1: #3c6e5a; --heat-2: #2f9e72; --heat-3: #3fe0a0; --heat-4: #b6ffe0;
+  --grad-primary: #ffe14d; --grad-hero: #000; --grad-cover: #000; --grad-good: #3fe0a0; --grad-a: #ffb547; --grad-b: #5ad1ff;
+  --hero-text: #fff; --hero-muted: #e8ecff; --hero-track: #333; --hero-ring: #fff; --cover-text: #fff; --cover-muted: #e8ecff;
+  --banner-bg: #ffe14d; --banner-text: #000; --banner-btn: #000; --banner-btn-text: #ffe14d;
+  --shadow-1: none; --shadow-2: none; --glow-accent: none; --backdrop: rgba(0, 0, 0, .85);
+}
+
+/* ===== Base: layout and structure (5.x) ===== */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent }
+html { font-size: calc(16px * var(--text-scale, 1)) }
+html, body { margin: 0; background: var(--bg); color: var(--text) }
+/* The body grows with the page. At height 100 % it was one screen tall, and its fixed gradients
+   were painted only inside it — a scrolled page showed a hard edge one screen down. */
+html { height: 100% }
+body { min-height: 100% }
+body { font: 1rem/1.45 var(--font) }
+body { overscroll-behavior: none }
+.app { max-width: 560px; margin: 0 auto; min-height: 100dvh;                        position: relative }
+h1 { line-height: 1.15; margin: 4px 0 8px }
+h2 { font-size: 1.125rem; margin: 0 0 10px }
+p { margin: 8px 0 }
+button { font: inherit; color: inherit }
+/* 5.24 — mint #16e182 is about 1.7:1 on white, so a keyboard ring in the accent disappears.
+   The ring uses the text colour (WCAG 2.4.7; the 3:1 change in 2.4.13). tests/design.test.mjs measures it. */
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
+
+.screen { display: flex; flex-direction: column; min-height: 100dvh }
+.scroll { flex: 1; padding: 16px 16px 120px; min-width: 0 } /* a long word must not widen the column past the screen */
+.scroll.center { text-align: center }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 }
+.eyebrow { font-size: 0.8125rem; font-weight: 700;                      text-transform: uppercase;                       margin: 0 }
+.note { font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; min-width: 0 } /* «микроконтроллера —» is glued with a non-breaking space */
+/* 5.31 — the four states of two channels in the settings: a term over its meaning, never two columns (200 % text). */
+.four-states { margin: 8px 0 4px }
+.four-states dt { font-weight: 700; margin-top: 8px; overflow-wrap: anywhere }
+.four-states dd { margin: 2px 0 0; font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere }
+.note.warn { color: var(--warn) }
+.lead { font-size: 1.188rem; font-weight: 600 }
+
+.card { padding: 16px; margin: 14px 0; text-align: left }
+.card-head { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: space-between; align-items: center } /* the pill wraps under the title at 200 % on 320 px */
+.card-head > h2 { min-width: 0 }
+.pill { background: var(--card2); border-radius: 99px; padding: 2px 10px; font-weight: 700; font-size: 0.875rem }
+
+.btn { min-height: var(--tap);                      border: 1px solid var(--line); background: var(--card2); padding: 12px 18px; font-weight: 700; cursor: pointer }
+
+.btn.primary { border-color: transparent }
+.btn.big { width: 100% }
+
+.btn.danger { background: transparent; border-color: var(--bad); color: var(--bad) }
+.btn:disabled { opacity: .5; cursor: default }
+.icon-btn { min-width: 48px; min-height: 48px; border: 0; background: transparent; font-size: 1.375rem; cursor: pointer; border-radius: 14px }
+.row-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px }
+.row-actions .btn { flex: 1 }
+.row-actions.col { flex-direction: column }
+.sticky-actions { position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 10px); display: grid; gap: 8px } /* 5.12.1: the fade ends above the items — at 30 % the onboarding dots sat on a half-visible line (a device report) */
+
+/* Bottom navigation (thumb zone). */
+.bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);                                display: grid;                                                                border-top: 1px solid var(--line);                                              z-index: 5 }
+.nav-item { border: 0; background: transparent; color: var(--muted);                place-items: center; font-size: 0.75rem; font-weight: 600; cursor: pointer }
+.nav-item.active { color: var(--accent) }
+.nav-icon { font-size: 1.25rem; line-height: 1 }
+
+.top-bar { display: grid;                                       align-items: center; padding: 8px; position: sticky; top: 0; background: var(--bg); z-index: 3 }
+.top-bar h1 { font-size: 1.188rem; text-align: center; margin: 0 }
+
+/* Home. */
+.hero { border-radius: 24px; padding: 16px }
+.hero-top { display: grid;                                       gap: 12px; align-items: center }
+.hero h1 { margin: 0 }
+.avatar { border-radius: 18px;                           display: grid; place-items: center; overflow: hidden }
+.avatar canvas { width: 44px; height: 44px }
+.streak { display: flex; align-items: center; gap: 4px;                                                    border-radius: 99px; padding: 6px 12px; font-size: 1.125rem }
+.xp { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin: 14px 0 6px; font-size: 0.875rem; font-weight: 600 }
+.xp small { color: var(--muted) }
+.xp-track, .skill-track { border-radius: 99px; overflow: hidden }
+.xp-track i, .skill-track i { display: block; height: 100%;                          border-radius: 99px; transition: width .6s cubic-bezier(.2,.9,.3,1.2) }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; text-align: center }
+.day i { display: block;                            margin: 0 auto 2px; border-radius: 50%; border: 2px solid var(--line) }
+
+.day.today i { border-color: var(--accent) }
+.day small { color: var(--muted) }
+.week-note { grid-column: 1 / -1; margin: 6px 0 0; font-size: 0.8125rem; color: var(--muted) }
+.plan-list { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 8px }
+.plan-list li { display: grid;                                  gap: 10px; align-items: center;                                                padding: 8px 10px }
+
+.plan-list small { display: block; color: var(--muted); font-size: 0.8125rem }
+.plan-icon { text-align: center }
+.tip p { margin: 4px 0 0; color: var(--muted) }
+.games h2 { margin-top: 18px }
+.game-grid { display: grid }
+.game-card { text-align: left; border: 1px solid var(--line);                               padding: 14px; background: var(--card);                    display: flex; flex-direction: column; gap: 4px; cursor: pointer }
+
+.game-card small { color: var(--muted); font-size: 0.8125rem; flex: 1 }
+
+.game-meta { font-size: 0.75rem;                     font-weight: 700 }
+
+/* Levels. */
+.game-hero { font-size: 3rem; margin: 0; text-align: center }
+.how { padding-left: 20px; margin: 8px 0; text-align: left }
+.how li { margin: 4px 0 }
+.level-grid { display: grid;                                        gap: 10px }
+.level { aspect-ratio: 1;                      border: 1px solid var(--line);                          display: grid; place-items: center; align-content: center; gap: 2px; cursor: pointer }
+.level b { font-size: 1.375rem }
+.level small { color: var(--warn); letter-spacing: 1px }
+
+.level.locked { opacity: .45 }
+
+/* Play. */
+.play-screen { height: 100dvh; min-height: 0 }
+.play-top { display: grid;                                            align-items: center; gap: 4px; padding: 4px 8px }
+.play-title b, .play-title h1 { display: block; font-size: 0.9375rem; margin: 0; line-height: 1.25 }
+.play-title small { color: var(--warn); font-size: 0.75rem; font-weight: 700 }
+.score { font-size: 1.375rem; min-width: 48px; text-align: right; padding-right: 6px }
+.play-progress { height: 4px; background: rgba(255,255,255,.08) }
+.play-progress i { display: block; height: 100%; width: 0;                            transition: width .2s linear }
+.stage { position: relative; flex: 1 }
+.stage-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none }
+.stage-hint { left: 12px; right: 12px; bottom: 8px;            text-align: center; font-size: 0.875rem; font-weight: 600; color: var(--text);                                                      padding: 6px 10px; pointer-events: none }
+.play-screen.lost .stage-hint { background: var(--bad); color: #fff }
+.overlay { position: absolute; inset: 0; background: rgba(8,12,30,.78); display: grid; place-items: end center; padding: 12px; overflow: auto }
+.overlay[hidden] { display: none }
+.sheet { width: 100%;                          border: 1px solid var(--line);                      padding: 18px; max-height: 100%; overflow: auto; animation: rise .25s cubic-bezier(.2,.9,.3,1.15) }
+.sheet.small { max-width: 420px }
+.sheet h2 { font-size: 1.375rem }
+.legend { font-size: 0.8125rem; color: var(--muted); background: var(--card2); border-radius: 12px; padding: 8px 10px }
+@keyframes rise { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
+
+.confirm { display: flex; align-items: center; gap: 10px; justify-content: center; font-size: 0.8125rem; color: var(--muted); margin: 10px 0 }
+.confirm-ring, .cal-ring { --p: 0; width: 28px; height: 28px; border-radius: 50%;                                                                                        flex: none; position: relative }
+.confirm-ring::after { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: var(--card) }
+
+/* Signal meter. */
+.meter { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; padding: 6px 10px;                         border-top: 1px solid var(--line) }
+.meter-row { display: flex; align-items: center; gap: 6px }
+.meter-label { font-weight: 800; width: 16px; text-align: center }
+.meter-label.a { color: var(--a) } .meter-label.b { color: var(--b) }
+.meter-bar { position: relative; flex: 1; height: 14px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden }
+.meter-bar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 99px }
+.meter-bar.b { transform: scaleX(-1) }
+.mark { position: absolute; top: 0; bottom: 0; width: 2px }
+.mark.on { background: #fff; opacity: .7 }
+.mark.co { background: var(--violet) }
+/* 5.32 — live trace of A and B (settings «Чувствительность»): a fixed height, the width of the card, never wider. */
+.trace-box { margin: 6px 0 2px }
+.trace { display: block; width: 100%; max-width: 100%; height: 88px; border-radius: 10px; background: var(--card2); border: 1px solid var(--line) }
+.trace-sum { margin: 6px 2px 0 }
+.meter-chip { min-width: 104px; text-align: center; font-weight: 800; font-size: 0.8125rem; border-radius: 99px; padding: 4px 10px; background: var(--card2) }
+.meter-chip[data-cmd="close"] { background: var(--a); color: #2b1800 }
+.meter-chip[data-cmd="open"] { background: var(--b); color: #00202c }
+.meter-chip[data-cmd="switch"] { background: var(--violet); color: #fff }
+.meter-chip[data-cmd="lost"] { background: var(--bad); color: #fff }
+/* 5.29: the wrist gestures of the UBI4 set — the muscles work, the hand stands; the recognizer's stream under the chip. */
+.meter-chip[data-cmd="wrist"] { box-shadow: inset 0 0 0 2px var(--violet) }
+.meter-probs { grid-column: 1 / -1; margin: 0; text-align: center; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums }
+/* 6.0 — the joystick of the СПППР (x = flexion − extension, y = pronation − supination; z under it) and the stream line */
+.meter-stick { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 10px }
+.meter-stick[hidden] { display: none }
+.stick { position: relative; width: 48px; height: 48px; border-radius: 12px; background: var(--track); flex: none }
+.stick::before, .stick::after { content: ''; position: absolute; background: var(--line-strong) }
+.stick::before { left: 50%; top: 6px; bottom: 6px; width: 1px }
+.stick::after { top: 50%; left: 6px; right: 6px; height: 1px }
+.stick-dot { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--muted); z-index: 1 }
+.stick-dot.on { background: var(--accent-ink) }
+.stick-z { position: relative; width: 48px; height: 8px; border-radius: 99px; background: var(--track); overflow: hidden; flex: none }
+.stick-z b { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; background: var(--violet) }
+.meter-stream { grid-column: 1 / -1; margin: 0; text-align: center; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums }
+.meter-stream.bad { color: var(--warn-ink); font-weight: 700 }
+@media (prefers-reduced-motion: reduce) { .stick-dot { transition: none } }
+.stream-box { display: grid; gap: 6px; margin: 8px 0 }
+/* 6.0 — feedback after testing */
+.survey-item { display: grid; gap: 6px; margin: 10px 0 }
+.survey-item p { margin: 0 }
+.survey-item .segmented { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) }
+.survey-item .seg { min-width: 0; padding-left: 4px; padding-right: 4px }
+.field { display: grid; gap: 6px; margin-top: 10px }
+.field textarea { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--card); color: var(--text); resize: vertical; min-height: 88px }
+/* 6.0 — missions of a session */
+.quest-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px }
+.quest-list li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--card2) }
+.quest-list li small { color: var(--muted) }
+.quest-list li.done b { color: var(--good-ink) }
+.stream-box, .stream-rate, .stream-packet { min-width: 0; max-width: 100% }
+.stream-packet { margin: 0; padding: 8px 10px; border-radius: 12px; background: var(--card2); color: var(--text); font: 0.75rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere }
+
+/* Emulator pads. */
+.controls { padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); background: var(--bg2) }
+.pads.two { display: grid;                                      gap: 10px }
+.pad { position: relative;                      overflow: hidden; background: var(--card2); border: 2px solid var(--line); touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer }
+.pad.on { border-color: #fff }
+.pad-a .pad-fill { background: linear-gradient(0deg, var(--a), rgba(255,181,71,.5)) }
+.pad-b .pad-fill { background: linear-gradient(0deg, var(--b), rgba(90,209,255,.5)) }
+.pad-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; transition: height .05s linear }
+.pad-ticks { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent 0 calc(25% - 1px), rgba(255,255,255,.12) calc(25% - 1px) 25%); pointer-events: none }
+.pad-label { left: 12px; top: 10px; display: grid; pointer-events: none }
+.pad-label b { font-size: 1.75rem }
+.pad-label span { font-size: 0.8125rem; color: var(--muted) }
+.pad-value { right: 12px; bottom: 10px; font-weight: 800; font-size: 1.125rem; pointer-events: none }
+.pad-co { border-radius: 18px; border: 2px dashed var(--violet); background: transparent; color: var(--violet); font-weight: 800; touch-action: none; cursor: pointer }
+.pad-co.on { background: var(--violet); color: #fff }
+.pads.gestures { display: grid;                                                   gap: 8px }
+.gkey { min-width: 0; border-radius: 16px; background: var(--card2); border: 2px solid var(--line); display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 4px; padding: 4px 6px;                          line-height: 1.15; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; font-size: 0.8125rem; font-weight: 700 }
+.gkey.on { border-color: var(--a); background: #3b2e1a }
+.gesture-icon { width: 36px; height: 36px; pointer-events: none }
+.avatar .gesture-icon { width: 44px; height: 44px }
+.pads-note { grid-column: 1 / -1; text-align: center; font-size: 0.75rem; color: var(--muted); margin: 2px 0 0 }
+.bridge-panel { text-align: center; padding: 6px; display: grid; gap: 2px }
+
+.controls.compact .gkey { min-height: 48px }
+.bridge-status { color: var(--muted); font-size: 0.8125rem }
+/* 5.30 — «Тренер качества сигнала»: quiet when the signal is good, a bordered line with the tip when it is not. */
+.signal-quality { margin: 0; font-size: 0.8125rem; color: var(--muted); overflow-wrap: anywhere }
+.signal-quality.bad { color: var(--text); border: 2px solid var(--warn); border-radius: 10px; padding: 2px 8px }
+/* the address note gives its room to the problem; a short landscape phone and a 320 px portrait keep the title
+   (the voice says the tip — 5.31, the skin sentence pushed the pad off a 320 × 568 screen) */
+.bridge-panel:has(.signal-quality.bad) > small { display: none }
+@media (max-width: 340px), (orientation: landscape) and (max-height: 400px) { .signal-quality .quality-tip { display: none } }
+/* 5.30 — the recognizer's top three is a teaching aid: on a short screen the pads need the room (the chip says the gesture) */
+@media (max-height: 600px) { .meter-probs, .meter-stream, .meter-stick { display: none } } /* 6.0: the joystick too — the chip and the A/B bars carry it */
+/* 5.30 — seven gestures (UBI4) in a short landscape column: four rows of pads with pictures do not fit 320 px; the names stay */
+@media (orientation: landscape) and (max-height: 400px) {
+  .play-screen .pads.gestures[data-many] .gesture-icon { display: none }
+  .play-screen .pads.gestures[data-many] .gkey { min-height: 44px; padding-block: 4px; grid-template-columns: 1fr; justify-items: center; text-align: center }
+}
+
+/* Results & rest. */
+.big-stars { color: var(--warn); animation: pop .5s cubic-bezier(.2,.9,.3,1.4) }
+.big-stars.s0 { color: var(--muted) }
+.big-score { margin: 0 }
+.big-score small { font-size: 1.125rem; color: var(--muted) }
+.xp-gain { color: var(--good); font-weight: 700 }
+.celebrate { text-align: center }
+.skill { display: grid;                                        gap: 10px; align-items: center; margin: 8px 0; font-size: 0.875rem }
+.skill b { text-align: right }
+.coach p { color: var(--muted) }
+@keyframes pop { from { transform: scale(.6); opacity: 0 } to { transform: none; opacity: 1 } }
+.breath { width: 140px; height: 140px; margin: 16px auto; border-radius: 50%; background: radial-gradient(circle, var(--accent), #1d2b5a 70%); animation: breathe 8s ease-in-out infinite }
+@keyframes breathe { 0%, 100% { transform: scale(.7) } 50% { transform: scale(1) } }
+.rest-count { display: block; font-size: 3rem }
+.rest .meter { border-radius: 14px; margin: 10px 0 }
+
+/* Progress. */
+.stats { display: grid;                                        gap: 8px }
+.stats div { padding: 10px 4px; text-align: center }
+.stats b { display: block }
+.stats small { color: var(--muted) }
+.radar { display: block }
+.trend { display: grid; grid-template-columns: 1fr 96px; gap: 10px; align-items: center }
+.calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center }
+.calendar small { color: var(--muted) }
+.cal { aspect-ratio: 1; border-radius: 6px; background: rgba(255,255,255,.07) }
+.cal.l1 { background: rgba(63,224,160,.3) } .cal.l2 { background: rgba(63,224,160,.5) }
+.cal.l3 { background: rgba(63,224,160,.75) } .cal.l4 { background: var(--good) }
+.cal.future { opacity: .3 }
+.badges { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.badge { background: var(--card2); border-radius: 14px; padding: 10px; opacity: .55; display: grid; gap: 2px }
+.badge.on { opacity: 1 }
+.badge small { color: var(--muted); font-size: 0.75rem }
+.skins { display: grid;                                        gap: 8px }
+.skin { border: 2px solid var(--line); background: var(--card2); border-radius: 14px; padding: 6px; display: grid; justify-items: center; cursor: pointer }
+.skin.active { border-color: var(--accent) }
+.skin small { color: var(--muted) }
+
+/* Settings. */
+.segmented { display: grid;                         grid-auto-columns: 1fr; gap: 6px;                                              padding: 4px; margin: 6px 0 }
+.seg { min-height: 52px; border: 0;                      background: transparent; color: var(--muted); cursor: pointer; display: grid; align-content: center; padding: 6px }
+.seg b { font-size: 0.875rem }
+
+.row { display: grid; gap: 6px; margin: 12px 0; font-size: 0.9375rem }
+.row > span { display: flex; justify-content: space-between; gap: 8px }
+.row small { display: block; color: var(--muted); font-size: 0.75rem }
+.row.toggle { grid-template-columns: 1fr auto; align-items: center }
+.row input[type=text], .row input[type=url], .row input[type=time] { min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg2); color: var(--text); padding: 0 12px; font: inherit }
+input[type=range] { width: 100%; accent-color: var(--accent); min-height: 32px }
+input[type=checkbox] { width: 48px; height: 28px; accent-color: var(--good) }
+output { color: var(--accent); font-weight: 700 }
+.settings .pads.two { margin: 8px 0 }
+.cal-ring { width: 120px; height: 120px; margin: 12px auto }
+.cal-ring::after { content: ''; position: absolute; inset: 14px; border-radius: 50%; background: var(--bg) }
+.cal-ring[data-step="a"] { background: conic-gradient(var(--a) calc(var(--p) * 360deg), rgba(255,255,255,.12) 0) }
+.cal-ring[data-step="b"] { background: conic-gradient(var(--b) calc(var(--p) * 360deg), rgba(255,255,255,.12) 0) }
+.calibration .pads.two { margin-top: 12px }
+
+/* Onboarding. */
+.onboarding .scroll { padding-top: 40px }
+.onb-art { display: grid; place-items: center; margin: 10px auto 16px }
+.onb-art canvas { width: 110px; height: 110px }
+.big-emoji { font-size: 4.5rem }
+.onboarding .sticky-actions { padding-left: 16px; padding-right: 16px }
+.dots { display: flex; gap: 8px; justify-content: center }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line) }
+.dots i.on { background: var(--accent); width: 22px; border-radius: 99px }
+
+/* Toasts. */
+#toasts { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 20; width: min(92vw, 420px); pointer-events: none }
+.toast { background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; font-weight: 700; text-align: center; animation: rise .25s ease; transition: opacity .4s }
+.toast.good { border-color: var(--good) }
+.toast.bad { border-color: var(--bad) }
+.toast.out { opacity: 0 }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important }
+}
+@media (min-width: 700px) { .app { border-left: 1px solid var(--line); border-right: 1px solid var(--line) } }
+
+/* v5: check-in, tutorial, skill check, data tables, showcase, PIN. */
+.btn.small { min-height: 36px; padding: 4px 12px; font-size: 0.8125rem }
+.showcase-banner { position: sticky; top: 0; z-index: 30; display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--banner-bg); color: var(--banner-text); font-weight: 800; font-size: 0.8125rem; padding: 4px 12px }
+.showcase-banner .btn { color: var(--banner-btn-text); border-color: var(--banner-btn) }
+.warn-card { border-color: var(--warn) }
+.tutorial-card { border-color: var(--accent) }
+
+.g-check.due { border: 2px solid var(--accent) }
+.checkin .segmented { grid-auto-flow: row }
+.checkin-advice { min-height: 48px }
+.tut-canvas { width: min(320px, 100%); height: auto; aspect-ratio: 4 / 3; display: block; margin: 0 auto }
+.tut-ring { width: 64px; height: 64px }
+/* 6.3.2: the step's progress ring beside its title, the words above the live picture (ui/tutorial.js) */
+.tut-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 4px 0 6px }
+.tut-head h2 { margin: 0; text-align: left }
+.tut-head .tut-ring { width: 40px; height: 40px; margin: 0; flex: none }
+.tut-head .tut-ring::after { inset: 8px }
+.tutorial .lead { margin: 0 0 10px }
+/* a first lesson is not the place for packets a second and jitter: the settings and the games show the stream line */
+.tutorial .meter-stream { display: none }
+
+.pin-input { font-size: 2rem; letter-spacing: 0.5em; text-align: center;              min-height: 60px; border-radius: 14px; border: 2px solid var(--line); background: var(--bg2); color: var(--text); margin: 12px auto; display: block }
+table.data { width: 100%; border-collapse: collapse; font-size: 0.8125rem }
+table.data caption { text-align: left; color: var(--muted); font-size: 0.75rem; padding-bottom: 4px }
+table.data th, table.data td { border: 1px solid var(--line);                   text-align: center }
+table.data th[scope="row"] { text-align: left; font-weight: 700 }
+td.heat.h1 { background: rgba(255,107,107,.18) } td.heat.h2 { background: rgba(255,107,107,.35) }
+td.heat.h3 { background: rgba(255,107,107,.55) } td.heat.h4 { background: rgba(255,107,107,.8); color: #fff }
+
+
+/* ===== 5.12 design layer. The base rules above hold layout; this layer is the look.
+   Rules: solid surfaces under text, decoration only behind content, every motion off with .rm / prefers-reduced-motion,
+   every gradient flattened by .hc (tokens) and forced colours. ===== */
+body {
+  background:
+    radial-gradient(560px 340px at 108% -8%, var(--deco-green), transparent 70%),
+    radial-gradient(520px 380px at -14% 22%, var(--deco-blue), transparent 70%),
+    var(--bg);
+  /* One screen of decoration (F1): fixed to the window where the engine can, at the top of the page where it cannot
+     (iOS Safari ignores `fixed`) — never repeated down a long page. */
+  background-size: 100% 100vh;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+.app { background: transparent }
+h1 { font-family: var(--font-display); font-size: 1.625rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15 }
+/* Screen titles: the brochure's upper-case Unbounded with a short green bar under it. */
+.scroll > h1:not(.sr-only):not(.eyebrow), .onb-hero h1 { text-transform: uppercase; letter-spacing: 0.01em }
+.scroll > h1:not(.sr-only):not(.eyebrow)::after { content: ''; display: block; width: 44px; height: 4px; margin-top: 10px; border-radius: 2px; background: var(--grad-primary) }
+h2 { font-weight: 800; letter-spacing: -0.2px }
+.stats b, .big-score, .score, .streak b, .pill, output, .rest-count, table.data td { font-variant-numeric: tabular-nums }
+.big-score, .score, .stats b, .rest-count, .level b, .sync-value, .streak b { font-family: var(--font-display); font-weight: 700 }
+.eyebrow { font-weight: 800; letter-spacing: 1px; color: var(--accent-ink) }
+.note.warn { color: var(--warn-ink); font-weight: 600 }
+.art { display: block; flex: none }
+
+/* Surfaces: white cards on the light-grey page (the sample), flat with a soft shadow (the brochure). */
+.card { background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-1); border-radius: var(--radius) }
+.card h2 { display: flex; align-items: center; gap: 8px }
+.pill { background: var(--tint-green); color: var(--accent-ink); font-weight: 800; padding: 3px 11px }
+.with-art { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px } /* the text column shrinks and wraps */
+/* 5.27 — the heading's text is an anonymous grid item: its minimum is its longest word. Where the browser has no
+   hyphenation dictionary (Linux headless Chromium has none) «Самочувствие» at 200 % text ran past 320 px; with one it
+   hyphenates as before. The last resort of 200 % text, as for the other headings below. */
+h2.with-art { overflow-wrap: anywhere }
+.with-art .art { width: 1.75rem; height: 1.75rem }
+.tinted { position: relative; overflow: hidden; background: var(--tint); border-color: transparent }
+.tinted::after { content: ''; position: absolute; right: -36px; bottom: -48px; width: 128px; height: 128px; border-radius: 50%; background: var(--deco); pointer-events: none }
+.tinted > * { position: relative; z-index: 1 }
+.t-green, .g-check { --tint: var(--tint-green); --deco: var(--deco-green); --ico: var(--ico-green) }
+.t-teal, .g-safe { --tint: var(--tint-teal); --deco: var(--deco-teal); --ico: var(--ico-teal) }
+.t-blue, .g-flight { --tint: var(--tint-blue); --deco: var(--deco-blue); --ico: var(--ico-blue) }
+.t-violet, .g-rhythm { --tint: var(--tint-violet); --deco: var(--deco-violet); --ico: var(--ico-violet) }
+.t-coral, .g-grip { --tint: var(--tint-coral); --deco: var(--deco-coral); --ico: var(--ico-coral) }
+.t-yellow, .g-tutorial, .tutorial-card { --tint: var(--tint-yellow); --deco: var(--deco-yellow); --ico: var(--ico-yellow) }
+
+/* Buttons: pill-shaped (M3 Expressive, the sample); the primary one in the brand green with near-black text (11:1). */
+.btn { border-radius: 999px; border: 1.5px solid var(--line-strong); background: var(--card); color: var(--text); font-weight: 800; transition: transform .18s var(--spring), box-shadow .18s ease, filter .18s ease }
+.btn:hover { filter: brightness(1.03) }
+.btn:active { transform: scale(.96) }
+.btn.primary { background: var(--grad-primary); color: var(--on-accent); border-color: transparent; box-shadow: var(--glow-accent) }
+/* A disabled primary is a status («Сегодня — отдых», «План выполнен»), not a faded green button:
+   full text contrast on the page grey, so the words stay readable (1.4.3; disabled text is exempt, the meaning is not). */
+.btn.primary:disabled { opacity: 1; background: var(--bg2); color: var(--text); border: 1px solid var(--line-strong); box-shadow: none; filter: none }
+.btn.big { min-height: 64px; font-size: 1.125rem; letter-spacing: .1px }
+.btn.ghost { background: var(--card) }
+.btn.danger { background: var(--card); border-color: var(--bad-ink); color: var(--bad-ink) }
+.top-bar .icon-btn, .play-top .icon-btn { background: var(--card); box-shadow: var(--shadow-1); border-radius: 50%; color: var(--text) }
+.top-bar h1 { font-size: 1.0625rem; font-weight: 700 }
+
+/* Home hero: the brand gradient tile (green → teal → blue) with near-black text, Мио on a white tile, light trails. */
+.hero { position: relative; overflow: hidden; background: var(--grad-hero); color: var(--hero-text); border-radius: 28px; padding: 18px 16px 16px; box-shadow: var(--shadow-2) }
+.hero > * { position: relative }
+.hero > .trails { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.hero h1 { color: var(--hero-text) }
+.hero .eyebrow { color: var(--hero-muted) }
+.avatar { background: #ffffff; border-radius: 20px; box-shadow: 0 6px 16px rgba(5, 16, 26, .18) }
+.avatar .art { width: 88%; height: 88% }
+.streak { background: #05101a; color: #ffffff; font-weight: 850; padding: 6px 12px 6px 8px }
+.streak .art { width: 1.5rem; height: 1.5rem }
+.xp-track, .skill-track { height: 12px; background: var(--track) }
+.xp-track i, .skill-track i { background: var(--grad-good) }
+.hero .xp-track { background: var(--hero-track) }
+.hero .xp-track i { background: #05101a }
+.hero .xp small, .hero .week-note, .hero .day small { color: var(--hero-muted) }
+.day i { width: 30px; height: 30px; border-color: var(--hero-ring); position: relative }
+.day.done i { background: #05101a; border-color: #05101a }
+.day.done i::after { content: ''; position: absolute; left: 32%; top: 20%; width: 26%; height: 44%; border: solid #16e182; border-width: 0 3px 3px 0; transform: rotate(40deg) }
+.day.today i { border-width: 3px; border-color: #ffffff; box-shadow: 0 0 0 2px #05101a }
+.day small { font-weight: 700 }
+
+/* Plan: a stepper of game rows, each with its picture on a tinted tile. */
+.plan-list li { background: var(--card2); border: 1px solid var(--line); border-radius: 18px; gap: 12px }
+.plan-list li.done { background: var(--tint-green); border-color: transparent }
+.plan-icon { display: grid; place-items: center; border-radius: 14px; background: var(--tint) }
+.plan-icon .art { width: 82%; height: 82% }
+.tip.card { background: var(--tint-green); border-color: transparent }
+.tip p { color: var(--text) }
+.coach-head b { font-size: 1.0625rem }
+
+/* Games: bento grid of tinted cards with an illustrated tile; the first card spans two columns. */
+.game-grid { grid-template-columns: 1fr 1fr; gap: 12px }
+.game-card { position: relative; overflow: hidden; border: 1px solid transparent; border-radius: 24px; background: var(--tint); color: var(--text); box-shadow: var(--shadow-1); transition: transform .2s var(--spring); min-height: 160px }
+.game-card:first-child { grid-column: 1 / -1; min-height: 150px }
+.game-card::after { content: ''; position: absolute; right: -34px; bottom: -46px; width: 130px; height: 130px; border-radius: 50%; background: var(--deco); pointer-events: none }
+.game-card > * { position: relative; z-index: 1 }
+.game-card:active { transform: scale(.97) }
+.game-card:focus-visible { outline-offset: -6px } /* the card clips overflow: the ring stays inside the tile */
+.game-card b { font-size: 1.0625rem }
+.game-icon { display: grid; place-items: center; border-radius: 18px; background: var(--card); box-shadow: var(--shadow-1) }
+.game-icon .art { width: 84%; height: 84% }
+.game-meta { color: var(--ico); font-weight: 800; display: flex; align-items: center; gap: 4px; flex-wrap: wrap }
+.game-meta .art { width: 1rem; height: 1rem }
+.g-check.card, .tutorial-card.card { position: relative; overflow: hidden; background: var(--tint); border-color: transparent }
+.g-check.card::after, .tutorial-card.card::after { content: ''; position: absolute; right: -40px; top: -50px; width: 130px; height: 130px; border-radius: 50%; background: var(--deco); pointer-events: none }
+.g-check.card > *, .tutorial-card.card > * { position: relative; z-index: 1 }
+.g-check.due { box-shadow: 0 0 0 2px var(--accent-ink), var(--shadow-1) }
+
+/* Levels. */
+.game-hero { width: 96px; height: 96px; margin: 0 auto 6px; border-radius: 30px; display: grid; place-items: center; background: var(--tint); box-shadow: var(--shadow-1) }
+.game-hero .art { width: 80%; height: 80% }
+.how li::marker { color: var(--accent-ink) }
+.level { border-radius: 22px; background: var(--card); color: var(--text); box-shadow: var(--shadow-1); gap: 4px; transition: transform .18s var(--spring) }
+.level:active { transform: scale(.95) }
+.level b { font-size: 1.5rem }
+.level .star-row .art { width: 1rem; height: 1rem }
+.level.locked { background: var(--bg2); border-color: transparent; box-shadow: none; cursor: default; opacity: 1 }
+.level.locked .art { width: 1.75rem; height: 1.75rem }
+.level.rec { background: var(--grad-primary); color: var(--on-accent); border-color: transparent; box-shadow: var(--glow-accent) }
+.star-row { display: inline-flex; gap: 2px; justify-content: center; color: var(--star-empty) }
+.level.rec .star-row { color: #0b5c43 }
+
+/* Bottom navigation: a floating white pill; the current section in a filled rounded square (the sample). */
+.bottom-nav { bottom: calc(10px + env(safe-area-inset-bottom)); width: calc(100% - 24px); max-width: 536px; border: 1px solid var(--line); border-radius: 26px; background: var(--card); box-shadow: var(--shadow-2); padding-bottom: 0 }
+.nav-item { min-height: 64px; gap: 2px; color: var(--muted); font-weight: 700 }
+.nav-item.active { color: var(--accent-ink); font-weight: 800 }
+.nav-item .nav-icon { padding: 5px 18px; border-radius: 16px; transition: background .2s ease }
+.nav-item.active .nav-icon { background: var(--grad-primary); color: var(--on-accent); box-shadow: var(--glow-accent) }
+
+/* Segmented control: white chips on a grey track; the chosen one in the brand green. */
+.segmented { background: var(--bg2); border: 0; border-radius: 20px }
+.seg { border-radius: 16px; color: var(--muted); transition: background .2s ease, transform .18s var(--spring) }
+.seg.active { background: var(--grad-primary); color: var(--on-accent); box-shadow: var(--glow-accent) }
+
+/* Play: HUD and meters. */
+.play-top { background: var(--card); border-bottom: 1px solid var(--line) }
+.play-title h1 { font-family: var(--font); letter-spacing: 0 }
+.play-title small { color: var(--warn-ink) }
+.score { color: var(--accent-ink) }
+.play-progress { background: var(--track) }
+.play-progress i { background: var(--grad-primary) }
+.overlay { background: var(--backdrop) }
+.play-screen.lost .stage-hint { background: var(--bad-ink); color: #ffffff }
+.meter { background: var(--card) }
+.meter-label.a { color: var(--a-ink) } .meter-label.b { color: var(--b-ink) }
+.meter-bar { background: var(--track) }
+.meter-bar.a .fill { background: linear-gradient(90deg, #f2622e, #ffa06b) }
+.meter-bar.b .fill { background: linear-gradient(90deg, #2f6fe0, #7fb0ff) }
+.mark.on { background: var(--text); opacity: .55 }
+.meter-chip { background: var(--bg2); color: var(--text) }
+.meter-chip[data-cmd="close"] { background: var(--a); color: #2a1000 }
+.meter-chip[data-cmd="open"] { background: var(--b); color: #05101a }
+.meter-chip[data-cmd="switch"] { background: var(--violet); color: #ffffff }
+.meter-chip[data-cmd="lost"] { background: var(--bad-ink); color: #ffffff }
+.controls { background: var(--bg) }
+.pad { border-radius: 26px; background: var(--card); box-shadow: var(--shadow-1) }
+.pad.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--card), var(--shadow-2) }
+.pad-a .pad-fill { background: var(--grad-a) }
+.pad-b .pad-fill { background: var(--grad-b) }
+.pad-ticks { background: repeating-linear-gradient(0deg, transparent 0 calc(25% - 1px), var(--line) calc(25% - 1px) 25%) }
+/* Labels sit on their own chips: readable over the channel colour that fills the pad. */
+.pad-label { background: var(--card); border-radius: 12px; padding: 2px 8px 3px; justify-self: start; align-self: flex-start; max-width: 100% }
+.pad-a .pad-label b { color: var(--a-ink) } .pad-b .pad-label b { color: var(--b-ink) }
+.pad-label b { font-family: var(--font-display); font-weight: 800 }
+.pad-value { background: var(--card); border-radius: 99px; padding: 0 8px }
+.pad-co { background: var(--card); color: var(--co-ink); border-color: var(--violet) }
+.pad-co.on { background: var(--violet); border-style: solid; color: #ffffff }
+.gkey { background: var(--card); box-shadow: var(--shadow-1); color: var(--text); border-radius: 18px }
+.gkey.on { border-color: var(--a); background: var(--tint-coral) }
+.sheet { border-radius: 28px; box-shadow: var(--shadow-2); background: var(--card) }
+.sheet-title { display: flex; align-items: center; gap: 12px }
+.sheet-title .tile { width: 52px; height: 52px; flex: none; border-radius: 18px; display: grid; place-items: center; background: var(--tint) }
+.sheet-title .tile .art { width: 84%; height: 84% }
+.legend { background: var(--bg2); border-radius: 14px }
+.confirm-ring, .cal-ring { background: conic-gradient(var(--a) calc(var(--p) * 360deg), var(--track) 0) }
+
+/* Results: stars as a picture, the score in Unbounded, rewards as chips. */
+.big-stars { display: flex; justify-content: center; gap: 6px; margin: 4px 0; color: var(--star-empty) }
+.big-stars .art { width: min(4.5rem, 21vw, 26vh); height: min(4.5rem, 21vw, 26vh); filter: drop-shadow(0 6px 10px rgba(245, 165, 36, .35)) }
+.big-stars .art:nth-child(2) { transform: translateY(-10px) scale(1.12) }
+.big-stars.s0 .art { filter: none }
+.big-score { font-size: min(3rem, 15vw); letter-spacing: -1px; color: var(--text) }
+.xp-gain { display: inline-block; padding: 4px 14px; border-radius: 999px; background: var(--tint-green); color: var(--good-ink); font-weight: 800 }
+.celebrate { text-align: center; --tint: var(--tint-green); --deco: var(--deco-green) }
+.celebrate .with-art { text-align: left }
+.coach.card { background: var(--tint-green); border-color: transparent }
+.coach p { color: var(--text) }
+.breath { background: radial-gradient(circle at 35% 30%, #ffffff 0%, #9ff5cd 30%, #25c2c4 70%, #2f80ed 100%); box-shadow: 0 0 0 14px var(--tint-teal), var(--glow-accent) }
+.rest-count { font-size: 3rem; color: var(--accent-ink) }
+.rest .meter { border-radius: 16px; border: 1px solid var(--line) }
+.rest .mio { display: block; margin: 0 auto 4px }
+
+/* Progress: the brochure's stacked gradient tiles — green, teal, cyan with dark text; blue, violet with white text. */
+.stats div { border-radius: 18px; border: 0; box-shadow: var(--shadow-1); background: #16e182; color: #05101a }
+.stats div:nth-child(5n + 2) { background: #1fd0a6 }
+.stats div:nth-child(5n + 3) { background: #2fa6e0 }
+.stats div:nth-child(5n + 4) { background: #2f6fe0; color: #ffffff }
+.stats div:nth-child(5n) { background: #5b4fd6; color: #ffffff }
+.stats div small { color: inherit; opacity: 1 }
+.stats b { font-size: 1.5rem }
+.cal { border-radius: 8px; background: var(--heat-0) }
+.cal.l1 { background: var(--heat-1) } .cal.l2 { background: var(--heat-2) }
+.cal.l3 { background: var(--heat-3) } .cal.l4 { background: var(--heat-4) }
+.cal.future { background: transparent; border: 1.5px dashed var(--line-strong); opacity: 1 }
+.badge { background: var(--card2); border: 1px solid var(--line); border-radius: 16px; opacity: 1; color: var(--muted); align-content: start }
+.badge .art { width: 2rem; height: 2rem; margin-bottom: 2px; color: var(--star-empty) } /* above the name: «Переключатель» needs the whole width */
+.badge.on { background: var(--tint-yellow); border-color: var(--warn); color: var(--text) }
+.skin { background: var(--card2); border-radius: 16px; color: var(--text) }
+.skin.active { border-color: var(--accent-ink); background: var(--tint-green); box-shadow: var(--glow-accent) }
+
+/* Settings: section glyphs on tinted tiles; the switch is outlined when off, green when on (M3). */
+.sec-ico { width: 40px; height: 40px; flex: none; border-radius: 13px; display: grid; place-items: center; background: var(--tint); color: var(--ico) }
+.sec-ico .ico { width: 1.375rem; height: 1.375rem }
+.fold > summary .sec-head { display: flex; align-items: center; gap: 12px; min-width: 0 }
+.row > span { font-weight: 600 }
+.row small { font-weight: 400 }
+.row input[type=text], .row input[type=url], .row input[type=time], .row input[type=password] { border-radius: 14px; border: 1.5px solid var(--line-strong); background: var(--card); color: var(--text) }
+.row input:focus-visible { border-color: var(--accent-ink) }
+input[type=range] { accent-color: #0aa865 }
+input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 52px; height: 32px; margin: 0; flex: none; border-radius: 99px; background: var(--switch-off); border: 2px solid var(--switch-edge); position: relative; cursor: pointer; transition: background .2s ease, border-color .2s ease }
+input[type=checkbox]::before { content: ''; position: absolute; left: 4px; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: var(--switch-knob); transform: translateY(-50%); transition: left .2s var(--spring), width .2s ease, height .2s ease, background .2s ease }
+input[type=checkbox]:checked { background: var(--grad-primary); border-color: transparent }
+input[type=checkbox]:checked::before { left: 22px; width: 24px; height: 24px; background: #05101a }
+output { color: var(--accent-ink); font-weight: 800 }
+.cal-ring::after { background: var(--bg) }
+.cal-ring[data-step="a"] { background: conic-gradient(var(--a) calc(var(--p) * 360deg), var(--track) 0) }
+.cal-ring[data-step="b"] { background: conic-gradient(var(--b) calc(var(--p) * 360deg), var(--track) 0) }
+
+/* Onboarding: a dark brand cover with light trails (the brochure's cover), the rest on the light page. */
+.onboarding .scroll { padding-top: 16px }
+.onb-hero { position: relative; overflow: hidden; background: var(--grad-cover); color: var(--cover-text); border-radius: 32px; padding: 22px 18px 20px; margin-bottom: 12px; box-shadow: var(--shadow-2) }
+.onb-hero > * { position: relative }
+.onb-hero > .trails { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.onb-hero h1 { color: var(--cover-text); margin: 6px 0 4px }
+.onb-hero .lead { color: var(--cover-muted); margin: 0 }
+.onb-art { margin: 4px auto 6px }
+.onb-art .art { width: 132px; height: 132px; filter: drop-shadow(0 14px 20px rgba(0, 0, 0, .4)); animation: float 4s ease-in-out infinite }
+.onb-art.small .art { width: 84px; height: 84px }
+.onb-art.scene .art { width: min(230px, 100%); height: auto; aspect-ratio: 5 / 4 }
+@keyframes float { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+.how.onb-card { padding: 14px 16px 14px 34px }
+.dots i { background: var(--line-strong); transition: width .25s var(--spring) }
+.dots i.on { background: #0aa865; width: 24px }
+
+/* Toasts, tables, PIN, check-in. */
+.toast { background: var(--card); color: var(--text); border-left: 5px solid var(--accent); border-radius: 16px; font-weight: 800; box-shadow: var(--shadow-2) }
+.toast.good { border-left-color: var(--good) }
+.toast.bad { border-left-color: var(--bad) }
+table.data thead th { background: var(--bg2) }
+td.heat.h1 { background: #fde2e2 } td.heat.h2 { background: #fbc4c4 }
+td.heat.h3 { background: #f59a9a } td.heat.h4 { background: #c21b2e; color: #fff }
+:root[data-theme="dark"] td.heat.h1 { background: #4a2235 } :root[data-theme="dark"] td.heat.h2 { background: #6e2a3f }
+:root[data-theme="dark"] td.heat.h3 { background: #9b3048 }
+.pin-art { display: grid; place-items: center; margin: 8px auto }
+.pin-art .art { width: 88px; height: 88px }
+.pin-input { border-radius: 16px; border: 2px solid var(--line-strong); background: var(--card) }
+.checkin-hero { display: flex; align-items: center; gap: 12px; text-align: left }
+.tut-canvas { border-radius: 20px }
+.showcase-banner .btn { background: var(--banner-btn) }
+
+/* Coach «Мио» next to its advice (5.4) */
+.coach-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px }
+.coach-head .mio { flex: none }
+.rest .mio { display: block; margin: 0 auto 4px }
+
+/* Headings focused on a screen change (for screen readers) need no ring: they are not controls. */
+[tabindex="-1"]:focus { outline: none }
+
+/* Settings: foldable sections (5.6) — the whole summary row is the 48 px target */
+.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; min-height: 48px }
+.fold > summary::-webkit-details-marker { display: none }
+.fold > summary h2 { margin: 0 }
+.fold > summary::after { content: '▾'; font-size: 1.25rem; color: var(--muted, #9fb0dd); transition: transform .2s }
+.fold[open] > summary::after { transform: rotate(180deg) }
+.fold[open] > summary { margin-bottom: 8px }
+:root.rm .fold > summary::after { transition: none }
+
+/* Landscape phone (5.7, WCAG 1.3.4 «Orientation»: not locked any more — e.g. a phone fixed on a wheelchair mount).
+   The play screen puts the field on the left and the signal + pads on the right, so nothing is cut off at 390 px. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .app { max-width: 1000px }
+
+  .play-screen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 42%) }
+  .play-top, .play-progress { grid-column: 1 / -1 }
+  .play-screen .stage { min-height: 0 }
+  .play-screen .meter { grid-column: 2; grid-row: 3; align-self: end; border-top: 0 }
+  .play-screen .controls { grid-column: 2; grid-row: 4; padding-bottom: calc(8px + env(safe-area-inset-bottom)) }
+
+  .play-screen .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)) } /* whole words: «Указательный» */
+  .play-screen .gkey { min-height: 48px }
+  .sheet { max-width: 640px }
+}
+
+/* ===== 5.8 — robust layout «from start to finish» (tests/e2e/layout.mjs: 7 viewports × text 100/130/200 %).
+   Android WebView multiplies text by the system font scale (up to 200 % on Android 14+), so sizes that hold
+   text are in rem, tracks shrink (minmax(0, …)), long words wrap, nothing relies on a fixed pixel box. ===== */
+html { overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto }
+small { font-size: max(0.75rem, 0.83em) }
+.seg small, .day small, .stats small, .calendar small, .skin small, .xp small { font-size: 0.75rem }
+
+.eyebrow, .play-title h1, .seg, .nav-item, .pad-label span, .bridge-panel small, .legend, .how li, .badge, .stats div { overflow-wrap: anywhere }
+
+/* Radio groups wrap instead of overflowing: «Пропорциональный» does not fit a third of 320 px. */
+.segmented { grid-auto-flow: row }
+
+.seg { min-width: 0 }
+
+/* Icon boxes grow with the text they sit next to. */
+.hero-top { grid-template-columns: 3.5rem minmax(0, 1fr) auto }
+.avatar { width: 3.5rem; height: 3.5rem }
+.game-icon { width: 3.25rem; height: 3.25rem; flex: none }
+.plan-list li { grid-template-columns: 2.75rem minmax(0, 1fr) }
+.plan-icon { width: 2.5rem; height: 2.5rem }
+.skill { grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) minmax(2.25rem, auto) }
+.skill span { overflow-wrap: anywhere }
+.day i { width: min(30px, 100%); aspect-ratio: 1; height: auto }
+
+/* Results: the stars are a picture (the score is text next to them) — sized by the screen, never wider than it. */
+.big-stars { letter-spacing: 0.08em }
+.big-score { font-size: min(3.25rem, 16vw) }
+
+/* Bottom bar: labels may take two lines at large text; the scroll padding above follows in rem. */
+.nav-item { padding: 4px 2px; line-height: 1.15; text-align: center }
+.showcase-banner .btn { min-height: 44px }
+
+/* Play: the title column shrinks (the score stays on screen), the stage gives way to the controls on short screens,
+   and if text is so large that nothing fits, the screen scrolls instead of cutting the pads off. */
+.play-top { grid-template-columns: 48px minmax(0, 1fr) 48px auto }
+.play-screen { overflow: hidden auto }
+.stage { min-height: 160px }
+.play-side { display: contents }
+
+/* Emulator pads: label at the top, value at the bottom — in the flow, so they can never overlap. */
+.pad { display: flex; flex-direction: column; justify-content: space-between; padding: 10px 12px; min-width: 0 }
+.pad-label, .pad-value { position: relative; inset: auto; z-index: 1 }
+.pad-label { gap: 2px }
+
+.pad-value { align-self: flex-end }
+.pads.two { height: auto; min-height: clamp(120px, 22dvh, 190px) }
+.pad-co { padding: 4px 8px }
+.settings .pads.two, .calibration .pads.two { height: auto; min-height: 120px }
+.tutorial .controls .pads.two { height: auto; min-height: 130px }
+.controls.compact .pads.two { height: auto; min-height: 96px }
+
+@media (orientation: landscape) and (max-height: 540px) {
+
+  .play-screen .play-side { display: flex; flex-direction: column;                            min-height: 0; overflow-y: auto }
+  .play-screen .pads.two { height: auto; min-height: clamp(120px, 46dvh, 220px) }
+}
+
+/* 5.8 — second pass of the layout audit. */
+.top-bar { grid-template-columns: 52px minmax(0, 1fr) 52px }
+.top-bar h1 { overflow-wrap: anywhere }
+.bottom-nav { grid-template-columns: repeat(4, minmax(0, 1fr)) } /* 5.14: four sections — the nest joined */
+.bottom-nav.three { grid-template-columns: repeat(3, minmax(0, 1fr)) } /* 6.3.3: progress in numbers — no section of the bird */
+.level-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 4.25rem), 1fr)) }
+.skins { grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr)) }
+.skin { min-width: 0 }
+.skin canvas { max-width: 100%; height: auto }
+.table-wrap { overflow-x: auto; margin: 6px 0; border-radius: 10px }
+.table-wrap:focus-visible { outline-offset: 0 }
+table.data { margin: 0 }
+
+.row input[type=text], .row input[type=url], .row input[type=time] { width: 100%; min-width: 0 }
+.row > span { flex-wrap: wrap }
+.pin-input { width: min(10ch, 100%) }
+.showcase-banner { flex-wrap: wrap }
+
+/* The game hint is a bar under the field (5.8): over the canvas it hid what games draw at the bottom and, on a short
+   screen with large text, climbed over the header. Two lines are reserved so the layout does not jump. */
+.stage-hint { position: static; margin: 0; border-radius: 0; background: var(--card); border-top: 1px solid var(--line);                                 display: grid; place-items: center }
+.play-side > :first-child { margin-top: auto } /* landscape column: overflow scrolls instead of escaping upwards */
+
+/* Short landscape screens: sticky footers would cover half of the page — they scroll with it. */
+@media (max-height: 540px) and (orientation: landscape) {
+  .sticky-actions { position: static; background: none }
+  .play-screen { grid-template-rows: auto 4px minmax(0, 1fr) auto }
+  .play-screen .stage { grid-column: 1; grid-row: 3 }
+  .play-screen .stage-hint { grid-column: 1; grid-row: 4 }
+  .play-screen .play-side { grid-column: 2; grid-row: 3 / 5 }
+}
+/* Only the field shrinks; the hint, the signal and the pads keep their content height. */
+.play-screen > .stage-hint, .play-screen .meter, .play-screen .controls { flex: none }
+/* A pad narrower than 6.5 rem keeps «A»/«B» and the value; the word under the letter would break mid-word. */
+.pad { container-type: inline-size }
+@container (max-width: 6.5rem) { .pad-label span { display: none } }
+.row input:not([type=checkbox]):not([type=range]):not([type=file]) { min-height: 48px }
+/* 5.8 — third pass. */
+@media (orientation: landscape) and (max-height: 540px) {
+  /* flex-end with overflow pushed the signal above the column; margin-top: auto aligns down only when it fits */
+  .play-screen .play-side { justify-content: normal }
+  .play-screen .play-side .meter { align-self: stretch }
+  .play-screen { overflow: hidden auto }
+  /* A compact bottom bar: icon and label in a row, 48 px — a third of a 320 px high screen is too much. */
+
+  .nav-item .nav-icon { padding: 2px 10px }
+
+}
+html { scroll-padding-bottom: var(--nav-space, calc(64px + 2rem)) }
+.scroll { padding-bottom: calc(var(--nav-space, calc(64px + 2rem)) + 2rem) }
+.nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center }
+.nav-label { max-width: 100%; overflow-wrap: anywhere }
+.fold > summary h2 { min-width: 0; overflow-wrap: anywhere }
+.row.toggle { min-height: 48px }
+/* Pad letters and values follow the pad width (container units) as well as the text size. */
+.pad-label b { line-height: 1.25 }
+.pad-value { line-height: 1.25; max-width: 100% }
+.pad { gap: 2px }
+.pads.two { grid-template-columns: minmax(0, 1fr) minmax(2.75rem, 0.55fr) minmax(0, 1fr) }
+.pad-label b { font-size: max(12px, min(1.75rem, 40cqi)) }
+.pad-value { font-size: max(12px, min(1.125rem, 26cqi)) }
+html { scroll-padding-top: calc(3rem + 24px) } /* sticky top bar / showcase banner */
+.showcase-banner small { font-size: inherit }
+@media (max-width: 380px) { .showcase-banner small { display: none } }
+/* Landscape: the field takes the whole left side; the hint sits on top of the right column (5.8). */
+@media (orientation: landscape) and (max-height: 540px) {
+  .play-screen { grid-template-rows: auto 4px auto minmax(0, 1fr) }
+  .play-screen .stage { grid-column: 1; grid-row: 3 / 5 }
+  .play-screen .stage-hint { grid-column: 2; grid-row: 3; border-top: 0; border-bottom: 1px solid var(--line) }
+  .play-screen .play-side { grid-column: 2; grid-row: 4 }
+}
+.big-stars { font-size: min(4rem, 20vw, 26vh); overflow-wrap: anywhere }
+/* SVG line icons (5.8) instead of platform emoji. */
+.ico { width: 1.5rem; height: 1.5rem; display: block }
+.icon-btn { display: inline-grid; place-items: center }
+.nav-icon .ico { width: 1.375rem; height: 1.375rem }
+.pad:focus-visible, .gkey:focus-visible, .pad-co:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
+:root .showcase-banner small, :root.hc .showcase-banner small { color: inherit }
+.plan .plan-start { margin: 4px 0 12px }
+.plan .plan-list { margin-bottom: 0 }
+
+/* Windows high contrast (forced colors, 5.9): backgrounds are replaced by system colours — state must not rely on them. */
+@media (forced-colors: active) {
+  :focus-visible { outline: 3px solid Highlight; outline-offset: 2px }
+  .seg.active, .nav-item.active, .level.rec, .skin.active, .pad.on, .gkey.on, .pad-co.on { outline: 3px solid Highlight; outline-offset: -3px }
+  .meter-bar .fill, .pad-fill, .xp-track i, .skill-track i, .play-progress i, .day.done i, .confirm-ring, .cal-ring { forced-color-adjust: none }
+  .btn, .seg, .card, .pad, .gkey { border: 1px solid CanvasText }
+  /* The drawn switch is a native checkbox again: system colours draw its state (5.12). */
+  input[type=checkbox] { appearance: auto; -webkit-appearance: auto; width: 28px; height: 28px; border: 0; background: none }
+  input[type=checkbox]::before { display: none }
+  .hero > .trails, .onb-hero > .trails, .game-card::after, .tinted::after, .g-check.card::after, .tutorial-card.card::after { display: none }
+}
+
+/* ===== 5.9 — words are never split mid-word at the default text size on a phone ≥ 360 px (layout linter «broken»;
+   the screenshot showed «Пропорциональны / й»). `overflow-wrap: anywhere` stays as the last resort for 200 % text. */
+/* The longest word of a group (`--word`, letters; segmented() and createGesturePads() set it) sets the narrowest
+   column: «Пропорциональный» stacks the options on a phone, «Правая рука / Левая рука» stay side by side.
+   Measured: bold 14 px Cyrillic ≈ 0.56 rem per letter; + padding. */
+.segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(5.75rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)) } /* 5.12: three short options in a row */
+/* 6.2: «50 Гц / по умолчанию» and «10 Гц / как у „Моторики“» are short labels with a long caption. The caption, not the label, set the column, and at 200 % text on 320 px the settings page grew past the screen. */
+.stream-rate .segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)) }
+.card { min-width: 0 }
+.checkin .segmented { grid-template-columns: repeat(auto-fit, minmax(min(100%, max(8rem, calc(var(--word, 0) * 0.56rem + 1.25rem))), 1fr)) }
+/* Gesture pads: icon + name; never fewer than two columns (seven pads in one column would push the field away).
+   bold 13 px ≈ 0.52 rem per letter + icon 36 px + gaps and padding. */
+.pads.gestures { grid-template-columns: repeat(auto-fit, minmax(min(calc(50% - 4px), max(6rem, calc(var(--word, 0) * 0.52rem + 3.75rem))), 1fr)) }
+.gkey { min-height: 3.5rem; overflow-wrap: normal }
+.gkey span { overflow-wrap: anywhere } /* last resort at 320 px or 200 % text */
+/* Number tiles: 2 × 2 on a phone — «упражнений», «выполнение, мс» and «2310» do not fit a quarter of 360 px. */
+.stats { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+@media (min-width: 480px) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)) } }
+/* Achievements: «Переключатель» is 129 px in bold 16 px, half of a 360 px card gives 121. */
+.badge b { font-size: 0.875rem }
+/* Tables: columns take whole words; a table wider than the card scrolls in its own named region (WCAG 1.4.10 lets
+   data tables scroll in two dimensions) instead of breaking «Усталость» into «Устало / сть». */
+table.data { table-layout: auto }
+table.data th, table.data td { overflow-wrap: normal; hyphens: manual; padding: 4px }
+table.data th { font-size: 0.75rem }
+/* «A+B» is one symbol for the player: it shrinks with the pad, never wraps. */
+.pad-co { container-type: inline-size }
+.pad-co span { white-space: nowrap; font-size: max(12px, min(1rem, 30cqi)) }
+/* A gesture pad narrower than icon + name (landscape column, 320 px): the icon goes above the name. */
+.gkey { container-type: inline-size }
+@container (max-width: 8.5rem) { /* content box: icon 36 + gap 4 + «Указательный» 94 px */
+  .gkey > * { grid-column: 1 / -1; justify-self: center; text-align: center }
+}
+@media (max-width: 479px) { .stats > :last-child:nth-child(odd) { grid-column: 1 / -1 } } /* 5 tiles: 2 + 2 + 1 wide */
+/* The radar spans the card including its padding: the side labels need the room more than a margin (5.9). */
+.radar { margin: 0 -16px; max-width: calc(100% + 32px) }
+
+/* ===== 5.10 — what the player presses is always on screen (layout linter «reach» and «action»). ===== */
+/* Screens driven by the pads («Первые шаги», calibration): the step scrolls in the middle, the signal and the pads
+   are docked at the bottom — in landscape on the right, like the game. */
+.frame { height: 100dvh; min-height: 0 }
+.frame > .frame-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px }
+.frame > .frame-dock { flex: none }
+.frame .tut-canvas { width: auto; max-width: 100%; height: clamp(110px, 28dvh, 240px) }
+.frame .tut-head .tut-ring { width: clamp(32px, 5dvh, 40px); height: clamp(32px, 5dvh, 40px) }
+.frame .row-actions { margin-top: 8px }
+@media (orientation: landscape) and (max-height: 540px) {
+  .frame { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 42%); grid-template-rows: auto minmax(0, 1fr) }
+  .frame > .top-bar { grid-column: 1 / -1 }
+  .frame > .frame-body { grid-column: 1; grid-row: 2 }
+  .frame > .frame-dock { grid-column: 2; grid-row: 2; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; border-left: 1px solid var(--line) }
+  .frame > .frame-dock > :first-child { margin-top: auto } /* down when it fits, scrolls when it does not (C.1.38) */
+  .frame .tut-canvas { height: clamp(90px, 30dvh, 200px) }
+}
+/* Demo profile: the banner takes its height from a full-height screen instead of pushing its bottom (the pads)
+   off the screen — the mode used to present the game to the jury. */
+.app:has(> .showcase-banner):has(> .play-screen, > .frame) { height: 100dvh; display: flex; flex-direction: column }
+.app:has(> .showcase-banner) > .play-screen, .app:has(> .showcase-banner) > .frame { height: auto; flex: 1; min-height: 0 }
+/* Dialog sheets scroll, their actions do not: «Старт» stays visible on any phone (it was scrolled out of sight). */
+.sheet-actions { position: sticky; bottom: -18px; margin: 12px -18px -18px; padding: 10px 18px 18px; background: inherit; border-top: 1px solid var(--line); z-index: 1 }
+.sheet-actions .confirm { margin: 0 0 8px }
+/* Game dialogs (intro, pause) cover everything under the header — the field, the hint, the signal and the pads. */
+.play-screen { position: relative }
+.play-screen > .overlay { top: var(--play-top, 60px); z-index: 4 }
+/* 200 % text on a small phone: the dock alone can be taller than the screen — then the whole frame scrolls,
+   and the step keeps a readable minimum instead of collapsing to nothing. */
+.frame { overflow: hidden auto }
+.frame > .frame-body { min-height: min(14rem, 45dvh) }
+/* Demo banner in landscape: the pads give up a little height so the column still fits (5.10). */
+@media (orientation: landscape) and (max-height: 540px) { .app:has(> .showcase-banner) .play-screen .pads.two { min-height: clamp(110px, 38dvh, 220px) } }
+/* Rewards of a run (5.10): on the screen, not in toasts over the score. */
+.rewards { list-style: none; margin: 4px auto 10px; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px }
+.rewards li { display: flex; align-items: center; gap: 6px; background: var(--card); border: 1.5px solid var(--warn); border-radius: 99px; padding: 5px 12px 5px 6px; font-size: 0.875rem; font-weight: 800; box-shadow: var(--shadow-1) }
+.rewards li .art { width: 1.5rem; height: 1.5rem }
+
+/* 5.11 — «Синхронизация звука»: the dot reaches the line on every click (transform only: no layout per frame). */
+.sync-stage { position: relative; height: 10rem; margin: 1rem 0; border-radius: 16px; background: var(--card); border: 1px solid var(--line); overflow: hidden }
+.sync-dot { position: absolute; top: 0; left: calc(50% - 1rem); width: 2rem; height: 2rem; border-radius: 50%; background: var(--accent); transform: translateY(calc(var(--y, 0) * 7rem)) }
+.sync-line { position: absolute; left: 10%; right: 10%; top: 9rem; height: 4px; border-radius: 2px; background: var(--muted) }
+.sync-line.hit { background: var(--good) }
+.sync-value { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums }
+/* 5.11 — 320 px high landscape (568×320): the hint on top of the right column pushed the pads off the screen
+   (full layout audit of 5.10: `reach` in 5 states — a long intro hint, the bridge status, high contrast, 7 gestures).
+   On such screens the hint goes under the field, and the right column holds only the signal and the pads. */
+@media (orientation: landscape) and (max-height: 400px) {
+  .play-screen { grid-template-rows: auto 4px minmax(0, 1fr) auto }
+  .play-screen .stage { grid-column: 1; grid-row: 3 }
+  .play-screen .stage-hint { grid-column: 1; grid-row: 4; border-top: 1px solid var(--line); border-bottom: 0; min-height: calc(1.45em + 12px) }
+  .play-screen .play-side { grid-column: 2; grid-row: 3 / 5 }
+  .play-screen .gkey, .frame .gkey { min-height: 44px }
+  .frame .gkey { padding-block: 2px } /* the icon sits above the name here; 4 px of padding put «Ключ» 2 px past a 320 px-tall screen */
+  .play-screen .pads.gestures, .frame .pads.gestures { gap: 4px }
+  .frame .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  /* 6.3.3: a demo shows the pads it presses; on a 320 px-tall screen its note took their room and a pad left the screen */
+  .play-screen .pads-note { display: none }
+}
+/* 5.11 — design review. Warning cards look like warnings (the later `.card` border used to win). */
+.card.warn-card { border: 1.5px solid var(--warn); background: var(--tint-yellow) }
+.warn-card > b { color: var(--warn-ink) }
+:root.hc .card.warn-card { border-color: #ffe14d; background: #000 }
+/* Home hero on 320–380 px: the greeting keeps whole words, the series goes under it instead of squeezing it. */
+.hero h1, .hero .eyebrow { overflow-wrap: anywhere } /* 5.12: whole words when they fit; Unbounded at 200 % text on 320–360 px breaks rather than overflows */
+.hero h1 { font-size: clamp(1.25rem, 6.4vw, 1.625rem) } /* Unbounded (5.12) is wider than the system font */
+@media (max-width: 380px) {
+  .hero-top { grid-template-columns: 3.5rem minmax(0, 1fr) }
+  .hero-top .streak { grid-column: 2; justify-self: start }
+}
+/* Short portrait phones (568 px, iPhone SE 1st gen): the day's first action stays above the bar in high contrast too.
+   High contrast adds a 2 px border on the hero and the bar; the looser padding pushed «Начать» under it at 320 × 568. */
+@media (orientation: portrait) and (max-height: 600px) {
+  .hero { padding: 14px 14px 12px }
+  .hero-top { gap: 8px }
+  .week { margin-top: 8px }
+  :root.hc .hero { padding: 8px 10px 6px }
+  :root.hc .week { margin-top: 4px; gap: 4px }
+  :root.hc .plan .plan-start { margin: 0 0 6px }
+}
+/* 5.11 — landscape phone (a wheelchair holder): a navigation rail on the left (Material 3) instead of a bar over a
+   third of a 390 px high screen, and every screen's main action stays on screen in one compact sticky row (it was
+   static there — «Дальше», «Играть», «Начать» were below the edge). */
+@media (orientation: landscape) and (max-height: 540px) {
+  .bottom-nav { top: 0; bottom: 0; left: 0; transform: none; width: calc(84px + env(safe-area-inset-left)); max-width: none; grid-template-columns: 1fr; grid-auto-rows: min-content; align-content: center; gap: 4px;
+    border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left) }
+  .nav-item { flex-direction: column; min-height: 64px; gap: 2px }
+  .bottom-nav.three { grid-template-columns: 1fr }
+  .screen:has(> .bottom-nav) { padding-left: calc(88px + env(safe-area-inset-left)) }
+  :root { --nav-space: 0px }
+  .sticky-actions { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 6px) }
+  /* basis in vw, not rem: at 200 % text a 12 rem basis put every button on its own row and the bar covered the page */
+  .sticky-actions > .btn { flex: 1 1 28vw; margin: 0; min-height: 48px; padding-block: 6px }
+  .sticky-actions .btn.big { min-height: 52px }
+  .app:has(> .screen > .bottom-nav) > .showcase-banner { padding-left: calc(88px + env(safe-area-inset-left)) }
+}
+:root.hc .bottom-nav { border-radius: 0 }
+/* 5.11 — two lines of the game hint fit the reserve exactly (border included): a 1 px jump resized the canvas. */
+.stage-hint { min-height: calc(2.9em + 14px); line-height: 1.45 }
+/* 5.11 — design review, second part. Unselected options look tappable; the game grid has no lonely cell. */
+.seg:not(.active) { background: var(--card); box-shadow: inset 0 0 0 1px var(--line) }
+:root.hc .seg:not(.active) { background: #000; box-shadow: inset 0 0 0 2px #fff }
+.game-card:last-child:nth-child(even) { grid-column: 1 / -1; min-height: 150px } /* the first card spans the row: an even last one would stand alone */
+/* Seven gesture pads on a short phone (320×568): three columns, the field keeps room for the hand. */
+@media (max-height: 640px) and (orientation: portrait) {
+  .play-screen .pads.gestures { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+  .play-screen .gkey { min-height: 48px; grid-template-columns: 1fr; justify-items: center }
+  .play-screen .gkey .gesture-icon { display: none }
+  .play-screen .pads-note { display: none }
+}
+/* 320 px with 200 % text: a split inside a word is the lesser evil than text past the edge (the linter's rule). */
+@media (max-width: 359px) { .hero h1, .btn { overflow-wrap: anywhere } }
+
+/* Жар-птица (5.12): the nest card — a dark brand cover with the glowing bird, the progress to the next stage. */
+.pet-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; background: var(--grad-cover); color: var(--cover-text); border-color: transparent; position: relative; overflow: hidden }
+.pet-card .pet-art .art { width: 96px; height: 96px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
+.pet-card h2 { color: var(--cover-text); font-family: var(--font-display); font-size: 1.25rem; margin: 2px 0 6px }
+.pet-card .eyebrow { color: var(--cover-muted) }
+.pet-card small { color: var(--cover-muted) }
+.pet-card .xp-track { background: #1b2a37; margin: 2px 0 4px }
+.pet-progress small { display: block; font-size: 0.8125rem }
+@media (max-width: 359px) { .pet-card { grid-template-columns: 1fr } }
+.pet-card.numbers { grid-template-columns: 1fr } /* 6.3.3: progress in numbers — the card without the bird */
+.pet-card.numbers .stats { margin: 8px 0 10px }
+/* The bird's path: a vertical journey with a rail through the stage nodes (Finch / Duolingo-like), any text size. */
+.pet-path { list-style: none; margin: 0; padding: 0; display: grid }
+.pet-path li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 12px 6px 6px; border-radius: 20px; position: relative }
+.pet-path li::before { content: ""; position: absolute; left: 33px; top: 0; bottom: 0; width: 2px; background: var(--line-strong) }
+.pet-path li:first-child::before { top: 50% }
+.pet-path li:last-child::before { bottom: 50% }
+.pet-path li.done::before, .pet-path li.now::before { background: var(--accent) }
+.pet-path li.now::before { bottom: 50% }
+.pet-path li.now:first-child::before { display: none }
+.pet-path li.now:not(:last-child)::after { content: ""; position: absolute; left: 33px; top: 50%; bottom: 0; width: 2px; background: var(--line-strong) }
+.pet-path .pet-node { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--card2); box-shadow: 0 0 0 2px var(--line-strong) }
+.pet-path li.done .pet-node, .pet-path li.now .pet-node { background: var(--tint-green); box-shadow: 0 0 0 2px var(--accent) }
+.pet-path li.now { background: var(--tint-green) }
+.pet-path li.next .art { filter: grayscale(1) opacity(.45) }
+.pet-path b { display: block; line-height: 1.25 }
+.pet-path small { display: block; color: var(--muted); font-size: 0.875rem }
+.pet-path li.now small { color: var(--accent-ink); font-weight: 700 }
+.pet-promise { color: var(--text) }
+
+
+/* ===== 5.13 — the living Firebird, its things, goals and hint tours.
+   Motion: short one-shots and an idle that stops by itself within 5 s (WCAG 2.2.2); all of it off with .rm and
+   prefers-reduced-motion (the rules at the end of the file). No flashes: the «evolve» glow changes slowly. ===== */
+.pet-card .pet-art { display: grid; place-items: center; padding: 0; margin: 0; border: 0; background: transparent; border-radius: 24px; cursor: pointer; min-width: 48px; min-height: 48px; color: inherit }
+.pet-card .pet-art:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
+.pet-card .pet-art .art { width: 104px; height: 104px }
+.pet-say { position: relative; margin: 10px 0 0; padding: 8px 12px; border-radius: 16px; background: #ffffff; color: #05101a; font-size: 0.875rem; font-weight: 600; line-height: 1.4 }
+.pet-say::before { content: ""; position: absolute; left: -7px; top: 14px; border: 7px solid transparent; border-left: 0; border-right-color: #ffffff }
+@media (max-width: 359px) { .pet-say::before { left: 24px; top: -7px; border: 7px solid transparent; border-top: 0; border-bottom-color: #ffffff } }
+.pet-goal { grid-column: 1 / -1; display: grid; gap: 6px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .18) }
+.pet-goal p { margin: 0; color: var(--cover-muted) }
+.pet-goal b { color: var(--cover-text) }
+.pet-goal .btn { justify-self: start }
+.pet-moment { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; background: var(--grad-cover); color: var(--cover-text); border-color: transparent; text-align: left }
+.pet-moment .art { width: 96px; height: 96px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
+.pet-moment p { margin: 0 }
+.outfit-preview { display: grid; place-items: center; margin: 4px 0 8px; padding: 8px; border-radius: 22px; background: var(--grad-cover) }
+.outfit-preview .art { width: 128px; height: 128px; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
+.outfit-slot { margin: 10px 0 }
+.outfit-label { margin: 0 0 6px; font-weight: 800 }
+.outfit-slot .note { margin: 0 }
+.goal-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; background: var(--grad-cover); color: var(--cover-text); border-color: transparent }
+.goal-intro p { margin: 0 }
+.goal h2, .goal h3 { margin: 2px 0 6px; font-size: 1.0625rem }
+.goal.active { border: 2px solid var(--accent) }
+.goal .xp-track { margin: 6px 0 4px }
+.goal small { display: block; color: var(--muted); margin-bottom: 10px }
+.goal .note { margin: 0 0 8px }
+@media (max-width: 359px) { .pet-moment, .goal-intro { grid-template-columns: 1fr; justify-items: center; text-align: center } }
+
+/* The bird moves as one group from its feet; the eyes blink from their middle; the tail sways from its base. */
+.firebird .fb-bird, .firebird .fb-eyes, .firebird .fb-tail { transform-box: fill-box }
+.firebird .fb-bird { transform-origin: 50% 100% }
+.firebird .fb-eyes { transform-origin: 50% 50% }
+.firebird .fb-tail { transform-origin: 50% 100% }
+.firebird.alive .fb-bird { animation: fb-breathe 2.4s ease-in-out 2 }
+.firebird-fed.alive .fb-bird { animation: fb-bounce 1.6s ease-in-out 3 }
+.firebird-rest.alive .fb-bird, .firebird.anim-sleep .fb-bird { animation: fb-sleep 4.4s ease-in-out 1 }
+.firebird.alive .fb-eyes { animation: fb-blink 2.4s ease-in-out 2 }
+.firebird.alive .fb-tail { animation: fb-sway 2.4s ease-in-out 2 }
+.firebird.anim-hop .fb-bird { animation: fb-hop .6s cubic-bezier(.3, .7, .4, 1) 1 }
+.firebird.anim-wave .fb-bird { animation: fb-wave .8s ease-in-out 1 }
+.firebird.anim-celebrate .fb-bird { animation: fb-hop .55s cubic-bezier(.3, .7, .4, 1) 2 }
+.firebird.anim-celebrate .fb-tail { animation: fb-sway .55s ease-in-out 2 }
+.firebird.anim-evolve .fb-bird { animation: fb-evolve 1.4s cubic-bezier(.2, .8, .3, 1.2) 1 }
+.firebird.anim-evolve { animation: fb-warm 1.4s ease-out 1 }
+@keyframes fb-breathe { 0%, 100% { transform: none } 50% { transform: translateY(-1.5px) scaleY(1.02) } }
+@keyframes fb-bounce { 0%, 100% { transform: none } 40% { transform: translateY(-3px) scaleY(1.03) } 70% { transform: translateY(0) scaleY(.98) } }
+@keyframes fb-sleep { 0%, 100% { transform: none } 50% { transform: scaleY(.97) scaleX(1.02) } }
+@keyframes fb-blink { 0%, 44%, 52%, 100% { transform: none } 48% { transform: scaleY(.1) } }
+@keyframes fb-sway { 0%, 100% { transform: none } 30% { transform: rotate(-2.5deg) } 70% { transform: rotate(2.5deg) } }
+@keyframes fb-hop { 0%, 100% { transform: none } 30% { transform: translateY(-9px) scale(.97, 1.04) } 60% { transform: translateY(0) scale(1.04, .95) } 80% { transform: scale(.99, 1.01) } }
+@keyframes fb-wave { 0%, 100% { transform: none } 25% { transform: rotate(-6deg) } 50% { transform: rotate(5deg) } 75% { transform: rotate(-3deg) } }
+@keyframes fb-evolve { 0% { transform: scale(.55); opacity: .2 } 60% { transform: scale(1.08); opacity: 1 } 100% { transform: none } }
+@keyframes fb-warm { 0% { filter: drop-shadow(0 0 0 rgba(255, 210, 122, 0)) } 50% { filter: drop-shadow(0 0 14px rgba(255, 210, 122, .85)) } 100% { filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) } }
+
+/* Hint tours: a card above the bottom bar (beside the rail in landscape) and a ring around the element it explains. */
+.tour { position: fixed; z-index: 25; left: 12px; right: 12px; bottom: 96px; max-width: 520px; margin: 0 auto; max-height: 48vh; display: flex; flex-direction: column;
+  background: var(--card); color: var(--text); border: 2px solid var(--accent-ink); border-radius: 24px; padding: 14px 16px 12px; box-shadow: var(--shadow-2); animation: rise .25s ease }
+/* The text scrolls inside the card, the buttons stay (a 390 px high landscape screen at 200 % text). */
+.tour-text { overflow: auto; min-height: 0; flex: 1 1 auto }
+.tour-count { margin: 0; color: var(--muted); font-size: 0.8125rem; font-weight: 700 }
+.tour h2 { margin: 2px 0 6px; font-size: 1.125rem }
+.tour p.tour-body { margin: 0 0 10px }
+.tour .row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; flex: 0 0 auto }
+.tour .row-actions .btn { flex: 1 1 9rem; margin: 0 }
+.tour-target { outline: 3px solid var(--focus) !important; outline-offset: 4px; box-shadow: 0 0 0 9px var(--deco-green, rgba(22, 225, 130, .25)) !important; scroll-margin-top: 72px; animation: tour-ring 1.6s ease-in-out 3 }
+@keyframes tour-ring { 0%, 100% { outline-offset: 4px } 50% { outline-offset: 7px } }
+/* Short screens (a 568 × 320 phone in landscape): a smaller card and the explained element right under the top (or the
+   demo banner), so both are on screen at once — the full layout run found the card over the element. */
+@media (max-height: 540px) { .tour { max-height: 40vh; padding: 10px 12px 8px } .tour h2 { margin: 0 0 4px } .tour-target { scroll-margin-top: 52px } }
+/* The demo banner above a game screen: the screen takes the height that is left, not the whole viewport. Found once the
+   demo profile kept the person's gesture scheme (5.13): «Ключ» was below a 568 × 320 screen under the banner. */
+.app:has(> .showcase-banner):has(> .play-screen) { height: 100dvh; min-height: 0; display: flex; flex-direction: column }
+.app:has(> .showcase-banner) > .play-screen { height: auto; flex: 1 1 0; min-height: 0 }
+/* …and on a short landscape game screen there is no room for the banner and six gesture pads: the pads win («что нажимать —
+   всегда на экране», 5.10); every other screen of the demo still shows the banner. */
+@media (orientation: landscape) and (max-height: 540px) { .app:has(> .play-screen) > .showcase-banner { display: none } }
+/* The same for «Первые шаги» and the calibration (`.frame`), in both orientations of a short screen: on 320 × 568 the
+   banner put «Ключ» of the gesture pads under the bottom edge. */
+@media (max-height: 600px) { .app:has(> .frame) > .showcase-banner { display: none } }
+:root.hc .tour { background: #000; border-color: #ffe14d }
+:root.hc .tour-target { outline-color: #ffe14d !important; box-shadow: none !important }
+:root.hc .pet-say { background: #000; color: #fff; border: 2px solid #fff }
+:root.hc .pet-say::before { display: none }
+:root.hc .pet-moment, :root.hc .goal-intro, :root.hc .outfit-preview { background: #000; color: #fff; border: 2px solid var(--line); box-shadow: none }
+@media (forced-colors: active) { .tour-target { outline: 3px solid Highlight !important } .tour { border-color: Highlight } }
+
+/* ===== Modes: high contrast and reduced motion always win over decoration ===== */
+:root.hc body { background: #000 }
+:root.hc .card, :root.hc .btn, :root.hc .seg, :root.hc .level, :root.hc .pad, :root.hc .gkey, :root.hc .badge, :root.hc .sheet,
+:root.hc .plan-list li, :root.hc .skin, :root.hc .legend, :root.hc .pad-label, :root.hc .pad-value, :root.hc .rewards li { border: 2px solid var(--line) }
+:root.hc .hero, :root.hc .onb-hero, :root.hc .game-card, :root.hc .g-check.card, :root.hc .tutorial-card.card, :root.hc .celebrate, :root.hc .tinted,
+:root.hc .card.warn-card, :root.hc .tip.card, :root.hc .coach.card, :root.hc .game-hero, :root.hc .plan-icon, :root.hc .sheet-title .tile, :root.hc .sec-ico,
+:root.hc .stats div, :root.hc .pet-card { background: #000; color: #fff; border: 2px solid var(--line); box-shadow: none }
+:root.hc .hero > .trails, :root.hc .onb-hero > .trails, :root.hc .game-card::after, :root.hc .tinted::after, :root.hc .g-check.card::after, :root.hc .tutorial-card.card::after { display: none }
+:root.hc .btn.primary, :root.hc .seg.active, :root.hc .level.rec, :root.hc .nav-item.active .nav-icon { background: #ffe14d; color: #000; box-shadow: none }
+:root.hc .btn.primary:disabled { background: #000; color: #fff; border-color: #fff }
+:root.hc .avatar, :root.hc .streak, :root.hc .game-icon { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none }
+:root.hc .hero .xp-track i, :root.hc .day.done i { background: #3fe0a0; border-color: #3fe0a0 }
+:root.hc .day.today i { box-shadow: none }
+:root.hc .note, :root.hc small { color: var(--muted) }
+:root.hc .eyebrow { color: #ffe14d }
+:root.hc .card.warn-card { border-color: #ffe14d; background: #000 }
+:root.hc .bottom-nav { background: #000; border: 2px solid #fff }
+:root.hc .breath { background: #ffe14d; box-shadow: none }
+:root.hc .big-stars .art { filter: none }
+:root.hc .level.rec .star-row { color: #555 }
+:root.hc .scroll > h1::after { background: #ffe14d }
+:root.rm *, :root.rm *::before, :root.rm *::after { animation: none !important; transition: none !important }
+
+/* ===== 5.14 — the nest (the Firebird's own section), the growth ceremony, the XP fill, week to week =====
+   Motion: a spring through CSS linear() (Material 3 Expressive physics, Baseline since 12.2023) with a cubic fallback;
+   overshoot only on the hero moment, never on navigation. «Меньше движения» keeps a cross-fade, not nothing (WebKit
+   2025): no turn, no growth, no swelling light. No flashes (WCAG 2.3.1). */
+:root { --spring-pop: cubic-bezier(.2, .9, .25, 1.25) }
+@supports (animation-timing-function: linear(0, 1)) {
+  :root { --spring-pop: linear(0, 0.043, 0.151, 0.294, 0.45, 0.602, 0.738, 0.853, 0.944, 1.011, 1.056, 1.082, 1.094, 1.094, 1.086, 1.074, 1.059, 1.045, 1.031, 1.019, 1.009, 1.002, 0.997, 0.993, 0.992, 0.991, 0.991, 0.992, 1) }
+}
+
+/* The nest: the brand's dark cover with light trails; the bird in the middle on a warm aura whose strength is the way to
+   the next stage (it never fades back). Text sits below the aura on the solid cover. */
+.nest-hero { position: relative; overflow: hidden; display: grid; justify-items: center; text-align: center; gap: 4px; background: var(--grad-cover); color: var(--cover-text); border-radius: 32px; padding: 16px 18px 18px; margin-bottom: 12px; box-shadow: var(--shadow-2) }
+.nest-hero > * { position: relative }
+.nest-hero > .trails { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+.nest-aura { position: absolute !important; top: 0; left: 50%; width: 240px; height: 240px; margin-left: -120px; border-radius: 50%; pointer-events: none; opacity: var(--aura, .5);
+  background: radial-gradient(circle, rgba(255, 210, 122, .6) 0%, rgba(255, 154, 82, .28) 40%, rgba(109, 78, 240, .16) 60%, transparent 72%) }
+.nest-bird { display: grid; place-items: center; padding: 0; margin: 0; border: 0; background: transparent; border-radius: 50%; cursor: pointer; color: inherit; min-width: 48px; min-height: 48px }
+.nest-bird:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px }
+.nest-bird .art { width: min(196px, 54vw); height: auto; filter: drop-shadow(0 16px 24px rgba(0, 0, 0, .5)) }
+.nest-info { display: grid; gap: 4px; justify-items: center; width: 100%; max-width: 30rem }
+.nest-info h1 { color: var(--cover-text); margin: 0; font-size: clamp(1.5rem, 7vw, 2rem); overflow-wrap: anywhere }
+.nest-info .eyebrow { color: var(--cover-muted); margin: 0 }
+.nest-character { margin: 0; color: var(--cover-muted); font-size: 0.9375rem; line-height: 1.4 }
+.nest-info .pet-progress { width: 100%; text-align: left; margin-top: 6px }
+.nest-info .xp-track { background: #1b2a37; margin: 4px 0 }
+.nest-info small { color: var(--cover-muted) }
+.nest-hero .pet-say { justify-self: stretch; text-align: left; margin-top: 10px }
+.nest-hero .pet-say::before { left: 50%; top: -7px; margin-left: -7px; border: 7px solid transparent; border-top: 0; border-bottom-color: #ffffff }
+.pet-card .nest-link { justify-self: start; margin-top: 10px }
+.badges.collection { list-style: none; margin: 0; padding: 0 }
+.badge .gift { color: var(--accent-ink); font-weight: 700 }
+
+/* The growth ceremony: the old stage turns half-way and shrinks away, the light swells, the new stage grows out of it. */
+span.evo { position: relative; display: inline-grid; place-items: center; flex: none }
+.evo > span { grid-area: 1 / 1; display: grid; place-items: center; width: 100%; height: 100% }
+.evo .art { filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45)) }
+.evo-glow { border-radius: 50%; background: radial-gradient(circle, rgba(255, 210, 122, .9) 0%, rgba(255, 154, 82, .35) 45%, transparent 70%); opacity: .35; animation: evo-glow 1.2s ease-out both }
+.evo-from { animation: evo-out .6s cubic-bezier(.55, 0, .8, .2) both }
+.evo-to { animation: evo-in .7s var(--spring-pop) .5s both }
+@keyframes evo-out { to { transform: scale(.15) rotate(160deg); opacity: 0 } }
+@keyframes evo-in { from { transform: scale(.15); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes evo-glow { 0% { transform: scale(.3); opacity: 0 } 45% { transform: scale(1.1); opacity: .95 } 100% { transform: none; opacity: .35 } }
+@keyframes evo-fade-out { to { opacity: 0 } }
+@keyframes evo-fade-in { from { opacity: 0 } to { opacity: 1 } }
+:root.rm .evo-from { animation: evo-fade-out .45s ease both !important }
+:root.rm .evo-to { animation: evo-fade-in .45s ease .3s both !important }
+:root.rm .evo-glow { animation: none !important }
+@media (prefers-reduced-motion: reduce) {
+  .evo-from { animation: evo-fade-out .45s ease both !important }
+  .evo-to { animation: evo-fade-in .45s ease .3s both !important }
+  .evo-glow { animation: none !important }
+}
+.pet-moment.grown { grid-template-columns: auto minmax(0, 1fr) }
+.pet-moment .nest-character { color: var(--cover-muted); margin: 4px 0 0 }
+.pet-moment .note { color: var(--cover-muted); margin: 4px 0 0 }
+
+/* The XP fill on return from an exercise: the bar grows to the new value, «+N XP» rises and fades under it — in the
+   flow (a row of its own), so it never covers the header at a large text size. */
+.xp-float { grid-column: 1 / -1; justify-self: center; padding: 2px 10px; border-radius: 99px; background: #05101a; color: #ffffff; font-weight: 800; font-size: 0.8125rem; pointer-events: none; animation: xp-float 2.2s ease-out .25s both }
+@keyframes xp-float { 0% { transform: translateY(6px); opacity: 0 } 15% { transform: none; opacity: 1 } 80% { transform: none; opacity: 1 } 100% { transform: translateY(-6px); opacity: 0 } }
+:root.rm .xp-float { animation: none }
+@media (prefers-reduced-motion: reduce) { .xp-float { animation: none !important } }
+
+/* Week to week (the organiser's IR brochure: the current period in green, the previous one in grey, an outlined chip). */
+.wk-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px }
+.wk-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 700 }
+.delta { flex: none; border: 1.5px solid var(--line-strong); border-radius: 99px; padding: 1px 10px; font-size: 0.8125rem; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums }
+.delta.up { border-color: var(--accent); color: var(--accent-ink) }
+.delta.down { color: var(--text) } /* less is not a failure: no red */
+.wk-bar { height: 10px; border-radius: 99px; background: var(--track); overflow: hidden; margin-top: 5px }
+.wk-bar i { display: block; height: 100%; border-radius: 99px }
+.wk-bar.now i { background: var(--grad-good) }
+.wk-bar.before i { background: var(--line-strong) }
+.wk-text { margin: 4px 0 0; font-size: 0.8125rem; color: var(--muted) }
+.empty-state { display: grid; justify-items: center; text-align: center; gap: 6px }
+.empty-state .btn { justify-self: stretch }
+:root.hc .nest-hero { background: #000; border: 2px solid #fff; box-shadow: none }
+:root.hc .nest-aura { display: none }
+:root.hc .delta.up { border-color: #3fe0a0; color: #3fe0a0 }
+@media (forced-colors: active) { .nest-aura, .evo-glow { display: none } .delta { border-color: CanvasText } }
+
+/* «Вопросы к Мио» (5.14): questions as buttons (≥ 48 px), answers open in place; a chevron turns. */
+.faq-intro { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center }
+.faq-intro p { margin: 0 }
+.faq-group h2 { margin-bottom: 4px }
+.faq-item { border-top: 1px solid var(--line) }
+.faq-item:first-of-type { border-top: 0 }
+.faq-item > summary { list-style: none; position: relative; display: block; min-height: 48px; padding: 13px 36px 13px 0; font-weight: 700; cursor: pointer; border-radius: 12px; overflow-wrap: anywhere }
+.faq-item > summary::-webkit-details-marker { display: none }
+.faq-item > summary::after { content: ""; position: absolute; right: 10px; top: 50%; width: 9px; height: 9px; margin-top: -7px; border-right: 2.5px solid var(--muted); border-bottom: 2.5px solid var(--muted); transform: rotate(45deg); transition: transform .2s ease }
+.faq-item[open] > summary::after { transform: rotate(225deg); margin-top: -2px }
+.faq-item > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
+.faq-item > p { margin: 0 0 10px; color: var(--text) }
+.faq-item > p + p { color: var(--muted) }
+:root.rm .faq-item > summary::after { transition: none }
+@media (forced-colors: active) { .faq-item > summary::after { border-color: CanvasText } }
+
+/* «Дело дня в быту» and «Пока протез делают» (5.14). */
+.everyday h2, .waiting-card h2 { margin: 0 }
+.everyday.done { background: var(--tint-green); border-color: var(--accent) }
+.everyday .btn, .waiting-card .btn { justify-self: start }
+.note.comeback { color: var(--text); font-weight: 600 }
+
+/* «Азбука протеза» (5.15, the sample's flashcards): a card is one big button — the question, a touch turns it and the
+   answer appears under it; dots show what was read; a check shows the right answer and why at once. */
+.primer-topic .card-head h2 { margin: 0 }
+.primer-topic.studied { border-color: var(--accent) }
+.primer-topic .note { margin: 0 }
+.primer-prize { display: flex; gap: 8px; align-items: center }
+.primer-deck, .primer-check { display: grid; gap: 12px; width: 100% }
+.flashcard { display: grid; gap: 0; width: 100%; text-align: left; color: var(--text); background: var(--card); border: 2px solid var(--line-strong); border-radius: var(--radius); box-shadow: var(--shadow-1); overflow: hidden }
+.flash-face { display: grid; gap: 10px; align-content: center; justify-items: start; width: 100%; min-height: 168px; padding: 20px; text-align: left;
+  font: inherit; color: inherit; background: transparent; border: 0; border-radius: calc(var(--radius) - 2px); cursor: pointer }
+.flash-face .eyebrow { margin: 0 }
+.flash-front { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.125rem, 1rem + 1.5vw, 1.5rem); line-height: 1.25; overflow-wrap: break-word; hyphens: auto }
+.flash-face small { color: var(--muted) }
+.flashcard.flipped { border-color: var(--accent); background: var(--tint-green); animation: flash-turn .32s var(--spring) }
+.flashcard.flipped .flash-face { min-height: 0; padding-bottom: 8px }
+.flash-face:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px }
+.flash-back { padding: 0 20px 20px }
+.flash-back p { margin: 0; font-size: 1.0625rem; line-height: 1.5 }
+.flash-back:empty { display: none }
+/* A long word at 200 % text («Указательный» in the grips card) breaks inside the card instead of widening the page. */
+.flashcard > *, .primer-deck > *, .primer-check > * { min-width: 0 }
+.flash-front, .flash-back p, .primer-options .option { overflow-wrap: break-word }
+.primer-deck .dots i.seen:not(.on) { background: var(--accent-ink) }
+.primer-deck > .note { margin: 0; text-align: center }
+@keyframes flash-turn { from { transform: translateY(6px); opacity: .45 } to { transform: none; opacity: 1 } } /* no 3D turn: a perspective widened the page for a moment */
+.primer-check h2 { margin: 0; overflow-wrap: break-word }
+.primer-options { display: grid; gap: 8px }
+.primer-options .option { justify-content: flex-start; text-align: left; white-space: normal; min-height: 52px; height: auto; padding: 12px 16px; line-height: 1.35; border-radius: 16px }
+.primer-options .option.right { background: var(--tint-green); border-color: var(--good-ink); color: var(--text) }
+.primer-options .option.wrong { border-color: var(--bad-ink); border-style: dashed }
+.primer-options .option[aria-disabled="true"]:not(.right):not(.wrong) { opacity: .72 }
+.primer-why { display: grid; gap: 6px }
+.primer-why p { margin: 0 }
+.primer-why:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px }
+.primer-summary { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px }
+.primer-summary li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; overflow-wrap: break-word }
+:root.rm .flashcard.flipped { animation: none }
+:root.hc .flashcard.flipped, :root.hc .primer-options .option.right { background: #000; border-color: #3fe0a0 }
+:root.hc .flashcard.flipped .flash-face small { color: #fff }
+@media (forced-colors: active) { .flashcard.flipped, .primer-options .option.right { border-color: Highlight } .primer-options .option.wrong { border-color: CanvasText } }
+
+/* ===== 5.16 — the team's illustrations (ui/pictures.js, public/art/). A picture is <img class="art pic">, sized by
+   the same rules as the drawings it replaces. The Firebird is layers (.pet-pic): the nest behind, the bird with what it
+   wears (one .fb-bird — the drawing's animations move it as one), the things of the nest in front. ===== */
+img.pic { object-fit: contain; user-select: none; -webkit-user-select: none; -webkit-user-drag: none }
+/* A command is read at a glance: no syllable break inside a button or a bar label («Повто-рить» doubled the action bar
+   on 568 × 320 at 200 % text with the Russian dictionary of Chromium on Windows and Android). */
+.btn, .nav-label { hyphens: manual }
+:where(.pet-pic) { width: var(--size, 96px); height: var(--size, 96px) }
+.pet-pic { position: relative; display: block; aspect-ratio: 1 / 1; flex: none }
+.pet-pic > .fb-bird { position: absolute; inset: 0; display: block; transform-origin: 50% 92% }
+.pet-pic .pet-body { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain }
+.pet-pic .pet-thing { position: absolute; height: auto; aspect-ratio: 1 / 1; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)); display: block; pointer-events: none }
+/* The pictures carry their own soft contact shadow: a lighter drop shadow keeps them on the dark covers without a halo. */
+.pet-card .pet-art .pet-pic, .nest-bird .pet-pic, .pet-moment .pet-pic, .evo .pet-pic { filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .28)) }
+/* The light waves of the home header lie over the brand gradient as a texture; the dark text stays on the green. */
+.hero > .hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right center; opacity: .6; mix-blend-mode: soft-light; pointer-events: none }
+h2.with-art .art, b.with-art .section-art { width: 2rem; height: 2rem }
+.btn > .art { display: inline-block; width: 1.5rem; height: 1.5rem; margin: -6px 8px -4px 0; vertical-align: middle }
+.xp-level { display: inline-flex; align-items: center; gap: 6px }
+.xp-level .art { width: 1.25rem; height: 1.25rem }
+/* «Дело дня»: the scene of the task on its own light tile (white paper and glass need their background). */
+.everyday-task { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center }
+.everyday-task p { margin: 0 }
+.day-art { width: 5.5rem; height: 5.5rem; border-radius: 18px; background: #ffffff; border: 1px solid var(--line); box-shadow: var(--shadow-1) }
+@media (max-width: 360px) { .day-art { width: 4.5rem; height: 4.5rem } }
+/* Covers of the first run: a light scene in the dark hero, still (it is the size of the page — no float). */
+.onb-art.cover { width: 100%; margin: 2px auto 10px }
+.onb-art.cover .art { width: auto; max-width: min(320px, 100%); height: auto; max-height: 34vh; aspect-ratio: 4 / 3; border-radius: 22px; filter: none; animation: none; box-shadow: 0 14px 28px rgba(0, 0, 0, .35) } /* a third of a landscape screen at most: the questions stay in view */
+/* The nest: the bird on the rug of its room. */
+.nest-stage { position: relative; width: 100%; display: grid; place-items: end center; border-radius: 26px; overflow: hidden }
+.nest-stage.room { background: var(--room) center 80% / cover no-repeat; min-height: min(250px, 68vw); padding-top: 14px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16) }
+.sec-ico .art { width: 34px; height: 34px }
+.nav-icon .nav-art { width: 28px; height: 28px }
+.badge .ach-art { width: 3rem; height: 3rem; margin-bottom: 2px }
+.badge .ach-off { opacity: .8 }
+.badge .gift { display: flex; align-items: center; gap: 6px }
+.badge .gift .art { width: 1.375rem; height: 1.375rem }
+.seg .gift-art { width: 2.25rem; height: 2.25rem; margin: 0 auto 2px }
+.skin .skin-art { width: 56px; height: 56px }
+.skin:disabled .skin-art { filter: grayscale(1); opacity: .5 }
+.rewards li .art { width: 2rem; height: 2rem }
+.empty-art .empty-pic { width: 7rem; height: 7rem }
+.primer-prize .art { width: 1.75rem; height: 1.75rem }
+:root.hc .hero-bg { display: none }
+:root.hc .nest-stage.room { background: none; min-height: 0 }
+@media (forced-colors: active) { .hero-bg { display: none } .nest-stage.room { background: none; min-height: 0 } }
+
+/* 5.17 — a new best of the level: a quiet chip under the score (compared with oneself). */
+.record { display: inline-flex; align-items: center; gap: 6px; margin: 2px auto 0; padding: 4px 12px 4px 6px; border-radius: 99px; background: var(--tint-yellow); color: var(--text); font-weight: 800; font-size: 0.875rem }
+.record .art { width: 1.25rem; height: 1.25rem }
+/* 5.17 — the still breathing circle gets words (reduced motion); the line keeps its height so nothing jumps. */
+.breath-word { min-height: 1.5em; margin: 0; font-weight: 800; color: var(--accent-ink) }
+.breath-word:empty { display: none }
+/* 5.17 — «Как прошёл полёт»: the altitude line over the rings (green — passed, amber — missed); the note repeats it. */
+.replay-plot { display: block; width: 100%; height: auto; margin: 4px 0 8px; border-radius: 12px; background: var(--tint-teal) }
+.replay-plot .mid { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; opacity: 0.5 }
+.replay-plot line.ok { stroke: var(--good); stroke-width: 5; stroke-linecap: round }
+.replay-plot line.miss { stroke: var(--warn); stroke-width: 5; stroke-linecap: round }
+.replay-plot rect.ok { fill: var(--good); opacity: 0.35 }
+.replay-plot rect.miss { fill: var(--warn); opacity: 0.35 }
+.replay-plot .flight-line { fill: none; stroke: var(--text); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round }
+/* 5.18 — the quick start under «Начать»: a quieter second door into the same day. */
+.plan .quick-start { display: block; margin: 0 auto 12px }
+/* 5.18 — the workshop replay: a column per object. */
+.grip-plot .track { fill: var(--track) }
+.grip-plot .break { fill: var(--bad); opacity: 0.22 }
+.grip-plot .window { fill: var(--good); opacity: 0.5 }
+.grip-plot .force { stroke: var(--text); stroke-width: 2 }
+.grip-plot .force.ok { fill: var(--good) }
+.grip-plot .force.miss { fill: var(--warn) }
+.safe-plot .lamp { stroke: var(--text); stroke-width: 1.5 }
+.safe-plot .lamp.ok { fill: var(--good) }
+.safe-plot .lamp.miss { fill: var(--warn) }
+/* «Как прошло созвездие»: the sky of the run, lit stars joined in their order. */
+.stars-plot { max-width: 220px; margin: 4px auto 8px }
+.stars-plot .sky-line { fill: none; stroke: var(--text); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.7 }
+.stars-plot .lamp { stroke: var(--text); stroke-width: 1.2 }
+.stars-plot .lamp.ok { fill: var(--good) }
+.stars-plot .lamp.miss { fill: var(--warn) }
+:root.hc .replay-plot { background: none; border: 2px solid currentColor }
+@media (forced-colors: active) {
+  .replay-plot { background: none; border: 1px solid CanvasText }
+  .replay-plot .flight-line { stroke: CanvasText }
+  .replay-plot line.ok, .replay-plot rect.ok { stroke: Highlight; fill: Highlight }
+  .replay-plot line.miss, .replay-plot rect.miss { stroke: GrayText; fill: GrayText }
+  .grip-plot .track { fill: Canvas; stroke: CanvasText }
+  .grip-plot .window, .grip-plot .force.ok { fill: Highlight; opacity: 1 }
+  .grip-plot .break, .grip-plot .force.miss { fill: GrayText; opacity: 1 }
+  .grip-plot .force, .safe-plot .lamp, .stars-plot .lamp, .stars-plot .sky-line { stroke: CanvasText }
+  .safe-plot .lamp.ok, .stars-plot .lamp.ok { fill: Highlight }
+  .safe-plot .lamp.miss, .stars-plot .lamp.miss { fill: GrayText }
+}
+
+/* 5.30 — the controls under the hand that taps them (meetup 21.10.2026: «под правую, левую, здоровую руку»;
+   core/hands.js). Landscape: the signal and the pads move to the left column for the left hand, the field to the right. */
+@media (orientation: landscape) and (max-height: 540px) {
+  [data-hand="left"] .play-screen { grid-template-columns: minmax(280px, 42%) minmax(0, 1fr) }
+  [data-hand="left"] .play-screen .stage { grid-column: 2 }
+  [data-hand="left"] .play-screen .stage-hint, [data-hand="left"] .play-screen .play-side { grid-column: 1 }
+}
+@media (orientation: landscape) and (max-height: 400px) {
+  [data-hand="left"] .play-screen .stage-hint { grid-column: 2 } /* under the field */
+}
+
+/* 5.30 — «Две руки»: a pair of pads per arm, side by side; under each its name. */
+.pads.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px }
+.duo-arm { display: grid; gap: 4px; min-width: 0 }
+.duo-name { font-size: 0.8125rem; text-align: center }
+.pads.duo .pads.two { min-height: clamp(96px, 18dvh, 160px); gap: 6px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+.pads.duo .pad { padding: 6px 8px }
+.pads.duo .pad-value { white-space: nowrap }
+
+/* 5.30 — a computer (Windows, macOS): with a mouse and no touch the pads say which keys play. */
+.pads-keys { display: none; grid-column: 1 / -1; margin: 2px 0 0; text-align: center; font-size: 0.75rem; color: var(--muted) }
+@media (hover: hover) and (pointer: fine) { .pads-keys { display: block } }
+
+/* 5.30 — a computer (Windows, macOS; the meetup: «можно зайти на сайт»): in a wide window the play screen spreads like a
+   landscape phone — the field on the left, the hint, the signal and the pads on the right (on the left for the left
+   hand) — instead of a 560 px phone column in the middle of the screen. The other screens stay a readable column. */
+@media (min-width: 1024px) and (min-height: 600px) and (orientation: landscape) {
+  .app:has(> .play-screen) { max-width: 1280px }
+  .play-screen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 34%); grid-template-rows: auto 4px auto minmax(0, 1fr) }
+  .play-top, .play-progress { grid-column: 1 / -1 }
+  .play-screen .stage { grid-column: 1; grid-row: 3 / 5; min-height: 0 }
+  .play-screen .stage-hint { grid-column: 2; grid-row: 3; border-top: 0; border-bottom: 1px solid var(--line) }
+  .play-screen .play-side { grid-column: 2; grid-row: 4; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; justify-content: normal }
+  .play-screen .play-side .meter { align-self: stretch }
+  .play-screen .pads.two { min-height: clamp(140px, 30dvh, 240px) }
+  .play-screen .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  [data-hand="left"] .play-screen { grid-template-columns: minmax(340px, 34%) minmax(0, 1fr) }
+  [data-hand="left"] .play-screen .stage { grid-column: 2 }
+  [data-hand="left"] .play-screen .stage-hint, [data-hand="left"] .play-screen .play-side { grid-column: 1 }
+}
+
+/* 5.32 — полировка интерфейса (docs/GAME_VISUALS.md §8): the same bionic hand as in the games on the pads and in the
+   calibration ring, pictures on the number tiles, glass level tiles, a deeper signal bar. Depth comes from tokens
+   (--shadow-*, --grad-*), so the dark theme follows and the high-contrast theme stays flat; text keeps its solid
+   surface (the contrast tests read the same rules). Motion: a 120 ms press, none with .rm / prefers-reduced-motion. */
+.pad-hand { position: absolute; right: 8px; top: 8px; width: 40px; height: 58px; display: grid; place-items: center; pointer-events: none;
+  transition: transform .12s var(--spring), filter .12s ease }
+.pad-hand .pic { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(5, 16, 26, .18)) }
+.pad-b .pad-hand .pic { transform: scaleX(-1) } /* the open palm faces the A pad: the two hands look at each other */
+.pad.on .pad-hand { transform: translateY(-2px) scale(1.08) }
+.pad-a.on .pad-hand .pic { filter: drop-shadow(0 0 10px rgba(255, 122, 69, .55)) }
+.pad-b.on .pad-hand .pic { filter: drop-shadow(0 0 10px rgba(59, 130, 246, .55)) }
+.pads.duo .pad-hand { width: 28px; height: 40px; right: 6px; top: 6px }
+.pad { background-image: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 45%) }
+.pad-co { box-shadow: var(--shadow-1); transition: transform .12s var(--spring) }
+.pad-co:active, .pad-co.on { transform: scale(.97) }
+
+/* The calibration ring: the hand of the step stands in the ring, over the inner disc. */
+.cal-ring { box-shadow: var(--shadow-1) }
+.cal-ring .cal-hand { position: absolute; inset: 0; margin: auto; width: 56px; height: 81px; z-index: 1 }
+.cal-ring::after { box-shadow: inset 0 2px 8px rgba(5, 16, 26, .08) }
+
+/* Number tiles: the picture above the number; a soft sheen on the top corner, away from the text. */
+.stats div { position: relative; overflow: hidden; display: grid; justify-items: center; gap: 2px; padding: 12px 6px 10px }
+.stats div .art { width: 30px; height: 30px; filter: drop-shadow(0 2px 3px rgba(5, 16, 26, .18)) }
+.stats div::before { content: ''; position: absolute; right: -24px; top: -24px; width: 72px; height: 72px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .35), rgba(255, 255, 255, 0)); pointer-events: none }
+
+/* Level tiles: a glass tile with a rim; a locked one is a quiet frosted tile with its lock; the recommended one glows. */
+.level { border: 1px solid var(--line); background-image: linear-gradient(180deg, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0) 60%) }
+.level.locked { background: var(--card2); border: 1px dashed var(--line-strong) }
+.level.locked .art { opacity: .7; filter: grayscale(.25) }
+.level.rec { outline: 3px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 2px }
+
+/* The signal bar: a deeper track with an inner shadow, rounded fills with a light edge. */
+/* Height stays 14 px. A border under the top bar also grew it by 1 px; the line is a shadow now. */
+.meter-bar { box-shadow: inset 0 1px 3px rgba(5, 16, 26, .14) }
+.meter-bar .fill { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45) }
+.meter-chip { box-shadow: var(--shadow-1); transition: background-color .12s ease }
+
+:root.hc .pad, :root.hc .level { background-image: none }
+:root.hc .pad-hand .pic, :root.hc .stats div .art { filter: none }
+:root.hc .stats div::before, :root.hc .cal-ring::after { box-shadow: none }
+:root.hc .stats div::before { display: none }
+:root.hc .meter-bar, :root.hc .meter-bar .fill { box-shadow: none }
+:root.hc .level.rec { outline-color: var(--accent) }
+@media (prefers-reduced-motion: reduce) { .pad-hand, .pad-co, .meter-chip { transition: none } }
+
+/* ===== 5.32 — система компонентов (docs/GAME_VISUALS.md §9). One layer over the 5.12 look, on tokens only:
+   · states (Material 3 state layers): an overlay of the content colour — hover 4 %, pressed 10 % — as an inset shadow,
+     so no element changes its size or its children's positioning; the press sinks 1 px;
+   · glass (Apple HIG «Materials»): the top bar, round icon buttons, the bottom navigation and the toasts blur what
+     scrolls under them; the tint stays 84–90 % opaque (the page text behind a label must not show through — the
+     legibility critique of «liquid glass», NN/g 2025), so text keeps its contrast; solid with «less transparency»,
+     in high contrast and in forced colours;
+   · hairlines: 1 px lines mixed from the line colour, a light top edge on raised controls;
+   · type: balanced headings, no orphan word in paragraphs (text-wrap). ===== */
+:root { --state: 0; --edge: inset 0 1px 0 rgba(255, 255, 255, .55); --sink: inset 0 -2px 0 rgba(5, 16, 26, .08);
+  --glass: color-mix(in srgb, var(--card) 90%, transparent); --glass-bg: color-mix(in srgb, var(--bg) 84%, transparent);
+  --hair: color-mix(in srgb, var(--line) 70%, transparent) }
+:root[data-theme="dark"] { --edge: inset 0 1px 0 rgba(255, 255, 255, .08); --sink: inset 0 -2px 0 rgba(0, 0, 0, .25) }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --edge: inset 0 1px 0 rgba(255, 255, 255, .08); --sink: inset 0 -2px 0 rgba(0, 0, 0, .25) } }
+
+/* Buttons: tactile pills — a light top edge, a soft inner base, the state layer over the fill. */
+.btn { --elev: var(--shadow-1); box-shadow: inset 0 0 0 100vmax rgba(5, 16, 26, var(--state)), var(--edge), var(--elev); transition: transform .12s var(--spring), box-shadow .15s ease, filter .15s ease }
+.btn.primary { --elev: var(--glow-accent); box-shadow: inset 0 0 0 100vmax rgba(5, 16, 26, var(--state)), inset 0 1px 0 rgba(255, 255, 255, .45), var(--sink), var(--elev) }
+.btn.ghost, .btn.danger { border-width: 1px }
+.btn:hover:not(:disabled) { --state: .04; filter: none }
+.btn:active:not(:disabled) { --state: .1; transform: translateY(1px) }
+.btn.primary:disabled { box-shadow: none }
+.icon-btn { transition: transform .12s var(--spring), box-shadow .15s ease }
+.icon-btn:active { transform: scale(.94) }
+.top-bar .icon-btn, .play-top .icon-btn { background: var(--glass); -webkit-backdrop-filter: saturate(1.6) blur(14px); backdrop-filter: saturate(1.6) blur(14px);
+  border: 1px solid var(--hair); box-shadow: var(--edge), var(--shadow-1) }
+
+/* Bars: glass over the page; a hairline under the top bar. */
+.top-bar { background: var(--glass-bg); -webkit-backdrop-filter: saturate(1.6) blur(18px); backdrop-filter: saturate(1.6) blur(18px); box-shadow: 0 1px 0 var(--hair) } /* a shadow, not a border: the bar keeps its height */
+.bottom-nav { background: var(--glass); -webkit-backdrop-filter: saturate(1.8) blur(20px); backdrop-filter: saturate(1.8) blur(20px); border-color: var(--hair); box-shadow: var(--edge), var(--shadow-2) }
+.nav-item { transition: color .15s ease }
+.nav-item .nav-icon { transition: background .2s ease, transform .18s var(--spring) }
+.nav-item:active .nav-icon { transform: scale(.92) }
+.nav-item.active .nav-icon { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), var(--glow-accent) }
+.play-top { border-bottom-color: var(--hair) }
+.meter { border-top-color: var(--hair) }
+
+/* Cards and rows: a hairline rim; rows that act get the state layer. */
+.card { border-color: var(--hair) }
+.plan-list li { border-color: var(--hair) }
+.game-card, .level, .seg { box-shadow: inset 0 0 0 100vmax rgba(5, 16, 26, var(--state)), var(--edge), var(--shadow-1) }
+.game-card:hover, .level:hover:not(:disabled), .seg:hover:not(.active) { --state: .03 }
+.game-card:active, .level:active:not(:disabled) { --state: .08 }
+.level.locked { box-shadow: none }
+.level.rec, .seg.active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), var(--glow-accent) }
+
+/* Segmented control: a sunken track, the chosen chip raised on it. */
+.segmented { box-shadow: inset 0 1px 3px rgba(5, 16, 26, .08) }
+.seg:not(.active) { box-shadow: none }
+.seg:not(.active):hover { box-shadow: inset 0 0 0 100vmax rgba(5, 16, 26, var(--state)) }
+
+/* Switch: the knob casts a shadow, the track has a sunken edge; text fields sink a little. */
+input[type=checkbox] { box-shadow: inset 0 1px 2px rgba(5, 16, 26, .12) }
+input[type=checkbox]::before { box-shadow: 0 1px 3px rgba(5, 16, 26, .3) }
+input[type=checkbox]:checked { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), var(--glow-accent) }
+.row input[type=text], .row input[type=url], .row input[type=time], .row input[type=password] { box-shadow: inset 0 1px 2px rgba(5, 16, 26, .06) }
+
+/* Foldable sections: a drawn chevron (the ▾ glyph was a font's, its weight varied), turning on open. */
+.fold > summary::after { content: ''; width: 9px; height: 9px; margin: -4px 8px 0 12px; border-right: 2.5px solid var(--muted); border-bottom: 2.5px solid var(--muted); transform: rotate(45deg); font-size: 0 }
+.fold[open] > summary::after { transform: rotate(225deg); margin-top: 4px }
+
+/* Toasts: glass with a coloured edge. */
+.toast { background: var(--glass); -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px); border: 1px solid var(--hair); border-left: 5px solid var(--accent) }
+.toast.good { border-left-color: var(--good) }
+.toast.bad { border-left-color: var(--bad) }
+
+/* Type: balanced headings, paragraphs without a lone last word (a 2026 baseline; older engines ignore it). */
+h1, h2, h3, .top-bar h1 { text-wrap: balance }
+p, li, small { text-wrap: pretty }
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent) }
+
+/* Less transparency, high contrast, forced colours: solid surfaces, no glass, no states drawn as shadows. */
+@media (prefers-reduced-transparency: reduce) {
+  .top-bar, .bottom-nav, .toast, .top-bar .icon-btn, .play-top .icon-btn { -webkit-backdrop-filter: none; backdrop-filter: none }
+  .top-bar { background: var(--bg) } .bottom-nav, .toast, .top-bar .icon-btn, .play-top .icon-btn { background: var(--card) }
+}
+:root.hc .top-bar, :root.hc .bottom-nav, :root.hc .toast, :root.hc .icon-btn { -webkit-backdrop-filter: none; backdrop-filter: none }
+:root.hc .top-bar { background: var(--bg) } :root.hc .bottom-nav, :root.hc .toast { background: var(--card) }
+:root.hc .btn, :root.hc .btn.primary, :root.hc .game-card, :root.hc .level, :root.hc .seg, :root.hc .seg.active, :root.hc .level.rec,
+:root.hc .segmented, :root.hc input[type=checkbox], :root.hc input[type=checkbox]::before, :root.hc .nav-item.active .nav-icon { box-shadow: none }
+:root.hc .btn:active:not(:disabled) { box-shadow: inset 0 0 0 3px var(--text) }
+@media (forced-colors: active) { .top-bar, .bottom-nav, .toast { -webkit-backdrop-filter: none; backdrop-filter: none } }
+
+/* 5.32 — a brighter page: three brand glows behind the content (mint, sky, violet; quieter at night). Decoration only:
+   cards keep their solid surfaces, so no text changes its contrast; high contrast stays black. */
+:root { --page-glow-1: rgba(22, 225, 130, .26); --page-glow-2: rgba(47, 166, 224, .2); --page-glow-3: rgba(91, 79, 214, .14) }
+:root[data-theme="dark"] { --page-glow-1: rgba(22, 225, 130, .12); --page-glow-2: rgba(47, 166, 224, .12); --page-glow-3: rgba(91, 79, 214, .14) }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page-glow-1: rgba(22, 225, 130, .12); --page-glow-2: rgba(47, 166, 224, .12); --page-glow-3: rgba(91, 79, 214, .14) } }
+body {
+  background:
+    radial-gradient(620px 420px at 110% -6%, var(--page-glow-1), transparent 70%),
+    radial-gradient(560px 460px at -16% 30%, var(--page-glow-2), transparent 70%),
+    radial-gradient(640px 420px at 70% 108%, var(--page-glow-3), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+:root.hc body { background: var(--bg) }
+
+/* ===== 26.10 — the welcome page: three points, each a picture, a bold title and one line (Apple HIG «Onboarding»:
+   a first frame read at a glance instead of three paragraphs). Tokens only; flat in high contrast. ===== */
+.onb-features { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 8px; text-align: left }
+.onb-features li { display: grid; grid-template-columns: 48px 1fr; gap: 12px; align-items: center; padding: 10px 14px 10px 10px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--hair); box-shadow: var(--shadow-1) }
+.onb-features .onb-feature-art { width: 48px; height: 48px; object-fit: contain; transform: scale(1.2); filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .16)) }
+.onb-hero.welcome .onb-art.cover .art { max-height: 26vh } /* the first frame — cover, three points and «Дальше» — fits a 390 × 844 screen */
+.onb-features li > div { min-width: 0; overflow-wrap: anywhere; hyphens: auto } /* «реабилитологом» at 200 % text is wider than the column at 320 px: a split, not text past the edge */
+.onb-features b { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1.0625rem; line-height: 1.25; color: var(--text); text-wrap: balance }
+.onb-features li span { display: block; color: var(--muted); font-size: .9375rem; line-height: 1.4; margin-top: 2px; text-wrap: pretty }
+:root.hc .onb-features li { box-shadow: none; border-color: currentColor }
+:root.hc .onb-features .onb-feature-art { filter: none }
+
+/* ===== 26.10 — the app shell: the brand before the script runs (index.html, tools/build.mjs). A weak phone showed a
+   blank page for up to 2 s after the APK splash; the first screen replaces it. It appears only after 250 ms, so a fast
+   start never flashes it, and stands still with reduced motion. ===== */
+.boot { min-height: 100vh; min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 8px; text-align: center; animation: boot-in .4s ease-out .25s both }
+.boot img { width: 96px; height: 96px; border-radius: 24px; box-shadow: 0 18px 36px rgba(6, 30, 40, .28) }
+.boot b { margin-top: 10px; font-family: var(--font-display); font-size: 1.5rem; letter-spacing: .02em; text-transform: uppercase; color: var(--text) }
+.boot span { color: var(--muted); font-size: .9375rem }
+@keyframes boot-in { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+@media (prefers-reduced-motion: reduce) { .boot { animation: none } }
+
+/* ===== 26.10 — the bird in its nest is one picture (pet-*-nest): a hop or a bounce lifted the nest off the ground
+   with it. Here it perks up in place — squash and stretch from the nest's bottom (95 % of the frame) — and a wave
+   rocks the nest a little. Still off with reduced motion (the rule for :root.rm and prefers-reduced-motion). ===== */
+.pet-pic.nested > .fb-bird { transform-origin: 50% 95% }
+.firebird.nested.alive .fb-bird { animation-name: fb-nest-breathe }
+.firebird-fed.nested.alive .fb-bird, .firebird.nested.anim-hop .fb-bird, .firebird.nested.anim-celebrate .fb-bird { animation-name: fb-nest-perk }
+.firebird.nested.anim-wave .fb-bird { animation-name: fb-nest-rock }
+@keyframes fb-nest-breathe { 0%, 100% { transform: none } 50% { transform: scaleY(1.015) } }
+@keyframes fb-nest-perk { 0%, 100% { transform: none } 30% { transform: scale(.98, 1.045) } 60% { transform: scale(1.03, .97) } 80% { transform: scale(.995, 1.005) } }
+@keyframes fb-nest-rock { 0%, 100% { transform: none } 25% { transform: rotate(-3deg) } 50% { transform: rotate(2.5deg) } 75% { transform: rotate(-1.5deg) } }
+
+/* ── 6.3.2 — seams found on the screenshots of the audit of 09.11.2026 ── */
+/* The focus ring of the round header buttons stays inside them: outside (2 + 3 px) the top edge of the screen and the
+   progress line cut it, and it touched a three-digit score. */
+.play-top .icon-btn:focus-visible, .top-bar .icon-btn:focus-visible { outline-offset: -3px }
+.score { margin-left: 4px }
+/* An option alone in the last row takes the row: «Сильная усталость» (3 options in 2 columns) left an empty cell. Only on
+   a phone, where the check-in's options go in two columns (three fit from ≈ 470 px of width). */
+@media (max-width: 460px) { .checkin .segmented > .seg:last-child:nth-child(odd) { grid-column: 1 / -1 } }
+/* The report period: four short options — two rows of two at any text size (in three columns «Всё» stood alone). */
+.period .segmented { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+/* The cover's line is not hyphenated («био-ническим протезом» in the first words the person reads). The title keeps
+   hyphenation: at 320 px and 200 % text «СИНЕРГИЯ» does not fit a line. */
+.onb-hero .lead { hyphens: manual; -webkit-hyphens: manual; text-wrap: balance }
+/* 6.3.2 — iOS (Safari, the home-screen PWA and the app's WKWebView): a long press on a picture opens the system menu
+   «Скопировать · Сохранить», and holding a pad is how the on-screen emulator is played. Android takes the menu away in
+   ui/controls.js (contextmenu), iOS fires no such event — only this property stops it. Text stays selectable elsewhere. */
+.controls, .controls *, img.pic, .pet-pic, .stage-canvas, .tut-canvas { -webkit-touch-callout: none }

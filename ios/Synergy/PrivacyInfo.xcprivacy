@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  6.3.2 — the privacy manifest App Store Connect checks (Apple, since 2024). «Синергия» does not track, collects nothing
+  off the device (no account, no server, no analytics: the progress and the specialist report stay on the phone until
+  the person shares them) and calls none of the «required reason» APIs (no UserDefaults, no file timestamps, no disk
+  space, no boot time). If that changes, this file changes with it.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+</dict>
+</plist>
