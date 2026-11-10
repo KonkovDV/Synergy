@@ -960,6 +960,8 @@ table.data th { font-size: 0.75rem }
   .frame .gkey { padding-block: 2px } /* the icon sits above the name here; 4 px of padding put «Ключ» 2 px past a 320 px-tall screen */
   .play-screen .pads.gestures, .frame .pads.gestures { gap: 4px }
   .frame .pads.gestures { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  /* 6.3.3: a demo shows the pads it presses; on a 320 px-tall screen its note took their room and a pad left the screen */
+  .play-screen .pads-note { display: none }
 }
 /* 5.11 — design review. Warning cards look like warnings (the later `.card` border used to win). */
 .card.warn-card { border: 1.5px solid var(--warn); background: var(--tint-yellow) }
