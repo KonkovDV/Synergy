@@ -365,9 +365,9 @@
   "gesture-extension": {
    "w": 256,
    "h": 256,
-   "bytes": 7174,
+   "bytes": 8732,
    "alpha": true,
-   "sha256": "967a0be51fc517783f3676698faf36edc97eb2247ab9307067fd97b8bc924aa0",
+   "sha256": "6726d46b470561a730f0901b2ca5e9bcddb1867e70ac860109704a53c96c6f74",
    "source": "28fd1328ec1d4ac842e466747f0f27ed3ee0db0409d8cef514e7c3fc8db805ab"
   },
   "gesture-fist": {
@@ -613,9 +613,9 @@
   "hand-key": {
    "w": 438,
    "h": 635,
-   "bytes": 30168,
+   "bytes": 29176,
    "alpha": true,
-   "sha256": "17b912a264c4aa56bfee3b2f9f65ef853c07eb92474c0b6d5f72be0e1a95bb6a",
+   "sha256": "840500665bd6f43384e67053bef4fd9e1491092be314188141b816fccd1467db",
    "source": "9cab6f87e35873e494282b6efd3beffd5920517d88b8a9440303301edf863f7a"
   },
   "hand-open": {
@@ -629,17 +629,17 @@
   "hand-pinch": {
    "w": 438,
    "h": 635,
-   "bytes": 40222,
+   "bytes": 39048,
    "alpha": true,
-   "sha256": "0102e58822bbf842abf7e685f7f037627adbc6282d84df2fd020759d1f9e98e1",
+   "sha256": "d1471f645b909adc0d1cfa6fba62e9999f0e763353b24e4a7b490b322b28f200",
    "source": "9cab6f87e35873e494282b6efd3beffd5920517d88b8a9440303301edf863f7a"
   },
   "hand-point": {
    "w": 438,
    "h": 635,
-   "bytes": 33424,
+   "bytes": 32682,
    "alpha": true,
-   "sha256": "c2047a6a6547cae7d859ac6f424fac4235e11ef7d489b0d6a0a9c08709a5173e",
+   "sha256": "23be43ccb25dc5c11ce8cf9e9f0d79ab52c5188dbd85e315624f74e82cec626a",
    "source": "9cab6f87e35873e494282b6efd3beffd5920517d88b8a9440303301edf863f7a"
   },
   "hand-rest": {
@@ -1966,7 +1966,7 @@
   ],
   "splash": "android/res/drawable-xxhdpi/splash_bird.png"
  },
- "total_bytes": 4510758,
+ "total_bytes": 4509408,
  "generator": "tools/import-art.py (rembg isnet-general-use + colour-to-alpha on white, Pillow WebP); hand-*, bg-duo-*: tools/import-generated.py (colour-to-alpha on a magenta key; the rooms whole)",
  "layout": {
   "pet-chick-happy": {

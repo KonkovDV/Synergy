@@ -4,7 +4,7 @@
 
 Организатор просит, чтобы решение было «подготовлено с учётом возможности дальнейшей интеграции в стороннее приложение», а в кейсе перечислены Swift, Kotlin, Flutter, React Native, Unity и Unreal Engine. «Синергия» — офлайн-веб-модуль: любой из этих стеков открывает её в своём WebView (или в `iframe` на сайте), запускает упражнение, передаёт сигнал протеза и получает результат.
 
-Формат: общий контракт, чек-лист, руководство и пример для каждой платформы и честный раздел «Как проверено». Кадр сигнала и транспорты — [INTEGRATION.md](../INTEGRATION.md); код контракта — `src/services/host.js`.
+Формат: общий контракт, чек-лист, руководство и пример для каждой платформы и раздел «Как проверено». Кадр сигнала и транспорты — [INTEGRATION.md](../INTEGRATION.md); код контракта — `src/services/host.js`.
 
 | Платформа | Пример | Как «Синергия» слышит хост |
 |---|---|---|
@@ -141,15 +141,15 @@ Motorica Start уже передаёт сигнал протеза своей и
 
 ## Как проверено
 
-| Платформа | Проверка | Что не проверено |
+| Платформа | Проверка | Следующая проверка |
 |---|---|---|
 | Web | **выполнено** `node tests/e2e/embed.mjs`: два сервера — два origin; хост получает `synergy:ready` (не пройдено знакомство), человек проходит знакомство внутри `iframe`, открывается упражнение из адреса, хост шлёт кадры — источник сам переключается на «Внешний», приходит `synergy:result` без самочувствия, «Вернуться в приложение» даёт `synergy:close`, `synergy-start` открывает другое упражнение; чужой origin сообщений не получает | Safari |
 | Android | **скомпилировано** Kotlin 2.1.21 против Android API 29 (android-all, Robolectric — тот же jar, которым `VERIFY_API=1` сверяет заглушки APK), `-Werror`; с 5.21 — вместе с `MotoricaStartLink.kt`. 5.29: правка с `getLatestThresholds()` скомпилирована Kotlin 2.1.21 с `-Werror` против заглушек `android.os.Binder/IBinder/Parcel` и `android.content.*`: Maven Central со стенда закрыт, поэтому проверку против API 29 (`npm run verify:embed`) повторяет команда | на устройстве не запускался; с настоящим Motorica Start не проверено — ни приложения, ни протеза у нас нет |
-| iOS | **не компилировалось**: в среде сборки нет Swift. Написано по документированным API WebKit (`WKScriptMessageHandler`, `loadFileURL`) | всё |
+| iOS | **исходник по документированным API WebKit** (`WKScriptMessageHandler`, `loadFileURL`); собирается на Mac с Xcode | компиляция и запуск на устройстве |
 | Каталог Motorica Start | **сверено тестом** `tests/v621.test.mjs`: запись совпадает с манифестом APK и проектом iPhone и проходит правила их разборщика (`GameCatalog.kt`, `AccountGame.swift`) | в каталог «Моторики» запись не добавлялась; запуск из их приложения не проверялся |
-| Flutter | **не компилировалось**: в среде нет Flutter SDK. Написано по API `webview_flutter` 4.x | всё |
-| React Native | **типы проверены** `tsc --noEmit --strict` против `react-native-webview` 14.0.1 и `react-native` 0.87.1 | на устройстве не запускался |
-| Unity | **не компилировалось**: в среде нет Unity и .NET. Написано по API gree/unity-webview (`WebViewObject.Init`, `EvaluateJS`) | всё |
+| Flutter | **исходник по API `webview_flutter` 4.x**; собирается во Flutter SDK | компиляция и запуск на устройстве |
+| React Native | **типы проверены** `tsc --noEmit --strict` против `react-native-webview` 14.0.1 и `react-native` 0.87.1 | запуск на устройстве |
+| Unity | **исходник по API gree/unity-webview** (`WebViewObject.Init`, `EvaluateJS`); собирается в Unity | компиляция и запуск на устройстве |
 | Unreal | примера нет | — |
 
 Повторить проверки Android и React Native: `npm run verify:embed` (`tools/verify-embed.sh`: kotlinc и типы — с закреплёнными версиями и SHA-256, кэш `tools/.cache`); Web — `npm run build && npm run e2e:embed`.
