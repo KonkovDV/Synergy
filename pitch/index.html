@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Синергия — питч на финале «Моторика: Код движения»</title>
+<meta name="description" content="Игра-тренажёр управления бионическим протезом кисти. Ролик геймплея, 15 слайдов питча, цифры прогонов и файлы презентации. Команда MOTUS Lab, финал 18 ноября 2026.">
+<link rel="canonical" href="https://konkovdv.github.io/Synergy/pitch/">
+<meta name="theme-color" content="#071019">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-heXniqNIeuM+2SIMGDxWENVzV+DWCUiuq1k4xsDTsas='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="Синергия">
+<meta property="og:title" content="Синергия — игра-тренажёр управления бионическим протезом">
+<meta property="og:description" content="Тренажёр, где ошибка ничего не стоит. Ролик, слайды питча и цифры прогонов сборки 6.3.4. Команда MOTUS Lab.">
+<meta property="og:url" content="https://konkovdv.github.io/Synergy/pitch/">
+<meta property="og:image" content="https://konkovdv.github.io/Synergy/pitch/web/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Обложка питча: «Синергия» — игра-тренажёр управления бионическим протезом кисти; бионическая кисть держит стаканчик">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="preload" href="../fonts/unbounded-cyr.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="web/poster.jpg" as="image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "VideoGame",
+      "name": "Синергия",
+      "description": "Игра-тренажёр управления бионическим протезом кисти: два канала ЭМГ и поток СПППР на 7 состояний.",
+      "url": "https://konkovdv.github.io/Synergy/",
+      "inLanguage": "ru",
+      "gamePlatform": ["Android", "iOS", "Web browser"],
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Android, iOS, Web",
+      "isAccessibleForFree": true,
+      "softwareVersion": "6.3.4",
+      "author": { "@type": "Organization", "name": "MOTUS Lab" }
+    },
+    {
+      "@type": "VideoObject",
+      "name": "Синергия — ролик геймплея",
+      "description": "42 секунды: «Первые шаги», «Мастерская», «Полёт», «Ритм», «Сейф», «Созвездие» и итоги. Сборка 6.3.4 на эмуляторе сигнала.",
+      "thumbnailUrl": "https://konkovdv.github.io/Synergy/pitch/web/poster.jpg",
+      "contentUrl": "https://konkovdv.github.io/Synergy/pitch/synergy-gameplay-reel.mp4",
+      "uploadDate": "2026-11-17",
+      "duration": "PT42S",
+      "inLanguage": "ru"
+    }
+  ]
+}
+</script>
+<style>
+@font-face { font-family: "Unbounded"; src: url("../fonts/unbounded-cyr.woff2") format("woff2"); font-weight: 500 800; font-display: swap; unicode-range: U+0400-045F, U+2116 }
+@font-face { font-family: "Unbounded"; src: url("../fonts/unbounded-lat.woff2") format("woff2"); font-weight: 500 800; font-display: swap; unicode-range: U+0020-007E, U+00A0-00FF, U+2009, U+2013-2026, U+202F, U+20BD, U+2190-2192, U+2212, U+2248, U+2264-2265 }
+@font-face { font-family: "Inter"; src: url("../fonts/inter-cyr.woff2") format("woff2"); font-weight: 400 800; font-display: swap; unicode-range: U+0400-045F, U+2116 }
+@font-face { font-family: "Inter"; src: url("../fonts/inter-lat.woff2") format("woff2"); font-weight: 400 800; font-display: swap; unicode-range: U+0020-007E, U+00A0-00FF, U+2009, U+2013-2026, U+202F, U+20BD, U+2190-2192, U+2212, U+2248, U+2264-2265 }
+:root {
+  --ink: #05101a; --navy: #071019; --muted: #56616d; --line: #dce3e8; --card: #f3f5f7; --white: #fff;
+  --mint: #16e182; --mint-ink: #0a7a47; --teal: #1fd0a6; --cyan: #25c2c4; --sky: #2fa6e0; --blue: #2f6fe0; --violet: #5b4fd6;
+  --soft: #d5dfe6; --soft2: #a9bac7;
+  --head: "Unbounded", "Arial Black", system-ui, sans-serif; --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --wrap: min(1180px, 100% - 40px);
+}
+* { box-sizing: border-box }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 16px }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth } }
+body { margin: 0; font: 400 17px/1.55 var(--body); color: var(--ink); background: var(--white); text-rendering: optimizeLegibility }
+img, video { display: block; max-width: 100% }
+a { color: inherit }
+:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; border-radius: 6px }
+.wrap { width: var(--wrap); margin-inline: auto }
+.skip { position: absolute; left: 12px; top: -60px; z-index: 10; padding: 10px 16px; border-radius: 10px; background: var(--mint); color: var(--ink); font-weight: 700; text-decoration: none }
+.skip:focus { top: 12px }
+h1, h2, h3 { font-family: var(--head); font-weight: 800; letter-spacing: -.01em; line-height: 1.08; margin: 0 }
+h2 { font-size: clamp(28px, 4vw, 40px); text-transform: uppercase }
+h3 { font-size: 18px; letter-spacing: 0 }
+.kicker { font: 700 13px/1.3 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--mint-ink); margin: 0 0 12px }
+.lead { font-size: 19px; color: var(--muted); max-width: 760px; margin: 14px 0 0 }
+section { padding: 84px 0 }
+.nowrap { white-space: nowrap }
+
+/* hero */
+.hero { position: relative; color: var(--white); background:
+  radial-gradient(900px 520px at 8% -10%, rgba(22, 225, 130, .22), transparent 60%),
+  radial-gradient(800px 560px at 100% 10%, rgba(47, 111, 224, .30), transparent 62%),
+  radial-gradient(700px 500px at 60% 120%, rgba(91, 79, 214, .28), transparent 60%), var(--navy); padding: 0 0 72px; overflow: hidden }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 0 }
+.brand { font: 800 19px/1 var(--head); letter-spacing: .02em; text-decoration: none; color: var(--white) }
+.top nav ul { display: flex; flex-wrap: wrap; gap: 4px 22px; list-style: none; margin: 0; padding: 0 }
+.top nav a { color: var(--soft); text-decoration: none; font-weight: 600; font-size: 15px }
+.top nav a:hover { color: var(--white) }
+@media (max-width: 720px) { .top { flex-wrap: wrap; row-gap: 12px } .top nav { order: 3; width: 100% } .top nav ul { gap: 6px 18px } }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 22px; border-radius: 999px; font: 700 16px/1.2 var(--body); text-decoration: none; border: 1.5px solid transparent; cursor: pointer }
+.btn-mint { background: var(--mint); color: var(--ink) }
+.btn-mint:hover { background: #3ff09c }
+.btn-ghost { color: var(--white); border-color: rgba(255, 255, 255, .45) }
+.btn-ghost:hover { background: rgba(255, 255, 255, .1) }
+.btn-sm { min-height: 40px; padding: 8px 18px; font-size: 15px }
+.hero-grid { display: grid; grid-template-columns: 1fr; gap: 40px; align-items: center; padding-top: 28px }
+@media (min-width: 980px) { .hero-grid { grid-template-columns: 1.02fr 1fr; gap: 48px } }
+.hero .kicker { color: var(--mint) }
+.hero h1 { font-size: clamp(48px, 8.4vw, 92px); text-transform: uppercase }
+.hero .sub { font-size: clamp(21px, 2.4vw, 27px); line-height: 1.3; margin: 18px 0 0; max-width: 560px }
+.hero .tag { font: 700 19px/1.35 var(--body); color: var(--mint); margin: 14px 0 0 }
+.hero .story { color: var(--soft); margin: 18px 0 0; max-width: 580px }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 24px 0 0; padding: 0 }
+.chips li { padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .07); font-size: 14px; font-weight: 600 }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px }
+.hint { color: var(--soft2); font-size: 14.5px; margin: 16px 0 0 }
+.reel { margin: 0 }
+.reel .frame { position: relative; border-radius: 18px; overflow: hidden; background: #000; box-shadow: 0 30px 80px rgba(0, 0, 0, .45), 0 0 0 1px rgba(255, 255, 255, .12) }
+.reel video { width: 100%; height: auto; aspect-ratio: 16 / 9 }
+.reel figcaption { color: var(--soft2); font-size: 14.5px; margin-top: 12px }
+
+/* slides */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 26px 22px; list-style: none; margin: 36px 0 0; padding: 0 }
+.slide { display: block; text-decoration: none; color: inherit; border-radius: 14px }
+.slide img { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 12px; background: var(--card); box-shadow: 0 10px 28px rgba(5, 16, 26, .14), 0 0 0 1px var(--line); transition: transform .2s ease, box-shadow .2s ease }
+.slide:hover img { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(5, 16, 26, .2), 0 0 0 1px var(--line) }
+.slide span { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; font-weight: 700; font-size: 15.5px }
+.slide b { font-family: var(--head); font-size: 13px; color: var(--mint-ink) }
+.slide em { white-space: nowrap; font-style: normal; font-weight: 600; font-size: 12.5px; color: var(--muted); margin-left: auto; padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px }
+.more { margin: 30px 0 0; color: var(--muted) }
+
+/* numbers */
+.numbers { background: linear-gradient(180deg, #f3f5f7, #fff) }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; list-style: none; margin: 36px 0 0; padding: 0 }
+.tiles li { border-radius: 18px; padding: 24px 24px 22px; min-height: 168px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 12px 30px rgba(5, 16, 26, .12) }
+.tiles strong { font: 800 clamp(40px, 5vw, 52px)/1 var(--head); letter-spacing: -.02em }
+.tiles span { font-weight: 600; font-size: 16px; line-height: 1.4; margin-top: 16px }
+.t1 { background: linear-gradient(135deg, var(--mint), var(--teal)) }
+.t2 { background: linear-gradient(135deg, var(--teal), var(--cyan)) }
+.t3 { background: linear-gradient(135deg, var(--cyan), var(--sky)) }
+.t4 { background: linear-gradient(135deg, var(--blue), var(--violet)); color: var(--white) }
+.t5 { background: linear-gradient(135deg, var(--violet), #7a3fc8); color: var(--white) }
+.t6 { background: linear-gradient(135deg, #0d2233, #163a55); color: var(--white) }
+.src { margin: 22px 0 0; color: var(--muted); font-size: 15px }
+
+/* pilot */
+.pilot { background: var(--navy); color: var(--white); background-image: radial-gradient(800px 480px at 90% 0%, rgba(47, 166, 224, .22), transparent 60%), radial-gradient(700px 420px at 0% 100%, rgba(22, 225, 130, .16), transparent 60%) }
+.pilot .kicker { color: var(--mint) }
+.pilot .lead { color: var(--soft) }
+.pilot-grid { display: grid; grid-template-columns: 1fr; gap: 36px; margin-top: 40px }
+@media (min-width: 900px) { .pilot-grid { grid-template-columns: 1.35fr 1fr; gap: 48px } }
+.weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; list-style: none; margin: 0; padding: 0 }
+.weeks li { display: flex; flex-direction: column; gap: 10px }
+.weeks b { display: block; padding: 10px 12px; border-radius: 999px; text-align: center; color: var(--ink); font-weight: 800; font-size: 15px }
+.weeks li:nth-child(1) b { background: linear-gradient(90deg, var(--mint), var(--teal)) }
+.weeks li:nth-child(2) b { background: linear-gradient(90deg, var(--teal), var(--cyan)) }
+.weeks li:nth-child(3) b { background: linear-gradient(90deg, var(--cyan), var(--sky)) }
+.weeks li:nth-child(4) b { background: linear-gradient(90deg, var(--sky), #8ccbf4) }
+.weeks span { color: var(--soft); font-size: 16px; padding: 0 4px }
+.then { color: var(--soft2); margin: 22px 0 0 }
+.ask { align-self: start; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .18); border-radius: 18px; padding: 26px }
+.ask h3 { color: var(--mint); font-family: var(--body); font-size: 14px; letter-spacing: .14em; text-transform: uppercase }
+.ask ul { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 14px }
+.ask li { position: relative; padding-left: 26px; color: var(--soft) }
+.ask li::before { content: ""; position: absolute; left: 0; top: .5em; width: 12px; height: 12px; border-radius: 50%; background: var(--mint) }
+.ask li b { color: var(--white) }
+.pilot .src { color: var(--soft2) }
+.pilot .src a { color: var(--white) }
+
+/* team */
+.people { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 18px; margin-top: 34px }
+.person { border: 1px solid var(--line); border-radius: 18px; padding: 26px; background: var(--white) }
+.person p { margin: 6px 0 0; color: var(--muted) }
+.person .role { color: var(--mint-ink); font-weight: 700; margin-top: 4px }
+
+/* limits */
+.limits { background: var(--card) }
+.limits ul { margin: 26px 0 0; padding-left: 22px; display: grid; gap: 10px; max-width: 900px }
+
+/* files */
+.files { list-style: none; margin: 34px 0 0; padding: 0; border-top: 1px solid var(--line) }
+.files li { display: grid; grid-template-columns: 64px 1fr auto; gap: 6px 18px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--line) }
+.files .fmt { font: 800 12px/1 var(--head); letter-spacing: .04em; text-align: center; padding: 9px 0; border-radius: 10px; background: #e7f9f0; color: var(--mint-ink) }
+.files p { margin: 2px 0 0; color: var(--muted); font-size: 15px }
+.files a.btn { border-color: var(--line); color: var(--ink) }
+.files a.btn:hover { border-color: var(--ink) }
+@media (max-width: 640px) { .files li { grid-template-columns: 52px 1fr } .files li > a { grid-column: 2 } }
+
+footer { background: var(--navy); color: var(--soft2); padding: 40px 0 48px; font-size: 15px }
+footer p { margin: 6px 0 }
+footer a { color: var(--white) }
+
+/* viewer */
+dialog { width: min(1400px, 96vw); max-height: 96vh; padding: 0; border: 0; border-radius: 16px; background: #0b141c; color: var(--white); box-shadow: 0 40px 120px rgba(0, 0, 0, .6) }
+dialog::backdrop { background: rgba(3, 9, 14, .82) }
+dialog figure { margin: 0 }
+dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(96vh - 76px); object-fit: contain }
+.bar { display: flex; align-items: center; gap: 10px; padding: 12px 14px }
+.bar figcaption { flex: 1; font-weight: 600 }
+.bar button { min-width: 48px; min-height: 44px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, .35); background: transparent; color: var(--white); font: 700 16px/1 var(--body); cursor: pointer; padding: 0 16px }
+.bar button:hover { background: rgba(255, 255, 255, .1) }
+@media (prefers-reduced-motion: reduce) { .slide img { transition: none } .slide:hover img { transform: none } }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">К содержанию</a>
+<header class="hero">
+  <div class="wrap top">
+    <a class="brand" href="../">СИНЕРГИЯ</a>
+    <nav aria-label="Разделы страницы">
+      <ul>
+        <li><a href="#slides">Слайды</a></li>
+        <li><a href="#numbers">Цифры</a></li>
+        <li><a href="#pilot">Пилот</a></li>
+        <li><a href="#team">Команда</a></li>
+        <li><a href="#files">Файлы</a></li>
+      </ul>
+    </nav>
+    <a class="btn btn-mint btn-sm" href="../">Играть</a>
+  </div>
+  <div class="wrap hero-grid" id="main">
+    <div>
+      <p class="kicker">Финал геймджема «Моторика: Код движения» · 18 ноября 2026</p>
+      <h1>Синергия</h1>
+      <p class="sub">Игра-тренажёр управления бионическим протезом кисти</p>
+      <p class="tag">Тренажёр, где ошибка ничего не стоит</p>
+      <p class="story">Человек впервые берёт бионической рукой стаканчик горячего чая. Сожмёт сильнее — сомнёт и обожжётся, слабее — уронит. Нужно напрячь одну мышцу и не задеть соседнюю. «Синергия» учит этому на телефоне: те же предметы, что при выдаче протеза, и пять–десять минут в день.</p>
+      <ul class="chips" aria-label="Коротко">
+        <li>2 канала ЭМГ</li>
+        <li>СПППР, 7 состояний</li>
+        <li>Android и iPhone</li>
+        <li>офлайн, без аккаунта</li>
+      </ul>
+      <div class="cta">
+        <a class="btn btn-mint" href="../">Играть в браузере</a>
+        <a class="btn btn-ghost" href="https://github.com/KonkovDV/Synergy/raw/main/release/Synergy-6.3.4.apk">Скачать APK · 5 МБ</a>
+        <a class="btn btn-ghost" href="https://github.com/KonkovDV/Synergy/raw/main/pitch/Synergy-pitch.pdf">Презентация, PDF</a>
+      </div>
+      <p class="hint">В браузере управление — площадки A и B на экране или клавиши F и J. Протез не нужен; после первого открытия игра работает без сети.</p>
+    </div>
+    <figure class="reel">
+      <div class="frame">
+        <video id="reel" controls muted loop playsinline preload="metadata" poster="web/poster.jpg" width="1920" height="1080" aria-describedby="reel-about">
+          <source src="synergy-gameplay-reel.mp4" type="video/mp4">
+          <a href="synergy-gameplay-reel.mp4">Ролик геймплея, MP4</a>
+        </video>
+      </div>
+      <figcaption id="reel-about">Ролик геймплея, 42 секунды, без звука: «Первые шаги», «Мастерская», «Полёт», «Ритм», «Сейф», «Созвездие» и итоги по каждому каналу. Сборка 6.3.4 на эмуляторе сигнала.</figcaption>
+    </figure>
+  </div>
+</header>
+
+<main>
+  <section id="slides" aria-labelledby="slides-h">
+    <div class="wrap">
+      <p class="kicker">Презентация</p>
+      <h2 id="slides-h">Слайды питча</h2>
+      <p class="lead">Двенадцать слайдов на 4 минуты и три — для вопросов жюри. Слайд открывается крупно по нажатию, стрелки на клавиатуре листают.</p>
+      <ul class="grid">
+        <li><a class="slide" href="web/slide-01.webp" data-n="1"><img src="web/slide-01-640.webp" srcset="web/slide-01-640.webp 640w, web/slide-01.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" alt="Слайд 1, обложка. «Синергия» — игра-тренажёр управления бионическим протезом кисти. Тренажёр, где ошибка ничего не стоит. Два канала ЭМГ, СПППР на 7 состояний, Android и iPhone, офлайн, без аккаунта. Команда MOTUS Lab, Москва. На фото бионическая кисть держит стаканчик."><span><b>1</b>Обложка</span></a></li>
+        <li><a class="slide" href="web/slide-02.webp" data-n="2"><img src="web/slide-02-640.webp" srcset="web/slide-02-640.webp 640w, web/slide-02.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 2, проблема. Протез выдан, навыка ещё нет: 44 % опрошенных отказались от протеза руки; 35 % детей и 23 % взрослых бросают электрический протез. Цитата «Моторики»: напрягать ту или иную мышцу важно на фоне расслабления остальных, и это непростой навык."><span><b>2</b>Проблема</span></a></li>
+        <li><a class="slide" href="web/slide-03.webp" data-n="3"><img src="web/slide-03-640.webp" srcset="web/slide-03-640.webp 640w, web/slide-03.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 3, решение. Упражнения с выдачи протеза — теперь в телефоне: те же предметы, ошибаться не страшно, старт за 2 минуты, 5–10 минут в день."><span><b>3</b>Решение</span></a></li>
+        <li><a class="slide" href="web/slide-04.webp" data-n="4"><img src="web/slide-04-640.webp" srcset="web/slide-04-640.webp 640w, web/slide-04.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 4: ролик геймплея на 42 секунды, «Первые шаги» и шесть игр на эмуляторе сигнала."><span><b>4</b>Ролик</span></a></li>
+        <li><a class="slide" href="web/slide-05.webp" data-n="5"><img src="web/slide-05-640.webp" srcset="web/slide-05-640.webp 640w, web/slide-05.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 5, управление. Кисть в игре слушается так же, как протез: два канала ЭМГ дают четыре состояния — покой, сжатие, раскрытие и A+B для блокировки или смены хвата. Отклик 17 мс при пределе ТЗ 100 мс. Поток СПППР на 10 Гц; без пакетов 1,5 с — пауза «Сигнал потерян»."><span><b>5</b>Управление</span></a></li>
+        <li><a class="slide" href="web/slide-06.webp" data-n="6"><img src="web/slide-06-640.webp" srcset="web/slide-06-640.webp 640w, web/slide-06.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 6, игры. Каждый навык из ТЗ — своя игра: «Мастерская», «Полёт», «Ритм», «Сейф», «Созвездие», «Две руки». Жар-птица растёт от дней с тренировкой; 50 уровней, 16 типов миссий."><span><b>6</b>Игры</span></a></li>
+        <li><a class="slide" href="web/slide-07.webp" data-n="7"><img src="web/slide-07-640.webp" srcset="web/slide-07-640.webp 640w, web/slide-07.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 7, платформы. Одна сборка на большом экране, мониторе, ноутбуке, планшете и телефоне; часы — концепт. Android — APK 5 МБ, iPhone — собрано и запущено на симуляторе, компьютер — одним HTML-файлом."><span><b>7</b>Платформы</span></a></li>
+        <li><a class="slide" href="web/slide-08.webp" data-n="8"><img src="web/slide-08-640.webp" srcset="web/slide-08-640.webp 640w, web/slide-08.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 8, прогоны. Отклик 17 мс при пределе 100; APK 5 МБ при ориентире 100–150; 624 автотеста без падений; 50 из 50 уровней проходит автопилот; 0 нарушений доступности в 49 состояниях экранов; 1992 сочетания без дефектов."><span><b>8</b>Прогоны</span></a></li>
+        <li><a class="slide" href="web/slide-09.webp" data-n="9"><img src="web/slide-09-640.webp" srcset="web/slide-09-640.webp 640w, web/slide-09.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 9. Все шесть слабых мест прошлых игр закрыты: реиграбельность, размер, подстройка под экраны, незавершённый сюжет, дисбаланс каналов, однообразие механик."><span><b>9</b>Слабые места</span></a></li>
+        <li><a class="slide" href="web/slide-10.webp" data-n="10"><img src="web/slide-10-640.webp" srcset="web/slide-10-640.webp 640w, web/slide-10.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 10, внедрение. Запуск из Motorica Start через роутинг: ссылка synergy://play со стороной руки, порогами и сигналом; обратно — результат и пороги."><span><b>10</b>Внедрение</span></a></li>
+        <li><a class="slide" href="web/slide-11.webp" data-n="11"><img src="web/slide-11-640.webp" srcset="web/slide-11-640.webp 640w, web/slide-11.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 11, дальше. Хотим, чтобы тренажёр выдавали вместе с протезом. Пилот на 6 недель: реальный сигнал, сессии с 5–8 людьми, две недели дома, отчёт по пяти гипотезам. Нужно от «Моторики»: сигнал, доступ к Motorica Start, участники и реабилитолог."><span><b>11</b>Дальше</span></a></li>
+        <li><a class="slide" href="web/slide-12.webp" data-n="12"><img src="web/slide-12-640.webp" srcset="web/slide-12-640.webp 640w, web/slide-12.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 12, команда MOTUS Lab: Дмитрий Коньков, капитан; Елена Конькова, системный инженер, выпускница МГТУ им. Н. Э. Баумана по специальности «Биотехнические и медицинские аппараты и системы». QR-код на игру в браузере."><span><b>12</b>Команда</span></a></li>
+        <li><a class="slide" href="web/slide-13.webp" data-n="13"><img src="web/slide-13-640.webp" srcset="web/slide-13-640.webp 640w, web/slide-13.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 13, для вопросов: требования ТЗ потоков 1 и 2 и где они сделаны; путь сигнала один для эмулятора и устройства."><span><b>13</b>Требования ТЗ<em>для вопросов</em></span></a></li>
+        <li><a class="slide" href="web/slide-14.webp" data-n="14"><img src="web/slide-14-640.webp" srcset="web/slide-14-640.webp 640w, web/slide-14.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 14, для вопросов: девять ответов экспертов «Моторики» и как каждый сделан в игре."><span><b>14</b>Эксперты<em>для вопросов</em></span></a></li>
+        <li><a class="slide" href="web/slide-15.webp" data-n="15"><img src="web/slide-15-640.webp" srcset="web/slide-15-640.webp 640w, web/slide-15.webp 1600w" sizes="(min-width: 1180px) 370px, (min-width: 640px) 45vw, 92vw" width="640" height="360" loading="lazy" alt="Слайд 15, для вопросов: безопасность, доступность, отчёт специалисту, что есть сейчас, что проверит пилот и как в разработке использовали ИИ."><span><b>15</b>Безопасность и ИИ<em>для вопросов</em></span></a></li>
+      </ul>
+      <p class="more">Текст всех слайдов с источниками к каждому утверждению — <a href="https://github.com/KonkovDV/Synergy/blob/main/pitch/slides.md">slides.md</a>; что говорит докладчик — <a href="https://github.com/KonkovDV/Synergy/blob/main/pitch/SCRIPT.md">SCRIPT.md</a>.</p>
+    </div>
+  </section>
+
+  <section id="numbers" class="numbers" aria-labelledby="numbers-h">
+    <div class="wrap">
+      <p class="kicker">Работоспособность</p>
+      <h2 id="numbers-h">Что показали прогоны</h2>
+      <p class="lead">По словам организаторов, около 70 % оценки приходится на функциональность, работоспособность и технологичность. Поэтому здесь только цифры из прогонов сборки 6.3.4; каждую можно повторить командами из README.</p>
+      <ul class="tiles">
+        <li class="t1"><strong>17 мс</strong><span>отклик на сигнал двух каналов ЭМГ; в ТЗ — до 100 мс</span></li>
+        <li class="t2"><strong>624</strong><span>автотеста, ни один не упал</span></li>
+        <li class="t3"><strong>50 из 50</strong><span>уровней проходит автопилот на потоке с джиттером и потерями</span></li>
+        <li class="t4"><strong>0</strong><span>нарушений доступности WCAG 2.2 AA в 49 состояниях экранов (axe-core)</span></li>
+        <li class="t5"><strong>1992</strong><span>сочетания экрана и размера текста без дефектов раскладки</span></li>
+        <li class="t6"><strong>5 МБ</strong><span>весит APK при ориентире организаторов 100–150 МБ; работает офлайн</span></li>
+      </ul>
+      <p class="src">Источник — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/evidence.json">docs/evidence.json</a>, прогон 10.11.2026. 17.11 тесты снова прошли в GitHub Actions, там же приложение для iPhone собрано и запущено на симуляторе.</p>
+    </div>
+  </section>
+
+  <section id="pilot" class="pilot" aria-labelledby="pilot-h">
+    <div class="wrap">
+      <p class="kicker">Дальше</p>
+      <h2 id="pilot-h">Хотим, чтобы тренажёр выдавали вместе с протезом</h2>
+      <p class="lead">В стратегии «Моторики» до 2031 года — «цифровые решения для обучения и более быстрой адаптации пользователей». В целях ATTILAN — «геймификация процесса реабилитации». Первый шаг — пилот по готовому протоколу.</p>
+      <div class="pilot-grid">
+        <div>
+          <h3>Пилот на 6 недель</h3>
+          <ol class="weeks" style="margin-top:18px">
+            <li><b>1–2 недели</b><span>реальный сигнал вместо эмулятора, пороги из Motorica Start</span></li>
+            <li><b>3 неделя</b><span>сессии с 5–8 людьми без подсказок ведущего, анкета SUS</span></li>
+            <li><b>4–5 недели</b><span>две недели дома, без напоминаний от команды</span></li>
+            <li><b>6 неделя</b><span>отчёт по пяти гипотезам; пороги записаны до первой сессии</span></li>
+          </ol>
+          <p class="then">Затем — перенос навыка на протез: тесты SHAP и ACMC с контрольной группой, вместе с реабилитологами.</p>
+        </div>
+        <div class="ask">
+          <h3>Нужно от «Моторики»</h3>
+          <ul>
+            <li><b>Сигнал</b> — датчики или записи ЭМГ и СПППР</li>
+            <li><b>Доступ</b> — служба Motorica Start и ключ подписи</li>
+            <li><b>Люди</b> — 5–8 участников и реабилитолог</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Цитаты — IR-брошюра «Моторики», 2025. Гипотезы, пороги и процедура — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/USABILITY_PROTOCOL.md">протокол проверки</a>.</p>
+    </div>
+  </section>
+
+  <section id="team" aria-labelledby="team-h">
+    <div class="wrap">
+      <p class="kicker">Команда</p>
+      <h2 id="team-h">MOTUS Lab, Москва</h2>
+      <p class="lead">Лаборатория движения: motus по-латыни «движение» — как в названии геймджема «Код движения».</p>
+      <div class="people">
+        <article class="person">
+          <h3>Дмитрий Коньков</h3>
+          <p class="role">капитан</p>
+          <p>Постановка задач, механики и границы продукта; вопросы экспертам «Моторики» и перестройка игры под их ответы; приёмка результата.</p>
+        </article>
+        <article class="person">
+          <h3>Елена Конькова</h3>
+          <p class="role">системный инженер</p>
+          <p>МГТУ им. Н. Э. Баумана, инженер по специальности «Биотехнические и медицинские аппараты и системы» — область, к которой относятся и бионические протезы. Проверка сборок и документов, приёмка.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="limits" aria-labelledby="limits-h">
+    <div class="wrap">
+      <p class="kicker">Честно о границах</p>
+      <h2 id="limits-h">Что есть и чего нет</h2>
+      <ul>
+        <li>Оба потока сигнала работают на эмуляторах, как требует ТЗ. Реальный протез мы не подключали.</li>
+        <li>Метрики в игре игровые, не клинические. Перенос навыка на протез измерит пилот.</li>
+        <li>Со службой Motorica Start обмен не проверяли: её разрешение подписано ключом «Моторики». Формат данных совпадает.</li>
+        <li>iPhone: собрано и запущено на симуляторе в GitHub Actions, на живой телефон не ставили — нужна подпись разработчика. Часов пока нет, это концепт.</li>
+        <li>«Синергия» — тренажёр, не медицинское изделие. Иллюстрации презентации сгенерированы и отобраны командой; экраны игры настоящие.</li>
+      </ul>
+      <p class="src">Подробно — <a href="https://github.com/KonkovDV/Synergy/blob/main/LIMITS.md">LIMITS.md</a> и <a href="https://github.com/KonkovDV/Synergy/blob/main/pitch/QA.md">вопросы жюри с ответами</a>.</p>
+    </div>
+  </section>
+
+  <section id="files" aria-labelledby="files-h">
+    <div class="wrap">
+      <p class="kicker">Скачать</p>
+      <h2 id="files-h">Файлы</h2>
+      <ul class="files">
+        <li><span class="fmt">PPTX</span><div><h3>Презентация для PowerPoint</h3><p>15 слайдов, переходы Morph, ролик внутри, текст докладчика в заметках · 16 МБ</p></div><a class="btn btn-sm" href="https://github.com/KonkovDV/Synergy/raw/main/pitch/Synergy-pitch.pptx">Скачать</a></li>
+        <li><span class="fmt">PDF</span><div><h3>Презентация в PDF</h3><p>шрифты встроены, откроется на любом компьютере · 7,4 МБ</p></div><a class="btn btn-sm" href="https://github.com/KonkovDV/Synergy/raw/main/pitch/Synergy-pitch.pdf">Скачать</a></li>
+        <li><span class="fmt">MP4</span><div><h3>Ролик геймплея</h3><p>42 секунды, 1080p, без звука · 4,7 МБ</p></div><a class="btn btn-sm" href="synergy-gameplay-reel.mp4" download>Скачать</a></li>
+        <li><span class="fmt">APK</span><div><h3>Игра для Android</h3><p>Synergy-6.3.4.apk · 5 МБ, без сети и аккаунта</p></div><a class="btn btn-sm" href="https://github.com/KonkovDV/Synergy/raw/main/release/Synergy-6.3.4.apk">Скачать</a></li>
+        <li><span class="fmt">WEB</span><div><h3>Игра в браузере</h3><p>та же сборка 6.3.4; после первого открытия работает офлайн</p></div><a class="btn btn-sm" href="../">Открыть</a></li>
+        <li><span class="fmt">GIT</span><div><h3>Исходный код и документация</h3><p>README, соответствие ТЗ, архитектура, протокол пилота</p></div><a class="btn btn-sm" href="https://github.com/KonkovDV/Synergy">GitHub</a></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b style="color:#fff">Синергия</b> · сборка 6.3.4 · команда MOTUS Lab, Москва · 2026</p>
+    <p>Финал геймджема «Моторика: Код движения», 18 ноября 2026. Тренажёр, не медицинское изделие: клинический эффект не заявляем, его измерит пилот.</p>
+    <p>Страница без аналитики и cookies. <a href="../">Играть</a> · <a href="https://github.com/KonkovDV/Synergy">GitHub</a></p>
+  </div>
+</footer>
+
+<dialog id="viewer" aria-label="Слайд крупно">
+  <figure>
+    <img alt="" width="1600" height="900">
+    <div class="bar">
+      <figcaption></figcaption>
+      <button type="button" data-step="-1" aria-label="Предыдущий слайд">←</button>
+      <button type="button" data-step="1" aria-label="Следующий слайд">→</button>
+      <button type="button" data-close aria-label="Закрыть">Закрыть</button>
+    </div>
+  </figure>
+</dialog>
+
+<script>
+(() => {
+  // pitch/sw.js takes this page over from the game's offline cache (see the comment there). Once it controls the page,
+  // nothing new lands in that cache, and what the first visit left there is removed.
+  const purge = () => caches.keys().then(ks => Promise.all(ks.map(k => caches.open(k).then(c => c.keys()
+    .then(rs => Promise.all(rs.filter(r => new URL(r.url).pathname.includes('/pitch/')).map(r => c.delete(r))))))));
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js')
+    .then(() => (navigator.serviceWorker.controller?.scriptURL.endsWith('/pitch/sw.js') ? purge() : null)).catch(() => {});
+
+  const reel = document.getElementById('reel');
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
+  if (reel && 'IntersectionObserver' in window) {
+    new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting && !still.matches) reel.play().catch(() => {}); else if (!e.isIntersecting) reel.pause();
+    }), { threshold: 0.5 }).observe(reel);
+  }
+
+  const links = [...document.querySelectorAll('a.slide')];
+  const dlg = document.getElementById('viewer');
+  if (!dlg || typeof dlg.showModal !== 'function') return;
+  const big = dlg.querySelector('img'), cap = dlg.querySelector('figcaption');
+  let at = 0;
+  const show = i => {
+    at = (i + links.length) % links.length;
+    const a = links[at];
+    big.src = a.getAttribute('href');
+    big.alt = a.querySelector('img').alt;
+    cap.textContent = `${at + 1} из ${links.length} · ${a.querySelector('span').childNodes[1].textContent}`;
+  };
+  links.forEach((a, i) => a.addEventListener('click', e => { e.preventDefault(); show(i); dlg.showModal(); }));
+  dlg.addEventListener('click', e => {
+    const step = e.target.closest('[data-step]');
+    if (step) show(at + Number(step.dataset.step));
+    else if (e.target.closest('[data-close]') || e.target === dlg) dlg.close();
+  });
+  dlg.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); show(at + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(at - 1); }
+  });
+})();
+</script>
+</body>
+</html>

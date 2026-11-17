@@ -24,6 +24,7 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - run: sh tools/build-apk.sh   # 5.17: release/ is built, not tracked — the gate checks the APK of this very commit
       - run: node tools/check-submission.mjs --draft
+      - run: npm run check:pitch   # 17.11: the pitch of the final — notes, script, numbers and the text copy agree
       - name: e2e (mobile smoke + axe-core accessibility audit + layout audit, Playwright)
         run: |
           npm i --no-save --ignore-scripts playwright@1.56.1   # Playwright has no install scripts; browsers come next
