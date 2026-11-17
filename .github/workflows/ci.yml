@@ -20,7 +20,7 @@ jobs:
       - run: npm run test:tz     # 6.0, 04.11: every level of four games, three schemes, on both dictionaries of the СПППР stream
       - run: node tools/gesture-drill.mjs
       - run: npm run build
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6
         with: { distribution: temurin, java-version: '17' }
       - run: sh tools/build-apk.sh   # 5.17: release/ is built, not tracked — the gate checks the APK of this very commit
       - run: node tools/check-submission.mjs --draft
