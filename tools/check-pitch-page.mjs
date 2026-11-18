@@ -21,6 +21,7 @@ const site = mkdtempSync(join(tmpdir(), 'synergy-pages-'));
 cpSync(join(root, 'dist'), join(site, 'Synergy'), { recursive: true });
 for (const f of ['index.html', 'app.js', 'sw.js', 'web', 'synergy-gameplay-reel.mp4']) cpSync(join(root, 'pitch', f), join(site, 'Synergy/pitch', f), { recursive: true });
 cpSync(join(root, 'pitch/404.html'), join(site, 'Synergy/404.html'));
+cpSync(join(root, 'submission/Synergy-6.3.4-screencast.mp4'), join(site, 'Synergy/pitch/Synergy-6.3.4-screencast.mp4'));
 // …and, as the workflow does after the tests, the commit the page is built from (pitch/app.js shows it in the footer)
 let sha = '0'.repeat(40);
 try { sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim(); } catch { /* not a git checkout */ }

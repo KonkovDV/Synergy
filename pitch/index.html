@@ -336,6 +336,39 @@ dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(9
 .verify code { font: 500 13.5px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; background: var(--card); border-radius: 6px; padding: 1px 6px; color: var(--ink); overflow-wrap: anywhere }
 footer .build { color: var(--soft2) }
 
+/* the long read */
+.plain { background: var(--white) } .alt { background: var(--card) }
+.big3 { list-style: none; margin: 32px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px }
+.big3 li { padding: 22px; border-radius: 18px; background: var(--navy); color: var(--white) }
+.big3 strong { display: block; font: 800 clamp(40px, 6vw, 60px)/1 var(--head); color: var(--mint) }
+.big3 span { display: block; margin-top: 10px; color: var(--soft) }
+.quote { margin: 26px 0 0; padding: 20px 24px; border-left: 4px solid var(--mint); background: var(--card); border-radius: 0 16px 16px 0; font-size: 20px; font-style: italic }
+.quote cite { display: block; margin-top: 8px; font-size: 15px; font-style: normal; color: var(--muted) }
+.flow5 { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 16px }
+.flow5 img, .rep img { width: 100%; max-width: 220px; height: auto; border-radius: 22px; box-shadow: 0 14px 30px rgba(5, 16, 26, .16) }
+.flow5 b { display: block; margin-top: 10px; color: var(--mint-ink) } .flow5 span { color: var(--muted); font-size: 15px }
+.states { list-style: none; margin: 32px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 14px }
+.states li { padding: 16px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); text-align: center }
+.states img { width: 110px; height: 110px; margin: 0 auto 8px } .states b { display: block; font-size: 18px } .states span { color: var(--muted) }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; margin-top: 18px }
+.card { padding: 20px 22px; border-radius: 18px; border: 1px solid var(--line); background: var(--white) } .card h3 { font-size: 17px; text-transform: none } .card ul { margin: 12px 0 0; padding-left: 20px; color: var(--muted); display: grid; gap: 6px }
+.wide { width: 100%; height: auto; margin-top: 24px; border-radius: 18px }
+.facts4 { list-style: none; margin: 26px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px }
+.facts4 li { padding: 16px 18px; border-radius: 16px; background: var(--white); border: 1px solid var(--line); color: var(--muted) } .facts4 b { color: var(--ink) }
+.facts4.one { grid-template-columns: minmax(0, 1fr); margin: 0 }
+.rep { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 18px; margin-top: 26px; align-items: start }
+.rep .facts4 { grid-column: span 2 } @media (max-width: 700px) { .rep .facts4 { grid-column: auto } }
+.tbl { overflow-x: auto; margin-top: 26px; border-radius: 16px; border: 1px solid var(--line) }
+.tbl table { width: 100%; border-collapse: collapse; min-width: 640px; background: var(--white) }
+.tbl th, .tbl td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 15px }
+.tbl thead th { background: #e7f9f0; color: var(--mint-ink) }
+.pipe { list-style: none; margin: 30px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px }
+.pipe li { padding: 18px; border-radius: 18px; background: linear-gradient(135deg, var(--mint), var(--teal)); color: var(--ink) }
+.pipe li:nth-child(2) { background: linear-gradient(135deg, var(--teal), var(--cyan)) } .pipe li:nth-child(3) { background: linear-gradient(135deg, var(--cyan), var(--sky)) } .pipe li:nth-child(4) { background: linear-gradient(135deg, var(--sky), var(--blue)); color: var(--white) } .pipe li:nth-child(5) { background: linear-gradient(135deg, var(--blue), var(--violet)); color: var(--white) }
+.pipe b { display: block; font-size: 17px } .pipe span { display: block; margin-top: 6px; font-size: 14.5px; line-height: 1.45 }
+.chapters.light button { background: var(--card); border-color: var(--line); color: var(--ink) } .chapters.light b { color: var(--mint-ink) }
+.faq { border-bottom: 1px solid var(--line) } .faq summary { min-height: 48px; padding: 12px 0; cursor: pointer; font-weight: 700 } .faq p { margin: 0 0 16px; color: var(--muted) }
+
 /* the requirements checklist (tools/pitch-tz.mjs) */
 .crit { list-style: none; margin: 34px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px }
 .ck { display: grid; grid-template-columns: 64px 1fr; grid-template-rows: auto auto auto; column-gap: 14px; align-items: center; height: 100%; padding: 18px; border-radius: 18px; background: var(--white); border: 1px solid #cdeedd; color: inherit; text-decoration: none; box-shadow: 0 10px 26px rgba(5, 16, 26, .07); transition: border-color .2s, box-shadow .2s, transform .2s }
@@ -416,14 +449,22 @@ footer .build { color: var(--soft2) }
     <a class="brand" href="../">СИНЕРГИЯ</a>
     <nav aria-label="Разделы страницы">
       <ul>
+        <li><a href="#problem">Проблема</a></li>
+        <li><a href="#solution">Решение</a></li>
+        <li><a href="#control">Управление</a></li>
         <li><a href="#slides">Слайды</a></li>
         <li><a href="#tz">ТЗ</a></li>
         <li><a href="#games">Игры</a></li>
         <li><a href="#retention">Удержание</a></li>
         <li><a href="#numbers">Цифры</a></li>
+        <li><a href="#video">Видео</a></li>
         <li><a href="#embed">Встраивание</a></li>
+        <li><a href="#safety">Безопасность</a></li>
+        <li><a href="#report">Отчёт</a></li>
+        <li><a href="#arch">Архитектура</a></li>
         <li><a href="#pilot">Пилот</a></li>
         <li><a href="#team">Команда</a></li>
+        <li><a href="#faq">Вопросы</a></li>
         <li><a href="#files">Файлы</a></li>
       </ul>
     </nav>
@@ -470,6 +511,36 @@ footer .build { color: var(--soft2) }
     </div>
   </div>
 </div>
+
+  <section id="problem" class="plain" aria-labelledby="problem-h">
+    <div class="wrap">
+      <p class="kicker">Проблема</p>
+      <h2 id="problem-h">Протез выдан. Навыка ещё нет</h2>
+      <p class="lead">Протез выдают за день, а управлять им учатся неделями. Дома у человека — распечатка с упражнениями.</p>
+      <ul class="big3"><li><strong>44 %</strong><span>опрошенных отказались от протеза руки (опрос из Австрии)</span></li><li><strong>35 %</strong><span>детей бросают электрический протез</span></li><li><strong>23 %</strong><span>взрослых бросают электрический протез</span></li></ul><blockquote class="quote">«Напрягать ту или иную мышцу важно на фоне расслабления остальных, и это непростой навык»<cite>«Моторика», статья для будущих пользователей</cite></blockquote>
+      <p class="src">Salminger et al., Disabil Rehabil, 2022; Biddiss, Chau, Prosthet Orthot Int, 2007 — обзор за 25 лет; motorica.org. Разбор — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/RESEARCH.md">docs/RESEARCH.md</a>.</p>
+    </div>
+  </section>
+
+  <section id="solution" class="plain alt" aria-labelledby="solution-h">
+    <div class="wrap">
+      <p class="kicker">Решение</p>
+      <h2 id="solution-h">Упражнения с выдачи протеза — теперь в телефоне</h2>
+      <p class="lead">Так тренируются при выдаче протеза: кубики, кольца, «кухня». Обучение короткое, дальше человек занимается сам. «Синергия» переносит это в телефон: те же предметы — стаканчик, яйцо, яблоко, губка, кубик, — но ошибка ничего не стоит. Старт — «Первые шаги» за 2 минуты, дальше 5–10 минут в день.</p>
+      <h3 class="tz-h">Так проходит тренировка дня</h3><ol class="flow5"><li><img src="web/flow-1.webp?v=b6252383" alt="Экран «Самочувствие» сборки 6.3.4" width="300" height="576" loading="lazy" decoding="async"><b>1 · Самочувствие</b><span>боль и усталость — до игры</span></li><li><img src="web/flow-2.webp?v=7b04c7b8" alt="Экран «План дня» сборки 6.3.4" width="300" height="576" loading="lazy" decoding="async"><b>2 · План дня</b><span>из слабых навыков, ≈ 10 минут</span></li><li><img src="web/flow-3.webp?v=7c4ed714" alt="Экран «Игра» сборки 6.3.4" width="300" height="576" loading="lazy" decoding="async"><b>3 · Игра</b><span>кисть слушается только сигнала</span></li><li><img src="web/flow-4.webp?v=6a3fc5e7" alt="Экран «Итоги» сборки 6.3.4" width="300" height="576" loading="lazy" decoding="async"><b>4 · Итоги</b><span>чистота закрытия и открытия</span></li><li><img src="web/flow-5.webp?v=60236a0c" alt="Экран «Жар-птица» сборки 6.3.4" width="300" height="576" loading="lazy" decoding="async"><b>5 · Жар-птица</b><span>растёт от дней с тренировкой</span></li></ol>
+      <p class="src">Экраны — сборка 6.3.4, демо-профиль с синтетическими данными.</p>
+    </div>
+  </section>
+
+  <section id="control" class="plain" aria-labelledby="control-h">
+    <div class="wrap">
+      <p class="kicker">Соответствие ТЗ и сигналы · 33 %</p>
+      <h2 id="control-h">Кисть в игре слушается так же, как протез</h2>
+      <p class="lead">Два датчика дают четыре команды. Поведение кисти сверено с ответами экспертов «Моторики». В играх — только сигнал; меню — здоровой рукой, кнопки под левую или правую руку.</p>
+      <ul class="states"><li><img src="web/state-rest.webp?v=29c0f7a1" alt="" width="220" height="220" loading="lazy"><b>Покой</b><span>кисть держит позу и силу</span></li><li><img src="web/state-open.webp?v=e8d5746e" alt="" width="220" height="220" loading="lazy"><b>Только B</b><span>кисть раскрывается</span></li><li><img src="web/state-fist.webp?v=ef10541c" alt="" width="220" height="220" loading="lazy"><b>Только A</b><span>кисть сжимается</span></li><li><img src="web/state-coact.webp?v=f295a477" alt="" width="220" height="220" loading="lazy"><b>A + B</b><span>блокировка или смена хвата</span></li></ul><div class="two"><div class="card"><h3>Поток 1 · два канала ЭМГ</h3><ul><li>амплитуды 0–255, у каждого канала свой порог</li><li>пороговый и пропорциональный режимы</li><li>порог, удержание, подавление ложных срабатываний, мёртвая зона</li><li><b>17 мс</b> — отклик, в ТЗ до 100 мс</li></ul></div><div class="card"><h3>Поток 2 · СПППР, 7 состояний</h3><ul><li>пакет <code>{timestamp_ms, dist}</code> на 10 Гц, строгий контракт</li><li>время — по таймеру микроконтроллера</li><li>команда с первого пакета, ошибочный откатывается следующим</li><li><b>1,5 с</b> без пакетов — пауза «Сигнал потерян»</li></ul></div></div>
+      <p class="src">Построчно с тестами — раздел «ТЗ» ниже и <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/TZ_COMPLIANCE.md">docs/TZ_COMPLIANCE.md</a>.</p>
+    </div>
+  </section>
 
   <section id="slides" aria-labelledby="slides-h">
     <div class="wrap">
@@ -561,6 +632,16 @@ footer .build { color: var(--soft2) }
     </div>
   </section>
 
+  <section id="platforms" class="plain alt" aria-labelledby="platforms-h">
+    <div class="wrap">
+      <p class="kicker">Платформы</p>
+      <h2 id="platforms-h">Одна сборка работает на любом экране</h2>
+
+      <img class="wide" src="web/lineup.webp?v=816e2a72" alt="Монитор, ноутбук, планшет, телефоны Android и iPhone, часы-концепт; на экранах — настоящие кадры сборки 6.3.4" width="1400" height="755" loading="lazy" decoding="async"><ul class="facts4"><li><b>Android</b> — APK 5 МБ, телефон и планшет</li><li><b>iPhone и iPad</b> — SwiftUI: собрано и запущено на симуляторе в GitHub Actions 17.11</li><li><b>ПК и большой экран</b> — тот же код одним HTML-файлом, офлайн</li><li><b>8 размеров экрана</b> — портрет и альбом, текст до 200 %</li><li><b>Звук и вибрация</b> — музыка «Ритма» создаётся кодом, вибро-метроном</li></ul>
+      <p class="src">Фото устройств сгенерировано, экраны настоящие; часы — концепт.</p>
+    </div>
+  </section>
+
   <section id="numbers" class="numbers" aria-labelledby="numbers-h">
     <div class="wrap">
       <p class="kicker">Работоспособность</p>
@@ -576,6 +657,16 @@ footer .build { color: var(--soft2) }
       </ul>
       <details class="verify"><summary>Как проверить цифры самому</summary><ol><li><code>git clone https://github.com/KonkovDV/Synergy</code>, затем <code>npm ci</code></li><li><code>npm test</code> — все 624 автотеста</li><li><code>npm run test:tz</code> — все уровни на потоке СПППР, 10 и 50 Гц</li><li><code>npm run e2e:a11y</code> и <code>npm run audit:layout</code> — доступность и раскладка, нужен Playwright (см. README)</li></ol><p>Каждый пуш в <code>main</code> проверяет CI — <a href="https://github.com/KonkovDV/Synergy/actions/workflows/ci.yml">прогоны на GitHub</a>.</p></details>
       <p class="src">Источник — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/evidence.json">docs/evidence.json</a>, прогон 10.11.2026. 17.11 тесты снова прошли в GitHub Actions, там же приложение для iPhone собрано и запущено на симуляторе.</p>
+    </div>
+  </section>
+
+  <section id="video" class="plain" aria-labelledby="video-h">
+    <div class="wrap">
+      <p class="kicker">Демо-видео сдачи</p>
+      <h2 id="video-h">Две минуты: каждое требование в кадре</h2>
+      <p class="lead">Официальное видео сдачи 10.11, сборка 6.3.4, с субтитрами. Главы ведут к минуте, где видно требование.</p>
+      <div class="reel"><div class="frame"><video id="demo" controls playsinline preload="none" poster="web/screencast-poster.jpg?v=cbd9d8f4" width="1920" height="1080"><source src="Synergy-6.3.4-screencast.mp4" type="video/mp4"><track kind="captions" src="web/screencast.vtt" srclang="ru" label="Русские субтитры" default><a href="Synergy-6.3.4-screencast.mp4">Демо-видео, MP4</a></video></div></div><ol class="chapters light"><li><button type="button" data-seek2="0"><b>0:00</b>обложка, план дня</button></li><li><button type="button" data-seek2="11"><b>0:11</b>«Первые шаги»</button></li><li><button type="button" data-seek2="24"><b>0:24</b>два канала ЭМГ, пороги, коактивация</button></li><li><button type="button" data-seek2="34"><b>0:34</b>пакеты СПППР 10 Гц</button></li><li><button type="button" data-seek2="46"><b>0:46</b>«Ритм» на потоке СПППР</button></li><li><button type="button" data-seek2="58"><b>0:58</b>«Мастерская», уровень целиком</button></li><li><button type="button" data-seek2="84"><b>1:24</b>итоги уровня</button></li><li><button type="button" data-seek2="94"><b>1:34</b>Жар-птица, цели, достижения</button></li><li><button type="button" data-seek2="103"><b>1:43</b>отчёт специалиста</button></li><li><button type="button" data-seek2="111"><b>1:51</b>крупный текст, контраст, без касаний</button></li></ol>
+      <p class="src">Минуты и требования — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/TZ_COMPLIANCE.md">docs/TZ_COMPLIANCE.md</a>, «Где это в видео».</p>
     </div>
   </section>
 
@@ -600,6 +691,56 @@ footer .build { color: var(--soft2) }
         <li><b>Примеры хостов</b> — Android на Kotlin, iOS на Swift, Unity, Flutter, React Native, Web: <a href="https://github.com/KonkovDV/Synergy/tree/main/docs/embed">docs/embed</a></li>
       </ul>
       <p class="src">Контракт ссылки, кадров и сообщений — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/INTEGRATION.md">docs/INTEGRATION.md</a>.</p>
+    </div>
+  </section>
+
+  <section id="safety" class="plain" aria-labelledby="safety-h">
+    <div class="wrap">
+      <p class="kicker">Безопасность и данные</p>
+      <h2 id="safety-h">Тренажёр, который бережёт человека</h2>
+
+      <ul class="facts4"><li><b>До игры</b> — два вопроса: боль и усталость. При умеренной боли план короче, при сильной игра предлагает сегодня не тренироваться; отметка о коже выключает датчики на день</li><li><b>Во время игры</b> — «Стало больно» в паузе закрывает день, серия не рвётся</li><li><b>Лимит</b> — мягкий, 30 минут активной игры в день, в детском режиме 20</li><li><b>Данные</b> — только на устройстве: без сервера, аккаунта и аналитики; отчёт человек отправляет сам</li><li><b>Статус</b> — тренажёр, не медицинское изделие; клиническую пользу измерит пилот</li></ul>
+      <p class="src">Подробно — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/LEGAL.md">docs/LEGAL.md</a>, <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/ACCESSIBILITY.md">docs/ACCESSIBILITY.md</a>.</p>
+    </div>
+  </section>
+
+  <section id="report" class="plain alt" aria-labelledby="report-h">
+    <div class="wrap">
+      <p class="kicker">Отчёт специалисту</p>
+      <h2 id="report-h">Что видит реабилитолог</h2>
+
+      <div class="rep"><img src="web/report-results.webp?v=bbf9a8e4" alt="Итоги упражнения: очки, навыки, команды каналов" width="390" height="844" loading="lazy"><img src="web/report-checkin.webp?v=b24574cd" alt="Опрос самочувствия перед тренировкой" width="390" height="844" loading="lazy"><ul class="facts4 one"><li><b>Чистота закрытия и открытия</b> — без помех от второй мышцы; по ней «Моторика» смотрит прогресс (ответ 10 митапа)</li><li><b>Баланс команд A и B</b> — перекос каналов виден сразу</li><li><b>Точность, тайминг, переключение</b> — по каждой игре и уровню</li><li><b>Проверка навыка раз в неделю</b> — без подсказок, рост только сверх погрешности</li><li><b>Самочувствие по дням</b>; PDF, CSV и JSON без сервера</li></ul></div>
+      <p class="src">Экраны демо-профиля, данные синтетические.</p>
+    </div>
+  </section>
+
+  <section id="experts" class="plain" aria-labelledby="experts-h">
+    <div class="wrap">
+      <p class="kicker">Эксперты «Моторики»</p>
+      <h2 id="experts-h">Ответы ваших экспертов уже в игре</h2>
+
+      <div class="tbl"><table><thead><tr><th scope="col">Вопрос</th><th scope="col">Ответ экспертов</th><th scope="col">Как в игре</th></tr></thead><tbody><tr><th scope="row">Кисть в пороговом режиме</th><td>постоянная скорость; без сигнала держит позу и силу; раскрытие сразу открывает</td><td>так работает модель кисти</td></tr><tr><th scope="row">С какой схемы начинать</th><td>с пороговой; оба канала выше порога — первая команда</td><td>пороговая схема и «Первая команда» по умолчанию</td></tr><tr><th scope="row">Ждать ли второго пакета СПППР</th><td>важнее быстрая реакция</td><td>команда с первого пакета, ошибочный откатывается</td></tr><tr><th scope="row">Вероятность СПППР — это сила?</th><td>нет: сила — время удержания, уверенность — скорость</td><td>так и сделано</td></tr><tr><th scope="row">«2 жеста + нейтраль»</th><td>любые два жеста</td><td>пара выбирается в настройках</td></tr><tr><th scope="row">Смена хвата с предметом</th><td>предмет может выпасть</td><td>хват меняется только пустой кистью</td></tr><tr><th scope="row">Отдых и доля 60–80 %</th><td>отдых считается отдельно; когда отдыхать, решает человек</td><td>отдых вне доли; игра советует, не останавливает</td></tr><tr><th scope="row">Мотивация взрослых</th><td>им интереснее цифры</td><td>режим «Только цифры»</td></tr><tr><th scope="row">Тренировка без ЭМГ</th><td>не полезна, тренируются на сигнале протеза</td><td>эмулятор — для показа и отладки</td></tr></tbody></table></div>
+      <p class="src">Ответы чек-пойнтов 07.11 и 09.11.2026 — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/TASK.md">docs/TASK.md</a>.</p>
+    </div>
+  </section>
+
+  <section id="arch" class="plain alt" aria-labelledby="arch-h">
+    <div class="wrap">
+      <p class="kicker">Архитектура</p>
+      <h2 id="arch-h">Один путь сигнала — от датчика до итогов</h2>
+      <p class="lead">Один код — в APK, приложении для iPhone, браузере и чужом приложении. Офлайн, без сервера и аналитики.</p>
+      <ol class="pipe"><li><b>1. Источник</b><span>площадки и клавиши на экране; мост WebSocket, Web Serial, Bluetooth; поток приложения-хоста</span></li><li><b>2. Кадр сигнала</b><span>один разборщик, лимит 4 КБ на сообщение, проверка типов; строгий контракт пакета СПППР</span></li><li><b>3. Схема</b><span>пороговая, пропорциональная, жесты; порог, удержание, мёртвая зона</span></li><li><b>4. Модель кисти</b><span>без сигнала держит позу и силу; хват меняется пустой кистью</span></li><li><b>5. Игра и итоги</b><span>6 игр, 50 уровней; навыки, баланс каналов, отчёт</span></li></ol>
+      <p class="src">Подробно — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/ARCHITECTURE.md">docs/ARCHITECTURE.md</a> и <a href="https://github.com/KonkovDV/Synergy/blob/main/SECURITY.md">SECURITY.md</a>.</p>
+    </div>
+  </section>
+
+  <section id="ai" class="plain" aria-labelledby="ai-h">
+    <div class="wrap">
+      <p class="kicker">ИИ в разработке</p>
+      <h2 id="ai-h">Инструмент, а не автор решений</h2>
+
+      <ul class="facts4"><li><b>Что делал ИИ</b> — ассистент кода, генератор иллюстраций, поиск источников</li><li><b>Что решала команда</b> — механики, слова о здоровье, границы продукта, приёмка</li><li><b>Как проверено</b> — 624 автотеста, автопилот на каждом уровне; проверки ловили ошибки ИИ, они описаны в отчёте</li><li><b>В игре</b> — к ИИ не обращается, всё работает офлайн</li></ul>
+      <p class="src">Отчёт по требованию организаторов — <a href="https://github.com/KonkovDV/Synergy/blob/main/submission/AI_REPORT.md">submission/AI_REPORT.md</a>.</p>
     </div>
   </section>
 
@@ -632,6 +773,16 @@ footer .build { color: var(--soft2) }
     </div>
   </section>
 
+  <section id="hyp" class="plain alt" aria-labelledby="hyp-h">
+    <div class="wrap">
+      <p class="kicker">Пилот · гипотезы</p>
+      <h2 id="hyp-h">Пороги успеха записаны заранее</h2>
+      <p class="lead">Пороги не меняются после того, как увидены данные. Перенос на протез — отдельный пилот с реабилитологами: тесты SHAP и ACMC и контрольная группа.</p>
+      <div class="tbl"><table><thead><tr><th scope="col">№</th><th scope="col">Гипотеза</th><th scope="col">Мера</th><th scope="col">Порог успеха</th></tr></thead><tbody><tr><th scope="row">H1</th><td>Лёгкая первая неделя держит людей</td><td>дни с тренировкой за 7 и 14 дней</td><td>у ≥ 60 % участников ≥ 3 дней из 7 и ≥ 5 из 14</td></tr><tr><th scope="row">H2</th><td>Быстрый старт снижает порог входа</td><td>доля упражнений «Быстро · ≈ 2 мин»</td><td>им пользуется ≥ 30 % участников за 14 дней</td></tr><tr><th scope="row">H3</th><td>Навык растёт сверх погрешности</td><td>первая и последняя проверка навыка</td><td>у ≥ 50 % участников с двумя проверками и больше</td></tr><tr><th scope="row">H4</th><td>Игру понимают без помощи</td><td>задачи без подсказки, анкета SUS</td><td>≥ 80 % задач без подсказки; SUS ≥ 68</td></tr><tr><th scope="row">H5</th><td>Тренировка безопасна</td><td>дни боли и раздражения кожи</td><td>ни одной жалобы, связанной с игрой</td></tr></tbody></table></div>
+      <p class="src">Протокол — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/USABILITY_PROTOCOL.md">docs/USABILITY_PROTOCOL.md</a>.</p>
+    </div>
+  </section>
+
   <section id="team" aria-labelledby="team-h">
     <div class="wrap">
       <p class="kicker">Команда</p>
@@ -651,6 +802,16 @@ footer .build { color: var(--soft2) }
           <p>Проверка сборок и документов, приёмка.</p>
         </article>
       </div>
+    </div>
+  </section>
+
+  <section id="faq" class="plain" aria-labelledby="faq-h">
+    <div class="wrap">
+      <p class="kicker">Вопросы жюри</p>
+      <h2 id="faq-h">Короткие ответы на трудные вопросы</h2>
+
+      <details class="faq"><summary>Переносится ли навык из игры на протез?</summary><p>Это измерит пилот: тесты SHAP и ACMC с контрольной группой, пороги записаны заранее. Метрики игры построены по мотивам клинических тестов и попадают в отчёт специалиста.</p></details><details class="faq"><summary>Вы тестировали с пользователями протезов?</summary><p>Задание даёт эмуляторы — на них баланс уровней проверен автопилотом и моделью новичка. Следующий шаг — люди: протокол, анкеты и отчёт специалиста готовы.</p></details><details class="faq"><summary>Площадки на экране — это же тач-управление?</summary><p>Это эмулятор сигнала, его требует ТЗ. С реальным источником площадки исчезают, в играх остаётся только сигнал; касания — только для меню.</p></details><details class="faq"><summary>Не закрепит ли игра совместное сокращение?</summary><p>Нет: чистота закрытия и открытия — отдельные цифры, помехи второго канала их снижают. A+B — только осознанная команда, как в протезе.</p></details><details class="faq"><summary>Откуда 17 мс?</summary><p>Отклик двух каналов при 60 кадрах в секунду, при 30 — 33 мс; цифры закреплены тестом.</p></details><details class="faq"><summary>Как подключить реальное устройство?</summary><p>Эмулятор и драйверы отдают один пакет. Драйверы — WebSocket, Web Serial, Bluetooth; замена — одна строка кода.</p></details><details class="faq"><summary>Это медицинское изделие?</summary><p>Нет: тренажёр не диагностирует и не лечит, медицинских заявлений не делает. Клиническую пользу измерит пилот.</p></details><details class="faq"><summary>Где хранятся данные?</summary><p>Только на устройстве: аккаунта, сервера и аналитики нет. Отчёт человек отправляет сам.</p></details><details class="faq"><summary>Не надоест через неделю?</summary><p>План дня каждый раз новый, 16 типов миссий, 50 уровней; Жар-птица растёт 21 день, дальше держат цели и поддержание навыка.</p></details><details class="faq"><summary>Это всё написал ИИ?</summary><p>ИИ — инструмент. Механики, решения о здоровье, границы продукта и приёмка — команда; проверка — 624 теста и автопилот на каждом уровне.</p></details>
+      <p class="src">Все ответы и источник каждой цифры — <a href="https://github.com/KonkovDV/Synergy/blob/main/pitch/QA.md">pitch/QA.md</a>.</p>
     </div>
   </section>
 
@@ -710,6 +871,6 @@ footer .build { color: var(--soft2) }
   </div>
 </dialog>
 
-<script src="app.js?v=f5c93c00" defer></script>
+<script src="app.js?v=f8619f4a" defer></script>
 </body>
 </html>
