@@ -81,7 +81,8 @@ try {
   if (after.open || after.hash || after.focus !== '2') fail(`просмотрщик после Esc: ${JSON.stringify(after)}`);
   await page.goto(`${base}pitch/#slide-8`, { waitUntil: 'load' }); await page.waitForTimeout(300);
   if (!(await page.evaluate(() => document.getElementById('viewer').open && /slide-08\.webp/.test(document.querySelector('#viewer img').src)))) fail('адрес #slide-8 не открывает слайд 8');
-  await page.keyboard.press('Escape');
+  // the viewer clears the address as it closes: wait for that, or the next address races it (seen once in three engines)
+  await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.getElementById('viewer').open && !location.hash);
   // The appendices are their own gallery, numbered as their deck: #appx-3 is page 3 of 9, End stays inside it.
   await page.goto(`${base}pitch/#appx-3`, { waitUntil: 'load' }); await page.waitForTimeout(300);
   await page.keyboard.press('End');
