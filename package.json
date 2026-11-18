@@ -13,6 +13,8 @@
     "soak": "node tests/e2e/soak.mjs",
     "start": "node tools/static-server.mjs",
     "check:submission": "node tools/check-submission.mjs",
+    "check:pitch": "node tools/check-pitch.mjs",
+    "check:pitch-page": "node tools/check-pitch-page.mjs",
     "pack": "sh tools/pack.sh",
     "drill:gestures": "node tools/gesture-drill.mjs",
     "audit:layout": "node tests/e2e/layout.mjs",
