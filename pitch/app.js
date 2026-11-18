@@ -36,6 +36,13 @@
     reel.play().catch(() => {});
   }));
 
+  const demo = document.getElementById('demo');
+  document.querySelectorAll('[data-seek2]').forEach(b => b.addEventListener('click', () => {
+    if (!demo) return;
+    demo.currentTime = Number(b.dataset.seek2);
+    demo.play().catch(() => {});
+  }));
+
   // The bar of sections marks where the reader is; on a phone it also scrolls the marked section into sight.
   const navList = document.querySelector('.top nav ul');
   const navLinks = [...document.querySelectorAll('.top nav a[href^="#"]')];
