@@ -11,6 +11,18 @@
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js')
     .then(() => (navigator.serviceWorker.controller?.scriptURL.endsWith('/pitch/sw.js') ? purge() : null)).catch(() => {});
 
+  // The footer names the commit the page was built from: the Pages workflow writes build.json after the tests passed.
+  const stamp = document.querySelector('footer .build');
+  if (stamp && 'fetch' in window) fetch('build.json', { cache: 'no-store' }).then(r => (r.ok ? r.json() : null)).then(b => {
+    if (!b || !/^[0-9a-f]{40}$/.test(b.sha ?? '')) return;
+    const repo = 'https://github.com/KonkovDV/Synergy', link = (href, text) => Object.assign(document.createElement('a'), { href, textContent: text });
+    const at = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(b.at ?? '');
+    stamp.replaceChildren('Страница собрана из коммита ', link(`${repo}/commit/${b.sha}`, b.sha.slice(0, 7)),
+      at ? ` · ${at[3]}.${at[2]}.${at[1]}, ${at[4]}:${at[5]} UTC` : '', '; перед публикацией прошли все автотесты',
+      ...(/^\d+$/.test(String(b.run ?? '')) ? [' — ', link(`${repo}/actions/runs/${b.run}`, 'прогон')] : []), '.');
+    stamp.hidden = false;
+  }).catch(() => {});
+
   // The reel plays while it is on screen (not with reduced motion); a chapter button moves it to its scene.
   const reel = document.getElementById('reel');
   if (reel && 'IntersectionObserver' in window) {

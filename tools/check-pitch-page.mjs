@@ -5,7 +5,8 @@
 // the reel; axe-core finds nothing (WCAG 2.2 AA and best practices); the page's own service worker takes it over; an
 // unknown address gets the 404 page. Needs Playwright with Chromium (CI: the e2e step) and axe-core (devDependencies).
 import { createServer } from 'node:http';
-import { createReadStream, statSync, mkdtempSync, cpSync, rmSync, existsSync } from 'node:fs';
+import { createReadStream, statSync, mkdtempSync, cpSync, rmSync, existsSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join, extname, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +21,10 @@ const site = mkdtempSync(join(tmpdir(), 'synergy-pages-'));
 cpSync(join(root, 'dist'), join(site, 'Synergy'), { recursive: true });
 for (const f of ['index.html', 'app.js', 'sw.js', 'web', 'synergy-gameplay-reel.mp4']) cpSync(join(root, 'pitch', f), join(site, 'Synergy/pitch', f), { recursive: true });
 cpSync(join(root, 'pitch/404.html'), join(site, 'Synergy/404.html'));
+// …and, as the workflow does after the tests, the commit the page is built from (pitch/app.js shows it in the footer)
+let sha = '0'.repeat(40);
+try { sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim(); } catch { /* not a git checkout */ }
+writeFileSync(join(site, 'Synergy/pitch/build.json'), JSON.stringify({ sha, run: '1', at: new Date().toISOString().slice(0, 16) + 'Z' }));
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp4': 'video/mp4', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 const server = createServer((req, res) => {
@@ -200,6 +205,36 @@ try {
       }
       await c.close();
     } finally { if (b !== browser) await b.close(); }
+  }
+
+  // 9. The games and the launch link open the game itself, as a new visitor meets it: the onboarding, then the exercise.
+  {
+    const c = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+    const p = await c.newPage();
+    await p.goto(`${base}pitch/`, { waitUntil: 'load' });
+    await p.waitForTimeout(400);
+    const links = await p.evaluate(() => ({
+      games: [...document.querySelectorAll('.gcards a.btn')].map(a => a.getAttribute('href')),
+      live: document.querySelector('.embed .live a')?.getAttribute('href'),
+      stamp: document.querySelector('footer .build')?.hidden === false ? document.querySelector('footer .build').textContent : '',
+    }));
+    const want = ['grip', 'flight', 'rhythm', 'safe', 'stars', 'duo'].map(g => `../?game=${g}&level=1&self=1`);
+    if (JSON.stringify(links.games) !== JSON.stringify(want)) fail(`ссылки «Играть» у игр: ${JSON.stringify(links.games)}`);
+    if (links.live !== '../?game=grip&level=2&side=left&closeThreshold=60&openThreshold=45&self=1') fail(`ссылка «Открыть так в браузере»: ${links.live}`);
+    if (!/^Страница собрана из коммита [0-9a-f]{7}/.test(links.stamp)) fail(`в подвале нет коммита сборки: «${links.stamp}»`);
+    await c.close();
+    for (const [href, title] of [[want[0], 'Мастерская · ур. 1'], [links.live, 'Мастерская · ур. 2']]) {
+      const g = await browser.newContext({ ...require('playwright').devices['iPhone 15 Pro'], reducedMotion: 'reduce' });
+      const q = await g.newPage();
+      await q.goto(new URL(href, `${base}pitch/`).href, { waitUntil: 'load' });
+      for (let i = 0; i < 6 && !(await q.evaluate(() => !!document.querySelector('canvas'))); i++) {
+        await q.evaluate(() => { const els = [...document.querySelectorAll('button')].filter(e => e.getBoundingClientRect().height > 0); for (const w of ['Пропустить обучение', 'Дальше']) { const e = els.find(x => x.textContent.trim().startsWith(w)); if (e) { e.click(); return; } } });
+        await q.waitForTimeout(600);
+      }
+      const text = await q.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+      if (!text.includes(title)) fail(`${href} не открывает «${title}» после знакомства с игрой`);
+      await g.close();
+    }
   }
 } finally {
   await browser.close();

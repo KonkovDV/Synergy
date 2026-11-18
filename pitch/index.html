@@ -285,6 +285,57 @@ dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(9
 .hooks b { font-size: 17px }
 .hooks span { color: var(--muted); font-size: 15px; line-height: 1.4 }
 @media (prefers-reduced-motion: reduce) { .slide img { transition: none } .slide:hover img { transform: none } }
+/* games: a real screen, the skill, a link straight into level 1 */
+.games { background: var(--white) }
+.gcards { list-style: none; margin: 36px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 350px), 1fr)); gap: 18px }
+.gcards > li { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 18px; padding: 16px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); transition: box-shadow .25s, transform .25s cubic-bezier(.2, .7, .2, 1) }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) { .gcards > li:hover { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(5, 16, 26, .12) } }
+.gcards img { width: 116px; height: auto; aspect-ratio: 430 / 590; border-radius: 14px; box-shadow: 0 10px 24px rgba(5, 16, 26, .16) }
+.gcards > li > div { display: flex; flex-direction: column; align-items: flex-start; min-width: 0 }
+.gcards h3 { font-size: 20px; text-transform: none }
+.gcards .lv { margin: 6px 0 0; color: var(--mint-ink); font-weight: 700; font-size: 14px }
+.gcards p { margin: 8px 0 0; color: var(--muted); font-size: 15px; line-height: 1.45 }
+.sk { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px }
+.sk li { padding: 4px 10px; border-radius: 999px; background: #e7f9f0; color: var(--mint-ink); font-weight: 700; font-size: 13px }
+.gcards .btn { margin-top: auto; padding-top: 0 }
+.gcards .sk + .btn { margin-top: 14px }
+@media (max-width: 400px) { .gcards > li { grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 14px } .gcards img { width: 72px } .gcards h3 { font-size: 18px } }
+
+/* embedding: the routing as a flow, the very link of the docs, live */
+.embed { color: var(--white); background: radial-gradient(800px 420px at 100% 0%, rgba(22, 225, 130, .16), transparent 60%), radial-gradient(700px 420px at 0% 100%, rgba(47, 111, 224, .22), transparent 60%), var(--navy) }
+.embed .kicker { color: var(--mint) }
+.embed .lead, .embed .src { color: var(--soft) }
+.embed a { color: var(--white) }
+.flow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 34px }
+@media (min-width: 900px) { .flow { grid-template-columns: minmax(0, .8fr) minmax(0, 1.7fr) minmax(0, .8fr); align-items: stretch } }
+.node { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 20px; border-radius: 18px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .16) }
+.node b { font: 800 18px/1.2 var(--head) }
+.node span { color: var(--soft); font-size: 15px }
+.node.me { background: linear-gradient(135deg, var(--mint), var(--teal)); border-color: transparent; color: var(--ink) }
+.node.me span { color: #0b3b2a }
+.wires { display: grid; gap: 10px; align-content: center }
+.wires p { margin: 0; display: grid; gap: 4px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, .04); border: 1px dashed rgba(255, 255, 255, .26) }
+.wires .dir { font: 700 12.5px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--mint) }
+.wires code, .facts code { font: 500 13.5px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: #c9f7df; overflow-wrap: anywhere }
+.wires span:last-child { color: var(--soft2); font-size: 14px }
+.live { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 22px 0 0 }
+.embed .live .btn { color: var(--ink) }
+.live span { color: var(--soft) }
+.facts { list-style: none; margin: 26px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px }
+.facts li { padding: 16px 18px; border-radius: 16px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .12); color: var(--soft); font-size: 15px }
+.facts b { color: var(--white) }
+
+/* the numbers can be checked by anyone */
+.verify { margin: 22px 0 0; border: 1px solid var(--line); border-radius: 16px; background: var(--white); padding: 0 18px }
+.verify summary { min-height: 48px; padding: 13px 0; cursor: pointer; font-weight: 700; list-style: none }
+.verify summary::-webkit-details-marker { display: none }
+.verify summary::after { content: ""; display: inline-block; width: 9px; height: 9px; margin-left: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-2px) }
+.verify[open] summary::after { transform: rotate(-135deg) }
+.verify ol { margin: 0 0 8px; padding-left: 22px; display: grid; gap: 6px; color: var(--muted) }
+.verify p { margin: 0 0 16px; color: var(--muted) }
+.verify code { font: 500 13.5px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; background: var(--card); border-radius: 6px; padding: 1px 6px; color: var(--ink); overflow-wrap: anywhere }
+footer .build { color: var(--soft2) }
+
 /* the requirements checklist (tools/pitch-tz.mjs) */
 .crit { list-style: none; margin: 34px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px }
 .ck { display: grid; grid-template-columns: 64px 1fr; grid-template-rows: auto auto auto; column-gap: 14px; align-items: center; height: 100%; padding: 18px; border-radius: 18px; background: var(--white); border: 1px solid #cdeedd; color: inherit; text-decoration: none; box-shadow: 0 10px 26px rgba(5, 16, 26, .07); transition: border-color .2s, box-shadow .2s, transform .2s }
@@ -338,7 +389,7 @@ dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(9
 /* motion: content is visible by default; where the browser can, cards rise into view as they scroll in */
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
-    .crit li, .tiles li, .plus li, .grid li, .weeks li, .hooks li, .growth li, .people > *, .files li { animation: rise both cubic-bezier(.2, .7, .2, 1); animation-timeline: view(); animation-range: entry 0% entry 70% }
+    .crit li, .tiles li, .plus li, .gcards > li, .facts li, .grid li, .weeks li, .hooks li, .growth li, .people > *, .files li { animation: rise both cubic-bezier(.2, .7, .2, 1); animation-timeline: view(); animation-range: entry 0% entry 70% }
     @keyframes rise { from { opacity: 0; transform: translateY(28px) scale(.985) } to { opacity: 1; transform: none } }
   }
   .hero::before { content: ""; position: absolute; inset: -20% -10% auto; height: 120%; pointer-events: none; background: radial-gradient(520px 340px at 30% 30%, rgba(22, 225, 130, .16), transparent 70%), radial-gradient(520px 360px at 75% 20%, rgba(47, 166, 224, .18), transparent 70%); animation: aurora 22s ease-in-out infinite alternate }
@@ -367,8 +418,10 @@ dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(9
       <ul>
         <li><a href="#slides">Слайды</a></li>
         <li><a href="#tz">ТЗ</a></li>
-        <li><a href="#numbers">Цифры</a></li>
+        <li><a href="#games">Игры</a></li>
         <li><a href="#retention">Удержание</a></li>
+        <li><a href="#numbers">Цифры</a></li>
+        <li><a href="#embed">Встраивание</a></li>
         <li><a href="#pilot">Пилот</a></li>
         <li><a href="#team">Команда</a></li>
         <li><a href="#files">Файлы</a></li>
@@ -474,20 +527,13 @@ dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(9
     </div>
   </section>
 
-  <section id="numbers" class="numbers" aria-labelledby="numbers-h">
+  <section id="games" class="games" aria-labelledby="games-h">
     <div class="wrap">
-      <p class="kicker">Работоспособность</p>
-      <h2 id="numbers-h">Что показали прогоны</h2>
-      <p class="lead">По словам организаторов, около 70 % оценки приходится на функциональность, работоспособность и технологичность. Поэтому здесь только цифры из прогонов сборки 6.3.4; каждую можно повторить командами из README.</p>
-      <ul class="tiles">
-        <li class="t1"><strong>17 мс</strong><span>отклик на сигнал двух каналов ЭМГ; в ТЗ — до 100 мс</span></li>
-        <li class="t2"><strong data-count>624</strong><span>автотеста, ни один не упал</span></li>
-        <li class="t3"><strong>50 из 50</strong><span>уровней проходит автопилот; 42 из них — ещё и на потоке СПППР с джиттером и потерями</span></li>
-        <li class="t4"><strong>0</strong><span>нарушений в проверке axe‑core в 49 состояниях экранов; ориентир WCAG 2.2 AA</span></li>
-        <li class="t5"><strong data-count>1992</strong><span>сочетания экрана и размера текста без дефектов раскладки</span></li>
-        <li class="t6"><strong>5 МБ</strong><span>весит APK при ориентире организаторов 100–150 МБ; работает офлайн</span></li>
-      </ul>
-      <p class="src">Источник — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/evidence.json">docs/evidence.json</a>, прогон 10.11.2026. 17.11 тесты снова прошли в GitHub Actions, там же приложение для iPhone собрано и запущено на симуляторе.</p>
+      <p class="kicker">Обучающая ценность · 16 %</p>
+      <h2 id="games-h">Шесть игр — каждая тренирует свой навык</h2>
+      <p class="lead">Пятьдесят уровней при минимуме в три по ТЗ. В плане дня — четыре игры, «Созвездие» — для жестов СПППР, «Две руки» — для двух протезов. «Играть» открывает игру сразу на первом уровне; на её первом экране есть «Смотреть демо» — тогда играет автопилот.</p>
+      <ul class="gcards"><li><img src="web/game-grip.webp?v=60391a1c" alt="Экран игры «Мастерская» в сборке 6.3.4" width="430" height="590" loading="lazy" decoding="async"><div><h3>Мастерская</h3><p class="lv">10 уровней · сила и изоляция</p><p>Дозирование силы хвата, удержание без напряжения, отпускание и смена хвата — как в протезе.</p><ul class="sk"><li>Разделение</li><li>Точность</li><li>Переключение</li><li>Плавность</li></ul><a class="btn btn-mint btn-sm" href="../?game=grip&amp;level=1&amp;self=1">Играть<span class="sr"> в «Мастерская»</span></a></div></li><li><img src="web/game-flight.webp?v=baa28e34" alt="Экран игры «Полёт» в сборке 6.3.4" width="430" height="590" loading="lazy" decoding="async"><div><h3>Полёт</h3><p class="lv">8 уровней · плавность и удержание</p><p>Плавное управление высотой, работа каждого канала отдельно, ровное удержание уровня.</p><ul class="sk"><li>Разделение</li><li>Точность</li><li>Плавность</li></ul><a class="btn btn-mint btn-sm" href="../?game=flight&amp;level=1&amp;self=1">Играть<span class="sr"> в «Полёт»</span></a></div></li><li><img src="web/game-rhythm.webp?v=9d9ee4dc" alt="Экран игры «Ритм» в сборке 6.3.4" width="430" height="590" loading="lazy" decoding="async"><div><h3>Ритм</h3><p class="lv">8 уровней · тайминг и переключение</p><p>Быстрое включение и расслабление, длительность удержания, заданная интенсивность.</p><ul class="sk"><li>Разделение</li><li>Тайминг</li><li>Точность</li></ul><a class="btn btn-mint btn-sm" href="../?game=rhythm&amp;level=1&amp;self=1">Играть<span class="sr"> в «Ритм»</span></a></div></li><li><img src="web/game-safe.webp?v=495bf70b" alt="Экран игры «Сейф» в сборке 6.3.4" width="430" height="590" loading="lazy" decoding="async"><div><h3>Сейф</h3><p class="lv">8 уровней · смена команд, A+B</p><p>Выбор нужного жеста или команды, чистые переходы через покой, повторяемость паттернов.</p><ul class="sk"><li>Переключение</li><li>Тайминг</li><li>Точность</li></ul><a class="btn btn-mint btn-sm" href="../?game=safe&amp;level=1&amp;self=1">Играть<span class="sr"> в «Сейф»</span></a></div></li><li><img src="web/game-stars.webp?v=c24263fd" alt="Экран игры «Созвездие» в сборке 6.3.4" width="430" height="590" loading="lazy" decoding="async"><div><h3>Созвездие</h3><p class="lv">8 уровней · жесты СПППР</p><p>Плавное управление двумя парами мышц-антагонистов: чем чётче движение, тем быстрее искра. Режим жестов включится сам.</p><ul class="sk"><li>Точность</li><li>Плавность</li><li>Тайминг</li></ul><a class="btn btn-mint btn-sm" href="../?game=stars&amp;level=1&amp;self=1">Играть<span class="sr"> в «Созвездие»</span></a></div></li><li><img src="web/game-duo.webp?v=80b2d622" alt="Экран игры «Две руки» в сборке 6.3.4" width="430" height="590" loading="lazy" decoding="async"><div><h3>Две руки</h3><p class="lv">8 уровней · для двух протезов</p><p>Одна рука работает — другая отдыхает; обе вместе; разные команды двумя руками, как держать банку одной рукой и открывать другой.</p><ul class="sk"><li>Разделение</li><li>Тайминг</li><li>Точность</li></ul><a class="btn btn-mint btn-sm" href="../?game=duo&amp;level=1&amp;self=1">Играть<span class="sr"> в «Две руки»</span></a></div></li></ul>
+      <p class="src">Описания и навыки — из кода игр (<a href="https://github.com/KonkovDV/Synergy/blob/main/src/games/registry.js">src/games/registry.js</a>), правила и формулы очков — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/GAME_RULES.md">docs/GAME_RULES.md</a>. Экраны — сборка 6.3.4, играет автопилот.</p>
     </div>
   </section>
 
@@ -512,6 +558,48 @@ dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(9
         <li><img src="../art/ico-checkin.webp" alt="" width="40" height="40"><b>Проверка навыка</b><span>раз в неделю и без подсказок — рост виден по-настоящему</span></li>
       </ul>
       <p class="src">Правила роста, серии, подарков и целей — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/GAME_RULES.md">docs/GAME_RULES.md</a>; картинки — из самой игры.</p>
+    </div>
+  </section>
+
+  <section id="numbers" class="numbers" aria-labelledby="numbers-h">
+    <div class="wrap">
+      <p class="kicker">Работоспособность</p>
+      <h2 id="numbers-h">Что показали прогоны</h2>
+      <p class="lead">По словам организаторов, около 70 % оценки приходится на функциональность, работоспособность и технологичность. Поэтому здесь только цифры из прогонов сборки 6.3.4; каждую можно повторить командами из README.</p>
+      <ul class="tiles">
+        <li class="t1"><strong>17 мс</strong><span>отклик на сигнал двух каналов ЭМГ; в ТЗ — до 100 мс</span></li>
+        <li class="t2"><strong data-count>624</strong><span>автотеста, ни один не упал</span></li>
+        <li class="t3"><strong>50 из 50</strong><span>уровней проходит автопилот; 42 из них — ещё и на потоке СПППР с джиттером и потерями</span></li>
+        <li class="t4"><strong>0</strong><span>нарушений в проверке axe‑core в 49 состояниях экранов; ориентир WCAG 2.2 AA</span></li>
+        <li class="t5"><strong data-count>1992</strong><span>сочетания экрана и размера текста без дефектов раскладки</span></li>
+        <li class="t6"><strong>5 МБ</strong><span>весит APK при ориентире организаторов 100–150 МБ; работает офлайн</span></li>
+      </ul>
+      <details class="verify"><summary>Как проверить цифры самому</summary><ol><li><code>git clone https://github.com/KonkovDV/Synergy</code>, затем <code>npm ci</code></li><li><code>npm test</code> — все 624 автотеста</li><li><code>npm run test:tz</code> — все уровни на потоке СПППР, 10 и 50 Гц</li><li><code>npm run e2e:a11y</code> и <code>npm run audit:layout</code> — доступность и раскладка, нужен Playwright (см. README)</li></ol><p>Каждый пуш в <code>main</code> проверяет CI — <a href="https://github.com/KonkovDV/Synergy/actions/workflows/ci.yml">прогоны на GitHub</a>.</p></details>
+      <p class="src">Источник — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/evidence.json">docs/evidence.json</a>, прогон 10.11.2026. 17.11 тесты снова прошли в GitHub Actions, там же приложение для iPhone собрано и запущено на симуляторе.</p>
+    </div>
+  </section>
+
+  <section id="embed" class="embed" aria-labelledby="embed-h">
+    <div class="wrap">
+      <p class="kicker">Готовность к внедрению · 16 %</p>
+      <h2 id="embed-h">Запуск из Motorica Start — через роутинг</h2>
+      <p class="lead">Как вы ответили участникам (ответ 15): встраивание — это запуск и обмен данными, а не компонент внутри чужого приложения. Приложение протеза открывает «Синергию» ссылкой и получает результат обратно.</p>
+      <div class="flow">
+        <div class="node"><b>Приложение протеза</b><span>Motorica Start или любое другое</span></div>
+        <div class="wires">
+          <p><span class="dir">запуск →</span><code>synergy://play?game=grip&amp;level=2&amp;side=left&amp;closeThreshold=60&amp;openThreshold=45</code><span>игра и уровень · сторона руки · пороги 0–255; сигнал — поток ЭМГ или СПППР</span></p>
+          <p><span class="dir">← обратно</span><span class="codes"><code>synergy:result</code> · <code>synergy:settings</code></span><span>игра, уровень, очки, навыки и пороги упражнения</span></p>
+        </div>
+        <div class="node me"><b>Синергия</b><span>открывается сразу на упражнении</span></div>
+      </div>
+      <p class="live"><a class="btn btn-mint btn-sm" href="../?game=grip&amp;level=2&amp;side=left&amp;closeThreshold=60&amp;openThreshold=45&amp;self=1">Открыть так в браузере</a><span>та же ссылка запуска: «Мастерская», уровень 2, левая рука</span></p>
+      <ul class="facts">
+        <li><b>Снимок Motorica Start v1</b> читается как есть: openLevel и closeLevel 0–255 и два порога</li>
+        <li><b>Каталог Motorica Start</b> — готовая запись «Синергии»: <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/embed/motorica-start-catalog.json">motorica-start-catalog.json</a></li>
+        <li><b>Эмулятор → устройство</b> — драйверы WebSocket, Web Serial, Bluetooth; замена одной строкой кода</li>
+        <li><b>Примеры хостов</b> — Android на Kotlin, iOS на Swift, Unity, Flutter, React Native, Web: <a href="https://github.com/KonkovDV/Synergy/tree/main/docs/embed">docs/embed</a></li>
+      </ul>
+      <p class="src">Контракт ссылки, кадров и сообщений — <a href="https://github.com/KonkovDV/Synergy/blob/main/docs/INTEGRATION.md">docs/INTEGRATION.md</a>.</p>
     </div>
   </section>
 
@@ -602,6 +690,7 @@ dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(9
   <div class="wrap">
     <p><b>Синергия</b> · сборка 6.3.4 · команда MOTUS Lab, Москва · 2026</p>
     <p>Финал геймджема «Моторика: Код движения», 18 ноября 2026. Тренажёр, не медицинское изделие: клинический эффект не заявляем, его измерит пилот.</p>
+    <p class="build" hidden></p>
     <p>Страница без аналитики и cookies. <a href="../">Играть</a> · <a href="https://github.com/KonkovDV/Synergy">GitHub</a></p>
   </div>
 </footer>
@@ -621,6 +710,6 @@ dialog img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: calc(9
   </div>
 </dialog>
 
-<script src="app.js?v=80f1f4d1" defer></script>
+<script src="app.js?v=f5c93c00" defer></script>
 </body>
 </html>
