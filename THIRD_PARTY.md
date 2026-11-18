@@ -39,7 +39,7 @@
 
 - npm: только точные версии в `package.json`, зависимостей времени выполнения у Продукта нет; `package-lock.json` (v3) — каждый пакет из реестра npm с `integrity` sha512; `npm ci --ignore-scripts` во всех задачах CI.
 - GitHub Actions: каждое действие закреплено SHA коммита, у каждого workflow верхний `permissions` с наименьшими правами, `checkout` без сохранённого токена.
-- Dependabot: новые версии предлагаются через 7 дней после выхода (`cooldown`), исправления безопасности — без задержки.
+- Dependabot: исправления безопасности приходят без задержки. Пулл-реквесты с новыми версиями после сдачи выключены (`open-pull-requests-limit: 0`); если их включить, версия предлагается через 7 дней после выхода (`cooldown`).
 - Python: `lab/requirements.txt` — точные версии и hash каждого файла PyPI (`tools/pip-hashes.py`), pip ставит в режиме проверки hash.
 - Загрузки скриптов сборки (`tools/build-apk.sh`, `tools/verify-embed.sh`) сверяются по SHA-256.
 - Выпуск: SBOM в формате CycloneDX и подписанное происхождение сборки (`.github/workflows/release.yml`).
