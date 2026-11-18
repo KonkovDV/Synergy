@@ -89,7 +89,13 @@ try {
   if (!(t > 20 && t < 25)) fail(`глава «Ритм» ставит ролик на ${t.toFixed(1)} с`);
 
   // 5. The page's own worker takes it over and empties the game's cache of /pitch/.
-  await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(800);
+  await page.reload({ waitUntil: 'load' });
+  // A slow runner takes longer to swap the worker and empty the cache: wait for the state, not for a fixed time.
+  await page.waitForFunction(async () => {
+    if (!navigator.serviceWorker.controller?.scriptURL.endsWith('/pitch/sw.js')) return false;
+    for (const k of await caches.keys()) for (const r of await (await caches.open(k)).keys()) if (new URL(r.url).pathname.includes('/pitch/')) return false;
+    return true;
+  }, null, { timeout: 15000, polling: 250 }).catch(() => {});
   const sw = await page.evaluate(async () => {
     const left = [];
     for (const k of await caches.keys()) { const c = await caches.open(k); for (const r of await c.keys()) if (new URL(r.url).pathname.includes('/pitch/')) left.push(r.url); }
