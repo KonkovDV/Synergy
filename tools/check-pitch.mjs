@@ -15,6 +15,7 @@ import { inflateRawSync } from 'node:zlib';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TEST_COUNT, APK_SIZE, testsWord } from './number-docs.mjs';
+import { build as buildChecklist } from './pitch-tz.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => readFileSync(join(root, f), 'utf8');
@@ -135,6 +136,8 @@ for (const [n, t] of titles) if (!copy.includes(t.toUpperCase())) fail(`${SLIDES
 
 // 6. The site and the decks.
 const page = read('pitch/index.html');
+// the requirements checklist is the table of docs/TZ_COMPLIANCE.md, row for row (tools/pitch-tz.mjs)
+if (buildChecklist(page, read('docs/TZ_COMPLIANCE.md')) !== page) fail('pitch/index.html: чек-лист ТЗ не совпадает с docs/TZ_COMPLIANCE.md — node tools/pitch-tz.mjs');
 const pad = n => String(n).padStart(2, '0');
 for (let n = 1; n <= slideNames.length; n++) for (const f of [`slide-${pad(n)}.webp`, `slide-${pad(n)}-640.webp`]) {
   if (!existsSync(join(root, 'pitch/web', f))) fail(`pitch/web/${f}: нет картинки слайда — python3 tools/pitch-export.py`);

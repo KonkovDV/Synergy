@@ -10,7 +10,8 @@ import { dirname, join } from 'node:path';
 const PITCH = join(dirname(fileURLToPath(import.meta.url)), '..', 'pitch');
 const PAGE = join(PITCH, 'index.html');
 // src="…" and href="…" of the page's own files (the game's ../art and outside links are not ours to version)
-const OWN = /((?:src|href|srcset|content)=")([^"]*)(")/g;
+// poster="…" too: the reel's poster is also preloaded, and the two addresses must be one file (18.11: it loaded twice)
+const OWN = /((?:src|href|srcset|content|poster)=")([^"]*)(")/g;
 const FILE = /(?<![\w/.:-])((?:web\/[\w.-]+\.(?:webp|jpg|png))|app\.js|synergy-gameplay-reel\.mp4)(?:\?v=[0-9a-f]{8})?/g;
 const hash = f => createHash('sha1').update(readFileSync(join(PITCH, f))).digest('hex').slice(0, 8);
 
