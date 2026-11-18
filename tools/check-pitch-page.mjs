@@ -66,7 +66,7 @@ try {
 
   // 3. The viewer: click, keys, the address, the focus.
   await page.locator('a.slide[data-n="2"]').click();
-  const opened = await page.evaluate(() => ({ open: document.getElementById('viewer').open, hash: location.hash, cap: document.querySelector('#viewer figcaption').textContent }));
+  const opened = await page.evaluate(() => ({ open: document.getElementById('viewer').open, hash: location.hash, cap: document.querySelector('#viewer .cap').textContent }));
   if (!opened.open || opened.hash !== '#slide-2' || !/^2 \/ \d+ · /.test(opened.cap)) fail(`просмотрщик по клику: ${JSON.stringify(opened)}`);
   await page.keyboard.press('ArrowRight'); await page.keyboard.press('End'); await page.keyboard.press('Home'); await page.keyboard.press('PageDown');
   if ((await page.evaluate(() => location.hash)) !== '#slide-2') fail('просмотрщик: стрелки, Home, End, PageDown листают не так');
@@ -79,7 +79,7 @@ try {
   // The appendices are their own gallery, numbered as their deck: #appx-3 is page 3 of 9, End stays inside it.
   await page.goto(`${base}pitch/#appx-3`, { waitUntil: 'load' }); await page.waitForTimeout(300);
   await page.keyboard.press('End');
-  const ap = await page.evaluate(() => ({ open: document.getElementById('viewer').open, hash: location.hash, cap: document.querySelector('#viewer figcaption').textContent, n: document.querySelectorAll('[data-gallery="appx"] a.slide').length }));
+  const ap = await page.evaluate(() => ({ open: document.getElementById('viewer').open, hash: location.hash, cap: document.querySelector('#viewer .cap').textContent, n: document.querySelectorAll('[data-gallery="appx"] a.slide').length }));
   if (!ap.open || ap.hash !== `#appx-${ap.n}` || !ap.cap.startsWith(`${ap.n} / ${ap.n} · `)) fail(`приложения в просмотрщике: ${JSON.stringify(ap)}`);
   await page.keyboard.press('Escape');
 
@@ -113,7 +113,7 @@ try {
     if (over > 0) fail(`ширина ${width}: страница шире экрана на ${over} px`);
     // A word wider than its own box (a long heading on a phone) is a defect even when nothing scrolls sideways.
     const wide = await p.evaluate(() => [...document.querySelectorAll('main *, header *, footer *')]
-      .filter(e => !e.closest('dialog') && e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 1 && !/auto|scroll/.test(getComputedStyle(e).overflowX))
+      .filter(e => !e.closest('dialog, .sr') && e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 1 && !/auto|scroll/.test(getComputedStyle(e).overflowX))   // .sr: text for screen readers, 1 px on purpose
       .map(e => `${e.tagName.toLowerCase()} «${e.textContent.trim().slice(0, 40)}»`));
     if (wide.length) fail(`ширина ${width}: текст шире своего блока — ${wide.slice(0, 3).join('; ')}`);
     await c.close();
@@ -132,6 +132,75 @@ try {
     await p.close();
   }
   await ax.close();
+
+  // 8. A phone as a tester holds it, in every engine this machine has (CI: Chromium; ENGINES=chromium,webkit,firefox).
+  // Every target 44 pt (Apple HIG), the reel on the first screen, the checklist answering a group, a criterion, words.
+  const pw = require('playwright');
+  for (const name of (process.env.ENGINES ?? 'chromium').split(',').map(e => e.trim()).filter(Boolean)) {
+    const b = name === 'chromium' ? browser : await pw[name].launch();
+    try {
+      for (const dev of ['iPhone SE', 'iPhone 15 Pro', 'Pixel 7']) {
+        const d = pw.devices[dev];
+        const c = await b.newContext({ ...(name === 'firefox' ? { viewport: d.viewport, userAgent: d.userAgent } : d), reducedMotion: 'reduce' });
+        const p = await c.newPage();
+        const errs = [];
+        p.on('pageerror', e => errs.push(e.message));
+        p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+        await p.goto(`${base}pitch/`, { waitUntil: 'load' });
+        await p.waitForTimeout(300);
+        const tag = `${name}, ${dev}`;
+        const m = await p.evaluate(() => ({
+          over: document.documentElement.scrollWidth - innerWidth,
+          reel: document.getElementById('reel').getBoundingClientRect().top, vh: innerHeight,
+          small: [...document.querySelectorAll('.top a, .btn, .chapters button, .seg button, .tz-open, .tz-find input, .req summary, .plus li > a, .ck')]
+            .filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.height < 44 || r.width < 44); })
+            .map(e => `«${e.textContent.trim().slice(0, 18)}» ${Math.round(e.getBoundingClientRect().width)}×${Math.round(e.getBoundingClientRect().height)}`),
+        }));
+        if (m.over > 0) fail(`${tag}: страница шире экрана на ${m.over} px`);
+        if (m.reel >= m.vh) fail(`${tag}: ролик не на первом экране — сверху ${Math.round(m.reel)} px при высоте ${m.vh}`);
+        if (m.small.length) fail(`${tag}: цели касания меньше 44 pt — ${m.small.slice(0, 4).join(', ')}`);
+        const list = () => p.evaluate(() => ({ shown: [...document.querySelectorAll('.reqs .req')].filter(r => !r.hidden).length, total: document.querySelectorAll('.reqs .req').length, count: document.querySelector('.tz-count').textContent }));
+        const inGroups = (...g) => p.evaluate(ids => ids.reduce((n, id) => n + document.querySelectorAll(`.rg[data-group="${id}"] .req`).length, 0), g);
+        await p.locator('.seg [data-show="s2"]').click();
+        let l = await list();
+        const s2 = await inGroups('s2');
+        if (l.shown !== s2 || l.count !== `Показано ${s2} из ${l.total}`) fail(`${tag}: фильтр «Поток 2» — ${JSON.stringify(l)}`);
+        await p.locator('.crit .ck').first().click();
+        l = await list();
+        if (l.shown !== await inGroups('s1', 's2')) fail(`${tag}: карточка критерия 33 % показывает ${l.shown} строк`);
+        await p.locator('.seg [data-show="all"]').click();
+        await p.fill('#tz-q', '200 мс');
+        l = await list();
+        if (!(l.shown > 0 && l.shown < l.total)) fail(`${tag}: поиск «200 мс» — ${JSON.stringify(l)}`);
+        await p.fill('#tz-q', 'нет-такого-слова');
+        if (!(await p.isVisible('.tz-none'))) fail(`${tag}: пустой поиск не говорит «Ничего не нашлось»`);
+        if (errs.length) fail(`${tag}: ошибки — ${errs.slice(0, 2).join('; ')}`);
+        await c.close();
+      }
+      const c = await b.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+      const p = await c.newPage();
+      await p.goto(`${base}pitch/#rg-ux`, { waitUntil: 'load' });
+      await p.waitForTimeout(300);
+      const ux = await p.evaluate(() => [...document.querySelectorAll('.reqs .req')].filter(r => !r.hidden).length === document.querySelectorAll('.rg[data-group="ux"] .req').length);
+      if (!ux) fail(`${name}: адрес #rg-ux не оставляет только раздел «UX и доступность»`);
+      await p.evaluate(() => document.getElementById('pilot').scrollIntoView());
+      await p.waitForTimeout(700);
+      if ((await p.getAttribute('.top nav a[href="#pilot"]', 'aria-current')) !== 'true') fail(`${name}: раздел «Пилот» на экране, а в строке разделов не отмечен`);
+      await p.goto(`${base}pitch/#slide-2`, { waitUntil: 'load' });
+      await p.waitForTimeout(300);
+      const box = await p.locator('#viewer img').boundingBox();
+      if (!box) fail(`${name}: просмотрщик не открылся по адресу #slide-2`);
+      else {
+        await p.mouse.move(box.x + box.width * 0.75, box.y + box.height / 2);
+        await p.mouse.down();
+        await p.mouse.move(box.x + box.width * 0.2, box.y + box.height / 2, { steps: 6 });
+        await p.mouse.up();
+        await p.waitForTimeout(200);
+        if ((await p.evaluate(() => location.hash)) !== '#slide-3') fail(`${name}: свайп влево не листает слайд вперёд`);
+      }
+      await c.close();
+    } finally { if (b !== browser) await b.close(); }
+  }
 } finally {
   await browser.close();
   server.close();
@@ -142,4 +211,4 @@ if (problems.length) {
   for (const p of [...new Set(problems)]) console.log(`✗ ${p}`);
   process.exit(1);
 }
-console.log('Страница питча: игра открывается; ошибок, битых картинок и ссылок нет; от 320 до 2560 px без прокрутки вбок; просмотрщик, главы ролика и свой service worker работают; axe — 0 нарушений; 404 на месте');
+console.log(`Страница питча: игра открывается; ошибок, битых картинок и ссылок нет; от 320 до 2560 px без прокрутки вбок; просмотрщик, главы ролика и свой service worker работают; axe — 0 нарушений; 404 на месте; на телефонах цели касания от 44 pt, ролик на первом экране, чек-лист ТЗ отвечает (${process.env.ENGINES ?? 'chromium'})`);
