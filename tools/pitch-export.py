@@ -3,6 +3,7 @@
 
 pitch/Synergy-pitch.pptx  →  pitch/Synergy-pitch.pdf             the deck as presented (contacts on slide 12)
 pitch/Synergy-pitch-appendix.pptx → pitch/Synergy-pitch-appendix.pdf and pitch/web/appx-NN.webp  the appendices П1–П8
+pitch/Synergy-pitch-full.pptx → pitch/Synergy-pitch-full.pdf    the pitch and all eight appendices in one deck
                           →  pitch/web/slide-NN.webp, -640.webp  the slides of the site, from a copy without the
                                                                  phone and the e-mail
                           →  pitch/web/og.jpg                    1200 × 630, slide 1 without the QR codes
@@ -26,6 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PITCH = ROOT / 'pitch'
 DECK = PITCH / 'Synergy-pitch.pptx'
 APPX = PITCH / 'Synergy-pitch-appendix.pptx'
+FULL = PITCH / 'Synergy-pitch-full.pptx'
 CONTACT = re.compile(r'(\+7|\b8)[\s(-]*\d{3}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}|[\w.+-]+@[\w-]+\.[a-z]{2,}', re.I)
 SLIDE_W, THUMB_W = 1600, 640
 
@@ -128,6 +130,11 @@ def main():
                 im.save(web / f'appx-{i:02d}.webp', 'WEBP', quality=82, method=6)
                 im.resize((THUMB_W, round(THUMB_W * 9 / 16)), Image.LANCZOS).save(web / f'appx-{i:02d}-640.webp', 'WEBP', quality=78, method=6)
             print(f'pitch/Synergy-pitch-appendix.pdf, pitch/web: {len(appx)} appendix slides')
+
+        if FULL.exists() and '--no-pdf' not in sys.argv:   # the pitch and all appendices in one file
+            (tmp / 'full').mkdir()
+            shutil.copy(to_pdf(FULL, tmp / 'full'), PITCH / 'Synergy-pitch-full.pdf')
+            print('pitch/Synergy-pitch-full.pdf')
 
         tw, th, g = 600, 338, 14
         rows = (len(slides) + 2) // 3

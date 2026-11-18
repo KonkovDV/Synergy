@@ -22,6 +22,7 @@ const problems = [];
 const fail = m => problems.push(m);
 
 const DECK = 'pitch/Synergy-pitch.pptx', SCRIPT = 'pitch/SCRIPT.md', SLIDES = 'pitch/slides.md', APPX = 'pitch/Synergy-pitch-appendix.pptx';
+const FULL = 'pitch/Synergy-pitch-full.pptx'; // 18.11: the pitch and all eight appendices in one deck
 const PHONE = /(\+7|(?<![\d.,])8)[\s(-]*\d{3}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}(?!\d)/, MAIL = /[\w.+-]+@[\w-]+\.[a-z]{2,}/i;
 const TEXT_PAGES = ['pitch/README.md', SCRIPT, SLIDES, 'pitch/QA.md', 'pitch/index.html'].filter(f => existsSync(join(root, f)));
 const LIMIT_S = 240, MAX_SLIDES = 15, MAX_WPM = 140;
@@ -61,6 +62,12 @@ const words = s => s.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
 const seconds = t => { const [m, s] = t.split(':').map(Number); return m * 60 + s; };
 const wordsWord = n => (n % 10 === 1 && n % 100 !== 11 ? 'слово' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'слова' : 'слов');
 const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+const notesOf = (zip, n) => {
+  const rel = zip.get(`ppt/slides/_rels/slide${n}.xml.rels`)?.().toString('utf8') ?? '';
+  const file = rel.match(/Target="\.\.\/notesSlides\/(notesSlide\d+\.xml)"/)?.[1];
+  return file ? norm(paragraphs(zip.get(`ppt/notesSlides/${file}`)().toString('utf8'), 'body').join(' ')) : '';
+};
 
 // 1–2. The deck and the talk.
 const files = unzip(readFileSync(join(root, DECK)));
@@ -155,6 +162,7 @@ if (at > 0) {
 // contacts: on slide 12 of the pitch deck only
 const decks = [[DECK, files, n => n !== 12]];
 if (existsSync(join(root, APPX))) decks.push([APPX, unzip(readFileSync(join(root, APPX))), () => true]);
+if (existsSync(join(root, FULL))) decks.push([FULL, unzip(readFileSync(join(root, FULL))), n => n !== 12]);
 for (const [name, zip, guarded] of decks) {
   for (const [part, get] of zip) {
     const n = Number(part.match(/^ppt\/slides\/slide(\d+)\.xml$/)?.[1]);
@@ -162,7 +170,9 @@ for (const [name, zip, guarded] of decks) {
     const t = decode((get().toString('utf8').match(/<a:t>[^<]*<\/a:t>/g) ?? []).map(x => x.slice(5, -6)).join(' '));
     if (PHONE.test(t) || MAIL.test(t)) fail(`${name}: слайд ${n} — телефон или почта; контакты только на слайде 12 колоды питча`);
   }
-  if (name === APPX) for (const [part, get] of zip) if (/\.(xml|rels)$/.test(part) && /\/tmp\/|\/home\/|scratchpad/.test(get().toString('utf8'))) fail(`${APPX}: ${part} — путь к файлу на компьютере сборки`);
+  if (name !== DECK) for (const [part, get] of zip) if (/\.(xml|rels)$/.test(part) && /\/tmp\/|\/home\/|scratchpad/.test(get().toString('utf8'))) fail(`${name}: ${part} — путь к файлу на компьютере сборки`);
+  // The full deck opens with the very pitch: the talk in its notes is the talk of the 15-slide deck, word for word.
+  if (name === FULL) for (let n = 1; n <= 12; n++) if (notesOf(zip, n) !== notesOf(files, n)) fail(`${FULL}: заметки слайда ${n} не те, что в ${DECK} — соберите обе колоды из одного источника`);
 }
 
 if (problems.length) {
