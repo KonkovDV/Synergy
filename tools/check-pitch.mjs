@@ -6,7 +6,7 @@
 //   2. the blocks of the talk follow each other from 0:00, end within 4:00, keep a calm pace, and the header of the
 //      script names the real number of words and the real end;
 //   3. what the pitch quotes from the run (tests, axe states, layout combinations, APK) = docs/evidence.json;
-//   4. no phone number or e-mail in the text pages (they are public; the contacts stay on slide 12 of the deck only);
+//   4. no phone number or e-mail in the text pages (they are public), except the contacts block of the site — the same as slide 12;
 //   5. at most 15 slides (the organizers' limit), each with its title in pitch/slides.md, no local paths in the file;
 //   6. the site (audit of 17.11): a picture for every slide, fresh versions in the addresses, the sizes of the files and
 //      the length of the reel as the page says them, the build the page names; no contacts in the decks but slide 12.
@@ -118,7 +118,8 @@ else if (Number(head[1]) !== total || head[2] !== mmss(clock)) fail(`${SCRIPT}: 
 const ev = JSON.parse(read('docs/evidence.json'));
 const apkMb = Math.round(ev.apk.kb / 1024);
 for (const f of TEXT_PAGES) {
-  const text = read(f).replace(/\*\*|<\/?(b|strong)>/g, ''); // «**624** автотеста» is a number too
+  // 18.11: the team asked for its contacts on the pitch site — one block of pitch/index.html, the same as slide 12; anywhere else they stay out.
+  const text = read(f).replace(/<!-- contacts:begin -->[\s\S]*?<!-- contacts:end -->/, '').replace(/\*\*|<\/?(b|strong)>/g, ''); // «**624** автотеста» is a number too
   for (const m of text.matchAll(TEST_COUNT)) if (Number(m[1]) !== ev.tests.total) fail(`${f}: «${m[0].trim()}», а тестов ${ev.tests.total} (docs/evidence.json)`);
   for (const m of text.matchAll(APK_SIZE)) if (Number(m[1]) !== ev.apk.kb) fail(`${f}: «${m[0]}», а APK ${ev.apk.kb} КБ (docs/evidence.json)`);
   for (const m of text.matchAll(/APK[^\n|]{0,12}?(\d+)\s*МБ/g)) if (Number(m[1]) !== apkMb) fail(`${f}: «${m[0]}», а APK ${ev.apk.kb} КБ ≈ ${apkMb} МБ`);
@@ -127,6 +128,12 @@ for (const f of TEXT_PAGES) {
   // 4. Privacy: the text pages are public on GitHub and on the site.
   if (PHONE.test(text)) fail(`${f}: номер телефона — в публичных страницах контактов нет, только на слайде 12 колоды`);
   if (/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(text.replace(/@[0-9a-f]{40}/g, ''))) fail(`${f}: адрес почты — в публичных страницах контактов нет`);
+}
+
+{ // the contacts block of the site: exactly one, and the phone and e-mail of slide 12
+  const page = read('pitch/index.html'), m = page.match(/<!-- contacts:begin -->([\s\S]*?)<!-- contacts:end -->/g) || [];
+  if (m.length !== 1) fail(`pitch/index.html: блок контактов должен быть один, а их ${m.length}`);
+  else for (const c of ['+79154528864', '+7 915 452-88-64', 'konkov-dmitrij@yandex.ru']) if (!m[0].replace(/&nbsp;/g, ' ').replace(/&#8209;/g, '-').includes(c)) fail(`pitch/index.html: в блоке контактов нет «${c}» со слайда 12`);
 }
 
 // 5. The text copy of the slides.
@@ -184,4 +191,4 @@ if (problems.length) {
   console.log(`\nПитч: ${n} ${n % 10 === 1 && n % 100 !== 11 ? 'расхождение' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'расхождения' : 'расхождений'}`);
   process.exit(1);
 }
-console.log(`Питч сходится: ${slideNames.length} слайдов, речь — ${total} ${wordsWord(total)} до ${mmss(clock)}, цифры — как в docs/evidence.json (${ev.tests.total} ${testsWord(ev.tests.total)}, APK ${ev.apk.kb} КБ), контактов в текстах нет`);
+console.log(`Питч сходится: ${slideNames.length} слайдов, речь — ${total} ${wordsWord(total)} до ${mmss(clock)}, цифры — как в docs/evidence.json (${ev.tests.total} ${testsWord(ev.tests.total)}, APK ${ev.apk.kb} КБ), контакты — только на слайде 12 и в одном блоке сайта`);
