@@ -1118,8 +1118,10 @@ async function build() {
   await applyTheme(DECK);
   fs.writeFileSync(path.join(OUT, 'slides.json'), JSON.stringify({
     title: pres.title, site: SITE, demo: DEMO, generated: 'tools/motorica-deck.cjs',
-    model: { years: MODEL.years, scenarios: Object.fromEntries(Object.entries(MODEL.scen).map(([k, v]) => [k, { name: v.name, total: v.total, cum: v.cum, ebitda2031: v.ebitda5, fte: v.fte }])),
-      asp: MODEL.asp, newUsers: MODEL.newUsers, breakEvenRevenue: MODEL.breakEvenRevenue, breakEvenEbitda: MODEL.breakEvenEbitda },
+    model: { years: MODEL.years, scenarios: Object.fromEntries(Object.entries(MODEL.scen).map(([k, v]) => [k, { name: v.name, reach: v.reach, drop: v.drop,
+      mix: v.mix, hours: v.hours, retained: v.retained, l1: v.l1, l2: v.l2, total: v.total, cum: v.cum, saving: v.saving, ebitda2031: v.ebitda5, fte: v.fte }])),
+    asp: MODEL.asp, newUsers: MODEL.newUsers, cycleRevenue: MODEL.cycleRevenue, cycleEbitda: MODEL.cycleEbitda,
+    breakEvenRevenue: MODEL.breakEvenRevenue, breakEvenEbitda: MODEL.breakEvenEbitda },
     slides: META,
   }, null, 2) + '\n');
   console.log(`${path.relative(ROOT, DECK)}: ${META.length} slides`);
