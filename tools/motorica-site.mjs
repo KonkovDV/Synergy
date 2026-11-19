@@ -30,6 +30,8 @@ copyFileSync(join(root, 'pitch/web/game-grip.webp'), join(dir, 'img/game-grip.we
 const hash = (rel) => createHash('sha256').update(readFileSync(join(dir, rel))).digest('hex').slice(0, 8);
 const v = (rel) => `${rel}?v=${hash(rel)}`;
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// Текст (не атрибуты): диапазон «3–6 месяцев» не разрывается на тире.
+const txt = (s) => esc(s).replace(/(\d)–(\d)/g, '<span class="nowrap">$1–$2</span>');
 const size = (rel) => {
   const b = statSync(join(dir, rel)).size;
   return b >= 1048576 ? `${(b / 1048576).toFixed(1).replace('.', ',')}&nbsp;МБ` : `${Math.max(1, Math.round(b / 1024))}&nbsp;КБ`;
@@ -66,11 +68,11 @@ const article = (s) => {
   return `<article class="slide" id="slide-${n}" aria-labelledby="slide-${n}-h">
   <a class="shot" href="${v(`${img}.webp`)}" data-n="${n}" data-title="${esc(s.title)}"><img src="${v(`${img}-640.webp`)}" srcset="${v(`${img}-640.webp`)} 640w, ${v(`${img}.webp`)} 1600w" sizes="(min-width: 900px) 520px, calc(100vw - 32px)" width="640" height="360" loading="lazy" decoding="async" alt="Слайд ${n}: ${esc(s.title)}"></a>
   <div>
-    <p class="kicker">${n} · ${esc(s.kicker)}</p>
-    <h4 id="slide-${n}-h">${esc(s.title)}</h4>
-    ${s.lines.length ? `<ul class="lines">${s.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
-    ${text ? `<details><summary>Текст выступления${time ? `<span class="muted small">&nbsp;· ${time}</span>` : ''}</summary><p>${esc(text)}</p></details>` : ''}
-    ${s.sources ? `<p class="src">Источники: ${esc(s.sources)}</p>` : ''}
+    <p class="kicker">${n} · ${txt(s.kicker)}</p>
+    <h4 id="slide-${n}-h">${txt(s.title)}</h4>
+    ${s.lines.length ? `<ul class="lines">${s.lines.map((l) => `<li>${txt(l)}</li>`).join('')}</ul>` : ''}
+    ${text ? `<details><summary>Текст выступления${time ? `<span class="muted small">&nbsp;· ${time}</span>` : ''}</summary><p>${txt(text)}</p></details>` : ''}
+    ${s.sources ? `<p class="src">Источники: ${txt(s.sources)}</p>` : ''}
   </div>
 </article>`;
 };
@@ -114,7 +116,7 @@ const html = `<!DOCTYPE html>
     <div>
       <p class="kicker">Предложение для руководства ГК «Моторика» · ноябрь 2026</p>
       <h1>Освоение протеза как продукт</h1>
-      <p class="lead">${esc(slides[0].lines[0])}</p>
+      <p class="lead">${txt(slides[0].lines[0])}</p>
       <ul class="actions">
         <li><a class="btn btn-mint" href="#slide-1" data-present="1">Смотреть презентацию</a></li>
         <li><a class="btn" href="${v(PPTX)}" download>PowerPoint <small>${size(PPTX)}</small></a></li>
@@ -129,9 +131,9 @@ const html = `<!DOCTYPE html>
   </div>
   <div class="wrap">
     <ul class="facts">
-${facts.map((f) => `      <li><p class="lab">${esc(f.lab)}</p><p class="big">${esc(f.big)}</p><p class="txt">${esc(f.txt)}</p><p class="txt"><a href="#slide-${f.to}">Слайд ${f.to}</a></p></li>`).join('\n')}
+${facts.map((f) => `      <li><p class="lab">${esc(f.lab)}</p><p class="big">${txt(f.big)}</p><p class="txt">${txt(f.txt)}</p><p class="txt"><a href="#slide-${f.to}">Слайд ${f.to}</a></p></li>`).join('\n')}
     </ul>
-    <p class="principle">${esc(principle)}</p>
+    <p class="principle">${txt(principle)}</p>
   </div>
 </header>
 <nav class="topnav" aria-label="Разделы страницы">

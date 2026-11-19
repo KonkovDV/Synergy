@@ -56,6 +56,10 @@
     stage.addEventListener('click', (e) => { if (e.target === stage) viewer.close(); });
   }
 
+  // Ссылка #slide-N: плавная прокрутка из CSS не должна оставить страницу на полпути, пока грузятся шрифты.
+  const target = /^#slide-\d+$/.test(location.hash) && document.getElementById(location.hash.slice(1));
+  if (target) document.fonts.ready.then(() => target.scrollIntoView({ block: 'start', behavior: 'instant' }));
+
   // Печать: текст выступления раскрыт, после печати — как было.
   let closed = [];
   addEventListener('beforeprint', () => { closed = [...document.querySelectorAll('details:not([open])')]; for (const d of closed) d.open = true; });
