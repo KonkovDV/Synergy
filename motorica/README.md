@@ -5,7 +5,8 @@
 | Что | Файл |
 |---|---|
 | Сайт презентации | https://konkovdv.github.io/Synergy/motorica/ (публикуется из ветки `main`) |
-| Колода, 32 слайда: 20 основных на 25 минут и 12 приложений | [`MOTUS-Lab-Motorica.pptx`](MOTUS-Lab-Motorica.pptx), [`MOTUS-Lab-Motorica.pdf`](MOTUS-Lab-Motorica.pdf) |
+| Колода, 34 слайда: 20 основных на 25 минут и 14 приложений | [`MOTUS-Lab-Motorica.pptx`](MOTUS-Lab-Motorica.pptx), [`MOTUS-Lab-Motorica.pdf`](MOTUS-Lab-Motorica.pdf) |
+| План сотрудничества: боли «Моторики» по её документам, рабочие пакеты, этапы и ворота, первые 90 дней | [`PLAN.md`](PLAN.md), на сайте — [plan.html](https://konkovdv.github.io/Synergy/motorica/plan.html) |
 | Модель экономического эффекта с формулами | [`MOTUS-Lab-Motorica-model.xlsx`](MOTUS-Lab-Motorica-model.xlsx) |
 | Текст слайдов, заметки, источники и числа модели | [`slides.json`](slides.json) — пишет генератор колоды, читает генератор сайта |
 
@@ -36,7 +37,7 @@ node tools/motorica-site.mjs && npm run check:motorica && npm run check:motorica
 - `tools/motorica-deck.cjs` — текст, модель эффекта (`MODEL`) и вёрстка; пишет PPTX и `slides.json`. Шрифты Arial и Calibri: LibreOffice подставляет метрически совместимые Liberation Sans и Carlito, поэтому переносы на стенде совпадают с PowerPoint.
 - `tools/motorica-export.py` — PDF колоды, слайды для сайта (`slides/`) из копии без телефона и почты, `og.jpg`. Нужны LibreOffice, poppler, Pillow и python-pptx.
 - `tools/motorica-model.py` — Excel-книга с именованными ячейками; `--check` пересчитывает её в LibreOffice и сверяет итоги со слайдами.
-- `tools/motorica-site.mjs` — `index.html` и `sw.js`; у ссылок на файлы `?v=` с хэшем содержимого.
+- `tools/motorica-site.mjs` — `index.html`, `plan.html` (из `PLAN.md`) и `sw.js`; у ссылок на файлы `?v=` с хэшем содержимого.
 
 ## Правила
 

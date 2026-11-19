@@ -146,3 +146,24 @@ details p { color: var(--ink) }
   section.block { padding: 16pt 0 }
   a { color: #000 }
 }
+
+/* План сотрудничества */
+.hero-plan h1 { max-width: 24ch }
+.plan-toc { background: var(--card); border-bottom: 1px solid var(--line) }
+.plan-toc ol { margin: 0 auto; padding: 18px 0 18px 1.4em; columns: 2 280px; column-gap: 40px }
+.plan-toc li { break-inside: avoid; padding: 3px 0 }
+.plan-toc a { color: var(--ink); font-weight: 600; text-decoration: none }
+.plan-toc a:hover { color: var(--mint-ink); text-decoration: underline }
+.doc { padding: clamp(28px, 4vw, 56px) 0 clamp(44px, 6vw, 80px) }
+.doc h2 { margin-top: 1.8em; padding-top: .4em; border-top: 2px solid var(--ink) }
+.doc h2:first-child { margin-top: 0 }
+.doc h3 { margin-top: 1.4em }
+.doc p, .doc li { max-width: 80ch }
+.doc ul, .doc ol { padding-left: 1.3em; margin: 0 0 1em }
+.doc li { margin: 0 0 .45em }
+.doc li::marker { color: var(--mint-ink) }
+.doc code { font-size: .9em; background: var(--card); padding: .1em .35em; border-radius: 5px; overflow-wrap: anywhere }
+.doc .table-scroll { margin: 18px 0 24px }
+table.text { min-width: 760px }
+table.text th, table.text td { white-space: normal; text-align: left; vertical-align: top; overflow-wrap: break-word; min-width: 3ch }
+@media print { .plan-toc { display: none } .doc h2 { break-after: avoid } table.text { min-width: 0 } }
