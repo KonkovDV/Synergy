@@ -1,0 +1,169 @@
+/* MOTUS Lab × «Моторика» — сайт презентации. Токены — из страницы питча (pitch/index.html); только светлая схема,
+   как у питча: слайды светлые, и тёмная тема дала бы два разных документа. */
+@font-face { font-family: "Unbounded"; src: url("fonts/unbounded-cyr.woff2") format("woff2"); font-weight: 500 800; font-display: swap; unicode-range: U+0400-045F, U+2116 }
+@font-face { font-family: "Unbounded"; src: url("fonts/unbounded-lat.woff2") format("woff2"); font-weight: 500 800; font-display: swap; unicode-range: U+0020-007E, U+00A0-00FF, U+2009, U+2013-2026, U+202F, U+20BD, U+2190-2192, U+2212, U+2248, U+2264-2265 }
+@font-face { font-family: "Inter"; src: url("fonts/inter-cyr.woff2") format("woff2"); font-weight: 400 800; font-display: swap; unicode-range: U+0400-045F, U+2116 }
+@font-face { font-family: "Inter"; src: url("fonts/inter-lat.woff2") format("woff2"); font-weight: 400 800; font-display: swap; unicode-range: U+0020-007E, U+00A0-00FF, U+2009, U+2013-2026, U+202F, U+20BD, U+2190-2192, U+2212, U+2248, U+2264-2265 }
+
+:root {
+  --ink: #05101a; --navy: #071019; --muted: #56616d; --line: #dce3e8; --card: #f3f5f7; --white: #fff;
+  --mint: #16e182; --mint-ink: #0a7a47; --mint-bg: #e2f8ec; --sky-ink: #15628f; --sky-bg: #e3f2fa;
+  --violet-ink: #463ab8; --violet-bg: #eceafb; --soft: #d5dfe6; --soft2: #a9bac7;
+  --head: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --wrap: min(1180px, 100% - 32px);
+  --radius: 14px;
+  color-scheme: only light;
+}
+*, *::before, *::after { box-sizing: border-box }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: 72px }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth } }
+body { margin: 0; background: var(--white); color: var(--ink); font: 400 17px/1.55 var(--body); overflow-wrap: break-word }
+img { max-width: 100%; height: auto; display: block }
+a { color: var(--mint-ink); text-underline-offset: .18em }
+a:hover { text-decoration-thickness: 2px }
+:focus-visible { outline: 3px solid var(--mint-ink); outline-offset: 2px; border-radius: 4px }
+.hero :focus-visible, .viewer :focus-visible, .site-foot :focus-visible { outline-color: var(--mint) }
+h1, h2, h3, h4 { font-family: var(--head); line-height: 1.15; margin: 0 0 .5em; letter-spacing: -.01em; text-wrap: balance }
+h1 { font-size: clamp(2rem, 1.2rem + 3.6vw, 3.6rem); font-weight: 800 }
+h2 { font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.3rem); font-weight: 700 }
+h3 { font-size: clamp(1.15rem, 1rem + .6vw, 1.45rem); font-weight: 700 }
+h4 { font-size: 1.12rem; font-weight: 700 }
+p { margin: 0 0 1em; text-wrap: pretty }
+.wrap { width: var(--wrap); margin-inline: auto }
+.kicker { font: 700 .8rem/1.3 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--mint-ink); margin: 0 0 .6em }
+.lead { font-size: clamp(1.05rem, 1rem + .4vw, 1.3rem); color: var(--muted); max-width: 62ch }
+.muted { color: var(--muted) }
+.small { font-size: .9rem }
+.nowrap { white-space: nowrap }
+
+.skip { position: absolute; left: 12px; top: -60px; z-index: 30; background: var(--mint); color: var(--navy); padding: 10px 14px; border-radius: 8px; font-weight: 700 }
+.skip:focus { top: 12px }
+
+/* Шапка и навигация */
+.hero { background: var(--navy); color: var(--white); padding: clamp(40px, 7vw, 88px) 0 clamp(36px, 5vw, 64px) }
+.hero .kicker { color: var(--mint) }
+.hero .lead { color: var(--soft) }
+.hero h1 { max-width: 16ch }
+.hero-grid { display: grid; gap: 32px; align-items: center }
+@media (min-width: 900px) { .hero-grid { grid-template-columns: minmax(0, 1fr) 420px } }
+.hero-shot { border-radius: var(--radius); box-shadow: 0 18px 50px rgba(0, 0, 0, .45); background: #0d1a26 }
+.hero figure { margin: 0 }
+@media (max-width: 899px) { .hero figure { display: none } }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 26px 0 0; padding: 0; list-style: none }
+.btn { display: inline-flex; align-items: center; gap: .5em; min-height: 44px; padding: 10px 18px; border-radius: 999px; border: 2px solid currentColor;
+  color: inherit; font: 700 .98rem/1.2 var(--body); text-decoration: none; background: transparent; cursor: pointer }
+.btn:hover { background: rgba(22, 225, 130, .12) }
+.btn-mint { background: var(--mint); border-color: var(--mint); color: var(--navy) }
+.btn-mint:hover { background: #5cf0ad; border-color: #5cf0ad }
+.btn small { font-weight: 500; opacity: .8 }
+.hero .btn:not(.btn-mint) { color: var(--white); border-color: rgba(255, 255, 255, .55) }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 40px 0 0; padding: 0; list-style: none }
+.facts li { background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12); border-radius: var(--radius); padding: 16px 18px }
+.facts .lab { font: 700 .75rem/1.2 var(--body); letter-spacing: .12em; color: var(--mint); margin: 0 0 6px }
+.facts .big { font: 800 1.45rem/1.15 var(--head); margin: 0 0 6px; color: var(--white) }
+.facts .txt { font-size: .93rem; color: var(--soft); margin: 0 }
+.facts a { color: var(--mint) }
+.principle { margin: 22px 0 0; padding: 14px 18px; border-radius: var(--radius); background: rgba(22, 225, 130, .1); border: 1px solid rgba(22, 225, 130, .35); color: var(--white) }
+
+.topnav { position: sticky; top: 0; z-index: 20; background: rgba(255, 255, 255, .96); border-bottom: 1px solid var(--line); backdrop-filter: saturate(1.4) blur(6px) }
+.topnav ul { display: flex; gap: 18px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 auto; padding: 6px 0; list-style: none; width: var(--wrap) }
+.topnav li { flex: none }
+.topnav a { display: inline-block; padding: 8px 2px; color: var(--ink); text-decoration: none; font-weight: 600; font-size: .95rem }
+.topnav a:hover { color: var(--mint-ink); text-decoration: underline }
+
+section.block { padding: clamp(44px, 6vw, 80px) 0 }
+section.block + section.block { border-top: 1px solid var(--line) }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 28px 0 0; padding: 0; list-style: none }
+.card { background: var(--card); border-radius: var(--radius); padding: 20px 22px }
+.card h3 { font-size: 1.08rem; margin-bottom: .4em }
+.card p:last-child { margin-bottom: 0 }
+.card.mint { background: var(--mint-bg) }
+.card.navy { background: var(--navy); color: var(--white) }
+.card.navy .big { color: var(--mint) }
+.card .big { font: 800 1.6rem/1.15 var(--head); color: var(--mint-ink); margin: 0 0 6px }
+
+/* Таблица эффекта */
+.table-scroll { overflow-x: auto; margin: 26px 0 0; border: 1px solid var(--line); border-radius: var(--radius) }
+table { border-collapse: collapse; width: 100%; min-width: 680px; font-variant-numeric: tabular-nums }
+caption { text-align: left; padding: 14px 16px 6px; font-weight: 700 }
+th, td { padding: 10px 14px; border-top: 1px solid var(--line); text-align: right; white-space: nowrap }
+th:first-child, td:first-child { text-align: left }
+thead th { background: var(--navy); color: var(--white); border-top: 0; font-weight: 700 }
+tbody tr:nth-child(even) { background: var(--card) }
+tbody tr.base { background: var(--mint-bg); font-weight: 700 }
+
+/* Слайды */
+.group { margin: 40px 0 0 }
+.group > h3 { padding-bottom: .4em; border-bottom: 2px solid var(--ink) }
+.slide { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px 28px; padding: 28px 0; border-bottom: 1px solid var(--line) }
+.lines li, .src, details p { overflow-wrap: anywhere }
+@media (min-width: 900px) { .slide { grid-template-columns: 520px minmax(0, 1fr); align-items: start } }
+.shot { display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--card); cursor: zoom-in }
+.shot img { width: 100%; aspect-ratio: 16 / 9 }
+.slide .kicker { margin-bottom: .3em }
+.slide h4 { font-size: clamp(1.08rem, 1rem + .4vw, 1.3rem) }
+.lines { margin: 0 0 .8em; padding-left: 1.15em }
+.lines li { margin: 0 0 .35em }
+.lines li::marker { color: var(--mint-ink) }
+details { margin: 0 0 .8em; border: 1px solid var(--line); border-radius: 10px; padding: 0 14px }
+summary { cursor: pointer; padding: 10px 0; font-weight: 700; color: var(--ink); min-height: 44px; display: flex; align-items: center }
+details[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 10px }
+details p { color: var(--ink) }
+.src { font-size: .88rem; color: var(--muted) }
+
+/* Контакты и подвал */
+.contacts { background: var(--mint-bg) }
+.contact-links { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 0 }
+.contact-links .btn:not(.btn-mint) { color: var(--ink) }
+.site-foot { background: var(--navy); color: var(--soft2); padding: 34px 0 44px; font-size: .92rem }
+.site-foot a { color: var(--mint) }
+.site-foot p { max-width: 90ch }
+
+/* Просмотрщик */
+.viewer { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; background: rgba(4, 9, 14, .97); color: var(--white) }
+.viewer::backdrop { background: rgba(4, 9, 14, .85) }
+.viewer[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto }
+.viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px }
+.viewer .cap { margin: 0; font-weight: 600; font-size: .98rem; color: var(--soft) }
+.viewer-stage { display: grid; place-items: center; padding: 0 12px; min-height: 0; touch-action: pan-y }
+.viewer-stage img { max-width: min(100%, 1600px); max-height: 100%; width: auto; height: auto; border-radius: 6px; background: #fff }
+.viewer-nav { display: flex; justify-content: center; gap: 12px; padding: 12px 14px 18px }
+.icon-btn { min-width: 48px; min-height: 48px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, .5); background: transparent; color: var(--white);
+  font: 700 1.05rem/1 var(--body); cursor: pointer; padding: 0 16px }
+.icon-btn:hover { background: rgba(255, 255, 255, .1) }
+.icon-btn:disabled { opacity: .35; cursor: default }
+
+@media print {
+  .topnav, .viewer, .actions, .skip, .no-print { display: none !important }
+  body { font-size: 11pt }
+  .hero { background: #fff; color: #000; padding: 0 0 12pt }
+  .hero .lead, .facts .txt, .facts .big, .principle { color: #000 }
+  .facts li, .principle { border-color: #999; background: #fff }
+  .slide { break-inside: avoid; grid-template-columns: 1fr }
+  details { border: 0; padding: 0 }
+  details > *:not(summary) { display: block }
+  section.block { padding: 16pt 0 }
+  a { color: #000 }
+}
+
+/* План сотрудничества */
+.hero-plan h1 { max-width: 24ch }
+.plan-toc { background: var(--card); border-bottom: 1px solid var(--line) }
+.plan-toc ol { margin: 0 auto; padding: 18px 0 18px 1.4em; columns: 2 280px; column-gap: 40px }
+.plan-toc li { break-inside: avoid; padding: 3px 0 }
+.plan-toc a { color: var(--ink); font-weight: 600; text-decoration: none }
+.plan-toc a:hover { color: var(--mint-ink); text-decoration: underline }
+.doc { padding: clamp(28px, 4vw, 56px) 0 clamp(44px, 6vw, 80px) }
+.doc h2 { margin-top: 1.8em; padding-top: .4em; border-top: 2px solid var(--ink) }
+.doc h2:first-child { margin-top: 0 }
+.doc h3 { margin-top: 1.4em }
+.doc p, .doc li { max-width: 80ch }
+.doc ul, .doc ol { padding-left: 1.3em; margin: 0 0 1em }
+.doc li { margin: 0 0 .45em }
+.doc li::marker { color: var(--mint-ink) }
+.doc code { font-size: .9em; background: var(--card); padding: .1em .35em; border-radius: 5px; overflow-wrap: anywhere }
+.doc .table-scroll { margin: 18px 0 24px }
+table.text { min-width: 760px }
+table.text th, table.text td { white-space: normal; text-align: left; vertical-align: top; overflow-wrap: break-word; min-width: 3ch }
+@media print { .plan-toc { display: none } .doc h2 { break-after: avoid } table.text { min-width: 0 } }

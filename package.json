@@ -15,6 +15,8 @@
     "check:submission": "node tools/check-submission.mjs",
     "check:pitch": "node tools/check-pitch.mjs",
     "check:pitch-page": "node tools/check-pitch-page.mjs",
+    "check:motorica": "node tools/check-motorica.mjs",
+    "check:motorica-page": "node tools/check-motorica-page.mjs",
     "pack": "sh tools/pack.sh",
     "drill:gestures": "node tools/gesture-drill.mjs",
     "audit:layout": "node tests/e2e/layout.mjs",
