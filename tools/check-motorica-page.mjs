@@ -24,7 +24,7 @@ const site = mkdtempSync(join(tmpdir(), 'motorica-pages-'));
 const withGame = existsSync(join(root, 'dist/index.html'));
 if (withGame) cpSync(join(root, 'dist'), join(site, 'Synergy'), { recursive: true });
 else cpSync(join(root, 'public/icons'), join(site, 'Synergy/icons'), { recursive: true });
-const FILES = ['index.html', 'site.css', 'app.js', 'sw.js', 'og.jpg', 'fonts', 'img', 'slides', 'MOTUS-Lab-Motorica.pptx', 'MOTUS-Lab-Motorica.pdf', 'MOTUS-Lab-Motorica-model.xlsx'];
+const FILES = ['index.html', 'plan.html', 'site.css', 'app.js', 'sw.js', 'og.jpg', 'fonts', 'img', 'slides', 'MOTUS-Lab-Motorica.pptx', 'MOTUS-Lab-Motorica.pdf', 'MOTUS-Lab-Motorica-model.xlsx'];
 for (const f of FILES) cpSync(join(root, 'motorica', f), join(site, 'Synergy/motorica', f), { recursive: true });
 let sha = '0'.repeat(40);
 try { sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim(); } catch { /* не git */ }
@@ -105,18 +105,31 @@ try {
   if (top < 0 || top > 160) fail(`#slide-16: слайд не у верхнего края (top ${Math.round(top)})`);
   await deep.close();
 
+  // 3а. План сотрудничества: картинки, якоря, ссылка на контакты главной.
+  const pp = await ctx.newPage();
+  watch(pp);
+  await pp.goto(`${url}plan.html`, { waitUntil: 'load' });
+  await pp.evaluate(() => document.fonts.ready);
+  const planInfo = await pp.evaluate(() => ({
+    sections: document.querySelectorAll('main h2[id^="sec-"]').length,
+    dead: [...document.querySelectorAll('a[href^="#"]')].map((a) => a.getAttribute('href')).filter((h) => h.length > 1 && !document.getElementById(h.slice(1))),
+    back: !!document.querySelector('a[href="./#contacts"]'),
+  }));
+  if (planInfo.sections < 10 || planInfo.dead.length || !planInfo.back) fail(`план: ${JSON.stringify(planInfo)}`);
+  await pp.close();
+
   // 4. Ширины от телефона до большого монитора: ничего не прокручивается вбок, цели касания на телефоне — от 44 px.
-  for (const w of [320, 375, 414, 768, 1024, 1280, 1440, 1920]) {
+  for (const [w, target] of [320, 375, 414, 768, 1024, 1280, 1440, 1920].flatMap((x) => [[x, url], [x, `${url}plan.html`]])) {
     const p = await ctx.newPage();
     await p.setViewportSize({ width: w, height: 800 });
-    await p.goto(url, { waitUntil: 'load' });
+    await p.goto(target, { waitUntil: 'load' });
     await p.evaluate(() => document.fonts.ready);
     const over = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    if (over > 0) fail(`${w}px: страница шире окна на ${over}px`);
+    if (over > 0) fail(`${w}px ${target.endsWith('plan.html') ? 'план' : 'главная'}: страница шире окна на ${over}px`);
     const wide = await p.evaluate(() => [...document.querySelectorAll('body *')]
       .filter((e) => !e.closest('dialog, .table-scroll') && e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 1 && !/auto|scroll|hidden/.test(getComputedStyle(e).overflowX))
       .slice(0, 5).map((e) => `${e.tagName.toLowerCase()}.${e.className}`));
-    if (wide.length) fail(`${w}px: содержимое вылезает из блоков: ${wide.join(', ')}`);
+    if (wide.length) fail(`${w}px ${target.endsWith('plan.html') ? 'план' : 'главная'}: содержимое вылезает из блоков: ${wide.join(', ')}`);
     if (w <= 414) {
       const tiny = await p.evaluate(() => [...document.querySelectorAll('.btn, .icon-btn, summary')].filter((e) => e.getClientRects().length && e.getBoundingClientRect().height < 44).length);
       if (tiny) fail(`${w}px: ${tiny} кнопок ниже 44 px`);
@@ -136,6 +149,10 @@ try {
   await ap.locator('a.shot[data-n="5"]').click();
   v = await run();
   if (v.length) fail(`axe, просмотрщик: ${v.join(' | ')}`);
+  await ap.goto(`${url}plan.html`, { waitUntil: 'load' });
+  await ap.addScriptTag({ path: axePath });
+  v = await run();
+  if (v.length) fail(`axe, план: ${v.join(' | ')}`);
   await ax.close();
 
   // 6. Свой service worker забирает страницу, и она открывается без сети.
@@ -165,4 +182,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» в браузере — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: ошибок, битых картинок и якорей нет; просмотрщик, #slide-N и фокус работают; 320–1920 px без прокрутки вбок; axe — 0 нарушений; свой service worker и офлайн-копия`);
+console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: главная и план — ошибок, битых картинок и якорей нет; просмотрщик, #slide-N и фокус работают; 320–1920 px без прокрутки вбок; axe — 0 нарушений; свой service worker и офлайн-копия`);

@@ -122,6 +122,7 @@ const html = `<!DOCTYPE html>
         <li><a class="btn" href="${v(PPTX)}" download>PowerPoint <small>${size(PPTX)}</small></a></li>
         <li><a class="btn" href="${v(PDF)}" download>PDF <small>${size(PDF)}</small></a></li>
         <li><a class="btn" href="${v(XLSX)}" download>Excel-модель <small>${size(XLSX)}</small></a></li>
+        <li><a class="btn" href="plan.html">План сотрудничества</a></li>
         <li><a class="btn" href="${data.demo}">Тренажёр в браузере</a></li>
       </ul>
     </div>
@@ -141,6 +142,7 @@ ${facts.map((f) => `      <li><p class="lab">${esc(f.lab)}</p><p class="big">${t
     <li><a href="#economics">Экономика</a></li>
     <li><a href="#slides">Слайды</a></li>
     <li><a href="#appendix">Приложения</a></li>
+    <li><a href="plan.html">План сотрудничества</a></li>
     <li><a href="#contacts">Контакты</a></li>
   </ul>
 </nav>
@@ -209,9 +211,133 @@ ${appendix.map(article).join('\n')}
 `;
 writeFileSync(join(dir, 'index.html'), html);
 
-// Service worker: страница — сначала из сети, файлы с ?v= — из кэша. Версия — хэш страницы, в которой хэши всех файлов.
-const version = createHash('sha256').update(html).digest('hex').slice(0, 12);
-const core = ['./', v('site.css'), v('app.js'), 'fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2',
+// План сотрудничества: motorica/PLAN.md → motorica/plan.html. Разметка — подмножество Markdown, которое показывает и
+// GitHub: заголовки, абзацы, списки в два уровня, таблицы, **жирный**, `код`, [ссылки](адрес).
+const inline = (s) => txt(s)
+  .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+  .replace(/`([^`]+)`/g, '<code>$1</code>')
+  .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, u) => `<a href="${u}">${t}</a>`);
+function markdown(md) {
+  const lines = md.replace(/\r/g, '').split('\n');
+  const out = [];
+  const toc = [];
+  let title = '';
+  let lead = '';
+  let tables = 0;
+  let i = 0;
+  const block = /^(#{1,3} |\||- |\d+\. )/;
+  while (i < lines.length) {
+    const line = lines[i];
+    let m;
+    if (!line.trim()) { i++; continue; }
+    if ((m = /^(#{1,3}) (.+)$/.exec(line))) {
+      if (m[1].length === 1) title = m[2];
+      else if (m[1].length === 2) { const id = `sec-${toc.length + 1}`; toc.push([id, m[2]]); out.push(`<h2 id="${id}">${inline(m[2])}</h2>`); }
+      else out.push(`<h3>${inline(m[2])}</h3>`);
+      i++;
+      continue;
+    }
+    if (line.startsWith('|')) {
+      const rows = [];
+      while (i < lines.length && lines[i].startsWith('|')) rows.push(lines[i++]);
+      const cells = (r) => r.replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+      const label = toc.length ? toc[toc.length - 1][1].replace(/^\d+\. /, '') : 'план';
+      tables += 1;
+      out.push(`<div class="table-scroll" tabindex="0" role="region" aria-label="Таблица ${tables}: ${esc(label)}"><table class="text"><thead><tr>${cells(rows[0]).map((c) => `<th scope="col">${inline(c)}</th>`).join('')}</tr></thead><tbody>
+${rows.slice(2).map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`).join('\n')}
+</tbody></table></div>`);
+      continue;
+    }
+    if (/^(- |\d+\. )/.test(line)) {
+      const tag = /^\d+\. /.test(line) ? 'ol' : 'ul';
+      const items = [];
+      while (i < lines.length && (/^(- |\d+\. )/.test(lines[i]) || /^ {2}- /.test(lines[i]))) {
+        const l = lines[i++];
+        if (/^ {2}- /.test(l)) items[items.length - 1].sub.push(l.slice(4));
+        else items.push({ text: l.replace(/^(- |\d+\. )/, ''), sub: [] });
+      }
+      out.push(`<${tag}>${items.map((it) => `<li>${inline(it.text)}${it.sub.length ? `<ul>${it.sub.map((x) => `<li>${inline(x)}</li>`).join('')}</ul>` : ''}</li>`).join('\n')}</${tag}>`);
+      continue;
+    }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !block.test(lines[i])) para.push(lines[i++].trim());
+    if (!lead && !out.length) lead = para.join(' ');
+    else out.push(`<p>${inline(para.join(' '))}</p>`);
+  }
+  return { title, lead, toc, body: out.join('\n') };
+}
+const plan = markdown(readFileSync(join(dir, 'PLAN.md'), 'utf8'));
+const head = (title, description, path) => `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="only light">
+<meta name="theme-color" content="#071019">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="canonical" href="${data.site}${path}">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="MOTUS Lab">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(description)}">
+<meta property="og:url" content="${data.site}${path}">
+<meta property="og:image" content="${data.site}og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Обложка презентации: «Освоение протеза как продукт», MOTUS Lab для ГК «Моторика»">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/unbounded-cyr.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/inter-cyr.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="${v('site.css')}">
+<script src="${v('app.js')}" defer></script>
+</head>`;
+const planHtml = `${head('План сотрудничества — MOTUS Lab × ГК «Моторика»', 'Боли «Моторики» по её собственным документам, семь рабочих пакетов, этапы с воротами решений, первые 90 дней, управление, данные и регуляторика, права и оплата, показатели и риски.', 'plan.html')}
+<body>
+<a class="skip" href="#main">К содержанию</a>
+<header class="hero hero-plan">
+  <div class="wrap">
+    <p class="kicker">MOTUS Lab × ГК «Моторика» · предложение для обсуждения</p>
+    <h1>${inline(plan.title)}</h1>
+    <p class="lead">${inline(plan.lead)}</p>
+    <ul class="actions">
+      <li><a class="btn btn-mint" href="./">Презентация и экономика</a></li>
+      <li><a class="btn" href="${v(PPTX)}" download>PowerPoint <small>${size(PPTX)}</small></a></li>
+      <li><a class="btn" href="${v(XLSX)}" download>Excel-модель <small>${size(XLSX)}</small></a></li>
+      <li><a class="btn" href="./#contacts">Связаться</a></li>
+    </ul>
+  </div>
+</header>
+<nav class="plan-toc" aria-label="Разделы плана">
+  <div class="wrap">
+    <ol>
+${plan.toc.map(([id, t]) => `      <li><a href="#${id}">${inline(t.replace(/^\d+\. /, ''))}</a></li>`).join('\n')}
+    </ol>
+  </div>
+</nav>
+<main id="main" class="doc">
+  <div class="wrap">
+${plan.body}
+  </div>
+</main>
+<footer class="site-foot">
+  <div class="wrap">
+    <p>План — предложение MOTUS Lab для обсуждения с ГК «Моторика». Факты о компании — из её открытых документов, ссылки — в разделе «Источники»; всё, что предлагаем мы, так и названо. Исходный текст плана — <a href="https://github.com/KonkovDV/Synergy/blob/main/motorica/PLAN.md">motorica/PLAN.md</a>. <span id="build"></span></p>
+  </div>
+</footer>
+</body>
+</html>
+`;
+writeFileSync(join(dir, 'plan.html'), planHtml);
+
+// Service worker: страницы — сначала из сети, файлы с ?v= — из кэша. Версия — хэш страниц, в которых хэши всех файлов.
+const version = createHash('sha256').update(html + planHtml).digest('hex').slice(0, 12);
+const core = ['./', 'plan.html', v('site.css'), v('app.js'), 'fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2',
   'fonts/unbounded-lat.woff2', v('img/game-grip.webp'), ...slides.map((s) => v(`slides/slide-${pad(s.n)}-640.webp`))];
 writeFileSync(join(dir, 'sw.js'), `// Офлайн-копия сайта презентации; генерирует tools/motorica-site.mjs — не править руками.
 // Игра на корне сайта (../sw.js) отдаёт всё под собой из кэша; этот worker с областью ./ забирает /motorica/ себе
@@ -235,9 +361,9 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.endsWith('/build.json')) return;
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then((res) => {
-      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('./', copy)); }
+      if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
       return res;
-    }).catch(() => caches.match('./')));
+    }).catch(() => caches.match(req).then((hit) => hit || caches.match('./'))));
     return;
   }
   e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => {
@@ -246,4 +372,4 @@ self.addEventListener('fetch', (e) => {
   })));
 });
 `);
-console.log(`motorica/index.html: ${slides.length} slides; motorica/sw.js: ${version}`);
+console.log(`motorica/index.html: ${slides.length} slides; motorica/plan.html: ${plan.toc.length} sections; motorica/sw.js: ${version}`);
