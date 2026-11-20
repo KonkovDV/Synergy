@@ -23,8 +23,9 @@ jobs:
       - run: printf '{"sha":"%s","run":"%s","at":"%s"}\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" "$(date -u +%Y-%m-%dT%H:%MZ)" > dist/pitch/build.json
       # 19.11.2026 — the proposal for Motorica's management: /motorica/, its own service worker (scope /motorica/), the deck,
       # its PDF and the Excel model next to the page. slides.json stays in the repository: the page already holds its text.
+      # 20.11.2026 — the deck is the page itself (50 slides in HTML and SVG): no slide pictures, only img/ with the screens.
       - run: node tools/check-motorica.mjs
-      - run: mkdir -p dist/motorica && cp -R motorica/index.html motorica/plan.html motorica/site.css motorica/app.js motorica/sw.js motorica/og.jpg motorica/fonts motorica/img motorica/slides motorica/MOTUS-Lab-Motorica.pptx motorica/MOTUS-Lab-Motorica.pdf motorica/MOTUS-Lab-Motorica-model.xlsx dist/motorica/
+      - run: mkdir -p dist/motorica && cp -R motorica/index.html motorica/plan.html motorica/site.css motorica/app.js motorica/sw.js motorica/og.jpg motorica/fonts motorica/img motorica/MOTUS-Lab-Motorica.pptx motorica/MOTUS-Lab-Motorica.pdf motorica/MOTUS-Lab-Motorica-model.xlsx dist/motorica/
       - run: cp dist/pitch/build.json dist/motorica/build.json
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5

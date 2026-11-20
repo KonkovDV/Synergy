@@ -1,10 +1,13 @@
 #!/usr/bin/env node
-// Сайт презентации для «Моторики» без браузера.   node tools/check-motorica.mjs
-// Слайдов в slides.json столько же, сколько картинок и статей на странице; каждая ссылка на файл ведёт к файлу, а её
-// ?v= совпадает с его хэшем; телефон и почта — только в блоке contacts:begin/end главной страницы, на странице плана
-// их нет; есть CSP, noindex, lang и alt; якоря ведут к существующим id; числа эффекта на странице — те же, что в модели
-// колоды; план на сайте собран из текущего motorica/PLAN.md.
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+// Сайт и колода для «Моторики» без браузера.   node tools/check-motorica.mjs
+// Один источник — tools/motorica/*.mjs: сайт (index.html), PDF, PowerPoint и slides.json должны быть собраны из одного
+// и того же состояния. Проверяется: слайдов на странице столько же, сколько страниц PDF, слайдов PPTX (и заметок к ним)
+// и записей slides.json, а заголовки и текст выступления совпадают — значит, PDF и PPTX не устарели; каждая ссылка на
+// файл ведёт к файлу, а её ?v= совпадает с его хэшем; телефон и почта — только в блоке contacts:begin/end главной
+// страницы; есть CSP, noindex, lang и alt; id не повторяются, якоря ведут к существующим id; маршруты кресел и
+// «20 минут» ссылаются на существующие слайды; числа модели на странице — те же, что в slides.json; план на сайте
+// собран из текущего motorica/PLAN.md; в офлайн-копии нет устаревших файлов.
+import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,19 +16,63 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'motorica');
 const problems = [];
 const fail = (m) => problems.push(m);
-const { slides, model } = JSON.parse(readFileSync(join(dir, 'slides.json'), 'utf8'));
+const { slides, model, sections } = JSON.parse(readFileSync(join(dir, 'slides.json'), 'utf8'));
 const html = readFileSync(join(dir, 'index.html'), 'utf8');
 const plan = readFileSync(join(dir, 'plan.html'), 'utf8');
+const N = slides.length;   // столько слайдов в колоде; страница, PDF и PPTX должны совпасть с ним
 
-const pics = readdirSync(join(dir, 'slides'));
-const big = pics.filter((f) => /^slide-\d\d\.webp$/.test(f)).length;
-const small = pics.filter((f) => /^slide-\d\d-640\.webp$/.test(f)).length;
-const articles = (html.match(/<article class="slide" id="slide-\d+"/g) || []).length;
-if (!(slides.length === big && big === small && small === articles)) fail(`слайдов ${slides.length}, картинок ${big} и ${small}, статей ${articles}`);
+// ── 1. Число слайдов везде одно: страница, PDF, PPTX, slides.json ──
+const secs = [...html.matchAll(/<section class="s L-([\w-]+)( core)?" id="s(\d+)" data-n="(\d+)" data-sec="(\w+)"/g)];
+if (secs.length !== N) fail(`на странице ${secs.length} слайдов, а нужно ${N}`);
+secs.forEach((m, i) => { if (+m[3] !== i + 1 || +m[4] !== i + 1) fail(`слайд ${i + 1} на странице записан как id s${m[3]}, data-n ${m[4]}`); });
+if (slides.length !== N) fail(`slides.json: ${slides.length} слайдов`);
 slides.forEach((s, i) => { if (s.n !== i + 1) fail(`slides.json: слайд ${i + 1} записан как ${s.n}`); });
 
+const pdf = readFileSync(join(dir, 'MOTUS-Lab-Motorica.pdf')).toString('latin1');
+const pages = (pdf.match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
+if (pages !== N) fail(`PDF: ${pages} страниц, а слайдов ${N} — node tools/motorica-deck.cjs`);
+if (!/\/Outlines\b/.test(pdf)) fail('PDF без оглавления (outline)');
+const pptx = readFileSync(join(dir, 'MOTUS-Lab-Motorica.pptx')).toString('latin1');
+const pSlides = new Set(pptx.match(/ppt\/slides\/slide\d+\.xml/g) || []).size;
+const pNotes = new Set(pptx.match(/ppt\/notesSlides\/notesSlide\d+\.xml/g) || []).size;
+if (pSlides !== N || pNotes !== N) fail(`PPTX: ${pSlides} слайдов и ${pNotes} страниц заметок, а нужно ${N}`);
+
+// Текст слайдов на странице и в slides.json (а значит, в PDF и PPTX, снятых с той же страницы) совпадает
+const plainText = (s) => s.replace(/<[^>]+>/g, '').replace(/&nbsp;| /g, ' ').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  .replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+const norm = (s) => String(s ?? '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+const parts = html.split(/(?=<section class="s )/).slice(1);
+parts.forEach((part, i) => {
+  const s = slides[i];
+  if (!s) return;
+  const title = plainText(/<h[12] class="title" id="h\d+">([\s\S]*?)<\/h[12]>/.exec(part)?.[1] ?? '');
+  const notes = plainText(/<details class="speech"><summary>[^<]*<\/summary><p>([\s\S]*?)<\/p>/.exec(part)?.[1] ?? '');
+  if (title !== norm(s.title)) fail(`слайд ${i + 1}: заголовок на странице «${title}», в slides.json «${norm(s.title)}» — PDF и PPTX устарели, node tools/motorica-deck.cjs`);
+  if (notes !== norm(s.notes)) fail(`слайд ${i + 1}: текст выступления на странице и в slides.json расходится — node tools/motorica-deck.cjs`);
+  if (!s.notes || s.notes.length < 80) fail(`слайд ${i + 1}: нет текста выступления`);
+  if (!s.sources) fail(`слайд ${i + 1}: нет источников`);
+  if (/\{#[\w:]+\}|undefined|NaN|\[object /.test(part)) fail(`слайд ${i + 1}: неразрешённая ссылка или пустое значение в тексте`);
+});
+const secIds = new Set(sections.map((x) => x.id));
+for (const m of secs) if (!secIds.has(m[5])) fail(`слайд ${m[3]}: раздел ${m[5]} не описан`);
+
+// ── 2. Маршруты: «20 минут» и восемь кресел ──
+const deck = JSON.parse(/<script type="application\/json" id="deck-data">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '{}');
+const coreHtml = secs.filter((m) => m[2]).map((m) => +m[3]);
+if (JSON.stringify(deck.core) !== JSON.stringify(coreHtml)) fail(`маршрут «20 минут» в данных (${deck.core}) и на странице (${coreHtml}) расходится`);
+if (coreHtml.length < 15 || coreHtml.length > 24) fail(`в маршруте «20 минут» ${coreHtml.length} слайдов — это не 20 минут`);
+if (JSON.stringify(slides.filter((s) => s.core).map((s) => s.n)) !== JSON.stringify(coreHtml)) fail('маршрут «20 минут» в slides.json устарел');
+const chairs = Object.entries(deck.chairs || {});
+if (chairs.length !== 8) fail(`кресел ${chairs.length}, а нужно 8`);
+for (const [id, c] of chairs) {
+  if (!c.slides?.length || c.slides.some((n) => n < 1 || n > N)) fail(`маршрут кресла ${id}: ${c.slides}`);
+  if (!html.includes(`<option value="${id}">`)) fail(`маршрута кресла ${id} нет в списке маршрутов`);
+  if (!html.includes(`data-chair="${id}"`)) fail(`у кресла ${id} нет карточки, которая включает маршрут`);
+}
+
+// ── 3. Файлы, ?v=, CSP, noindex, alt, id и якоря ──
 const hash = (rel) => createHash('sha256').update(readFileSync(join(dir, rel))).digest('hex').slice(0, 8);
-const CONTACT = /(\+7|\b8)[\s( -]*\d{3}[\s) -]*\d{3}[\s ‑-]*\d{2}[\s ‑-]*\d{2}|\+79154528864|[\w.+-]+@[\w-]+\.[a-z]{2,}|&#8209;/gi;
+const CONTACT = /(\+7|\b8)[\s( -]*\d{3}[\s) -]*\d{3}[\s ‑-]*\d{2}[\s ‑-]*\d{2}|\+79154528864|[\w.+-]+@[\w-]+\.[a-z]{2,}|&#8209;/gi;
 const contact = new RegExp(CONTACT.source, 'i');   // без флага g: test() не помнит прошлую позицию
 
 function page(name, text) {
@@ -36,54 +83,89 @@ function page(name, text) {
     if (!existsSync(join(dir, file || '.'))) { fail(`${name}: нет файла ${file}`); continue; }
     if (query && query !== `v=${hash(file)}`) fail(`${name}: устаревший ?v= у ${file}: ${query}, а хэш ${hash(file)}`);
   }
-  if (!/<html lang="ru">/.test(text)) fail(`${name}: нет lang="ru"`);
+  if (!/<html lang="ru"/.test(text)) fail(`${name}: нет lang="ru"`);
   if (!/<meta name="robots" content="noindex, nofollow">/.test(text)) fail(`${name}: нет noindex`);
   if (!/http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self';/.test(text)) fail(`${name}: нет строгой CSP`);
-  if (/\sstyle="|<style|<script>(?!<\/script>)/.test(text)) fail(`${name}: встроенные стили или скрипты — CSP их не пропустит`);
-  for (const m of text.matchAll(/<img\b[^>]*>/g)) if (!/\salt="[^"]+"/.test(m[0])) fail(`${name}: картинка без alt: ${m[0].slice(0, 80)}`);
+  if (/\sstyle="|<style|<script>(?!<\/script>)|\son[a-z]+="/.test(text)) fail(`${name}: встроенные стили, скрипты или обработчики — CSP их не пропустит`);
+  for (const m of text.matchAll(/<img\b[^>]*>/g)) if (!/\salt="[^"]*"/.test(m[0])) fail(`${name}: картинка без alt: ${m[0].slice(0, 80)}`);
+  // SVG — либо украшение (aria-hidden), либо картинка или группа со ссылками (role="img" / "group") с подписью
+  for (const m of text.matchAll(/<svg\b[^>]*>/g)) if (!/aria-hidden="true"|role="(?:img|group)"[^>]*aria-label="[^"]+"|aria-label="[^"]+"[^>]*role="(?:img|group)"/.test(m[0])) fail(`${name}: SVG без aria-hidden и без подписи: ${m[0].slice(0, 90)}`);
   const ids = [...text.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
   const dup = ids.filter((x, i) => ids.indexOf(x) !== i);
   if (dup.length) fail(`${name}: повторяются id: ${[...new Set(dup)].join(', ')}`);
   for (const m of text.matchAll(/href="#([^"]+)"/g)) if (!ids.includes(m[1])) fail(`${name}: якорь #${m[1]} никуда не ведёт`);
+  for (const m of text.matchAll(/aria-(?:labelledby|controls|describedby)="([^"]+)"/g)) for (const id of m[1].split(/\s+/)) if (!ids.includes(id)) fail(`${name}: aria-ссылка на несуществующий id ${id}`);
   return ids;
 }
-
 const indexIds = page('index.html', html);
 page('plan.html', plan);
 for (const m of plan.matchAll(/href="\.\/#([^"]+)"/g)) if (!indexIds.includes(m[1])) fail(`plan.html: ссылка ./#${m[1]} никуда не ведёт на главной`);
-if (!html.includes('href="plan.html"')) fail('главная не ссылается на план сотрудничества');
+if (!html.includes('href="plan.html')) fail('главная не ссылается на план сотрудничества');
+const contactsSlide = slides.find((s) => s.layout === 'decisions')?.n;
+if (!plan.includes(`href="./#s${contactsSlide}"`)) fail('план не ведёт к контактам на главной');
+if (/href="#\d+"/.test(html)) fail('ссылки на слайды вида #N — нужны #sN, как id слайдов');
 
-for (const f of ['fonts/inter-cyr.woff2', 'fonts/unbounded-cyr.woff2', 'sw.js', 'og.jpg']) if (!existsSync(join(dir, f))) fail(`нет ${f}`);
+for (const f of ['fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2', 'fonts/unbounded-lat.woff2', 'sw.js', 'og.jpg', 'img/game-grip.webp',
+  'MOTUS-Lab-Motorica.pdf', 'MOTUS-Lab-Motorica.pptx', 'MOTUS-Lab-Motorica-model.xlsx']) if (!existsSync(join(dir, f))) fail(`нет ${f}`);
+if (existsSync(join(dir, 'slides'))) fail('motorica/slides/ — картинки прошлой колоды; страница больше на них не ссылается');
 const sw = readFileSync(join(dir, 'sw.js'), 'utf8');
 const core = JSON.parse(/const CORE = (\[.*\]);/.exec(sw)?.[1] ?? '[]');
-if (!core.includes('plan.html')) fail('sw.js: план не попадает в офлайн-копию');
+if (!core.includes('plan.html') || !core.includes('./')) fail('sw.js: страница или план не попадают в офлайн-копию');
 for (const ref of core) {
   if (ref === './') continue;
   const [file, query] = ref.split('?');
   if (!existsSync(join(dir, file)) || (query && query !== `v=${hash(file)}`)) fail(`sw.js: устаревший или пропавший файл ${ref} — node tools/motorica-site.mjs`);
 }
+for (const m of html.matchAll(/<img\b[^>]*src="(img\/[^"?]+)/g)) if (!core.some((r) => r.startsWith(m[1]))) fail(`sw.js: картинки ${m[1]} нет в офлайн-копии`);
 
+// ── 4. Контакты — только в блоке contacts ──
 const begin = html.indexOf('<!-- contacts:begin -->');
 const end = html.indexOf('<!-- contacts:end -->');
 if (begin < 0 || end < begin) fail('нет блока contacts:begin … contacts:end');
-const outside = (html.slice(0, begin) + html.slice(end)).match(CONTACT);
+// Данные калькулятора (JSON) — числа с длинной дробной частью похожи на телефон; в них проверяем только строки
+const jsonRe = /<script type="application\/json" id="deck-data">[\s\S]*?<\/script>/;
+const strings = (v) => (typeof v === 'string' ? [v] : Array.isArray(v) ? v.flatMap(strings) : v && typeof v === 'object' ? Object.values(v).flatMap(strings) : []);
+for (const t of strings(deck)) if (contact.test(t)) fail(`контакты в данных страницы: ${t.slice(0, 60)}`);
+const outside = (html.slice(0, begin).replace(jsonRe, '') + html.slice(end).replace(jsonRe, '')).match(CONTACT);
 if (outside) fail(`контакты вне блока contacts: ${[...new Set(outside)].join(', ')}`);
-if (contact.test(plan)) fail('контакты на странице плана — там должна быть только ссылка на блок «Контакты» главной');
-for (const f of ['app.js', 'site.css', 'sw.js', 'PLAN.md']) if (contact.test(readFileSync(join(dir, f), 'utf8'))) fail(`контакты в ${f}`);
-for (const s of slides) for (const t of [...s.lines, s.notes, s.sources]) if (t && contact.test(t)) fail(`контакты в тексте слайда ${s.n}`);
+if (contact.test(plan)) fail('контакты на странице плана — там должна быть только ссылка на слайд с контактами');
+for (const f of ['app.js', 'site.css', 'sw.js', 'PLAN.md', 'README.md']) if (contact.test(readFileSync(join(dir, f), 'utf8'))) fail(`контакты в ${f}`);
+for (const s of slides) for (const t of [...s.lines, s.notes, s.sources]) if (t && contact.test(t)) fail(`контакты в тексте слайда ${s.n} (slides.json)`);
 
-// План на сайте собран из текущего PLAN.md: каждый заголовок раздела есть на странице.
+// ── 5. План на сайте собран из текущего PLAN.md ──
+const planFlat = plan.replace(/\u00a0/g, ' ');   // типографика страницы ставит неразрывные пробелы
 for (const m of readFileSync(join(dir, 'PLAN.md'), 'utf8').matchAll(/^## (.+)$/gm)) {
   const title = m[1].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*|`/g, '');
-  if (!plan.includes(title.replace(/(\d)–(\d)/g, '<span class="nowrap">$1–$2</span>'))) fail(`plan.html устарел: нет раздела «${m[1]}» — node tools/motorica-site.mjs`);
+  if (!planFlat.includes(title.replace(/(\d+)–(\d+)/g, '<span class="nw">$1–$2</span>'))) fail(`plan.html устарел: нет раздела «${m[1]}» — node tools/motorica-site.mjs`);
 }
 
-const base = model.scenarios.base;
-const rub = (x) => Math.round(x).toLocaleString('ru-RU');
-for (const x of [...base.total, base.cum, base.ebitda2031]) if (!html.includes(`<td>${rub(x)}</td>`)) fail(`в таблице эффекта нет числа ${rub(x)} из модели`);
+// ── 5а. План говорит то же, что колода: все пакеты работ с теми же названиями и итоги модели ──
+const D = await import(new URL('./motorica/data.mjs', import.meta.url).href);
+const planMd = readFileSync(join(dir, 'PLAN.md'), 'utf8').replace(/\u00a0/g, ' ');
+for (const w of D.WPS) if (!planMd.includes(`### ${w.id}. ${w.t.replace(/\u00a0/g, ' ')}`)) fail(`PLAN.md: нет пакета «${w.id}. ${w.t}» — названия в плане и в колоде должны совпадать`);
+const rubP = (x) => Math.round(x).toLocaleString('ru-RU').replace(/\s/g, ' ');
+for (const [k, s] of Object.entries(model.scenarios)) {
+  const row = `| ${s.name} | ${[s.total[4], s.cum, s.ebitdaFull[4], s.ebitdaFullCum, s.cashPulled].map(rubP).join(' | ')} |`;
+  if (!planMd.includes(row)) fail(`PLAN.md: строка сценария «${s.name}» в разделе «Бизнес-эффект» не совпадает с моделью: нужно ${row}`);
+}
+for (const x of [`+${rubP(model.scenarios.base.total[4])} млн ₽ выручки`, `+${rubP(model.scenarios.base.ebitdaFull[4])} млн ₽ EBITDA`]) if (!planMd.includes(x)) fail(`PLAN.md: в разделе «Коротко» нет «${x}» из модели`);
+
+// ── 6. Числа модели на странице — из той же модели, что slides.json и Excel ──
+const rub = (x) => Math.round(x).toLocaleString('ru-RU').replace(/\s/g, ' ');
+for (const [k, s] of Object.entries(model.scenarios)) {
+  for (const [o, x] of [['2031', s.total[4]], ['cum', s.cum], ['ebitda', s.ebitdaFull[4]]]) {
+    if (!html.includes(`data-o="${k}-${o}">${rub(x)}<`)) fail(`в таблице сценариев нет числа ${rub(x)} (${k}-${o}) из модели`);
+  }
+}
+const b = model.scenarios.base;
+if (Math.abs(b.ebitdaFull[4] - (b.total[4] * 0.26 + b.ops)) > 0.01) fail('EBITDA 2031 со всеми рычагами ≠ (L1 + L2) × маржа + L3…L7');
+if (Math.abs(b.ops - (b.saving + b.l4 + b.l5 + b.l6 + b.l7)) > 0.01) fail('сумма рычагов L3–L7 не сходится');
+for (const k of ['cons', 'base', 'opt']) if (!(model.scenarios[k].ebitdaFull.every((x, i, a) => i === 0 || x > a[i - 1]))) fail(`сценарий ${k}: EBITDA по годам не растёт`);
+if (!(model.scenarios.cons.ebitdaFull[4] < b.ebitdaFull[4] && b.ebitdaFull[4] < model.scenarios.opt.ebitdaFull[4])) fail('сценарии не упорядочены: консервативный < базовый < оптимистичный');
+if (deck.model?.base?.margin !== 0.26) fail('калькулятор на странице получает не ту базу модели');
 
 if (problems.length) {
   console.error(`Сайт «Моторики» — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`motorica: ${slides.length} слайдов = ${big} картинок = ${articles} статей; план — ${(plan.match(/<h2 id="sec-/g) || []).length} разделов; ссылки, ?v=, контакты, CSP, alt и якоря в порядке`);
+console.log(`motorica: ${N} слайдов = ${pages} страниц PDF = ${pSlides} слайдов PPTX = slides.json, текст совпадает; маршрут на 20 минут — ${coreHtml.length} слайдов, кресел — ${chairs.length}; план — ${(plan.match(/<h2 id="sec-/g) || []).length} разделов; ссылки, ?v=, контакты, CSP, alt, id и якоря в порядке; числа модели сходятся`);
