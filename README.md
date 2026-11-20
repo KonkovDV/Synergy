@@ -22,7 +22,7 @@
 | Отчёт об использовании ИИ | [`submission/AI_REPORT.md`](submission/AI_REPORT.md), для загрузки — [DOCX](submission/Synergy-6.3.4-ai-report.docx) |
 | Исходный код и эмуляторы | этот репозиторий; эмуляторы — [`src/input/`](src/input) и [`tools/spppr-emulator.mjs`](tools/spppr-emulator.mjs) |
 | Питч финала 18.11.2026 | [`pitch/`](pitch/README.md): колода, ролик геймплея, скрипт на 4 минуты, ответы на вопросы; [страница питча](https://konkovdv.github.io/Synergy/pitch/) |
-| Предложение руководству «Моторики», 19.11.2026 | [`motorica/`](motorica/README.md): колода на 34 слайда (PPTX и PDF), Excel-модель эффекта, [план сотрудничества](motorica/PLAN.md), [сайт презентации](https://konkovdv.github.io/Synergy/motorica/) |
+| План сотрудничества с ГК «Моторика», 20.11.2026 | [`motorica/`](motorica/README.md): колода на 50 слайдов — [сайт](https://konkovdv.github.io/Synergy/motorica/) с маршрутами для восьми кресел руководства, PDF и PPTX; Excel-модель эффекта по семи рычагам; [план сотрудничества](motorica/PLAN.md) — 11 пакетов работ в четырёх треках |
 
 ## Попробовать за три минуты
 
