@@ -1064,3 +1064,37 @@ svg.pst-a { align-self: center; justify-self: center; color: var(--muted); width
 
 .ipo-f { gap: 8px } .ipo-fact { padding: 8px 14px }
 .ipo-t .tr { padding: 7px 16px; font-size: 14px }
+
+/* ── Конкуренты: кто наступает на пятку ── */
+.rivals .tr { grid-template-columns: 1.05fr 1fr 1fr 1.1fr 1fr; gap: 16px; padding: 9px 16px; font-size: 14.5px; line-height: 1.32; align-items: start }
+.rivals .th span { display: inline-flex; align-items: center; gap: 8px }
+.rivals .th svg.i { width: 16px; height: 16px; color: var(--mint) }
+.rivals .rv-n { display: flex; flex-direction: column; gap: 3px }
+.rivals .rv-n b { font-size: 16px }
+.rivals .rv-n i { font-size: 12.5px; line-height: 1.3 }
+.rivals .rv-us { background: linear-gradient(90deg, rgba(22, 225, 130, .12), rgba(22, 225, 130, .03)) }
+.rivals .rv-us .rv-n b { color: var(--mint) }
+.rivals .rv-soft { color: var(--ink) }
+.rivals .tr:not(.rv-us) .rv-soft { box-shadow: inset 3px 0 0 var(--amber); padding-left: 10px }
+.rivals .rv-none { color: var(--muted) }
+.L-rivals .strip { margin-top: auto }
+
+/* ── Три давления — три ответа ── */
+.press { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; flex: 1; min-height: 0 }
+.press .pr { gap: 6px; padding: 16px 20px }
+.press .pr-h { margin: 0 0 4px; display: flex; gap: 12px; align-items: flex-start }
+.press .pr-h > span { display: flex; flex-direction: column; gap: 2px }
+.press .pr-h i { font-style: normal; color: var(--muted); font: 700 12px/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase }
+.press .pr-h b { font-size: 17.5px; line-height: 1.28 }
+.press .pr-l { margin: 6px 0 0; font-size: 11.5px; display: flex; align-items: center; gap: 8px }
+.press .pr-l.them { color: var(--amber) }
+.press .pr-l.us { color: var(--sky) }
+.press ul { margin: 0; padding-left: 18px; color: var(--soft); font-size: 14.5px; line-height: 1.36; display: flex; flex-direction: column; gap: 3px }
+.press ul.do { color: var(--ink) }
+.press .pr-kpi, .press .pr-eff { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; line-height: 1.3; color: var(--soft) }
+.press .pr-kpi { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line) }
+.press .pr-eff { color: var(--mint2); font-weight: 600 }
+.press .pr-kpi svg.i, .press .pr-eff svg.i { width: 18px; height: 18px; flex: none; color: var(--mint) }
+@media (max-width: 1100px) {
+  html:not(.deck):not(.print) .press { grid-template-columns: 1fr }
+}

@@ -722,6 +722,24 @@ L.chain = (s) => `<div class="tbl chain" role="table" aria-label="Боли «М�
   ${s.data.rows.map((r) => `<div class="tr" role="row"><span role="cell" class="ch-p"><b>${tx(r.pain)}</b><i>${tx(r.fact)} · ${tx(r.src)}</i></span><span role="cell">${tx(r.how)} ${chip(r.wp, 'muted', 'sm')}</span><span role="cell">${chip(LVL[r.lvl][0], LVL[r.lvl][1], 'sm')}<i>${tx(r.proof)}</i></span><span role="cell">${tx(r.proc)}</span><span role="cell" class="m">${tx(r.eff)}</span></div>`).join('')}
 </div>`;
 
+// Кто наступает на пятку: «Моторика» и претенденты по четырём полям; пустая клетка — данных в открытых источниках нет
+const RV_COLS = [['hand', 'Руки', 'LuHand'], ['leg', 'Ноги', 'LuFootprints'], ['soft', 'ПО и данные', 'LuSmartphone'], ['money', 'Цена и деньги', 'LuWallet']];
+L.rivals = (s) => `<div class="tbl rivals" role="table" aria-label="«Моторика» и конкуренты: руки, ноги, ПО и данные, цена и деньги">
+  <div class="tr th" role="row"><span role="columnheader">Игрок</span>${RV_COLS.map(([, t, i]) => `<span role="columnheader">${ic(i)}${tx(t)}</span>`).join('')}</div>
+  ${s.data.rows.map((r) => `<div class="tr${r.id === 'us' ? ' rv-us' : ''}" role="row"><span role="cell" class="rv-n"><b>${tx(r.t)}</b><i>${tx(r.s)}</i></span>${RV_COLS.map(([k]) => `<span role="cell"${k === 'soft' && r[k] ? ' class="rv-soft"' : ''}>${r[k] ? tx(r[k]) : '<span class="rv-none" aria-label="нет данных">—</span>'}</span>`).join('')}</div>`).join('')}
+</div>
+<p class="strip sm">${ic('LuZap')}<span><b>Быстрее всего догоняют в ПО и данных:</b> Steplife уже собирает данные о ходьбе, у «Моторики» мониторинг — в 2028 году. Три ответа — слайд ${s.next}.</span></p>`;
+
+// Три давления конкуренции из годового отчёта и ответ на каждое
+L.pressures = (s) => `<div class="press">${s.data.cols.map((c, i) => `
+  <div class="card pr"><p class="pr-h">${ic(c.icon, 'badge sm')}<span><i>Давление ${i + 1}</i><b>«${tx(c.q)}»</b></span></p>
+    <p class="lbl pr-l them">Что делают конкуренты</p><ul>${c.them.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
+    <p class="lbl pr-l us">Что у «Моторики»</p><ul>${c.us.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
+    <p class="lbl pr-l do">Наш ответ ${chip(c.wp, 'mint', 'sm')}</p><ul class="do">${c.do.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
+    <p class="pr-kpi">${ic('LuGauge')}<span>${tx(c.kpi)}</span></p>
+    <p class="pr-eff">${ic('LuTrendingUp')}<span>${tx(c.eff)}</span></p></div>`).join('')}
+</div>`;
+
 // Путь пациента по этапам годового отчёта — и что меняется на каждом
 L.process = (s) => `<div class="proc">${s.data.stages.map((st, i) => `
   <div class="pst"><p class="pst-h"><span class="pst-n">${i + 1}</span><b>${tx(st.t.replace(/^Этап \d · /, ''))}</b><i>${tx(st.d)}</i></p>
