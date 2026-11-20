@@ -17,7 +17,7 @@ import QRCode from 'qrcode';
 import { MODEL, BASE, SCEN, RAMP, YEARS, r0, bn } from './motorica/model.mjs';
 import * as D from './motorica/data.mjs';
 import { SLIDES, SECTIONS, SOURCES, WP_EFFECT, slideOf } from './motorica/slides.mjs';
-import { renderSlide, iconSprite, tx, esc, plain, ic } from './motorica/render.mjs';
+import { renderSlide, iconSprite, tx, esc, plain, ic, nb } from './motorica/render.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'motorica');
@@ -171,7 +171,8 @@ const html = svgRoles(tidy(htmlRaw)).replace(/href="#(\d+)"/g, 'href="#s$1"');
 writeFileSync(join(dir, 'index.html'), html);
 
 // ── План сотрудничества: motorica/PLAN.md → plan.html (подмножество Markdown, которое показывает и GitHub) ──
-const inline = (s) => esc(s).replace(/(\d+)–(\d+)/g, '<span class="nw">$1–$2</span>')
+// Та же типографика, что в слайдах: число не отрывается от единицы, «≈ 2» и короткие предлоги не висят в конце строки
+const inline = (s) => esc(nb(s)).replace(/(\d+)–(\d+)/g, '<span class="nw">$1–$2</span>')
   .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
   .replace(/`([^`]+)`/g, '<code>$1</code>')
   .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, u) => `<a href="${u}">${t}</a>`);
@@ -197,7 +198,7 @@ function markdown(md) {
       const label = toc.length ? toc[toc.length - 1][1].replace(/^\d+\. /, '') : 'план';
       tables += 1;
       out.push(`<div class="table-scroll" tabindex="0" role="region" aria-label="Таблица ${tables}: ${esc(label)}"><table class="text"><thead><tr>${cells(rows[0]).map((c) => `<th scope="col">${inline(c)}</th>`).join('')}</tr></thead><tbody>
-${rows.slice(2).map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join('')}</tr>`).join('\n')}
+${rows.slice(2).map((r) => `<tr>${cells(r).map((c) => `<td${/^[≈+−-]?\d[\d\s,.]*( ?%)?$/.test(c) ? ' class="n"' : ''}>${inline(c)}</td>`).join('')}</tr>`).join('\n')}
 </tbody></table></div>`);
       continue;
     }

@@ -133,9 +133,10 @@ for (const f of ['app.js', 'site.css', 'sw.js', 'PLAN.md', 'README.md']) if (con
 for (const s of slides) for (const t of [...s.lines, s.notes, s.sources]) if (t && contact.test(t)) fail(`контакты в тексте слайда ${s.n} (slides.json)`);
 
 // ── 5. План на сайте собран из текущего PLAN.md ──
+const planFlat = plan.replace(/\u00a0/g, ' ');   // типографика страницы ставит неразрывные пробелы
 for (const m of readFileSync(join(dir, 'PLAN.md'), 'utf8').matchAll(/^## (.+)$/gm)) {
   const title = m[1].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*|`/g, '');
-  if (!plan.includes(title.replace(/(\d+)–(\d+)/g, '<span class="nw">$1–$2</span>'))) fail(`plan.html устарел: нет раздела «${m[1]}» — node tools/motorica-site.mjs`);
+  if (!planFlat.includes(title.replace(/(\d+)–(\d+)/g, '<span class="nw">$1–$2</span>'))) fail(`plan.html устарел: нет раздела «${m[1]}» — node tools/motorica-site.mjs`);
 }
 
 // ── 5а. План говорит то же, что колода: все пакеты работ с теми же названиями и итоги модели ──

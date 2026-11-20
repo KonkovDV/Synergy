@@ -928,7 +928,9 @@ html:not(.deck):not(.print) .speech summary { display: flex; align-items: center
   html:not(.deck):not(.print) .raci .th > span:not(:first-child) { writing-mode: vertical-rl; transform: rotate(180deg); justify-self: center; letter-spacing: .02em; text-transform: none; font-size: 11.5px }
   html:not(.deck):not(.print) .governance .legend { gap: 8px 14px }
 }
-.doc-hero h1, main.doc { overflow-wrap: anywhere }
+.doc-hero h1, main.doc { overflow-wrap: break-word }
+main.doc td, main.doc th { overflow-wrap: normal }
+main.doc td.n { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums }   /* числа в таблицах плана не рвутся */
 
 /* Шапка колоды на экранах 900–1500 px: сначала прячем размеры файлов, затем подписи (остаются значки с title и aria) */
 @media (max-width: 1500px) { html.deck .files small { display: none } }
