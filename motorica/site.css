@@ -159,7 +159,7 @@ svg.hero { width: 100%; height: 100% }
 .sum-col .viz + .more { margin-top: 2px }
 .viz .f-mint { fill: var(--mint) } .viz .f-mint-d { fill: rgba(22, 225, 130, .38) } .viz .f-sky { fill: var(--sky) } .viz .f-violet { fill: var(--violet) }
 .viz .f-amber { fill: var(--amber) } .viz .f-rose { fill: var(--rose) } .viz .f-teal { fill: var(--mint2) } .viz .f-ink { fill: var(--ink) }
-.viz .f-off { fill: rgba(255, 255, 255, .13) } .viz .f-cut { fill: none; stroke: var(--amber); stroke-width: 1.5; stroke-dasharray: 3 3 }
+.viz .f-off { fill: rgba(255, 255, 255, .13) } .viz .f-cut { fill: none; stroke: var(--amber); stroke-width: 1.5; stroke-dasharray: 3 3 } .viz .f-cut-m { fill: none; stroke: var(--mint); stroke-width: 1.5; stroke-dasharray: 3 3 }
 .vz-v { fill: var(--soft); font-size: 12.5px; font-weight: 600 } .vz-v.hi, .vz-l2.hi { fill: var(--mint) }
 .vz-l { fill: var(--muted); font-size: 12px } .vz-l2 { fill: var(--soft); font-size: 13px; font-weight: 600 } .vz-c { fill: var(--muted); font-size: 11.5px }
 
@@ -952,3 +952,115 @@ html:not(.deck):not(.print) .body { overflow-wrap: anywhere }
   html:not(.deck):not(.print) .grow .g2, html:not(.deck):not(.print) .grow .g3 { margin-left: 0 }
   html:not(.deck):not(.print) .qrs { flex-wrap: wrap }
 }
+
+/* ── Реестр рисков «Моторики»: карта 3 × 3 и меры с показателями ── */
+.riskmap2 { grid-template-columns: 1.25fr 1fr; align-items: stretch }
+.riskmap2 .chart { margin: 0; display: flex; flex-direction: column; gap: 6px }
+svg.riskgrid { width: 100%; height: auto }
+.rg-cell { stroke: rgba(255, 255, 255, .08) }
+.rg-cell.h2 { fill: rgba(22, 225, 130, .1) } .rg-cell.h3 { fill: rgba(140, 200, 110, .12) } .rg-cell.h4 { fill: rgba(245, 184, 74, .14) }
+.rg-cell.h5 { fill: rgba(245, 140, 90, .17) } .rg-cell.h6 { fill: rgba(255, 110, 110, .22) }
+.rg-chip rect { fill: rgba(7, 16, 25, .55); stroke: rgba(255, 255, 255, .28); stroke-width: 1.2 }
+.rg-chip.on rect { fill: var(--mint); stroke: var(--mint) }
+.rg-c { fill: var(--soft); font: 700 15px var(--body) }
+.rg-chip.on .rg-c { fill: var(--bg) }
+.rg-ax { fill: var(--soft); font-size: 15px; font-weight: 600 }
+.rg-axt { fill: var(--muted); font-size: 13.5px }
+.riskmap2 figcaption { display: flex; align-items: center; gap: 8px }
+.sw-on, .sw-off { display: inline-block; width: 22px; height: 12px; border-radius: 6px; vertical-align: middle }
+.sw-on { background: var(--mint) } .sw-off { border: 1px solid rgba(255, 255, 255, .35) }
+.rg-side { display: flex; flex-direction: column; gap: 14px; justify-content: center }
+.rg-big { margin: 0; display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: center; padding: 14px 18px; border-radius: 16px; background: var(--card); border: 1px solid var(--line) }
+.rg-big b { font: 600 34px/1 var(--head); color: var(--mint) }
+.rg-big span { color: var(--soft); font-size: 16px; line-height: 1.35 }
+.rg-big.hot { border-color: rgba(255, 143, 143, .45); background: var(--rose-d) }
+.rg-big.hot b { color: var(--rose) }
+.riskreg .tr { grid-template-columns: 1.15fr 2.3fr .85fr .7fr 1.3fr; gap: 14px; padding: 6px 16px; font-size: 13.5px; line-height: 1.3 }
+.riskreg .th { padding: 9px 16px }
+.riskreg .rr-k { display: flex; gap: 10px; align-items: flex-start }
+.riskreg .rr-k > span { display: flex; flex-direction: column }
+.riskreg .rr-k i { color: var(--muted); font-size: 12px }
+.riskreg .tr > span:nth-child(2) i { color: var(--ink); font-style: normal }
+.riskreg small { color: var(--muted); white-space: nowrap }
+.how { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700 }
+.how-do { background: var(--mint-d); color: var(--mint) } .how-tool { background: var(--sky-d); color: var(--sky) } .how-data { background: var(--violet-d); color: var(--violet) }
+@media (max-width: 1100px) { html:not(.deck):not(.print) .riskmap2 { grid-template-columns: 1fr } html:not(.deck):not(.print) .rg-big { grid-template-columns: 110px 1fr } }
+
+/* ── Медицинское ПО команды и границы утверждений ── */
+.cards.c4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px }
+.medsw { align-content: start }
+.card.ms { display: flex; flex-direction: column; gap: 7px; padding: 14px 16px }
+.card.ms .h { font: 600 18px var(--head); color: var(--ink); text-decoration: none }
+.card.ms a.h:hover { color: var(--mint) }
+.card.ms > span { color: var(--soft); font-size: 15px; line-height: 1.35 }
+.card.ms .m { margin: auto 0 0; display: flex; gap: 8px; align-items: flex-start; color: var(--mint2); font-size: 14px; font-weight: 600 }
+.card.ms .wps { margin: 0; display: flex; flex-wrap: wrap; gap: 6px }
+.card.ms.into { background: var(--mint-d); border-color: rgba(22, 225, 130, .35) }
+.card.ms.into ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--soft) }
+.card.ms.into li b { color: var(--ink) }
+.bounds { grid-template-columns: 1.35fr 1fr; align-items: stretch }
+.bd { display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line) }
+.bd h3 { margin: 0; display: flex; align-items: center; gap: 10px; font: 600 20px var(--head) }
+.bd.no h3 svg { color: var(--rose) } .bd.yes h3 svg { color: var(--mint) }
+.bd.yes { background: var(--mint-d); border-color: rgba(22, 225, 130, .3) }
+.bd ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px }
+.bd li { display: flex; flex-direction: column; gap: 3px; padding-left: 14px; border-left: 3px solid var(--line2) }
+.bd.no li { border-left-color: rgba(255, 143, 143, .55) } .bd.yes li { border-left-color: var(--mint) }
+.bd li b { font-size: 17px } .bd li span { color: var(--soft); font-size: 15px; line-height: 1.4 }
+@media (max-width: 1100px) { html:not(.deck):not(.print) .cards.c4 { grid-template-columns: 1fr 1fr } html:not(.deck):not(.print) .bounds { grid-template-columns: 1fr } }
+@media (max-width: 640px) { html:not(.deck):not(.print) .cards.c4 { grid-template-columns: 1fr } }
+
+/* ── Боль → решение → эффект, процессы, IPO ── */
+.chain .tr { grid-template-columns: 1.5fr 1.25fr 1.25fr 1fr .95fr; gap: 14px; padding: 7px 16px; font-size: 13.5px; line-height: 1.3; align-items: start }
+.chain .ch-p { display: flex; flex-direction: column; gap: 3px }
+.chain .ch-p b { font-size: 14.5px }
+.chain i { display: block; margin-top: 3px; color: var(--muted); font-style: normal; font-size: 12.5px }
+.chain .m { font-weight: 700 }
+.proc { flex: 1; display: grid; grid-template-columns: 1fr 26px 1fr 26px 1fr 26px 1fr; align-items: stretch; gap: 0 }
+.pst { display: flex; flex-direction: column; gap: 10px; padding: 16px 16px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line) }
+.pst-h { margin: 0; display: grid; grid-template-columns: 34px 1fr; column-gap: 10px; align-items: center }
+.pst-n { grid-row: span 2; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--mint-d); color: var(--mint); font: 700 16px var(--head) }
+.pst-h b { font: 600 16px/1.2 var(--head) } .pst-h i { color: var(--muted); font-style: normal; font-size: 13px }
+.pst-m { margin: 0; padding-left: 18px; color: var(--soft); font-size: 14px; line-height: 1.35; display: flex; flex-direction: column; gap: 3px }
+.pst-us { display: flex; flex-direction: column; gap: 7px; padding-top: 8px; border-top: 1px dashed var(--line2) }
+.pst-us p { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.3 }
+.pst-l { margin: auto 0 0; display: flex; gap: 8px; align-items: center; color: var(--mint2); font-weight: 700; font-size: 14px }
+svg.pst-a { align-self: center; justify-self: center; color: var(--muted); width: 22px; height: 22px }
+.ipo { grid-template-columns: 1fr 1.6fr; align-items: stretch }
+.ipo-f { display: flex; flex-direction: column; gap: 12px }
+.ipo-fact { margin: 0; display: flex; flex-direction: column; gap: 3px; padding: 12px 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line) }
+.ipo-fact b { font-size: 16px } .ipo-fact span { color: var(--soft); font-size: 14px }
+.ipo-f .gov { margin-top: auto }
+.ipo-t .tr { grid-template-columns: 1.3fr 1.7fr .7fr; gap: 14px; padding: 10px 16px; font-size: 14.5px; line-height: 1.35 }
+@media (max-width: 1100px) { html:not(.deck):not(.print) .proc { grid-template-columns: 1fr 1fr; gap: 12px } html:not(.deck):not(.print) svg.pst-a { display: none } html:not(.deck):not(.print) .ipo { grid-template-columns: 1fr } html:not(.deck):not(.print) .chain .tr, html:not(.deck):not(.print) .ipo-t .tr { grid-template-columns: 1fr !important } }
+@media (max-width: 640px) { html:not(.deck):not(.print) .proc { grid-template-columns: 1fr } }
+
+.weak .tr { padding-top: 5px; padding-bottom: 5px }
+.weak .tr i { font-size: 12.5px; line-height: 1.3 }
+
+.ms-into { margin-top: 12px; padding: 14px 18px; border-radius: 16px; background: var(--mint-d); border: 1px solid rgba(22, 225, 130, .3) }
+.ms-into .lbl { margin: 0 0 8px }
+.ms-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px }
+.ms-cols p { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; line-height: 1.35; color: var(--soft) }
+.ms-cols b { color: var(--ink); font-size: 14.5px }
+.card.ms.ai { background: var(--card2) }
+@media (max-width: 1100px) { html:not(.deck):not(.print) .ms-cols { grid-template-columns: 1fr 1fr } }
+@media (max-width: 640px) { html:not(.deck):not(.print) .ms-cols { grid-template-columns: 1fr } }
+
+.medinto { flex: 1; align-content: stretch }
+.card.mi { display: flex; flex-direction: column; gap: 12px; padding: 18px 18px }
+.mi-h { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px }
+.mi-h b { font: 600 19px/1.2 var(--head) }
+.card.mi > span { color: var(--ink); font-size: 15.5px; line-height: 1.4 }
+.mi-from, .mi-why { margin: 0; display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.4; color: var(--soft) }
+.mi-from svg { color: var(--sky) } .mi-why { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); color: var(--mint2); font-weight: 600 }
+
+.pst-lose, .pst-kpi { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; line-height: 1.35 }
+.pst-lose { color: var(--rose) } .pst-lose b, .pst-kpi b { color: var(--ink) }
+.pst-kpi { color: var(--soft) } .pst-kpi svg { color: var(--sky) }
+.chain .tr { padding-top: 5px; padding-bottom: 5px }
+.chain i { font-size: 12px; line-height: 1.28 }
+.ipo-fact { padding: 10px 14px } .ipo-fact b { font-size: 15px } .ipo-fact span { font-size: 13.5px }
+
+.ipo-f { gap: 8px } .ipo-fact { padding: 8px 14px }
+.ipo-t .tr { padding: 7px 16px; font-size: 14px }

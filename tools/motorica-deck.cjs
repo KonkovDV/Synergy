@@ -7,7 +7,7 @@
  *   node tools/motorica-deck.cjs     → motorica/MOTUS-Lab-Motorica.pdf, .pptx, og.jpg, slides.json
  *   node tools/motorica-site.mjs     → ещё раз: ссылки на PDF и PPTX получают свежие ?v= и размеры
  *
- * Chromium открывает motorica/?print=1 — все 50 слайдов подряд по 1600 × 900, без анимаций — и печатает PDF: текст
+ * Chromium открывает motorica/?print=1 — все слайды подряд по 1600 × 900, без анимаций — и печатает PDF: текст
  * в нём векторный, ищется и копируется. PowerPoint собирается из снимков тех же слайдов (1920 × 1080) с текстом
  * выступления в заметках и разделами презентации; править текст нужно в tools/motorica/slides.mjs и data.mjs, иначе
  * сайт, PDF и PPTX разойдутся. slides.json — текст слайдов, речь, источники и числа модели (их сверяет Excel-модель).
@@ -58,7 +58,8 @@ const TITLE = 'План сотрудничества MOTUS Lab и ГК «Мот�
       return { n: +s.dataset.n, sec: s.dataset.sec, layout: [...s.classList].find((c) => c.startsWith('L-'))?.slice(2), core: s.classList.contains('core'),
         kicker: t('.kicker'), title: t('.title'), lead: t('.sh .lead'), lines, notes: t('.speech p'), sources: t('.src').replace(/^Источники:\s*/, '') };
     }));
-    if (meta.length !== 50) throw new Error(`слайдов ${meta.length}, а нужно 50`);
+    const { SLIDES } = await import(path.join(ROOT, 'tools/motorica/slides.mjs'));
+    if (meta.length !== SLIDES.length) throw new Error(`на странице ${meta.length} слайдов, в колоде ${SLIDES.length}`);
 
     // ── Снимки 1920 × 1080 для PowerPoint и обложка для превью ссылок ──
     const shotPage = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1.2 });

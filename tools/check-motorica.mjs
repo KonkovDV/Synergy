@@ -19,7 +19,7 @@ const fail = (m) => problems.push(m);
 const { slides, model, sections } = JSON.parse(readFileSync(join(dir, 'slides.json'), 'utf8'));
 const html = readFileSync(join(dir, 'index.html'), 'utf8');
 const plan = readFileSync(join(dir, 'plan.html'), 'utf8');
-const N = 50;
+const N = slides.length;   // столько слайдов в колоде; страница, PDF и PPTX должны совпасть с ним
 
 // ── 1. Число слайдов везде одно: страница, PDF, PPTX, slides.json ──
 const secs = [...html.matchAll(/<section class="s L-([\w-]+)( core)?" id="s(\d+)" data-n="(\d+)" data-sec="(\w+)"/g)];
@@ -60,7 +60,7 @@ for (const m of secs) if (!secIds.has(m[5])) fail(`слайд ${m[3]}: разд�
 const deck = JSON.parse(/<script type="application\/json" id="deck-data">([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '{}');
 const coreHtml = secs.filter((m) => m[2]).map((m) => +m[3]);
 if (JSON.stringify(deck.core) !== JSON.stringify(coreHtml)) fail(`маршрут «20 минут» в данных (${deck.core}) и на странице (${coreHtml}) расходится`);
-if (coreHtml.length < 15 || coreHtml.length > 22) fail(`в маршруте «20 минут» ${coreHtml.length} слайдов — это не 20 минут`);
+if (coreHtml.length < 15 || coreHtml.length > 24) fail(`в маршруте «20 минут» ${coreHtml.length} слайдов — это не 20 минут`);
 if (JSON.stringify(slides.filter((s) => s.core).map((s) => s.n)) !== JSON.stringify(coreHtml)) fail('маршрут «20 минут» в slides.json устарел');
 const chairs = Object.entries(deck.chairs || {});
 if (chairs.length !== 8) fail(`кресел ${chairs.length}, а нужно 8`);

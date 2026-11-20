@@ -123,12 +123,12 @@ const SUMVIZ = {
     return { label: `Из чего складывается EBITDA 2031, млн ₽: ${seg.map(([k, v]) => `${k} — ${r1(v)}`).join(', ')}`, svg: `${bar}${leg}${svgText(114, 148, 'млн ₽ EBITDA в 2031 году', 'vz-c', 'middle')}` };
   },
   speed: () => {
-    const d = MODEL.scen.base.pathDays; const k = 228 / 180; const doc = 120 * k; const cut = d * k;
-    const row = (y, short) => `<rect x="0" y="${y}" width="${doc - (short ? cut : 0) - 2}" height="18" rx="3" class="f-amber"/>${short ? `<rect x="${doc - cut}" y="${y}" width="${cut - 2}" height="18" rx="3" class="f-cut"/>` : ''}<rect x="${doc}" y="${y}" width="${228 - doc}" height="18" rx="3" class="f-mint"/>`;
-    return { label: `Путь пациента: около 6 месяцев, из них около 4 — документы и госпрограммы; пакеты WP8 и WP10 сокращают его на ${d} дней у половины пациентов`,
-      svg: `${svgText(0, 12, 'сейчас · ≈6 месяцев', 'vz-l2')}${row(18, false)}${svgText(0, 62, `с WP8 и WP10 · −${d} дней`, 'vz-l2 hi')}${row(68, true)}
-        <rect x="0" y="104" width="11" height="11" rx="2" class="f-amber"/>${svgText(18, 114, 'документы', 'vz-l')}<rect x="104" y="104" width="11" height="11" rx="2" class="f-mint"/>${svgText(122, 114, 'адаптация ≈2 мес', 'vz-l')}
-        ${svgText(114, 148, 'путь пациента, ≈180 дней', 'vz-c', 'middle')}` };
+    const d = MODEL.scen.base.pathDays; const k = 228 / 180;
+    return { label: `Путь пациента: медицинский этап 3–6 месяцев, затем финансирование; цель «Моторики» — путь 1–2 месяца; в модели пакеты WP8 и WP10 сокращают путь на ${d} дней у половины пациентов (допущение L7)`,
+      svg: `${svgText(0, 12, 'сейчас · медэтап 3–6 мес.', 'vz-l2')}<rect x="0" y="18" width="${90 * k - 2}" height="18" rx="3" class="f-amber"/><rect x="${90 * k}" y="18" width="${90 * k - 2}" height="18" rx="3" class="f-cut"/>
+        ${svgText(0, 62, 'цель «Моторики» · 1–2 мес.', 'vz-l2 hi')}<rect x="0" y="68" width="${30 * k - 2}" height="18" rx="3" class="f-mint"/><rect x="${30 * k}" y="68" width="${30 * k - 2}" height="18" rx="3" class="f-cut-m"/>
+        ${svgText(0, 114, `наш вклад в модели: −${d} дней у ½ пациентов`, 'vz-l')}
+        ${svgText(114, 148, 'дни пути пациента, шкала до 180', 'vz-c', 'middle')}` };
   },
   people: () => {
     const n = 78; const on = Math.round(MODEL.scen.base.fte);
@@ -272,16 +272,16 @@ L.team = (s) => `
 L.heatmap = () => {
   const comps = D.COMPETENCIES;
   const rows = D.PORTFOLIO;
-  const x0 = 330, cw = 132, rh = 20.5, y0 = 64;
+  const x0 = 330, cw = 120, rh = rows.length > 26 ? 17 : 20.5, y0 = 64;
   const head = comps.map(([, t], j) => svgLines(x0 + j * cw + cw / 2, 22, t, 16, 18, 'hm-h', 'middle')).join('');
   const cells = rows.map((r, i) => {
     const y = y0 + i * rh;
-    const label = `<a href="${D.GH}${D.PORTFOLIO_URL[r.n]}" class="hm-link">${svgText(0, y + 15, r.n, 'hm-n')}</a>${svgText(170, y + 15, r.k, 'hm-k')}`;
+    const label = `<a href="${D.repoUrl(r.n)}" class="hm-link">${svgText(0, y + 15, r.n, 'hm-n')}</a>${svgText(170, y + 15, r.k, 'hm-k')}`;
     const cs = r.c.map((v, j) => `<rect x="${x0 + j * cw + 3}" y="${y + 2}" width="${cw - 6}" height="${rh - 4}" rx="4" class="hm v${v}" data-tip="${esc(r.n + ' · ' + comps[j][1] + ': ' + ['нет', 'опыт', 'сильная сторона', 'ядро проекта'][v] + ' — ' + r.t + '; ' + r.m)}"><title>${esc(r.n + ' — ' + comps[j][1] + ': ' + ['нет', 'опыт', 'сильная сторона', 'ядро проекта'][v])}</title></rect>`).join('');
     return `<g class="hm-row">${label}${cs}</g>`;
   }).join('');
   const H = y0 + rows.length * rh + 6;
-  return `<div class="heat-wrap"><svg class="heat" viewBox="0 0 ${x0 + comps.length * cw} ${H}" role="img" aria-label="Карта компетенций 24 репозиториев">${head}${cells}</svg>
+  return `<div class="heat-wrap"><svg class="heat" viewBox="0 0 ${x0 + comps.length * cw} ${H}" role="img" aria-label="Карта компетенций ${rows.length} репозиториев команды">${head}${cells}</svg>
     <div class="legend">${[0, 1, 2, 3].map((v) => `<span><i class="hm-sw v${v}"></i>${['нет', 'опыт', 'сильная сторона', 'ядро проекта'][v]}</span>`).join('')}<span class="tip" data-heat-tip aria-live="polite">Наведите на клетку — увидите доказательство из репозитория</span></div></div>`;
 };
 
@@ -364,7 +364,8 @@ L.wp = (s, ctx) => {
   const W = 1424, x0 = 0, k = W / 16;
   const ticks = [0, 2, 4, 6, 8, 10, 12, 14, 16].map((m) => `<line x1="${x0 + m * k}" y1="6" x2="${x0 + m * k}" y2="30" class="g"/>${svgText(x0 + m * k + 4, 44, m === 0 ? 'старт' : `${m} мес`, 'ax')}`).join('');
   const bar = `<rect x="${x0 + w.start * k}" y="10" width="${Math.min(w.len, 16 - w.start) * k}" height="16" rx="8" class="c-${tr.c}"/>`;
-  return `<div class="wp-head">${chip('трек «' + tr.t + '»', tr.c)}${chip(w.stT, w.st === 'ready' ? 'mint' : w.st === 'spec' ? 'sky' : 'violet')}${chip(w.term, 'muted')}</div>
+  const rk = D.wpRisks(w.id);
+  return `<div class="wp-head">${chip('трек «' + tr.t + '»', tr.c)}${chip(w.stT, w.st === 'ready' ? 'mint' : w.st === 'spec' ? 'sky' : 'violet')}${chip(w.term, 'muted')}${rk.length ? chip('мера реестра рисков: ' + rk.join(' · '), 'rose') : ''}</div>
   <div class="wp-grid">
     <div class="wp-left">
       <div class="card task"><span class="lbl">${ic('LuTarget')} Задача «Моторики»</span><p>${tx(w.task)}</p><i>${tx(w.taskSrc)}</i></div>
@@ -409,7 +410,7 @@ L.gantt = (s, ctx) => {
       <rect x="${xs(w.start) + 2}" y="${y + 8}" width="${len * k - 4}" height="22" rx="11" class="c-${c}"><title>${esc(`${w.id} · ${w.t}: ${w.term}`)}</title></rect>
       ${w.start + w.len > 18 ? `<rect x="${W - 146}" y="${y + 8}" width="130" height="22" rx="11" class="c-${c} later"/>` : ''}</g>`;
   }).join('');
-  const later = [['WP1', 'ATTILAN — 2028'], ['WP4', '«Немо» 2028–29'], ['WP8', 'Индия, БРИКС']];
+  const later = [['WP1', 'ATTILAN — 2028'], ['WP4', 'NEMO Sensitive'], ['WP8', 'Индия, СНГ']];
   const laterBars = later.map(([id, t]) => { const i = D.WPS.findIndex((w) => w.id === id); const y = top + i * rh; return `<rect x="${W - 146}" y="${y + 8}" width="140" height="22" rx="11" class="c-${trackColor(D.WPS[i].tr)} later"/>${svgText(W - 76, y + 24, t, 'lt', 'middle')}`; }).join('');
   const gates = [[0.5, 'G0'], [2, 'G1'], [6, 'G2'], [12, 'G3']].map(([m, g]) => `<g class="gate"><path d="M${xs(m)} ${top - 4} l9 9 l-9 9 l-9 -9 z"/>${svgText(xs(m) + 13, top + 9, g, 'gt')}</g>`).join('')
     + `<g class="gate"><path d="M${W - 76} ${top - 4} l9 9 l-9 9 l-9 -9 z"/>${svgText(W - 63, top + 9, 'G4', 'gt')}</g>`;
@@ -663,7 +664,7 @@ L.company = (s) => {
     ['78', 'протезистов и медиков на всю сеть центров'],
     ['110+', 'разработчиков и инженеров в НИОКР; >25 проектов'],
     ['0,7 млрд ₽', 'на НИОКР в 2025 году — 10 % выручки'],
-    ['1,9 млрд ₽', 'грант на исследования очувствления протезов'],
+    ['до 1,92 млрд ₽', 'грант до 2031 года: центр нейропротезирования, платформа NEMO Sensitive'],
     ['24 → 51 %', 'продаж через свои центры «Моторика Орто», 2024 → 2025'],
   ];
   return `<div class="split company2">
@@ -714,11 +715,96 @@ L.weak = (s) => `
     ${s.data.rows.map((r) => `<div class="tr" role="row"><span role="cell" class="pt">${ic(r.icon, 'badge xs')}<span><b>${tx(r.t)}</b><i>${tx(r.ev)} · ${tx(r.src)}</i></span></span><span role="cell">${tx(r.lose)}</span><span role="cell">${chip(r.fix, 'mint', 'sm')}</span><span role="cell" class="m">${tx(r.lev)}</span></div>`).join('')}
   </div>`;
 
-L.riskmap = (s) => `
-  <div class="tbl riskmap" role="table" aria-label="Меры из реестра рисков «Моторики» и пакеты работ">
-    <div class="tr th" role="row"><span role="columnheader">Код</span><span role="columnheader">Риск</span><span role="columnheader">Мера, которую назвала «Моторика»</span><span role="columnheader">Кто выполняет</span></div>
-    ${s.data.rows.map(([c, r, m, w]) => `<div class="tr" role="row"><span role="cell">${chip(c, 'sky', 'sm')}</span><span role="cell"><b>${tx(r)}</b></span><span role="cell"><i>${tx(m)}</i></span><span role="cell" class="m">${tx(w)}</span></div>`).join('')}
+// Боль → решение → эффективность → процесс → бизнес-эффект
+const LVL = { done: ['работает у нас', 'mint'], lit: ['в исследованиях', 'sky'], pilot: ['проверяет пилот', 'violet'], model: ['допущение модели', 'amber'], option: ['опцион', 'muted'] };
+L.chain = (s) => `<div class="tbl chain" role="table" aria-label="Боли «Моторики», решения, доказательства, процессы и эффекты">
+  <div class="tr th" role="row"><span role="columnheader">Боль и факт</span><span role="columnheader">Как решаем</span><span role="columnheader">Насколько доказано</span><span role="columnheader">Что меняется в процессе</span><span role="columnheader">Бизнес-эффект</span></div>
+  ${s.data.rows.map((r) => `<div class="tr" role="row"><span role="cell" class="ch-p"><b>${tx(r.pain)}</b><i>${tx(r.fact)} · ${tx(r.src)}</i></span><span role="cell">${tx(r.how)} ${chip(r.wp, 'muted', 'sm')}</span><span role="cell">${chip(LVL[r.lvl][0], LVL[r.lvl][1], 'sm')}<i>${tx(r.proof)}</i></span><span role="cell">${tx(r.proc)}</span><span role="cell" class="m">${tx(r.eff)}</span></div>`).join('')}
+</div>`;
+
+// Путь пациента по этапам годового отчёта — и что меняется на каждом
+L.process = (s) => `<div class="proc">${s.data.stages.map((st, i) => `
+  <div class="pst"><p class="pst-h"><span class="pst-n">${i + 1}</span><b>${tx(st.t.replace(/^Этап \d · /, ''))}</b><i>${tx(st.d)}</i></p>
+    <ul class="pst-m">${st.items.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
+    <div class="pst-us">${st.us.map(([w, d]) => `<p>${chip(w, 'mint', 'sm')}<span>${tx(d)}</span></p>`).join('')}</div>
+    <p class="pst-lose">${ic('LuTriangleAlert')}<span><b>Теряется сейчас:</b> ${tx(st.lose)}</span></p>
+    <p class="pst-kpi">${ic('LuGauge')}<span><b>Видно по:</b> ${tx(st.kpi)}</span></p>
+    <p class="pst-l">${ic('LuTrendingUp')}<span>${tx(st.lev)}</span></p></div>${i < s.data.stages.length - 1 ? ic('LuChevronRight', 'pst-a') : ''}`).join('')}
+</div>
+<p class="strip sm">${ic('LuRepeat')}<span><b>Цикл замыкается на этапе 4:</b> пользователь, который освоил протез, через 1–3 года возвращается за заменой — это рычаг L1.</span></p>`;
+
+// IPO: пять факторов инвестиционной привлекательности «Моторики» и вклад сотрудничества
+L.ipo = (s) => `<div class="split ipo">
+  <div class="ipo-f"><p class="lbl">${ic('LuLandmark')} Что уже есть — по годовому отчёту</p>${s.data.facts.map(([a, b]) => `<p class="ipo-fact"><b>${tx(a)}</b><span>${tx(b)}</span></p>`).join('')}</div>
+  <div class="tbl ipo-t" role="table" aria-label="Факторы инвестиционной привлекательности и вклад сотрудничества">
+    <div class="tr th" role="row"><span role="columnheader">Фактор — дословно</span><span role="columnheader">Чем подкрепляет сотрудничество</span><span role="columnheader">Пакеты</span></div>
+    ${s.data.factors.map(([f, c, w]) => `<div class="tr" role="row"><span role="cell"><b>${tx(f)}</b></span><span role="cell">${tx(c)}</span><span role="cell" class="m">${tx(w)}</span></div>`).join('')}
+  </div>
+</div>
+<p class="strip sm gov">${ic('LuShieldCheck')}<span><b>Зрелость управления:</b> ${tx(s.data.gov)}</span></p>`;
+
+// Медицинское ПО Елены Коньковой: семь репозиториев и что из них переходит в пакеты
+L.medsw = () => {
+  const reps = D.PORTFOLIO.filter((p) => /KonkovaElena/.test(D.PORTFOLIO_URL[p.n] || ''));
+  const cards = reps.map((r) => `<div class="card ms"><a class="h" href="${esc(D.repoUrl(r.n))}">${esc(r.n)}</a><span>${tx(r.t)}</span><p class="m">${ic('LuBadgeCheck', 'ok')}<span>${tx(r.m)}</span></p><p class="wps">${r.wp.map((w) => chip(w, 'muted', 'sm')).join(' ')}</p></div>`).join('');
+  return `<div class="cards c4 medsw">${cards}<div class="card ms ai"><b class="h">Общий принцип — человек в цикле</b><span>МРТ, ЭКГ, маммография: черновик ИИ без проверки врача не выходит. Анамнез: пакет для врача с явной проверкой, локальная модель — только помощник. OpenRNA: отзыв согласия — состояние случая. AIRI: когда ИИ передаёт решение эксперту.</span><p class="m">${ic('LuShieldCheck', 'ok')}<span>границы в README: «Research Use Only», «not a medical device», «Synthetic only»</span></p></div></div>`;
+};
+
+// Что из медицинского ПО переходит в пакеты «Моторики»
+L.medinto = (s) => `<div class="cards c4 medinto">${s.data.items.map((x) => `<div class="card mi"><p class="mi-h">${chip(x.wp, 'mint', 'sm')}<b>${tx(x.t)}</b></p><span>${tx(x.what)}</span><p class="mi-from">${ic('LuGitBranch')}<span>${tx(x.from)}</span></p><p class="mi-why">${ic('LuTarget')}<span>${tx(x.why)}</span></p></div>`).join('')}</div>`;
+
+// Границы утверждений: что не утверждаем и чем подтверждаем то, что утверждаем
+L.bounds = (s) => `<div class="split bounds">
+  <div class="bd no"><h3>${ic('LuBan')} Не утверждаем</h3><ul>${s.data.no.map(([a, b]) => `<li><b>${tx(a)}</b><span>${tx(b)}</span></li>`).join('')}</ul></div>
+  <div class="bd yes"><h3>${ic('LuCircleCheck')} Утверждаем — и чем подтверждаем</h3><ul>${s.data.yes.map(([a, b]) => `<li><b>${tx(a)}</b><span>${tx(b)}</span></li>`).join('')}</ul></div>
+</div>`;
+
+// Карта ключевых рисков — как на с. 87 годового отчёта: строки — существенность, столбцы — вероятность.
+// Подсвечены риски, меру против которых выполняет или поддерживает пакет MOTUS Lab (D.RISKREG).
+L.riskmap = (s) => {
+  const ours = new Map(D.RISKREG.map((r) => [r.c, r]));
+  const SEV = [['high', 'высокая'], ['mod', 'умеренная'], ['low', 'низкая']];
+  const PROB = [['low', 'низкая'], ['mid', 'средняя'], ['high', 'высокая']];
+  const W = 860, H = 580, x0 = 96, y0 = 30, cw = (W - x0 - 6) / 3, chh = (H - y0 - 70) / 3;
+  const cells = SEV.flatMap(([sv], i) => PROB.map(([pr], j) => {
+    const x = x0 + j * cw, y = y0 + i * chh, heat = (3 - i) + (j + 1);
+    const codes = D.RISK_GRID[sv][pr] || [];
+    const chips = codes.map((c, k) => {
+      const cx = x + 14 + (k % 3) * 82, cy = y + 16 + Math.floor(k / 3) * 46;
+      const on = ours.has(c);
+      return `<g class="rg-chip${on ? ' on' : ''}"><rect x="${cx}" y="${cy}" width="74" height="36" rx="18"/>${svgText(cx + 37, cy + 24, c, 'rg-c', 'middle')}${on ? `<title>${esc(c + ' · ' + ours.get(c).n + ' — ' + ours.get(c).wp)}</title>` : ''}</g>`;
+    }).join('');
+    return `<rect x="${x + 3}" y="${y + 3}" width="${cw - 6}" height="${chh - 6}" rx="14" class="rg-cell h${heat}"/>${chips}`;
+  })).join('');
+  const rowsL = SEV.map(([, l], i) => svgText(x0 - 14, y0 + i * chh + chh / 2 + 6, l, 'rg-ax', 'end')).join('');
+  const colsL = PROB.map(([, l], j) => svgText(x0 + j * cw + cw / 2, H - 40, l, 'rg-ax', 'middle')).join('');
+  const all = Object.values(D.RISK_GRID).flatMap((r) => Object.values(r).flat());
+  const high = Object.values(D.RISK_GRID.high).flat();
+  const red = D.RISK_GRID.high.high.filter((c) => ours.has(c));
+  const svg = `<svg class="riskgrid" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Карта ключевых рисков «Моторики»: ${all.length} рисков; меру выполняет или поддерживает пакет MOTUS Lab для ${ours.size}: ${[...ours.keys()].join(', ')}`)}">
+    ${cells}${rowsL}${colsL}${svgText(x0 + (W - x0) / 2, H - 8, 'вероятность возникновения →', 'rg-axt', 'middle')}
+    ${svgText(x0 - 14, 18, 'существенность ↓', 'rg-axt', 'end')}</svg>`;
+  return `<div class="split riskmap2">
+    <figure class="chart">${svg}<figcaption class="fine"><i class="sw-on"></i> мера с пакетом MOTUS Lab · <i class="sw-off"></i> прочие ключевые риски</figcaption></figure>
+    <div class="rg-side">
+      <p class="rg-big"><b>${ours.size} из ${all.length}</b><span>ключевых рисков — мера из вашего реестра есть в наших пакетах</span></p>
+      <p class="rg-big"><b>${high.filter((c) => ours.has(c)).length} из ${high.length}</b><span>рисков высокой существенности</span></p>
+      <p class="rg-big hot"><b>${red.length} из ${D.RISK_GRID.high.high.length}</b><span>в самой опасной клетке: ${red.map((c) => `${c} «${ours.get(c).n}»`).join(', ')}</span></p>
+      <p class="strip sm">${ic('LuQuote')}<span><b>«Формализованная система риск-менеджмента по-прежнему находится в стадии становления».</b> В 2026 году «Моторика» создаёт Службу внутреннего контроля и аудита — у каждой нашей меры есть показатель исполнения (слайд ${s.next}).</span></p>
+    </div>
   </div>`;
+};
+
+// Меры дословно из реестра: пакет, как участвуем, чем подтверждаем исполнение
+L.riskreg = (s) => {
+  const lvl = { high: 'высокая', mod: 'умеренная', low: 'низкая' };
+  const pr = { high: 'высокая', mid: 'средняя', low: 'низкая' };
+  const col = { high: 'rose', mod: 'amber', low: 'mint' };
+  return `<div class="tbl riskreg" role="table" aria-label="Меры из реестра рисков «Моторики», пакеты MOTUS Lab и показатели исполнения">
+    <div class="tr th" role="row"><span role="columnheader">Риск</span><span role="columnheader">Мера из реестра — дословно</span><span role="columnheader">Пакет</span><span role="columnheader">Как</span><span role="columnheader">Показатель исполнения</span></div>
+    ${s.data.rows.map((r) => `<div class="tr" role="row"><span role="cell" class="rr-k">${chip(r.c, col[r.sev], 'sm')}<span><b>${tx(r.n)}</b><i>${tx(`существенность ${lvl[r.sev]}, вероятность ${pr[r.prob]}`)}</i></span></span><span role="cell"><i>${tx(r.m)}</i><small> с. ${r.p}</small></span><span role="cell" class="m">${tx(r.wp)}</span><span role="cell"><span class="how how-${r.how === 'выполняет' ? 'do' : r.how === 'инструмент' ? 'tool' : 'data'}">${tx(r.how)}</span></span><span role="cell">${tx(r.ev)}</span></div>`).join('')}
+  </div>`;
+};
 
 L.gaps = (s) => `<div class="gaps">${s.data.rows.map((g, i) => `
   <div class="gap"><span class="gn">${i + 1}</span><div><b>${tx(g.t)}</b><p class="ev">${ic('LuSearch')}<span>${tx(g.ev)}</span></p><p class="fx">${ic('LuCircleCheck')}<span>${tx(g.fix)}</span></p></div></div>`).join('')}</div>`;
@@ -757,11 +843,11 @@ L.levers = () => {
   const S = MODEL.scen; const B = MODEL.base;
   const v = (f, d = 0) => ['cons', 'base', 'opt'].map((k) => (d ? r1(f(S[k])) : r0(f(S[k]))));
   const rows = [
-    ['L1', 'Удержание', 'новые × охват × Δотказов × выручка на протез × возврат ÷ срок, накопительно', `${r0(MODEL.newUsers)} новых в год; ${r2(MODEL.asp)} млн ₽ на протез`, 'охват 30/50/70 %, Δотказов 5/10/15 п.п.', v((s) => s.l1[4])],
-    ['L2', 'Флагманы', 'сдвиг × 2 600 протезов × разница цены', '2 600 протезов рук в 2025', 'сдвиг 1/2/4 п.п., разница 1 млн ₽', v((s) => s.l2[4])],
-    ['L3', 'Часы специалистов', '3 600 пациентов × часов ÷ 1 800 × стоимость ставки', `ФОТ 2 млрд ₽ / 777 = ${r2(MODEL.fteCost)} млн ₽ на ставку`, '1/2/3 ч на пациента', v((s) => s.saving, 1)],
+    ['L1', 'Удержание', 'новые × охват × Δотказов × выручка на протез × возврат ÷ срок, накопительно', `2 600 × 45 % новых (A1) = ${r0(MODEL.newUsers)}; ${r2(MODEL.asp)} млн ₽ на протез`, 'охват 30/50/70 %, Δотказов 5/10/15 п.п.', v((s) => s.l1[4])],
+    ['L2', 'Флагманы', 'сдвиг × 2 600 протезов × разница цены', '≈2 600 протезов рук: 3,6 тыс. × 74 %', 'сдвиг 1/2/4 п.п., разница 1 млн ₽', v((s) => s.l2[4])],
+    ['L3', 'Часы специалистов', '3 600 протезов × часов ÷ 1 800 × стоимость ставки', `ФОТ 2 млрд ₽ / 777 = ${r2(MODEL.fteCost)} млн ₽ на ставку`, '1/2/3 ч на выдачу протеза', v((s) => s.saving, 1)],
     ['L4', 'Визиты в сервис', 'база × обращения × доля решённых до визита × (3 ч + логистика)', `база ≈${r0(MODEL.activeBase)} = 2 600 × 3 года`, '0,5 обращения в год; 10/20/30 %; 5 тыс. ₽', v((s) => s.l4, 1)],
-    ['L5', 'Документы', '3 600 комплектов × возвраты × доля предотвращённых × 6 ч', '≈4 из 6 месяцев пути — документы', 'возвраты 15 %; 30/50/70 % предотвращено', v((s) => s.l5, 1)],
+    ['L5', 'Документы', '3 600 комплектов × возвраты × доля предотвращённых × 6 ч', 'медэтап 3–6 мес.: МТЗ, МСЭ', 'возвраты 15 %; 30/50/70 % предотвращено', v((s) => s.l5, 1)],
     ['L6', 'Онбординг', 'новые специалисты × месяцев раньше ÷ 12 × стоимость ставки', '78 специалистов, 2 новых центра', '15 новых в год; 0,5/1/1,5 мес', v((s) => s.l6, 1)],
     ['L7', 'Путь пациента', 'выручка рук × доля × дней ÷ 365 × стоимость денег', `выручка рук ${r0(MODEL.ul)} млн ₽`, '7/14/28 дней у 30/50/70 %; 15 % годовых', v((s) => s.l7, 1)],
   ];

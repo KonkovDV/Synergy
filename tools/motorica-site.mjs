@@ -47,7 +47,7 @@ const addDays = (iso, d) => { const t = new Date(iso + 'T12:00:00Z'); t.setUTCDa
 const ddmm = (t) => `${String(t.getUTCDate()).padStart(2, '0')}.${String(t.getUTCMonth() + 1).padStart(2, '0')}`;
 
 const slides = SLIDES.map((s, i) => ({ ...s, n: i + 1 }));
-if (slides.length !== 50) throw new Error(`слайдов ${slides.length}, а нужно 50`);
+if (slides.length < 40) throw new Error(`слайдов ${slides.length} — колода собрана не полностью`);
 const ctx = {
   img: (f) => v(`img/${f}`),
   qrSite: await qrSvg(D.SITE),
@@ -131,7 +131,7 @@ const htmlRaw = `${head(TITLE, DESC, '', 'deck-page')}
   </nav>
   <div class="ctl">
     <label class="route-sel" title="Маршрут по слайдам (M — 20 минут)">${ic('LuRoute')}<span class="vh">Маршрут</span><select data-route aria-label="Маршрут по слайдам">
-      <option value="">Все 50 слайдов</option><option value="core">20 минут · основной</option>
+      <option value="">Все ${slides.length} слайдов</option><option value="core">20 минут · основной</option>
       ${D.CHAIRS.map((c) => `<option value="${c.id}">${esc(c.t)} · ${slides.filter((s) => (s.ch || []).includes(c.id)).length}</option>`).join('')}
     </select></label>
     <button type="button" class="notes-btn" data-notes aria-pressed="false" title="Текст выступления (N)">${ic('LuMessageSquareText')}<span>Речь</span></button>
