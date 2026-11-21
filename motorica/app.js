@@ -374,7 +374,15 @@
   if (!PRINT && params.get('route')) setRoute(params.get('route'));
   if (PRINT) { slides.forEach((s) => s.classList.add('on')); }
   // Готовность для экспорта: шрифты загружены
-  const images = () => (PRINT ? Promise.all([...document.images].map((im) => { im.loading = 'eager'; return im.decode().catch(() => {}); })) : Promise.resolve());
+  // В печати (из неё PDF): JPEG-двойники вместо WebP — PDF не знает WebP, и Chrome встроил бы картинку без сжатия
+  const images = () => (PRINT ? Promise.all([...document.images].map((im) => {
+    im.loading = 'eager';
+    const src = im.getAttribute('src') || '';
+    if (/\.webp(\?v=[^#]*)?$/.test(src)) im.src = src.replace(/\.webp(\?v=[^#]*)?$/, '.jpg');
+    return im.decode().catch(() => {});
+  }).concat(['open', 'view', 'value', 'we', 'model', 'wp', 'plan', 'trust', 'next'].map((k) => {   // фоны разделов из site.css
+    const im = new Image(); im.src = `img/sec-${k}.jpg`; return im.decode().catch(() => {});
+  }))) : Promise.resolve());
   Promise.all([document.fonts ? document.fonts.ready : Promise.resolve(), images()]).then(() => { doc.dataset.ready = '1'; });
 
   // ── Обложка: лёгкий параллакс кисти за курсором (как в Right Track); без него — при «уменьшить движение» ──
@@ -384,6 +392,19 @@
       if (mode !== 'deck' || cur !== 1) return;
       art.style.setProperty('--px', ((e.clientX / innerWidth) * 2 - 1).toFixed(3));
       art.style.setProperty('--py', ((e.clientY / innerHeight) * 2 - 1).toFixed(3));
+    }, { passive: true });
+  }
+
+  // ── Подсветка карточки за курсором (приём Right Track): координаты в --mx и --my, стиль — в site.css ──
+  if (!PRINT) {
+    const GLOW = '.card, .sum-col, .chair, .gap, .tile, .md, .mi, .kpi, .stat, .rg-big, .eco-node';
+    addEventListener('pointermove', (e) => {
+      if (mode !== 'deck' || e.pointerType === 'touch') return;
+      const el = e.target.closest?.(GLOW);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', `${(((e.clientX - r.left) / r.width) * 100).toFixed(1)}%`);
+      el.style.setProperty('--my', `${(((e.clientY - r.top) / r.height) * 100).toFixed(1)}%`);
     }, { passive: true });
   }
 })();

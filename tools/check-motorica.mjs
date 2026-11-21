@@ -154,7 +154,9 @@ for (const x of [`+${rubP(model.scenarios.base.total[4])} млн ₽ выруч�
 const rub = (x) => Math.round(x).toLocaleString('ru-RU').replace(/\s/g, ' ');
 for (const [k, s] of Object.entries(model.scenarios)) {
   for (const [o, x] of [['2031', s.total[4]], ['cum', s.cum], ['ebitda', s.ebitdaFull[4]]]) {
-    if (!html.includes(`data-o="${k}-${o}">${rub(x)}<`)) fail(`в таблице сценариев нет числа ${rub(x)} (${k}-${o}) из модели`);
+    // пробел между разрядами — любой: обычный или неразрывный (типограф ставит неразрывный)
+    const num = rub(x).split(' ').join('[\\s\\u00a0\\u202f]');
+    if (!new RegExp(`data-o="${k}-${o}">${num}<`).test(html)) fail(`в таблице сценариев нет числа ${rub(x)} (${k}-${o}) из модели`);
   }
 }
 const b = model.scenarios.base;
