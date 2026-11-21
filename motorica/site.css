@@ -1197,7 +1197,9 @@ svg.pst-a { align-self: center; justify-self: center; color: var(--muted); width
 }
 .vc-fix .vf > * { min-width: 0; overflow-wrap: anywhere }
 @media (max-width: 1100px) {
-  html:not(.deck):not(.print) .src-cols ul { gap: 12px; font-size: 15px; line-height: 1.6 }   /* строка ссылки ≥ 24 px — цель касания */
+  html:not(.deck):not(.print) .src-cols ul { gap: 8px; font-size: 15px; line-height: 1.5 }
+  /* Цель касания ≥ 24 px при любом шрифте: ссылка — блок во всю строку списка (axe target-size на CI) */
+  html:not(.deck):not(.print) .src-cols li > a { display: block; min-height: 24px; padding: 3px 0 }
   html:not(.deck):not(.print) .split.voice { grid-template-columns: 1fr }
   html:not(.deck):not(.print) .vc-fix .vf { grid-template-columns: 1fr }
   html:not(.deck):not(.print) .vc-fix .vf .chip { justify-self: start }
