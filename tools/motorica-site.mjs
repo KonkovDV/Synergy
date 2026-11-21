@@ -30,7 +30,7 @@ const XLSX = 'MOTUS-Lab-Motorica-model.xlsx';
 mkdirSync(join(dir, 'fonts'), { recursive: true });
 for (const f of ['inter-cyr.woff2', 'inter-lat.woff2', 'unbounded-cyr.woff2', 'unbounded-lat.woff2', 'OFL.txt']) copyFileSync(join(root, 'public/fonts', f), join(dir, 'fonts', f));
 mkdirSync(join(dir, 'img'), { recursive: true });
-for (const f of ['game-grip.webp', 'flow-1.webp', 'flow-2.webp', 'flow-3.webp', 'flow-4.webp', 'flow-5.webp']) copyFileSync(join(root, 'pitch/web', f), join(dir, 'img', f));
+for (const f of ['flow-1.webp', 'flow-2.webp', 'flow-3.webp', 'flow-4.webp', 'flow-5.webp']) copyFileSync(join(root, 'pitch/web', f), join(dir, 'img', f));
 
 const hash = (rel) => (existsSync(join(dir, rel)) ? createHash('sha256').update(readFileSync(join(dir, rel))).digest('hex').slice(0, 8) : '0');
 const v = (rel) => `${rel}?v=${hash(rel)}`;
@@ -135,7 +135,7 @@ const htmlRaw = `${head(TITLE, DESC, '', 'deck-page')}
       ${D.CHAIRS.map((c) => `<option value="${c.id}">${esc(c.t)} · ${slides.filter((s) => (s.ch || []).includes(c.id)).length}</option>`).join('')}
     </select></label>
     <button type="button" class="notes-btn" data-notes aria-pressed="false" title="Текст выступления (N)">${ic('LuMessageSquareText')}<span>Речь</span></button>
-    <span class="count" aria-live="polite"><b data-cur>1</b> / 50</span>
+    <span class="count" aria-live="polite"><b data-cur>1</b> / ${slides.length}</span>
   </div>
 </header>
 <div class="progress" aria-hidden="true"><i></i></div>
@@ -248,7 +248,7 @@ writeFileSync(join(dir, 'plan.html'), planHtml);
 // ── Service worker: страницы — сначала из сети, файлы с ?v= — из кэша ──
 const version = createHash('sha256').update(html + planHtml).digest('hex').slice(0, 12);
 const core = ['./', 'plan.html', v('site.css'), v('app.js'), 'fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2',
-  'fonts/unbounded-lat.woff2', ...['game-grip.webp', 'flow-1.webp', 'flow-2.webp', 'flow-3.webp', 'flow-4.webp', 'flow-5.webp'].map((f) => v(`img/${f}`))];
+  'fonts/unbounded-lat.woff2', ...['ambassador.webp', 'ambassador-face.webp', 'hero-hand.webp', 'modes-emg.webp', 'modes-bci.webp', 'modes-glasses.webp', 'flow-1.webp', 'flow-2.webp', 'flow-3.webp', 'flow-4.webp', 'flow-5.webp'].map((f) => v(`img/${f}`))];
 writeFileSync(join(dir, 'sw.js'), `// Офлайн-копия сайта презентации; генерирует tools/motorica-site.mjs — не править руками.
 // Игра на корне сайта (../sw.js) отдаёт всё под собой из кэша; этот worker с областью ./ забирает /motorica/ себе
 // и удаляет копии этой страницы, которые успел сохранить worker игры.

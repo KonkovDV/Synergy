@@ -110,20 +110,21 @@ svg text { font-family: var(--body); fill: var(--soft) }
 .L-cover .sh { position: relative; z-index: 2 }
 .cover-grid { position: relative; flex: 1; display: grid; grid-template-columns: 960px 1fr; gap: 20px }
 .cover-text { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 30px }
-.lead.xl { font-size: 22px; max-width: 900px; margin: 0 }
+.lead.xl { font-size: 22px; max-width: 840px; margin: 0 }
 .cover-stats { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 0 44px; padding-top: 22px; border-top: 1px solid var(--line) }
 .cover-stats div { display: flex; flex-direction: column; gap: 6px }
 .cover-stats b { font: 600 32px/1.1 var(--head); color: var(--mint) }
 .cover-stats span { color: var(--soft); font-size: 16px; max-width: 220px }
 .who { margin: auto 0 0; color: var(--soft); font-size: 17px }
-.cover-art { position: absolute; right: -40px; top: -170px; width: 640px; height: 640px; z-index: 1 }
-svg.hero { width: 100%; height: 100% }
-.traj { fill: none; stroke-width: 2; opacity: .55 }
-.traj.t0 { stroke: var(--mint) } .traj.t1 { stroke: var(--teal) } .traj.t2 { stroke: var(--sky) } .traj.t3 { stroke: var(--violet); opacity: .4 }
-.dot-m { fill: var(--mint) }
+.cover-art { position: absolute; right: 70px; top: -150px; width: 700px; height: 700px; z-index: 1; transform: translate3d(calc(var(--px, 0) * -14px), calc(var(--py, 0) * -10px), 0); transition: transform .8s cubic-bezier(.2, .7, .2, 1) }
+html.deck .s .hero-img { opacity: 0; transform: scale(1.04); transition: opacity 1.2s ease .15s, transform 1.8s cubic-bezier(.2, .7, .2, 1) .1s }
+html.deck .s.on .hero-img { opacity: 1; transform: none }
+/* Обложка: кисть с сигналами ЭМГ (ChatGPT Image 2.5 через Figma). Фон картинки растворяется в фоне слайда: lighten + мягкая маска */
+.hero-img { display: block; width: 100%; height: 100%; object-fit: contain; mix-blend-mode: lighten; pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 58% 62% at 52% 46%, #000 56%, transparent 100%); mask-image: radial-gradient(ellipse 58% 62% at 52% 46%, #000 56%, transparent 100%) }
 .phone { position: relative; margin: 0; border-radius: 28px; padding: 8px; background: #0b141d; border: 1px solid var(--line2); box-shadow: 0 24px 60px rgba(0, 0, 0, .45) }
 .phone img { display: block; width: 100%; height: auto; border-radius: 21px }
-.phone.p-cover { position: absolute; right: 250px; top: 40px; width: 240px; transform: rotate(4deg); z-index: 2 }
+.phone.p-cover { position: absolute; right: 330px; top: 70px; width: 230px; transform: rotate(-4deg); z-index: 2 }
 .cover-qr { position: absolute; right: 0; bottom: 6px; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--soft); font-size: 14px }
 .qr { background: #fff; border-radius: 14px; padding: 10px; width: 150px; height: 150px }
 .qr-svg { display: block; width: 100%; height: 100% }
@@ -311,6 +312,14 @@ svg.heat { flex: 1; min-height: 0; width: 100% }
 .hm:hover { stroke: #fff; stroke-width: 2 }
 .hm-sw { display: inline-block; width: 22px; height: 14px; border-radius: 4px }
 .legend .tip { margin-left: auto; color: var(--mint2) }
+/* Карта компетенций: подсказка занимает постоянное место, поэтому карта не меняет размер при наведении */
+.heat-wrap .legend { flex-wrap: nowrap; height: 2.9em; flex: none }
+.heat-wrap .legend > span:not(.tip) { flex: none }
+.heat-wrap .legend .tip { flex: 1 1 0; min-width: 0; margin-left: 28px; line-height: 1.38; max-height: 2.76em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical }
+@media (max-width: 1100px) {
+  html:not(.deck):not(.print) .heat-wrap .legend { flex-wrap: wrap; height: auto }
+  html:not(.deck):not(.print) .heat-wrap .legend .tip { flex-basis: 100%; margin-left: 0; height: 5.52em; max-height: none; -webkit-line-clamp: 4 }
+}
 
 /* ── Связи портфеля и пакетов ── */
 svg.mapping { flex: 1; min-height: 0; width: 100% }
@@ -621,6 +630,8 @@ html.deck, html.deck body { height: 100%; overflow: hidden }
 html.deck #deck { position: fixed; inset: 0 }
 html.deck .s { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform-origin: 0 0; opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility 0s linear .35s; border-radius: 6px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .04) }
 html.deck .s.on { opacity: 1; visibility: visible; transition: opacity .35s ease, visibility 0s }
+html.deck .s:not(.on) { pointer-events: none }   /* гаснущий или невидимый слайд не перехватывает мышь и касания */
+html.deck:not([data-ready="1"]) .s { transition: none }   /* при включении колоды слайды скрываются сразу, затухание — только при листании */
 html.deck .speech { display: none }
 .bar { display: none }
 html.deck .bar { position: fixed; z-index: 20; left: 0; right: 0; top: 0; height: 52px; display: flex; align-items: center; gap: 24px; padding: 0 22px; background: linear-gradient(var(--bg) 60%, rgba(7, 16, 25, 0)) }
@@ -721,6 +732,7 @@ html:not(.deck):not(.print) .body { margin-top: 20px }
   html:not(.deck):not(.print) .qr { width: 120px; height: 120px }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important } }
+@media (prefers-reduced-motion: reduce) { .cover-art { transform: none } html.deck .s .hero-img { opacity: 1; transform: none } }
 
 /* ════ Страница плана ════ */
 .wrap { max-width: 1120px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px) }
@@ -1166,4 +1178,28 @@ svg.pst-a { align-self: center; justify-self: center; color: var(--muted); width
   html:not(.deck):not(.print) .split.voice { grid-template-columns: 1fr }
   html:not(.deck):not(.print) .vc-fix .vf { grid-template-columns: 1fr }
   html:not(.deck):not(.print) .vc-fix .vf .chip { justify-self: start }
+}
+
+/* ── Образ амбассадора: центр экосистемы, финал, три способа управления ── */
+.eco-hub { width: 224px }
+.eco-hub .hub-face { display: block; width: 96px; height: 96px; margin: 0 auto 6px; border-radius: 50%; object-fit: cover; border: 2px solid var(--mint); box-shadow: 0 0 0 6px rgba(22, 225, 130, .12) }
+.contact { position: relative; overflow: hidden }
+.contact > :not(.dec-hand) { position: relative; z-index: 1 }
+.dec-hand { position: absolute; right: -70px; bottom: -90px; width: 430px; height: 430px; z-index: 0; object-fit: contain; mix-blend-mode: lighten; pointer-events: none; opacity: .95;
+  -webkit-mask-image: radial-gradient(ellipse 60% 56% at 62% 50%, #000 50%, transparent 100%); mask-image: radial-gradient(ellipse 60% 56% at 62% 50%, #000 50%, transparent 100%) }
+.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; flex: 1; min-height: 0 }
+.modes .md { padding: 0; gap: 7px; overflow: hidden }
+.md-img { margin: 0; aspect-ratio: 16 / 9; overflow: hidden; border-bottom: 1px solid var(--line) }
+.md-img img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 38% }
+.md-h, .modes .md-t, .modes .md ul, .md-wp { margin-left: 18px; margin-right: 18px }
+.md-h { margin-top: 10px; margin-bottom: 0; display: flex; align-items: center; gap: 10px }
+.md-k { color: var(--muted); font: 700 12px/1.2 var(--body); letter-spacing: .1em; text-transform: uppercase }
+.modes .md-t { font-size: 18px; line-height: 1.25 }
+.modes .md ul { margin-top: 0; margin-bottom: 0; padding-left: 18px; color: var(--soft); font-size: 14.5px; line-height: 1.35; display: flex; flex-direction: column; gap: 3px }
+.md-wp { margin-top: auto; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; font-size: 14px }
+.md-wp a { color: var(--mint) }
+.md-wp svg.i { width: 16px; height: 16px; color: var(--mint) }
+@media (max-width: 1100px) {
+  html:not(.deck):not(.print) .modes { grid-template-columns: 1fr }
+  html:not(.deck):not(.print) .dec-hand { display: none }
 }

@@ -1,9 +1,9 @@
 // Офлайн-копия сайта презентации; генерирует tools/motorica-site.mjs — не править руками.
 // Игра на корне сайта (../sw.js) отдаёт всё под собой из кэша; этот worker с областью ./ забирает /motorica/ себе
 // и удаляет копии этой страницы, которые успел сохранить worker игры.
-const VERSION = '7b0dcda6eb8e';
+const VERSION = '4436848e6dbf';
 const CACHE = 'motorica-' + VERSION;
-const CORE = ["./","plan.html","site.css?v=48b0d8bb","app.js?v=b3571fcd","fonts/inter-cyr.woff2","fonts/inter-lat.woff2","fonts/unbounded-cyr.woff2","fonts/unbounded-lat.woff2","img/game-grip.webp?v=8c12ea59","img/flow-1.webp?v=78270d67","img/flow-2.webp?v=81d5a2e5","img/flow-3.webp?v=dc98466c","img/flow-4.webp?v=2a5a1f76","img/flow-5.webp?v=e42f76c3"];
+const CORE = ["./","plan.html","site.css?v=9edd7a3a","app.js?v=0437b831","fonts/inter-cyr.woff2","fonts/inter-lat.woff2","fonts/unbounded-cyr.woff2","fonts/unbounded-lat.woff2","img/ambassador.webp?v=36e474c7","img/ambassador-face.webp?v=a68652b3","img/hero-hand.webp?v=e4dc3d9b","img/modes-emg.webp?v=c07a4cd0","img/modes-bci.webp?v=fc039f54","img/modes-glasses.webp?v=ad567ba6","img/flow-1.webp?v=78270d67","img/flow-2.webp?v=81d5a2e5","img/flow-3.webp?v=dc98466c","img/flow-4.webp?v=2a5a1f76","img/flow-5.webp?v=e42f76c3"];
 self.addEventListener('install', (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting())));
 self.addEventListener('activate', (e) => e.waitUntil((async () => {
   for (const name of await caches.keys()) {

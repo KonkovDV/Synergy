@@ -105,7 +105,7 @@ const contactsSlide = slides.find((s) => s.layout === 'decisions')?.n;
 if (!plan.includes(`href="./#s${contactsSlide}"`)) fail('план не ведёт к контактам на главной');
 if (/href="#\d+"/.test(html)) fail('ссылки на слайды вида #N — нужны #sN, как id слайдов');
 
-for (const f of ['fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2', 'fonts/unbounded-lat.woff2', 'sw.js', 'og.jpg', 'img/game-grip.webp',
+for (const f of ['fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2', 'fonts/unbounded-lat.woff2', 'sw.js', 'og.jpg', 'img/ambassador.webp', 'img/modes-emg.webp', 'img/modes-bci.webp', 'img/modes-glasses.webp', 'img/hero-hand.webp',
   'MOTUS-Lab-Motorica.pdf', 'MOTUS-Lab-Motorica.pptx', 'MOTUS-Lab-Motorica-model.xlsx']) if (!existsSync(join(dir, f))) fail(`нет ${f}`);
 if (existsSync(join(dir, 'slides'))) fail('motorica/slides/ — картинки прошлой колоды; страница больше на них не ссылается');
 const sw = readFileSync(join(dir, 'sw.js'), 'utf8');
