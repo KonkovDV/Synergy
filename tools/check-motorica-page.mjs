@@ -6,9 +6,10 @@
 // переходят; маршрут «20 минут» и маршруты восьми кресел (список и карточки) листают только свои слайды, ?route=
 // включает маршрут; текст выступления (N) — тот же, что у слайда; калькулятор считает как tools/motorica/model.mjs,
 // а ссылка на расчёт восстанавливает его; правило решения по пилоту и даты недель работают; тренажёр открывается в
-// окне и закрывается Esc с возвратом фокуса; на телефоне — лента слайдов, ссылки прокручивают к слайду; от 320 до
+// окне и закрывается Esc с возвратом фокуса; у каждого слайда в печати и в колоде нет обрезанных блоков, текста на
+// тексте и подписей за краем (tools/motorica-layout.mjs); на телефоне — лента слайдов, ссылки прокручивают к слайду; от 320 до
 // 2560 px ничего не прокручивается вбок; axe-core — 0 нарушений (WCAG 2.2 AA и best practices) в ленте со всеми
-// 50 слайдами, в колоде с открытыми заметками и тренажёром и на странице плана; страницу забирает свой service
+// слайдами, в колоде с открытыми заметками и тренажёром и на странице плана; страницу забирает свой service
 // worker, и она открывается без сети. Нужны Playwright с Chromium и axe-core (devDependencies).
 import { createServer } from 'node:http';
 import { createReadStream, statSync, mkdtempSync, cpSync, existsSync, writeFileSync, rmSync, readFileSync, mkdirSync } from 'node:fs';
@@ -17,6 +18,7 @@ import { join, extname, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { layoutIssues } from './motorica-layout.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -265,6 +267,25 @@ try {
     if ((await tipText()) !== (await link.getAttribute('data-tip'))) fail('карта компетенций: фокус на названии репозитория не показывает подсказку');
   }
 
+  // ── 5г. Вёрстка каждого слайда: нет обрезанных блоков, текста на тексте и на картинках, подписей за краем, ──
+  // слипшихся подписей и линий сквозь буквы (tools/motorica-layout.mjs). Печать — из неё PDF и PPTX; колода —
+  // в ней видны ползунки, поля и кнопки. Переходы выключены, чтобы мерить слайд на месте, а не в полёте.
+  {
+    const c = await browser.newContext({ viewport: { width: 1600, height: 900 }, bypassCSP: true, serviceWorkers: 'block' });
+    const p = await c.newPage();
+    for (const mode of ['print', 'deck']) {
+      await p.goto(`${url}${mode === 'print' ? '?print=1' : ''}`, { waitUntil: 'load' });
+      await ready(p);
+      await p.evaluate(() => document.fonts.ready);
+      await p.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation: none !important }' });
+      for (let n = 1; n <= N; n++) {
+        if (mode === 'deck') await go(p, n);
+        for (const x of await p.evaluate(layoutIssues, `#s${n}`)) fail(`вёрстка (${mode === 'print' ? 'печать' : 'колода'}), слайд ${n}: ${x}`);
+      }
+    }
+    await c.close();
+  }
+
   // ── 6. Правило решения по пилоту, даты недель, итог встречи ──
   await go(page, nOf('decision'));
   const verdict = async () => page.locator('[data-decide] [data-verdict]').textContent();
@@ -410,4 +431,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» в браузере — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут» и 8 кресел, заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);
+console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут» и 8 кресел, заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений; телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);
