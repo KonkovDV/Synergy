@@ -14,7 +14,8 @@ export function layoutIssues(sel) {
   const out = [];
   const name = (el) => `${el.tagName.toLowerCase()}.${String(el.className.baseVal ?? el.className).trim().split(/\s+/).slice(0, 2).join('.')}`;
   const short = (t) => `«${t.trim().replace(/\s+/g, ' ').slice(0, 32)}»`;
-  const inter = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+  // Площадь пересечения; полоска уже 3 px — это касание соседних букв строки (наклон, кернинг), а не наложение
+  const inter = (a, b) => { const w = Math.min(a.right, b.right) - Math.max(a.left, b.left), h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); return w < 3 || h < 3 ? 0 : w * h; };
   const after = (a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);   // b нарисован позже a
   // Содержимое закрытого <details> (текст выступления в ленте) не нарисовано, хотя у него есть прямоугольник
   const hiddenInDetails = (el) => { const d = el.closest('details:not([open])'); return !!d && !el.closest('summary'); };
@@ -41,9 +42,12 @@ export function layoutIssues(sel) {
     else { const rg = document.createRange(); rg.selectNodeContents(t); rects = [...rg.getClientRects()]; }
     for (const q of rects) if (q.width > 2 && q.height > 2) boxes.push({ el, q, txt: t.textContent });
   }
+  // Строки одного абзаца или заголовка между собой не сравниваем: при плотном интервале их рамки перекрываются, буквы — нет
+  const blk = (el) => el.closest('h1, h2, h3, h4, p, li, figcaption, blockquote, dd, dt, summary, label, button');
   for (let a = 0; a < boxes.length; a++) for (let c = a + 1; c < boxes.length; c++) {
     const A = boxes[a], B = boxes[c];
     if (A.el === B.el || A.el.contains(B.el) || B.el.contains(A.el)) continue;
+    if (!(A.el instanceof SVGElement) && blk(A.el) && blk(A.el) === blk(B.el)) continue;
     const ar = inter(A.q, B.q);
     if (ar > 12 && ar > 0.12 * Math.min(A.q.width * A.q.height, B.q.width * B.q.height)) out.push(`текст на тексте: ${short(A.txt)} × ${short(B.txt)}`);
   }

@@ -135,7 +135,7 @@ const SUMVIZ = {
         ${svgText(114, 148, 'недели от встречи', 'vz-c', 'middle')}` };
   },
 };
-const sumViz = (k) => { if (!k) return ''; const v = SUMVIZ[k](); return `<svg class="viz" viewBox="0 0 228 152" role="img" aria-label="${esc(v.label)}">${v.svg}</svg>`; };
+const sumViz = (k) => { if (!k) return ''; const v = SUMVIZ[k](); return `<svg class="viz" viewBox="-3 -4 234 160" role="img" aria-label="${esc(v.label)}">${v.svg}</svg>`; };
 
 L.summary = (s) => `
   <div class="sum">${s.data.cols.map(([lab, icn, big, txt, link, viz]) => `

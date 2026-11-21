@@ -1343,7 +1343,7 @@ html.print .phones .phone { box-shadow: 0 0 0 1px rgba(255, 255, 255, .16), inse
 /* Лента на узком экране: широкие схемы (app.js оборачивает их в .hscroll) листаются вбок в читаемом размере */
 .hscroll { display: contents }
 @media (max-width: 900px) {
-  html:not(.deck):not(.print) .hscroll { display: block; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: rgba(22, 225, 130, .5) transparent }
+  html:not(.deck):not(.print) .hscroll { display: block; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: rgba(22, 225, 130, .5) transparent }
   html:not(.deck):not(.print) .hscroll > svg { width: 940px !important; max-width: none; height: auto; flex: none }
   html:not(.deck):not(.print) .hscroll::after { content: "← схема листается вбок →"; display: block; position: sticky; left: 0; width: min(100%, 340px); margin-top: 6px; color: var(--muted); font-size: 13px }
   html:not(.deck):not(.print) .phones figcaption { position: static; margin-top: 8px }
@@ -1368,3 +1368,9 @@ html.print .phones .phone { box-shadow: 0 0 0 1px rgba(255, 255, 255, .16), inse
 @media (prefers-reduced-motion: no-preference) { html.deck .s.on .cover-art .halo::before { animation: orbit 16s linear infinite } }
 @keyframes orbit { to { rotate: 360deg } }
 html:not(.deck):not(.print) .cover-art .halo { display: none }
+@media (max-width: 900px) {
+  html:not(.deck):not(.print) .split.decision { grid-template-columns: 1fr }   /* дереву решения нужна вся ширина */
+}
+@media (max-width: 400px) {
+  html:not(.deck):not(.print) .so h3 { font-size: 17px }   /* «Что освободится» не рвётся внутри слова */
+}
