@@ -5,6 +5,7 @@
 //  • подпись SVG за пределами своего svg, вылезающая из своей плашки или клетки, слипшиеся подписи (зазор < 5 px);
 //  • фигура, нарисованная поверх текста, и линия, проходящая сквозь буквы (если у подписи нет ореола и линию
 //    не закрывает плашка под текстом);
+//  • неразрывный фрагмент текста другого размера или цвета, чем его строка;
 //  • элемент за пределами кадра слайда.
 // Функция самодостаточна: Playwright передаёт в страницу только её текст.
 export function layoutIssues(sel) {
@@ -103,6 +104,13 @@ export function layoutIssues(sel) {
       const gap = Math.max(A.left, B.left) - Math.min(A.right, B.right);
       if (gap < 5 && inter(A, B) <= 0.12 * Math.min(A.width * A.height, B.width * B.height)) out.push(`подписи слиплись: ${short(texts[a].textContent)} и ${short(texts[c].textContent)}`);
     }
+  }
+
+  // 4а. Неразрывный фрагмент (.nw) выбивается по стилю из своего текста: другой размер или цвет
+  for (const el of s.querySelectorAll('.nw')) {
+    const a = getComputedStyle(el), b = getComputedStyle(el.parentElement);
+    if (!el.getClientRects().length) continue;
+    if (a.fontSize !== b.fontSize || a.color !== b.color || a.fontFamily !== b.fontFamily) out.push(`фрагмент выбивается по стилю: ${short(el.textContent)}`);
   }
 
   // 4. Элемент за пределами кадра

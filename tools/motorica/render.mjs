@@ -16,7 +16,8 @@ export function nb(s) {
     .replace(/(^|[\s(])(≈|№|≥|≤|>|<|—|–) (?=\S)/g, '$1$2 ')
     .replace(/ (—|–) /g, ' $1 ')
     .replace(/(\d) (\d{3})/g, '$1 $2')
-    .replace(/(^|[\s(«])(в|и|к|с|у|о|а|по|на|за|от|до|не|из|без|для|при|или|что|как|это) /gi, '$1$2 ');
+    .replace(/(^|[\s(«])(в|и|к|с|у|о|а|по|на|за|от|до|не|из|без|для|при|или|что|как|это) /gi, '$1$2 ')
+    .replace(/(слайд[а-я]*|с\.|ст\.|п\.) (?=\d)/g, '$1 ');
 }
 // Текст для HTML: экранирование, неразрывные пробелы, *выделение*, ^{степень}, диапазоны цифр не рвутся.
 export function tx(s) {
@@ -42,7 +43,10 @@ export function iconSprite() {
     const inner = svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
     out.push(`<symbol id="i-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</symbol>`);
   }
-  return `<svg class="sprite" aria-hidden="true" focusable="false"><defs>${out.join('')}</defs></svg>`;
+  // Градиенты для графиков: сверху светлее, снизу глубже — «стеклянные» столбцы и полосы (fill: url(#g-mint) в site.css)
+  const grads = [['mint', '#4ff5ad', '#0db86a'], ['sky', '#8fd8fb', '#2b8fd4'], ['violet', '#c7c0ff', '#7b6ff2'], ['amber', '#ffd98a', '#e39a1f'], ['rose', '#ffb8b8', '#ef6a6a'], ['teal', '#86f5d8', '#12b394'], ['ink', '#ffffff', '#c9d6e0']]
+    .map(([k, a, b]) => `<linearGradient id="g-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`).join('');
+  return `<svg class="sprite" aria-hidden="true" focusable="false"><defs>${grads}${out.join('')}</defs></svg>`;
 }
 
 export const chip = (text, kind = 'mint', cls = '') => `<span class="chip c-${kind} ${cls}">${tx(text)}</span>`;
@@ -176,8 +180,8 @@ L.company = (s) => {
 L.ecosystem = (s, ctx) => {
   const n = s.data.nodes;
   const nodes = n.map((x, i) => `<div class="eco-node n${i + 1}" tabindex="0"><b>${tx(x.t)}</b><span>${tx(x.s)}</span><span class="wps">${x.wp.length ? x.wp.map((w) => chip(w, trackColor(D.WPS.find((p) => p.id === w).tr), 'sm')).join('') : chip('вне пакетов', 'muted', 'sm')}</span></div>`).join('');
-  // Лучи от центра к узлам — в той же сетке координат, что .eco-node (ширина 1424, высота 560): узлы 1–4 слева, 5 сверху, 6–9 справа
-  const P = [[330, 56], [330, 193], [330, 330], [330, 467], [712, 112], [1094, 56], [1094, 193], [1094, 330], [1094, 467]];
+  // Лучи от центра к узлам — в той же сетке координат, что .eco-node (ширина 1424, высота 530; карточки 360 × 118 с шагом 137): узлы 1–4 слева, 5 сверху, 6–9 справа
+  const P = [[360, 59], [360, 196], [360, 333], [360, 471], [712, 118], [1064, 59], [1064, 196], [1064, 333], [1064, 471]];
   const rays = P.map(([x, y]) => `<line x1="712" y1="300" x2="${x}" y2="${y}" class="ray"/>`).join('');
   return `<div class="eco"><svg class="eco-rays" viewBox="0 0 1424 530" preserveAspectRatio="none" aria-hidden="true">${rays}<circle cx="712" cy="300" r="122" class="hub"/></svg>
     <div class="eco-hub"><img class="hub-face" src="${ctx.img('ambassador-face.webp')}" alt="" width="256" height="256" loading="lazy" decoding="async"><b>ГК «Моторика»</b><span>человек и его возможности</span></div>${nodes}</div>`;
@@ -640,10 +644,11 @@ L.decisions = (s, ctx) => `
 // Последняя колонка — строка «Сборка из коммита …»: её заполняет app.js из build.json, который пишет workflow Pages
 L.sources = (s, ctx) => `<div class="src-cols">${ctx.sources.map(([h, items], i, all) => `<div><h3>${tx(h)}</h3><ul>${items.map(([t, u]) => `<li>${u ? `<a href="${esc(u)}">${tx(t)}</a>` : tx(t)}</li>`).join('')}</ul>${i === all.length - 1 ? '<p class="fine build" id="build"></p>' : ''}</div>`).join('')}</div>`;
 
+// Типограф поверх готового HTML слайда: неразрывные пробелы и в тексте, вставленном в шаблон без tx()
 export function renderSlide(s, ctx) {
   const fn = L[s.layout];
   if (!fn) throw new Error(`нет макета ${s.layout}`);
-  return fn(s, ctx);
+  return fn(s, ctx).replace(/>([^<]+)</g, (m, t) => `>${nb(t)}<`);
 }
 
 // ════ Макеты взгляда «Моторики» и бизнес-эффекта ════
@@ -700,15 +705,16 @@ L.market = (s) => {
       ${cmp('Нуждаются в протезе, тыс. человек', `${fmt1(m.hands.need)} → ${fmt1(m.hands.need2030)}`, `${m.legs.need} → ${m.legs.need2030}`)}
       ${cmp('Изделий в 2024 году, тыс.', fmt1(m.hands.units), String(m.legs.units))}
       ${cmp('Доля первичных пациентов', `${fmt1(m.hands.primary)} → ${fmt1(m.hands.primary2030)} %`, `${fmt1(m.legs.primary)} → ${fmt1(m.legs.primary2030)} %`)}
-      ${cmp('Доля «Моторики»', '≈40 %, № 1', '«Лимб» с 08.2026')}
-      <p class="strip sm">${ic('LuRepeat')}<span><b>87–95 % продаж — повторные пациенты.</b> Удержанный пользователь — это следующая замена через 1–3 года.</span></p>
+      ${cmp('Доля «Моторики»', '≈40 %, № 1', '«Лимб» с 09.2026')}
+      <p class="strip sm">${ic('LuRepeat')}<span><b>Повторные пациенты — 87 % спроса на протезы рук в 2024 году и ≈96 % к 2030-му.</b> Удержанный пользователь — это следующая замена через 1–3 года.</span></p>
     </div>
   </div>`;
 };
 
-L.chairs = (s) => `<div class="chairs">${s.data.chairs.map((c) => `
+// Иконки кресел — 3D-стекло (ChatGPT Image 2.5, одна сетка 4 × 2 на все восемь — единый свет и масштаб)
+L.chairs = (s, ctx) => `<div class="chairs">${s.data.chairs.map((c) => `
   <div class="chair">
-    <button type="button" class="ch-h" data-chair="${c.id}" aria-pressed="false">${ic(c.icon, 'badge sm')}<b>${tx(c.t)}</b><span class="vh"> — маршрут по слайдам</span></button>
+    <button type="button" class="ch-h" data-chair="${c.id}" aria-pressed="false"><img class="ch-ic" src="${ctx.img(`chair-${c.id}.webp`)}" alt="" width="48" height="48" loading="lazy" decoding="async"><b>${tx(c.t)}</b><span class="vh"> — маршрут по слайдам</span></button>
     <p class="lbl">Что важно</p><ul>${c.care.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
     <p class="lbl give">Что даём</p><ul class="give">${c.give.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
     <p class="metric">${ic('LuGauge')}<span>${tx(c.metric)}</span></p>
@@ -888,7 +894,7 @@ L.efftree = () => {
   const box = (x, y, w, h, title, val, sub, cls) => `<g class="et ${cls}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14"/>${svgText(x + 16, y + 30, title, 'et-t')}${svgText(x + w - 16, y + 30, val, 'et-v', 'end')}${sub ? svgLines(x + 16, y + 54, sub, Math.floor(w / 8.4), 19, 'et-s') : ''}</g>`;
   const line = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}" class="et-l"/>`;
   const rev = b.total[4] * mg; const cost = b.saving + b.l4 + b.l5 + b.l6;
-  const root = box(462, 0, 500, 74, 'EBITDA 2031, базовый сценарий', `≈${r0(b.ebitdaFull[4])} млн ₽`, '', 'root');
+  const root = box(422, 0, 580, 74, 'EBITDA 2031, базовый сценарий', `≈${r0(b.ebitdaFull[4])} млн ₽`, '', 'root');
   const br = [
     [40, 'Выручка растёт', `${r0(b.total[4])} млн ₽ × 26 % = ${r0(rev)}`, 'rev'],
     [512, 'Затраты снижаются', `≈${r0(cost)} млн ₽ в год`, 'cost'],

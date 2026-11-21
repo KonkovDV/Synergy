@@ -199,12 +199,16 @@ try {
   // блок меняет высоту — это и есть «скачет пропорция». Самая длинная и самая короткая подсказка карты — обязательно.
   const boxesOf = (n) => page.evaluate((n) => [...document.querySelectorAll(`#s${n} .body > *, #s${n} .body > * > *`)]
     .filter((e) => !e.parentElement.closest('svg')).map((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round).join(','); }), n);
+  // Блоки слайда появляются с короткой анимацией: мерить — когда она закончилась, иначе «сдвиг» — это полёт блока
+  const settled = () => page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 5000 });
   const steady = async (layout, label, act) => {
     const n = nOf(layout);
     await go(page, n);
+    await settled();
     const before = await boxesOf(n);
     await act(n);
     await page.waitForTimeout(80);
+    await settled();
     const after = await boxesOf(n);
     const moved = before.filter((x, i) => x !== after[i]).length;
     if (moved || before.length !== after.length) fail(`${label}: вёрстка сдвигается при взаимодействии — ${moved} блоков`);

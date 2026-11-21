@@ -65,7 +65,7 @@ const body = slides.map((s) => {
 <div class="frame">
 <header class="sh"><p class="kicker"><span>${tx(s.kicker)}</span></p><h${s.n === 1 ? 1 : 2} class="title" id="h${s.n}">${tx(s.title)}</h${s.n === 1 ? 1 : 2}>${s.lead && s.layout !== 'cover' ? `<p class="lead">${tx(s.lead)}</p>` : ''}</header>
 <div class="body">${inner}</div>
-<footer class="sf"><p class="src"><span>Источники:</span> ${tx(s.src)}</p><p class="pn"><span class="sec-name">${tx(secTitle[s.sec])}</span><b>${s.n}</b></p></footer>
+<footer class="sf"><p class="src"><span class="src-l">Источники:</span> ${tx(s.src)}</p><p class="pn"><span class="sec-name">${tx(secTitle[s.sec])}</span><b>${s.n}</b></p></footer>
 <details class="speech"><summary>Текст выступления</summary><p>${tx(s.notes)}</p></details>
 </div>
 </section>`;
@@ -246,9 +246,12 @@ ${iconSprite()}
 writeFileSync(join(dir, 'plan.html'), planHtml);
 
 // ── Service worker: страницы — сначала из сети, файлы с ?v= — из кэша ──
-const version = createHash('sha256').update(html + planHtml).digest('hex').slice(0, 12);
+// Картинки из site.css (фоны разделов, зерно) идут без ?v=: их содержимое входит в версию кэша
+const cssImgs = ['grain.webp', ...['open', 'view', 'value', 'we', 'model', 'wp', 'plan', 'trust', 'next'].map((k) => `sec-${k}.webp`)].map((f) => `img/${f}`);
+const version = createHash('sha256').update(html + planHtml).update(Buffer.concat(cssImgs.map((f) => readFileSync(join(dir, f))))).digest('hex').slice(0, 12);
 const core = ['./', 'plan.html', v('site.css'), v('app.js'), 'fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2',
-  'fonts/unbounded-lat.woff2', ...['ambassador.webp', 'ambassador-face.webp', 'hero-hand.webp', 'modes-emg.webp', 'modes-bci.webp', 'modes-glasses.webp', 'flow-1.webp', 'flow-2.webp', 'flow-3.webp', 'flow-4.webp', 'flow-5.webp'].map((f) => v(`img/${f}`))];
+  'fonts/unbounded-lat.woff2', ...['ambassador.webp', 'ambassador-face.webp', 'hero-hand.webp', 'modes-emg.webp', 'modes-bci.webp', 'modes-glasses.webp', 'flow-1.webp', 'flow-2.webp', 'flow-3.webp', 'flow-4.webp', 'flow-5.webp',
+    ...['ceo', 'cfo', 'product', 'digital', 'rnd', 'med', 'ops', 'reg'].map((c) => `chair-${c}.webp`)].map((f) => v(`img/${f}`)), ...cssImgs];
 writeFileSync(join(dir, 'sw.js'), `// Офлайн-копия сайта презентации; генерирует tools/motorica-site.mjs — не править руками.
 // Игра на корне сайта (../sw.js) отдаёт всё под собой из кэша; этот worker с областью ./ забирает /motorica/ себе
 // и удаляет копии этой страницы, которые успел сохранить worker игры.
