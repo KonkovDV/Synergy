@@ -41,6 +41,21 @@
     mode = m;
     fit();
     if (m === 'deck') show(cur, false);
+    if (m === 'flow') wrapWide();
+  }
+  // Лента на узком экране: широкая схема не сжимается до нечитаемого, а листается вбок внутри своего блока.
+  // В колоде и в печати обёртка — display: contents (site.css), вёрстка не меняется.
+  function wrapWide() {
+    for (const svg of $$('svg.heat, svg.mapping, svg.seq, svg.gantt, svg.weeks, svg.efftree, svg.riskgrid, .decision > svg')) {
+      if (svg.parentElement.classList.contains('hscroll')) continue;
+      const box = document.createElement('div');
+      box.className = 'hscroll';
+      box.tabIndex = 0;
+      box.setAttribute('role', 'group');
+      box.setAttribute('aria-label', 'Схема шире экрана — листается вбок');
+      svg.before(box);
+      box.append(svg);
+    }
   }
   function fit() {
     if (mode !== 'deck') { slides.forEach((s) => { s.style.transform = ''; }); return; }

@@ -78,7 +78,7 @@ L.cover = (s, ctx) => `
       <div class="cover-stats">${s.data.stats.map(([v, l]) => `<div><b>${tx(v)}</b><span>${tx(l)}</span></div>`).join('')}</div>
       <p class="who">${tx(s.data.who)}</p>
     </div>
-    <div class="cover-art" aria-hidden="true"><img class="hero-img" src="${ctx.img('ambassador.webp')}" alt="" width="1024" height="1024" fetchpriority="high" decoding="async"></div>
+    <div class="cover-art" aria-hidden="true"><span class="halo"><i></i><i></i><i></i></span><img class="hero-img" src="${ctx.img('ambassador.webp')}" alt="" width="1024" height="1024" fetchpriority="high" decoding="async"></div>
     <div class="cover-qr"><div class="qr">${ctx.qrSite}</div><span>Сайт презентации</span></div>
   </div>`;
 
@@ -272,14 +272,14 @@ L.heatmap = () => {
     return `<g class="hm-row">${label}${cs}</g>`;
   }).join('');
   const H = y0 + rows.length * rh + 6;
-  return `<div class="heat-wrap"><svg class="heat" viewBox="0 0 ${x0 + comps.length * cw} ${H}" role="img" aria-label="Карта компетенций ${rows.length} репозиториев команды">${head}${cells}</svg>
+  return `<div class="heat-wrap"><svg class="heat" viewBox="0 0 ${x0 + comps.length * cw + 16} ${H}" role="img" aria-label="Карта компетенций ${rows.length} репозиториев команды">${head}${cells}</svg>
     <div class="legend">${[0, 1, 2, 3].map((v) => `<span><i class="hm-sw v${v}"></i>${['нет', 'опыт', 'сильная сторона', 'ядро проекта'][v]}</span>`).join('')}<span class="tip" data-heat-tip aria-live="polite">Наведите на клетку — увидите доказательство из репозитория</span></div></div>`;
 };
 
 L.mapping = () => {
   const reps = D.PORTFOLIO;
   const wps = D.WPS;
-  const W = 1424, H = 540;
+  const W = 1424, H = 566;   // шаг строки ≈ 18 — подписи 31 репозитория не касаются друг друга
   const ry = (i) => Math.round((14 + i * (H - 28) / (reps.length - 1)) * 100) / 100;
   const wy = (i) => Math.round((26 + i * (H - 52) / (wps.length - 1)) * 100) / 100;
   const xL = 300, xR = 1000;
@@ -353,7 +353,7 @@ L.wp = (s, ctx) => {
   const tr = TR[w.tr];
   // Мини-шкала: 0–16 месяцев от старта, полоса этого пакета
   const W = 1424, x0 = 0, k = W / 16;
-  const ticks = [0, 2, 4, 6, 8, 10, 12, 14, 16].map((m) => `<line x1="${x0 + m * k}" y1="6" x2="${x0 + m * k}" y2="30" class="g"/>${svgText(x0 + m * k + 4, 44, m === 0 ? 'старт' : `${m} мес`, 'ax')}`).join('');
+  const ticks = [0, 2, 4, 6, 8, 10, 12, 14, 16].map((m) => `<line x1="${x0 + m * k}" y1="6" x2="${x0 + m * k}" y2="30" class="g"/>${m === 16 ? svgText(x0 + m * k - 2, 44, `${m} мес`, 'ax', 'end') : svgText(x0 + m * k + 4, 44, m === 0 ? 'старт' : `${m} мес`, 'ax')}`).join('');
   const bar = `<rect x="${x0 + w.start * k}" y="10" width="${Math.min(w.len, 16 - w.start) * k}" height="16" rx="8" class="c-${tr.c}"/>`;
   const rk = D.wpRisks(w.id);
   return `<div class="wp-head">${chip('трек «' + tr.t + '»', tr.c)}${chip(w.stT, w.st === 'ready' ? 'mint' : w.st === 'spec' ? 'sky' : 'violet')}${chip(w.term, 'muted')}${rk.length ? chip('мера реестра рисков: ' + rk.join(' · '), 'rose') : ''}</div>
@@ -396,6 +396,7 @@ L.sequence = (s) => {
     return `<g class="msg c-${col}">${arrow}${badge(bx, y, k + 1)}${badge(tx0 + 12, y, k + 1)}${svgText(tx0 + 36, y + 5, label, 'ml-t')}</g>`;
   }).join('');
   return `<div class="seq-wrap"><svg class="seq" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(steps.map((x, i) => `${i + 1}. ${lanes[x[0]]} → ${lanes[x[1]]}: ${x[2]} (${ST[x[3]][1]})`).join('; '))}">${bands}${life}${head}${msgs}</svg>
+    <ol class="seq-list flow-only">${steps.map(([a, b, label, st], k) => `<li><span class="sq-b c-${ST[st][0]}">${k + 1}</span><span><b>${a === b ? tx(lanes[a]) : `${tx(lanes[a])} → ${tx(lanes[b])}`}</b> ${tx(label)}</span></li>`).join('')}</ol>
     <p class="legend">${['done', 'need', 'risk'].map((k) => `<span>${chip(ST[k][1], ST[k][0], 'sm')}</span>`).join('')}<span class="fine">номер на стрелке — номер шага справа</span></p></div>`;
 };
 

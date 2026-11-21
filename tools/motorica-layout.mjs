@@ -16,10 +16,12 @@ export function layoutIssues(sel) {
   const short = (t) => `«${t.trim().replace(/\s+/g, ' ').slice(0, 32)}»`;
   const inter = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
   const after = (a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);   // b нарисован позже a
+  // Содержимое закрытого <details> (текст выступления в ленте) не нарисовано, хотя у него есть прямоугольник
+  const hiddenInDetails = (el) => { const d = el.closest('details:not([open])'); return !!d && !el.closest('summary'); };
 
   // 1. Обрезка
   for (const el of s.querySelectorAll('*')) {
-    if (!el.getClientRects().length || el.classList.contains('vh')) continue;
+    if (!el.getClientRects().length || el.classList.contains('vh') || el.classList.contains('hscroll') || hiddenInDetails(el)) continue;
     const cs = getComputedStyle(el);
     if (!/hidden|clip|auto|scroll/.test(cs.overflowX + cs.overflowY) || cs.webkitLineClamp !== 'none') continue;
     if (el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 2) out.push(`обрезан ${name(el)}: ${el.clientWidth}×${el.clientHeight} < ${el.scrollWidth}×${el.scrollHeight}`);
@@ -31,7 +33,7 @@ export function layoutIssues(sel) {
   for (let t = tw.nextNode(); t; t = tw.nextNode()) {
     if (!t.textContent.trim()) continue;
     const el = t.parentElement;
-    if (!el || !el.getClientRects().length || el.closest('.vh, title, desc')) continue;
+    if (!el || !el.getClientRects().length || el.closest('.vh, title, desc') || hiddenInDetails(el)) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
     let rects;
@@ -116,6 +118,7 @@ export function layoutIssues(sel) {
   // 4. Элемент за пределами кадра
   const fr = s.getBoundingClientRect();
   for (const el of s.querySelectorAll('.frame *')) {
+    if (hiddenInDetails(el) || el.closest('.hscroll > svg') || el.closest('[aria-hidden="true"]')) continue;   // схема в .hscroll шире экрана намеренно; декор (aria-hidden) слайд обрезает
     const q = el.getBoundingClientRect();
     if (q.width && (q.right > fr.right + 1 || q.bottom > fr.bottom + 1 || q.left < fr.left - 1)) { out.push(`за пределами кадра: ${name(el)}`); break; }
   }

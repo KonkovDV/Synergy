@@ -7,7 +7,7 @@
 // включает маршрут; текст выступления (N) — тот же, что у слайда; калькулятор считает как tools/motorica/model.mjs,
 // а ссылка на расчёт восстанавливает его; правило решения по пилоту и даты недель работают; тренажёр открывается в
 // окне и закрывается Esc с возвратом фокуса; у каждого слайда в печати и в колоде нет обрезанных блоков, текста на
-// тексте и подписей за краем (tools/motorica-layout.mjs); на телефоне — лента слайдов, ссылки прокручивают к слайду; от 320 до
+// тексте и подписей за краем (tools/motorica-layout.mjs), в ленте на телефоне широкие схемы листаются вбок; на телефоне — лента слайдов, ссылки прокручивают к слайду; от 320 до
 // 2560 px ничего не прокручивается вбок; axe-core — 0 нарушений (WCAG 2.2 AA и best practices) в ленте со всеми
 // слайдами, в колоде с открытыми заметками и тренажёром и на странице плана; страницу забирает свой service
 // worker, и она открывается без сети. Нужны Playwright с Chromium и axe-core (devDependencies).
@@ -200,7 +200,7 @@ try {
   const boxesOf = (n) => page.evaluate((n) => [...document.querySelectorAll(`#s${n} .body > *, #s${n} .body > * > *`)]
     .filter((e) => !e.parentElement.closest('svg')).map((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round).join(','); }), n);
   // Блоки слайда появляются с короткой анимацией: мерить — когда она закончилась, иначе «сдвиг» — это полёт блока
-  const settled = () => page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 5000 });
+  const settled = () => page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity), null, { timeout: 5000 });
   const steady = async (layout, label, act) => {
     const n = nOf(layout);
     await go(page, n);
@@ -288,6 +288,17 @@ try {
       }
     }
     await c.close();
+    // Лента на телефоне (390 px): широкие схемы листаются вбок в своём блоке, остальное — без наложений и обрезок
+    const f = await browser.newContext({ viewport: { width: 390, height: 844 }, bypassCSP: true, serviceWorkers: 'block' });
+    const fp = await f.newPage();
+    await fp.goto(url, { waitUntil: 'load' });
+    await ready(fp);
+    await fp.evaluate(() => document.fonts.ready);
+    await fp.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation: none !important }' });
+    if (!(await fp.evaluate(() => document.documentElement.classList.contains('flow')))) fail('390 px: страница не в режиме ленты');
+    if (!(await fp.evaluate(() => document.querySelectorAll('.hscroll > svg').length >= 7))) fail('390 px: широкие схемы не листаются вбок (.hscroll)');
+    for (let n = 1; n <= N; n++) for (const x of await fp.evaluate(layoutIssues, `#s${n}`)) fail(`вёрстка (лента 390 px), слайд ${n}: ${x}`);
+    await f.close();
   }
 
   // ── 6. Правило решения по пилоту, даты недель, итог встречи ──
@@ -435,4 +446,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» в браузере — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут» и 8 кресел, заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений; телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);
+console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут» и 8 кресел, заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений (колода, печать, лента 390 px); телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);
