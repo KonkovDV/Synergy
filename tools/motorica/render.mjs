@@ -44,7 +44,7 @@ export function iconSprite() {
     out.push(`<symbol id="i-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</symbol>`);
   }
   // Градиенты для графиков: сверху светлее, снизу глубже — «стеклянные» столбцы и полосы (fill: url(#g-mint) в site.css)
-  const grads = [['mint', '#4ff5ad', '#0db86a'], ['sky', '#8fd8fb', '#2b8fd4'], ['violet', '#c7c0ff', '#7b6ff2'], ['amber', '#ffd98a', '#e39a1f'], ['rose', '#ffb8b8', '#ef6a6a'], ['teal', '#86f5d8', '#12b394'], ['ink', '#ffffff', '#c9d6e0']]
+  const grads = [['mint', '#4ff5ad', '#0db86a'], ['sky', '#8fd8fb', '#2b8fd4'], ['violet', '#c7c0ff', '#7b6ff2'], ['amber', '#ffd98a', '#e39a1f'], ['rose', '#ffb8b8', '#ef6a6a'], ['teal', '#86f5d8', '#12b394'], ['ink', '#ffffff', '#c9d6e0'], ['ta', '#33c98f', '#00a36b'], ['tb', '#dc8dc4', '#c45fa6'], ['tc', '#6aaee8', '#3489d6'], ['td', '#dc9a3e', '#c07812']]
     .map(([k, a, b]) => `<linearGradient id="g-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`).join('');
   return `<svg class="sprite" aria-hidden="true" focusable="false"><defs>${grads}${out.join('')}</defs></svg>`;
 }
@@ -453,7 +453,8 @@ L.pilot = (s) => `
   <div class="tbl hyp" role="table" aria-label="Гипотезы пилота и пороги">
     <div class="tr th" role="row"><span role="columnheader"></span><span role="columnheader">Гипотеза</span><span role="columnheader">Мера</span><span role="columnheader">Подтверждено, если</span></div>
     ${s.data.hyp.map(([id, h, m, p]) => `<div class="tr" role="row"><span role="cell">${chip(id, id === 'H5' ? 'amber' : 'mint', 'sm')}</span><span role="cell"><b>${tx(h)}</b></span><span role="cell">${tx(m)}</span><span role="cell" class="m">${tx(p)}</span></div>`).join('')}
-  </div>`;
+  </div>
+  ${s.data.ethics ? `<p class="strip sm">${ic('LuShieldCheck')}<span><b>Этика:</b> ${tx(s.data.ethics)}.</span></p>` : ''}`;
 
 L.decision = () => {
   const W = 1000, H = 520;
@@ -525,8 +526,8 @@ L.layers = (s) => `<div class="layers">${s.data.layers.map(([t, d], i) => `<div 
 
 L.regtree = () => {
   const W = 1424, H = 500;
-  return `<svg class="regtree" viewBox="0 0 ${W} ${H}" role="img" aria-label="Если программа диагностирует, лечит или управляет протезом — это ПО медицинского изделия: ГОСТ Р МЭК 62304, ГОСТ ISO 14971, ГОСТ Р МЭК 62366-1, ГОСТ Р ИСО 14155; иначе — тренировочная программа">
-    <g class="rq"><rect x="452" y="10" width="520" height="86" rx="16"/>${svgText(712, 46, 'Программа диагностирует, лечит', 'rt', 'middle')}${svgText(712, 74, 'или управляет протезом?', 'rt', 'middle')}</g>
+  return `<svg class="regtree" viewBox="0 0 ${W} ${H}" role="img" aria-label="Если заявленное назначение программы медицинское — диагностика, лечение, медицинская реабилитация, мониторинг состояния или управление протезом (323-ФЗ, ст. 38), — это ПО медицинского изделия: ГОСТ Р МЭК 62304, ГОСТ ISO 14971, ГОСТ Р МЭК 62366-1, ГОСТ Р ИСО 14155; иначе — тренировочная программа">
+    <g class="rq"><rect x="392" y="10" width="640" height="86" rx="16"/>${svgText(712, 44, 'Назначение программы медицинское?', 'rt', 'middle')}${svgText(712, 74, 'диагностика, лечение, медицинская реабилитация, мониторинг состояния', 'rs', 'middle')}</g>
     <path d="M600 96 L330 170" class="re"/><path d="M824 96 L1094 170" class="re"/>${svgText(430, 132, 'нет', 'rl', 'middle')}${svgText(994, 132, 'да', 'rl', 'middle')}
     <g class="ra a1"><rect x="40" y="170" width="580" height="300" rx="18"/>${svgText(70, 214, 'Тренировочная программа', 'rh')}
       ${svgLines(70, 252, 'Учит управлению и показывает прогресс; диагнозы и лечение — у специалиста. Регистрация не нужна, но мы держим практики качества: требования, риски, юзабилити, тесты.', 54, 26, 'rs')}
@@ -548,7 +549,8 @@ export function modelChart(sc, attrs = '') {
   const grid = [0, 100, 200, 300, 400].map((v) => `<line x1="${x0}" y1="${Y(v)}" x2="${x0 + pw}" y2="${Y(v)}" class="g"/>${svgText(x0 - 12, Y(v) + 5, String(v), 'ax', 'end')}`).join('');
   const lines = [['cons', 'muted'], ['base', 'mint'], ['opt', 'sky']].map(([k, c]) => {
     const pts = sc[k].total.map((v, i) => `${X(i)},${Y(v)}`).join(' ');
-    return `<g class="ser c-${c}" data-ser="${k}"><polyline points="${pts}"/>${sc[k].total.map((v, i) => `<circle cx="${X(i)}" cy="${Y(v)}" r="5.5"/>`).join('')}${svgText(X(4) - 10, Y(sc[k].total[4]) - 14, r0(sc[k].total[4]), 'sv', 'end', ` data-end="${k}"`)}</g>`;
+    // Подпись у конца линии: название сценария и значение 2031 года — легенда прямо на графике
+    return `<g class="ser c-${c}" data-ser="${k}"><polyline points="${pts}"/>${sc[k].total.map((v, i) => `<circle cx="${X(i)}" cy="${Y(v)}" r="5.5"/>`).join('')}<text x="${X(4) - 10}" y="${Y(sc[k].total[4]) - 14}" class="sv" text-anchor="end" data-end="${k}"><tspan class="sn">${esc(sc[k].name.toLowerCase())} · </tspan>${r0(sc[k].total[4])}</text></g>`;
   }).join('');
   const years = MODEL.years.map((y, i) => svgText(X(i), y0 + ph + 30, y, 'ax', 'middle')).join('');
   return `<svg class="model-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Дополнительная выручка по сценариям, млн ₽ в год: ${esc(Object.values(sc).map((v) => `${v.name.toLowerCase()} — ${v.total.map(r0).join(', ')}`).join('; '))}"${attrs}>${grid}${years}${lines}
@@ -663,7 +665,7 @@ L.company = (s) => {
   const bars = f.revenue.map(([y, v], i) => {
     const h = (v / maxV) * 300; const half = y.startsWith('I');
     const mg = { 1: 38, 2: 26, 3: 28 }[i];
-    return `<g class="col${half ? ' half' : ''}"><rect x="${xs(i)}" y="${base - h}" width="${bw}" height="${h}" rx="10"/>${svgText(xs(i) + bw / 2, base - h - 14, fmt1(v), 'c-val', 'middle')}${svgText(xs(i) + bw / 2, base + 30, y, 'c-lab', 'middle')}${mg ? svgText(xs(i) + bw / 2, base + 56, `EBITDA ${mg} %`, 'c-mg', 'middle') : ''}</g>`;
+    return `<g class="col${half ? ' half' : ''}"><rect x="${xs(i)}" y="${base - h}" width="${bw}" height="${h}" rx="10"/>${svgText(xs(i) + bw / 2, base - h - 14, fmt1(v), 'c-val', 'middle')}${svgText(xs(i) + bw / 2, base + 30, y, 'c-lab', 'middle')}${mg ? svgText(xs(i) + bw / 2, base + 56, `скорр. EBITDA ${mg} %`, 'c-mg', 'middle') : ''}</g>`;
   }).join('');
   // Рентабельность EBITDA: точки над 2024, 2025, I пол. 2026 и линия цели 30 %
   const my = (m) => 110 - (m - 20) * 4.2;
@@ -676,11 +678,11 @@ L.company = (s) => {
     ['110+', 'разработчиков и инженеров в НИОКР; >25 проектов'],
     ['0,7 млрд ₽', 'на НИОКР в 2025 году — 10 % выручки'],
     ['до 1,92 млрд ₽', 'грант до 2031 года: центр нейропротезирования, платформа NEMO Sensitive'],
-    ['24 → 51 %', 'продаж через свои центры «Моторика Орто», 2024 → 2025'],
+    ['24 → 51 %', 'доля B2C-продаж — свои центры «Моторика ОРТО», 2024 → 2025'],
   ];
   return `<div class="split company2">
-    <figure class="chart"><figcaption>Выручка группы по МСФО, млрд ₽ · рентабельность EBITDA, %</figcaption>
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Выручка: 2023 — 2,0; 2024 — 4,2; 2025 — 7,1; I полугодие 2026 — 4,3 млрд ₽. Рентабельность EBITDA: 2024 — 38 %, 2025 — 26 %, I полугодие 2026 — 28 %, цель — 30 %">
+    <figure class="chart"><figcaption>Выручка группы по МСФО, млрд ₽ · рентабельность по скорр. EBITDA, %</figcaption>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Выручка: 2023 — 2,0; 2024 — 4,2; 2025 — 7,1; I полугодие 2026 — 4,3 млрд ₽. Рентабельность по скорректированной EBITDA: 2024 — 38 %, 2025 — 26 %, I полугодие 2026 — 28 %, цель — 30 %">
       <line x1="${x0 - 10}" y1="${base}" x2="${W - 40}" y2="${base}" class="axis"/>${bars}${svgText(W - 40, H - 8, 'цель «Моторики» — 30 % по скорр. EBITDA', 'mg-g', 'end')}</svg></figure>
     <div class="tiles6">${tiles.map(([v, l]) => `<div class="tile"><b>${tx(v)}</b><span>${tx(l)}</span></div>`).join('')}</div>
   </div>`;
@@ -949,7 +951,7 @@ L.speedopt = () => {
     ['без стенда', 'отладка логики управления и Потока 3 на эмуляторе и двойнике', 'WP6'],
   ];
   const free = [
-    [`${r0(b.specialistHours)} ч`, `часов специалистов в год — ${r1(b.fte)} ставки при 78 на сеть`, 'L3'],
+    [`${r0(b.specialistHours)} ч`, `часов специалистов в год — ${r1(b.fte)} ставки при 78 на сеть; допущение — 2 ч на выдачу`, 'L3'],
     [`≈${r0(b.visits)}`, 'визитов в сервис в год не понадобятся', 'L4'],
     [`${r0(b.docHoursSaved)} ч`, 'доработки документов в год', 'L5'],
     [`${r1(b.onboardFte)} ставки`, 'на онбординге новых специалистов', 'L6'],
@@ -983,10 +985,10 @@ L.trustx = (s) => {
 };
 
 L.regip = (s) => {
-  const tree = `<svg class="regtree-c" viewBox="0 0 700 470" role="img" aria-label="Если программа диагностирует, лечит или управляет протезом — это ПО медицинского изделия; иначе — тренировочная программа">
-    <g class="rq"><rect x="110" y="0" width="480" height="78" rx="16"/>${svgText(350, 34, 'Диагностирует, лечит', 'rt', 'middle')}${svgText(350, 62, 'или управляет протезом?', 'rt', 'middle')}</g>
+  const tree = `<svg class="regtree-c" viewBox="0 0 700 470" role="img" aria-label="Если заявленное назначение программы медицинское — диагностика, лечение, медицинская реабилитация, мониторинг состояния или управление протезом (323-ФЗ, ст. 38), — это ПО медицинского изделия; иначе — тренировочная программа">
+    <g class="rq"><rect x="60" y="0" width="580" height="78" rx="16"/>${svgText(350, 32, 'Назначение медицинское?', 'rt', 'middle')}${svgText(350, 60, 'диагностика, лечение, медицинская реабилитация, мониторинг', 'rs', 'middle')}</g>
     <path d="M250 78 L170 130" class="re"/><path d="M450 78 L530 130" class="re"/>${svgText(190, 104, 'нет', 'rl', 'middle')}${svgText(510, 104, 'да', 'rl', 'middle')}
-    <g class="ra a1"><rect x="0" y="130" width="330" height="330" rx="18"/>${svgText(20, 168, 'Тренировочная программа', 'rh')}${svgLines(20, 204, 'учит управлению и показывает прогресс; регистрация не нужна; практики качества — требования, риски, тесты', 34, 24, 'rs')}
+    <g class="ra a1"><rect x="0" y="130" width="330" height="330" rx="18"/>${svgText(20, 168, 'Тренировочная программа', 'rh')}${svgLines(20, 204, 'назначение — тренировка навыка управления, не лечение; регистрация не нужна; практики качества — требования, риски, тесты', 34, 24, 'rs')}
       <g class="here"><rect x="20" y="390" width="250" height="44" rx="22"/>${svgText(145, 418, 'сейчас «Синергия» — здесь', 'hr', 'middle')}</g></g>
     <g class="ra a2"><rect x="370" y="130" width="330" height="330" rx="18"/>${svgText(390, 168, 'ПО медицинского изделия', 'rh')}
       ${['ГОСТ Р МЭК 62304 — цикл ПО', 'ГОСТ ISO 14971 — риски', 'ГОСТ Р МЭК 62366-1 — юзабилити', 'ГОСТ Р ИСО 14155 — клиника', '323-ФЗ, ст. 38 — регистрация'].map((x, i) => svgText(390, 212 + i * 46, x, 'rk')).join('')}</g></svg>`;

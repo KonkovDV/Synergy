@@ -1376,3 +1376,39 @@ html:not(.deck):not(.print) .cover-art .halo { display: none }
 @media (max-width: 400px) {
   html:not(.deck):not(.print) .so h3 { font-size: 17px }   /* «Что освободится» не рвётся внутри слова */
 }
+
+/* ── Треки на графиках: палитра навыка dataviz (тёмная тема, все пары, ΔE CVD ≥ 7,8, обычное зрение ≥ 20) ── */
+:root { --ta: #00b074; --tb: #ce6bb0; --tc: #3b93de; --td: #cb8016 }
+.sw.c-ta { background: var(--ta) } .sw.c-tb { background: var(--tb) } .sw.c-tc { background: var(--tc) } .sw.c-td { background: var(--td) }
+.ml.c-ta { stroke: var(--ta) } .ml.c-tb { stroke: var(--tb) } .ml.c-tc { stroke: var(--tc) } .ml.c-td { stroke: var(--td) }
+:is(.bub, .mw) circle.c-ta { fill: url(#g-ta) } :is(.bub, .mw) circle.c-tb { fill: url(#g-tb) } :is(.bub, .mw) circle.c-tc { fill: url(#g-tc) } :is(.bub, .mw) circle.c-td { fill: url(#g-td) }
+:is(.gr rect, .wp-time rect, .later).c-ta { fill: url(#g-ta) } :is(.gr rect, .wp-time rect, .later).c-tb { fill: url(#g-tb) }
+:is(.gr rect, .wp-time rect, .later).c-tc { fill: url(#g-tc) } :is(.gr rect, .wp-time rect, .later).c-td { fill: url(#g-td) }
+/* Плашки треков: текст светлее метки — текст носит текстовый тон, цвет метки остаётся у фона и рамки */
+.c-ta.chip { background: rgba(0, 176, 116, .16); color: #5fe0ac; box-shadow: inset 0 0 0 1px rgba(0, 176, 116, .38) }
+.c-tb.chip { background: rgba(206, 107, 176, .16); color: #eeaad8; box-shadow: inset 0 0 0 1px rgba(206, 107, 176, .38) }
+.c-tc.chip { background: rgba(59, 147, 222, .16); color: #96c8f2; box-shadow: inset 0 0 0 1px rgba(59, 147, 222, .38) }
+.c-td.chip { background: rgba(203, 128, 22, .18); color: #f2c27a; box-shadow: inset 0 0 0 1px rgba(203, 128, 22, .4) }
+/* Рынок: цвет следует за годом, а не за сегментом — оба столбца 2024 одного цвета */
+.mk.l .y24 { fill: url(#g-sky) }
+/* График сценариев: название сценария у конца линии — легенда прямо на графике */
+.model-chart .sn { fill: var(--soft); font: 500 15px var(--body, inherit) }
+/* ── Без «полос по краю» (навык pptx: односторонние бордюры читаются как шаблон) — подложка, метка, номер ── */
+.grow .g { border-left: 0; box-shadow: inset 0 0 0 1px var(--line) }
+.grow .g1 { background: linear-gradient(90deg, rgba(22, 225, 130, .10), transparent 62%), var(--bg2) }
+.grow .g2 { background: linear-gradient(90deg, rgba(22, 225, 130, .16), transparent 66%), var(--bg2) }
+.grow .g3 { background: linear-gradient(90deg, rgba(22, 225, 130, .24), transparent 70%), var(--bg2) }
+.grow .g .st { color: var(--mint2) }
+.gg.m, .gg.u { border-top-width: 1px; border-top-color: var(--line) }
+.gg.m { background: linear-gradient(180deg, rgba(76, 184, 238, .10), transparent 42%), var(--surf) }
+.gg.u { background: linear-gradient(180deg, rgba(22, 225, 130, .10), transparent 42%), var(--surf) }
+.gg h3::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 10px; border-radius: 50%; vertical-align: .12em; background: var(--mint) }
+.gg.m h3::before { background: var(--sky) }
+.layers-c li { border-left-width: 1px; border-left-color: var(--line) }
+.layers-c li::before { color: var(--mint) }
+.bd li { position: relative; padding-left: 20px; border-left: 0 }
+.bd li::before { content: ""; position: absolute; left: 0; top: .48em; width: 8px; height: 8px; border-radius: 50%; background: var(--line2) }
+.bd.no li::before { background: var(--rose) } .bd.yes li::before { background: var(--mint) }
+/* Слайд 60: подписи схемы данных крупнее — схема ужата в колонку */
+.trust-flow .df-s { font-size: 15.5px }
+.mk.l .y24 { opacity: .75 }
