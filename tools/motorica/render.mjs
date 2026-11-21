@@ -74,22 +74,9 @@ L.cover = (s, ctx) => `
       <div class="cover-stats">${s.data.stats.map(([v, l]) => `<div><b>${tx(v)}</b><span>${tx(l)}</span></div>`).join('')}</div>
       <p class="who">${tx(s.data.who)}</p>
     </div>
-    <div class="cover-art" aria-hidden="true">${heroArt()}</div>
-    <figure class="phone p-cover"><img src="${ctx.img('game-grip.webp')}" alt="Экран «Мастерской»: протез держит предмет, внизу — площадки сигнала" width="430" height="590"></figure>
+    <div class="cover-art" aria-hidden="true"><img class="hero-img" src="${ctx.img('ambassador.webp')}" alt="" width="1024" height="1024" fetchpriority="high" decoding="async"></div>
     <div class="cover-qr"><div class="qr">${ctx.qrSite}</div><span>Сайт презентации</span></div>
   </div>`;
-
-function heroArt() {
-  // «Траектории»: плавные линии сигнала, расходящиеся из одной точки, — от ЭМГ к движению
-  const paths = [];
-  for (let i = 0; i < 14; i++) {
-    const a = (i - 6.5) * 26;
-    const c1 = 180 + i * 7;
-    const n2 = (x) => Math.round(x * 100) / 100;
-    paths.push(`<path d="M40 470 C ${c1} ${n2(470 + a * 0.2)}, ${300 + i * 9} ${n2(300 - a)}, 560 ${n2(250 - a * 1.6)}" class="traj t${i % 4}"/>`);
-  }
-  return `<svg class="hero" viewBox="0 0 600 600" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">${paths.join('')}<circle cx="40" cy="470" r="7" class="dot-m"/></svg>`;
-}
 
 L.toc = (s, ctx) => {
   const cards = ctx.sections.map((sec, i) => {
@@ -186,14 +173,14 @@ L.company = (s) => {
   </div>`;
 };
 
-L.ecosystem = (s) => {
+L.ecosystem = (s, ctx) => {
   const n = s.data.nodes;
   const nodes = n.map((x, i) => `<div class="eco-node n${i + 1}" tabindex="0"><b>${tx(x.t)}</b><span>${tx(x.s)}</span><span class="wps">${x.wp.length ? x.wp.map((w) => chip(w, trackColor(D.WPS.find((p) => p.id === w).tr), 'sm')).join('') : chip('вне пакетов', 'muted', 'sm')}</span></div>`).join('');
   // Лучи от центра к узлам — в той же сетке координат, что .eco-node (ширина 1424, высота 560): узлы 1–4 слева, 5 сверху, 6–9 справа
   const P = [[330, 56], [330, 193], [330, 330], [330, 467], [712, 112], [1094, 56], [1094, 193], [1094, 330], [1094, 467]];
   const rays = P.map(([x, y]) => `<line x1="712" y1="300" x2="${x}" y2="${y}" class="ray"/>`).join('');
-  return `<div class="eco"><svg class="eco-rays" viewBox="0 0 1424 530" preserveAspectRatio="none" aria-hidden="true">${rays}<circle cx="712" cy="300" r="100" class="hub"/></svg>
-    <div class="eco-hub"><b>ГК «Моторика»</b><span>человек и его возможности</span></div>${nodes}</div>`;
+  return `<div class="eco"><svg class="eco-rays" viewBox="0 0 1424 530" preserveAspectRatio="none" aria-hidden="true">${rays}<circle cx="712" cy="300" r="122" class="hub"/></svg>
+    <div class="eco-hub"><img class="hub-face" src="${ctx.img('ambassador-face.webp')}" alt="" width="256" height="256" loading="lazy" decoding="async"><b>ГК «Моторика»</b><span>человек и его возможности</span></div>${nodes}</div>`;
 };
 
 L.strategy = (s) => `
@@ -240,7 +227,7 @@ L.synergy = (s, ctx) => {
   const caps = ['Самочувствие', 'План дня', 'Игра', 'Итоги', 'Прогресс'];
   return `<div class="split synergy">
     <div class="screens">
-      <div class="phones">${caps.map((c, i) => `<figure class="phone"><img src="${ctx.img(`flow-${i + 1}.webp`)}" alt="Экран «${c}» тренажёра «Синергия»" width="300" height="576"><figcaption>${c}</figcaption></figure>`).join('')}</div>
+      <div class="phones">${caps.map((c, i) => `<figure class="phone"><img src="${ctx.img(`flow-${i + 1}.webp`)}" alt="Экран «${c}» тренажёра «Синергия»" width="300" height="576" loading="lazy" decoding="async"><figcaption>${c}</figcaption></figure>`).join('')}</div>
       <div class="minis">${[['5–10 мин', 'тренировка дня'], ['12 шагов', '«Первые шаги» за 2 минуты'], ['16 типов', 'миссий сессии'], ['15', 'достижений'], ['30 мин', 'мягкий лимит в день']].map(([v, l]) => `<span><b>${tx(v)}</b>${tx(l)}</span>`).join('')}</div>
       <div class="try" data-game><button type="button" class="btn">${ic('LuPlay')} Открыть тренажёр в слайде</button><span>та же сборка 6.3.4, что на телефоне; площадки A и B — эмулятор сигнала</span></div>
     </div>
@@ -276,7 +263,7 @@ L.heatmap = () => {
   const head = comps.map(([, t], j) => svgLines(x0 + j * cw + cw / 2, 22, t, 16, 18, 'hm-h', 'middle')).join('');
   const cells = rows.map((r, i) => {
     const y = y0 + i * rh;
-    const label = `<a href="${D.repoUrl(r.n)}" class="hm-link">${svgText(0, y + 15, r.n, 'hm-n')}</a>${svgText(170, y + 15, r.k, 'hm-k')}`;
+    const label = `<a href="${D.repoUrl(r.n)}" class="hm-link" data-tip="${esc(r.n + ' — ' + r.t + '; ' + r.m)}">${svgText(0, y + 15, r.n, 'hm-n')}</a>${svgText(170, y + 15, r.k, 'hm-k')}`;
     const cs = r.c.map((v, j) => `<rect x="${x0 + j * cw + 3}" y="${y + 2}" width="${cw - 6}" height="${rh - 4}" rx="4" class="hm v${v}" data-tip="${esc(r.n + ' · ' + comps[j][1] + ': ' + ['нет', 'опыт', 'сильная сторона', 'ядро проекта'][v] + ' — ' + r.t + '; ' + r.m)}"><title>${esc(r.n + ' — ' + comps[j][1] + ': ' + ['нет', 'опыт', 'сильная сторона', 'ядро проекта'][v])}</title></rect>`).join('');
     return `<g class="hm-row">${label}${cs}</g>`;
   }).join('');
@@ -629,6 +616,7 @@ L.decisions = (s, ctx) => `
       <div class="qrs"><figure><div class="qr">${ctx.qrSite}</div><figcaption>Сайт презентации</figcaption></figure><figure><div class="qr">${ctx.qrDemo}</div><figcaption>Тренажёр в браузере</figcaption></figure></div>
       <p class="copy-row"><button type="button" class="btn" data-copy-summary>${ic('LuClipboardCheck')} Скопировать итог встречи</button><span class="copied" aria-live="polite"></span></p>
       <p class="fine">Неделя 0 — встреча · недели 1–2 — доступ и протокол · недели 3–8 — пилот · неделя 8 — отчёт и решение</p>
+      <img class="dec-hand" src="${ctx.img('hero-hand.webp')}" alt="" aria-hidden="true" width="1024" height="1024" loading="lazy" decoding="async">
     </div>
   </div>`;
 
@@ -721,6 +709,16 @@ L.chain = (s) => `<div class="tbl chain" role="table" aria-label="Боли «М�
   <div class="tr th" role="row"><span role="columnheader">Боль и факт</span><span role="columnheader">Как решаем</span><span role="columnheader">Насколько доказано</span><span role="columnheader">Что меняется в процессе</span><span role="columnheader">Бизнес-эффект</span></div>
   ${s.data.rows.map((r) => `<div class="tr" role="row"><span role="cell" class="ch-p"><b>${tx(r.pain)}</b><i>${tx(r.fact)} · ${tx(r.src)}</i></span><span role="cell">${tx(r.how)} ${chip(r.wp, 'muted', 'sm')}</span><span role="cell">${chip(LVL[r.lvl][0], LVL[r.lvl][1], 'sm')}<i>${tx(r.proof)}</i></span><span role="cell">${tx(r.proc)}</span><span role="cell" class="m">${tx(r.eff)}</span></div>`).join('')}
 </div>`;
+
+// Три способа управлять кистью — один тренажёр и один контракт; картинки — образ амбассадора, не реальный пользователь
+L.modes = (s, ctx) => `<div class="modes">${s.data.items.map((m) => `
+  <article class="card md"><figure class="md-img"><img src="${ctx.img(m.img)}" alt="${esc(m.alt)}" width="960" height="640" loading="lazy" decoding="async"></figure>
+    <p class="md-h">${chip(m.st, m.stc, 'sm')}<span class="md-k">${tx(m.k)}</span></p>
+    <b class="md-t">${tx(m.t)}</b>
+    <ul>${m.pts.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
+    <p class="md-wp">${ic('LuArrowRight')}<a href="#s${m.slide}">${tx(m.wp)}</a></p></article>`).join('')}
+</div>
+<p class="strip sm">${ic('LuShieldCheck')}<span><b>Решает человек:</b> какой бы ни был источник сигнала, кисть получает один пакет намерения, сторож потерь гасит движение, необратимое подтверждает пользователь — слайд ${s.next}.</span></p>`;
 
 // Кто наступает на пятку: «Моторика» и претенденты по четырём полям; пустая клетка — данных в открытых источниках нет
 const RV_COLS = [['hand', 'Руки', 'LuHand'], ['leg', 'Ноги', 'LuFootprints'], ['soft', 'ПО и данные', 'LuSmartphone'], ['money', 'Цена и деньги', 'LuWallet']];

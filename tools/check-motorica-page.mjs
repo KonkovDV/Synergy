@@ -7,7 +7,7 @@
 // включает маршрут; текст выступления (N) — тот же, что у слайда; калькулятор считает как tools/motorica/model.mjs,
 // а ссылка на расчёт восстанавливает его; правило решения по пилоту и даты недель работают; тренажёр открывается в
 // окне и закрывается Esc с возвратом фокуса; на телефоне — лента слайдов, ссылки прокручивают к слайду; от 320 до
-// 1920 px ничего не прокручивается вбок; axe-core — 0 нарушений (WCAG 2.2 AA и best practices) в ленте со всеми
+// 2560 px ничего не прокручивается вбок; axe-core — 0 нарушений (WCAG 2.2 AA и best practices) в ленте со всеми
 // 50 слайдами, в колоде с открытыми заметками и тренажёром и на странице плана; страницу забирает свой service
 // worker, и она открывается без сети. Нужны Playwright с Chromium и axe-core (devDependencies).
 import { createServer } from 'node:http';
@@ -192,6 +192,79 @@ try {
   await page.locator('[data-calc] [data-reset]').click();
   if (digits(await page.locator('[data-o="my-2031"]').textContent()) !== ru(ref.total[4])) fail('«Исходные цифры» не вернули базовый сценарий');
 
+  // ── 5б. Интерактив не двигает вёрстку: наведение, ползунки и галочки не меняют размеры блоков слайда ──
+  // Сравниваются блоки двух верхних уровней тела слайда: если подсказка или число переносится на новую строку,
+  // блок меняет высоту — это и есть «скачет пропорция». Самая длинная и самая короткая подсказка карты — обязательно.
+  const boxesOf = (n) => page.evaluate((n) => [...document.querySelectorAll(`#s${n} .body > *, #s${n} .body > * > *`)]
+    .filter((e) => !e.parentElement.closest('svg')).map((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round).join(','); }), n);
+  const steady = async (layout, label, act) => {
+    const n = nOf(layout);
+    await go(page, n);
+    const before = await boxesOf(n);
+    await act(n);
+    await page.waitForTimeout(80);
+    const after = await boxesOf(n);
+    const moved = before.filter((x, i) => x !== after[i]).length;
+    if (moved || before.length !== after.length) fail(`${label}: вёрстка сдвигается при взаимодействии — ${moved} блоков`);
+  };
+  await steady('heatmap', 'карта компетенций, наведение', async (n) => {
+    const cells = page.locator(`#s${n} svg.heat .hm`);
+    const [longest, shortest] = await page.evaluate((n) => { const t = [...document.querySelectorAll(`#s${n} svg.heat .hm`)].map((e) => e.dataset.tip.length); return [t.indexOf(Math.max(...t)), t.indexOf(Math.min(...t))]; }, n);
+    for (const i of [longest, shortest, 0, longest]) await cells.nth(i).hover({ force: true });
+  });
+  await steady('mapping', 'связи портфеля, наведение', async (n) => { for (const g of await page.locator(`#s${n} [data-map] .mr`).all()) await g.hover({ force: true }); });
+  await steady('gantt', 'дорожная карта, наведение', async (n) => { for (const g of (await page.locator(`#s${n} [data-gantt] .gr`).all()).slice(0, 4)) await g.hover({ force: true }); });
+  await steady('risks', 'риски, наведение', async (n) => { for (const g of (await page.locator(`#s${n} [data-risk]`).all()).slice(0, 6)) await g.hover({ force: true }); });
+  await steady('model', 'калькулятор, ползунки', async (n) => {
+    for (const r of await page.locator(`#s${n} [data-calc] input[type="range"]`).all()) { await r.evaluate((e) => { e.value = e.max; e.dispatchEvent(new Event('input', { bubbles: true })); }); }
+    for (const r of await page.locator(`#s${n} [data-calc] input[type="range"]`).all()) { await r.evaluate((e) => { e.value = e.min; e.dispatchEvent(new Event('input', { bubbles: true })); }); }
+  });
+  await steady('weeks', 'первые 90 дней, дата старта', async (n) => { await page.locator(`#s${n} input[data-start]`).fill('2027-12-27'); await page.locator(`#s${n} input[data-start]`).dispatchEvent('change'); });
+  await steady('decision', 'правило решения, галочки', async (n) => { for (const b of await page.locator(`#s${n} [data-decide] input[data-h]`).all()) await b.click(); });
+
+  // ── 5в. Счётчик, перехват мыши и подсказки карты: мышь, касание, клавиатура ──
+  {   // при включении колоды виден ровно один слайд — без затухания всех остальных стопкой
+    const fresh = await ctx.newPage();
+    await fresh.goto(`${url}#s${nOf('decision')}`, { waitUntil: 'load' });
+    await ready(fresh);
+    const shown = await fresh.evaluate(() => [...document.querySelectorAll('#deck > .s')].filter((s) => getComputedStyle(s).visibility === 'visible').length);
+    if (shown !== 1) fail(`после загрузки видно слайдов: ${shown}, а должен быть один`);
+    await fresh.close();
+  }
+  const count = (await page.locator('.count').textContent()).replace(/\s+/g, ' ').trim();
+  if (!new RegExp(`/ ${N}$`).test(count)) fail(`счётчик слайдов «${count}», а слайдов ${N}`);
+  for (const layout of ['heatmap', 'scorecard', 'wpmap', 'decisions']) {
+    const n = nOf(layout);
+    await go(page, n);
+    await page.waitForTimeout(450);   // гаснущий слайд ещё виден 0,35 с
+    const stray = await page.evaluate((n) => {
+      const s = document.getElementById(`s${n}`); const r = s.querySelector('.body').getBoundingClientRect(); const out = [];
+      for (let i = 1; i < 6; i++) for (let j = 1; j < 6; j++) {
+        const e = document.elementFromPoint(r.left + (r.width * i) / 6, r.top + (r.height * j) / 6);
+        if (e && !s.contains(e) && e.closest('#deck')) out.push(`${e.tagName.toLowerCase()} со слайда ${e.closest('.s')?.dataset.n}`);
+      }
+      return out.slice(0, 3);
+    }, n);
+    if (stray.length) fail(`слайд ${n}: мышь перехватывает невидимый слайд — ${stray.join(', ')}`);
+  }
+  {
+    const n = nOf('heatmap');
+    await go(page, n);
+    await page.waitForTimeout(450);
+    const tipText = () => page.locator(`#s${n} [data-heat-tip]`).textContent();
+    const cell = page.locator(`#s${n} svg.heat .hm`).nth(150);
+    await cell.hover();
+    if (!/ · .+: /.test(await tipText())) fail(`карта компетенций: наведение не показывает подсказку — «${(await tipText()).slice(0, 60)}»`);
+    const cols = await page.evaluate(() => document.querySelectorAll('.heat .hm-row')[0].querySelectorAll('.hm').length);
+    const edge = page.locator(`#s${n} svg.heat .hm`).nth(cols - 1);   // крайний правый столбец — в зоне «щелчок листает дальше»
+    await edge.click();
+    if ((await on(page))[0] !== n) fail('карта компетенций: касание клетки у правого края листает слайд');
+    if ((await tipText()) !== (await edge.getAttribute('data-tip'))) fail('карта компетенций: касание клетки не показывает подсказку');
+    const link = page.locator(`#s${n} svg.heat .hm-link`).nth(5);
+    await link.focus();
+    if ((await tipText()) !== (await link.getAttribute('data-tip'))) fail('карта компетенций: фокус на названии репозитория не показывает подсказку');
+  }
+
   // ── 6. Правило решения по пилоту, даты недель, итог встречи ──
   await go(page, nOf('decision'));
   const verdict = async () => page.locator('[data-decide] [data-verdict]').textContent();
@@ -216,12 +289,12 @@ try {
   else {
     await go(page, +gameSlide);
     await page.locator('[data-game] button').click();
-    const g = await page.evaluate(() => ({ hidden: document.getElementById('game').hidden, src: document.querySelector('#game iframe')?.src, focus: document.activeElement?.hasAttribute('data-game-close') }));
-    if (g.hidden || !g.src?.endsWith('/Synergy/') || !g.focus) fail(`тренажёр: ${JSON.stringify(g)}`);
+    const g = await page.evaluate(() => ({ hidden: document.getElementById('game').hidden, src: document.querySelector('#game iframe')?.src, focus: document.activeElement?.hasAttribute('data-game-close'), inert: document.getElementById('deck').inert && document.getElementById('bar').inert }));
+    if (g.hidden || !g.src?.endsWith('/Synergy/') || !g.focus || !g.inert) fail(`тренажёр: ${JSON.stringify(g)}`);
     await page.waitForTimeout(withGame ? 1500 : 300);
     await page.keyboard.press('Escape');
-    const closed = await page.evaluate(() => ({ hidden: document.getElementById('game').hidden, focus: !!document.activeElement?.closest('[data-game]') }));
-    if (!closed.hidden || !closed.focus) fail(`тренажёр после Esc: ${JSON.stringify(closed)}`);
+    const closed = await page.evaluate(() => ({ hidden: document.getElementById('game').hidden, focus: !!document.activeElement?.closest('[data-game]'), inert: document.getElementById('deck').inert || document.getElementById('bar').inert }));
+    if (!closed.hidden || !closed.focus || closed.inert) fail(`тренажёр после Esc: ${JSON.stringify(closed)}`);
   }
 
   // ── 8. Глубокие ссылки: #sN и ?route= ──
@@ -280,9 +353,9 @@ try {
   await audit({ width: 1440, height: 900 }, 'plan.html', 'план');
 
   // ── 11. Ширины от телефона до большого монитора ──
-  for (const [w, target] of [320, 375, 414, 768, 1024, 1280, 1440, 1920].flatMap((x) => [[x, url], [x, `${url}plan.html`]])) {
+  for (const [w, target] of [320, 375, 414, 768, 1024, 1280, 1440, 1920, 2560].flatMap((x) => [[x, url], [x, `${url}plan.html`]])) {
     const p = await ctx.newPage();
-    await p.setViewportSize({ width: w, height: w <= 414 ? 800 : w < 1440 ? 768 : 1000 });
+    await p.setViewportSize({ width: w, height: w <= 414 ? 800 : w < 1440 ? 768 : w > 1920 ? 1440 : 1000 });
     await p.goto(target, { waitUntil: 'load' });
     await p.evaluate(() => document.fonts.ready);
     const name = `${w}px ${target.endsWith('plan.html') ? 'план' : 'колода'}`;
@@ -337,4 +410,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» в браузере — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут» и 8 кресел, заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; телефон — лента; 320–1920 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);
+console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут» и 8 кресел, заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);

@@ -103,7 +103,7 @@
   // Щелчок по пустому месту слайда — дальше (кроме ссылок и полей)
   $('#deck').addEventListener('click', (e) => {
     if (mode !== 'deck') return;
-    if (e.target.closest('a, button, input, label, select, summary, [tabindex], .eco-node, svg a, [data-map], [data-gantt], [data-risk], [data-chair]')) return;
+    if (e.target.closest('a, button, input, label, select, summary, [tabindex], .eco-node, svg a, svg.heat, [data-map], [data-gantt], [data-risk], [data-chair]')) return;
     const r = slides[cur - 1].getBoundingClientRect();
     if (e.clientX > r.left + r.width * 0.86) step(1);
     else if (e.clientX < r.left + r.width * 0.06) step(-1);
@@ -184,14 +184,16 @@
       box.append(f);
     }
     modal.hidden = false;
+    for (const el of document.body.children) if (el !== modal && !el.inert) { el.inert = true; inerted.push(el); }
     close.focus();
   }
+  const inerted = [];
   modal?.addEventListener('keydown', (e) => { if (e.key === 'Tab') played = true; });
   addEventListener('blur', () => setTimeout(() => {
     const f = $('iframe', modal || document.body);
     if (modal && !modal.hidden && !played && f && document.activeElement === f) $('[data-game-close]', modal).focus();
   }, 0));
-  function closeGame() { if (modal && !modal.hidden) { modal.hidden = true; $('[data-game] button')?.focus(); } }
+  function closeGame() { if (modal && !modal.hidden) { modal.hidden = true; while (inerted.length) inerted.pop().inert = false; $('[data-game] button')?.focus(); } }
   $('[data-game] button')?.addEventListener('click', openGame);
   $('[data-game-close]')?.addEventListener('click', closeGame);
   modal?.addEventListener('click', (e) => { if (e.target === modal) closeGame(); });
@@ -205,9 +207,11 @@
 
   // ── Карта компетенций: подсказка ──
   const tip = $('[data-heat-tip]');
-  $$('.heat .hm').forEach((c) => {
+  // наведение мышью, касание клетки, фокус клавиатуры на названии репозитория
+  $$('.heat .hm, .heat .hm-link').forEach((c) => {
     const on = () => { if (tip) tip.textContent = c.dataset.tip; };
     c.addEventListener('mouseenter', on); c.addEventListener('focus', on);
+    if (c.classList.contains('hm')) c.addEventListener('click', on);
   });
 
   // ── Связи портфеля и пакетов: подсветка ──
@@ -370,5 +374,16 @@
   if (!PRINT && params.get('route')) setRoute(params.get('route'));
   if (PRINT) { slides.forEach((s) => s.classList.add('on')); }
   // Готовность для экспорта: шрифты загружены
-  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { doc.dataset.ready = '1'; });
+  const images = () => (PRINT ? Promise.all([...document.images].map((im) => { im.loading = 'eager'; return im.decode().catch(() => {}); })) : Promise.resolve());
+  Promise.all([document.fonts ? document.fonts.ready : Promise.resolve(), images()]).then(() => { doc.dataset.ready = '1'; });
+
+  // ── Обложка: лёгкий параллакс кисти за курсором (как в Right Track); без него — при «уменьшить движение» ──
+  const art = $('.cover-art');
+  if (art && !PRINT && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    addEventListener('pointermove', (e) => {
+      if (mode !== 'deck' || cur !== 1) return;
+      art.style.setProperty('--px', ((e.clientX / innerWidth) * 2 - 1).toFixed(3));
+      art.style.setProperty('--py', ((e.clientY / innerHeight) * 2 - 1).toFixed(3));
+    }, { passive: true });
+  }
 })();
