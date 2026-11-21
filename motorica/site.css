@@ -421,16 +421,19 @@ svg.wp-time { width: 100%; flex: none; height: 46px }
 .wp-time rect.c-mint { fill: var(--mint) } .wp-time rect.c-violet { fill: var(--violet) } .wp-time rect.c-sky { fill: var(--sky) } .wp-time rect.c-amber { fill: var(--amber) }
 
 /* ── Последовательность ── */
-svg.seq { flex: 1; min-height: 0; width: 100% }
+.seq-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 14px }
+svg.seq { width: 100%; height: auto; max-height: 100%; min-height: 0 }
+.sq-band { fill: rgba(255, 255, 255, .035) } .sq-band.odd { fill: none }
 .lane rect { fill: var(--bg3); stroke: var(--line2) }
 .ln { fill: var(--ink); font-size: 17px; font-weight: 700 }
+.sq-hd { fill: var(--muted); font: 700 13px var(--body); letter-spacing: .1em; text-transform: uppercase }
 .life { stroke: var(--line2); stroke-width: 1.5; stroke-dasharray: 4 6 }
-.ma { stroke-width: 2.4 }
-.ml-t { fill: var(--ink); font-size: 15px }
-.msg .self { fill: var(--bg3); stroke: var(--line2) }
-.msg.c-mint .ma, .msg.c-mint .mh { stroke: var(--mint); fill: var(--mint) } .msg.c-mint .st { fill: var(--mint) }
-.msg.c-sky .ma, .msg.c-sky .mh { stroke: var(--sky); fill: var(--sky) } .msg.c-sky .st { fill: var(--sky) }
-.msg.c-amber .ma, .msg.c-amber .mh { stroke: var(--amber); fill: var(--amber) } .msg.c-amber .st { fill: var(--amber) }
+.ma { fill: none; stroke-width: 2.4 }
+.ml-t { fill: var(--ink); font-size: 16px }
+.sq-n { fill: var(--bg); font: 700 13.5px var(--body) }
+.msg.c-mint .ma { stroke: var(--mint) } .msg.c-mint .mh, .msg.c-mint .st { fill: var(--mint) }
+.msg.c-sky .ma { stroke: var(--sky) } .msg.c-sky .mh, .msg.c-sky .st { fill: var(--sky) }
+.msg.c-amber .ma { stroke: var(--amber) } .msg.c-amber .mh, .msg.c-amber .st { fill: var(--amber) }
 
 /* ── Дорожная карта ── */
 svg.gantt { flex: 1; min-height: 0; width: 100% }
@@ -444,7 +447,9 @@ svg.gantt { flex: 1; min-height: 0; width: 100% }
 .later-zone { fill: rgba(255, 255, 255, .03) }
 .lt { fill: var(--bg); font-size: 12.5px; font-weight: 700 }
 .gate path { fill: var(--ink) }
-.gt { fill: var(--ink); font-size: 13px; font-weight: 700 }
+.gt { fill: var(--ink); font-size: 14px; font-weight: 700 }
+.gate-l { stroke: rgba(255, 255, 255, .22); stroke-width: 1.2; stroke-dasharray: 3 5 }
+.gl.gate-row { fill: var(--muted) }
 svg.i.gt-i { color: var(--ink) }
 .gantt .gr { cursor: pointer }
 .gantt.dim .gr { opacity: .3 } .gantt.dim .gr.on { opacity: 1 }
@@ -470,9 +475,12 @@ svg.weeks { flex: 1; min-height: 0; width: 100% }
 .wd { fill: var(--mint); font-size: 14px; font-weight: 700 }
 .wb rect { fill: var(--sky) }
 .wb.gate rect { fill: var(--mint) }
-.wg { fill: var(--bg); font: 700 14px var(--head) }
+.wg { fill: var(--bg); font: 700 14.5px var(--body) }
 .wt { fill: var(--ink); font-size: 16px; font-weight: 700 }
 .ws { fill: var(--muted); font-size: 13.5px }
+/* Подписи поверх сетки: ореол цвета фона, чтобы линии не проходили сквозь буквы */
+.wt, .ws { paint-order: stroke; stroke: var(--bg); stroke-width: 6px; stroke-linejoin: round }
+.sv { paint-order: stroke; stroke: #121b23; stroke-width: 6px; stroke-linejoin: round }
 
 /* ── Пилот ── */
 .steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px }
@@ -557,13 +565,14 @@ svg.regtree { flex: 1; min-height: 0; width: 100% }
 .ser.c-muted polyline { stroke: var(--muted) } .ser.c-muted circle { fill: var(--muted) }
 .ser.c-mine polyline { stroke: var(--amber); stroke-dasharray: 8 6 } .ser.c-mine circle { fill: var(--amber) }
 .sv { fill: var(--ink); font: 600 17px var(--head) }
-.calc { display: flex; flex-direction: column; gap: 14px; min-height: 0 }
-.scen .tr { grid-template-columns: 1.75fr .8fr 1fr 1fr; padding: 9px 18px; font-size: 16px }
-.scen .th > span { letter-spacing: .06em }
+.calc { display: flex; flex-direction: column; gap: 12px; min-height: 0 }
+.calc > * { flex-shrink: 0 }
+.scen .tr { grid-template-columns: 1.4fr .7fr 1.05fr 1.2fr; gap: 14px; padding: 9px 18px; font-size: 16px }
+.scen .th > span { letter-spacing: .05em; white-space: nowrap }
 .scen .tr > span:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums }
 .scen .tr.hl { background: var(--mint-d) }
 .scen .tr.hl span { color: var(--ink); font-weight: 700 }
-.sliders { display: flex; flex-direction: column; gap: 6px; padding: 14px 18px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line) }
+.sliders { display: flex; flex-direction: column; gap: 2px; padding: 12px 18px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line) }
 .sliders .lbl { margin: 0 0 4px }
 .sl { display: grid; grid-template-columns: 1fr 190px 92px; gap: 12px; align-items: center; font-size: 14.5px; color: var(--soft) }
 .sl input { width: 100%; accent-color: var(--mint); min-height: 28px }
@@ -616,6 +625,10 @@ svg.regtree { flex: 1; min-height: 0; width: 100% }
 .contact .ct a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line2) }
 .qrs { display: flex; gap: 22px; margin: 8px 0 }
 .qrs figcaption { margin-top: 8px; color: var(--soft); font-size: 14px; text-align: center }
+.ct-steps { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; max-width: calc(100% - 270px); color: var(--soft); font-size: 15px }
+.ct-steps li { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap }
+.ct-steps li::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--mint); flex: none; transform: translateY(-1px) }
+.ct-steps b { color: var(--ink); font-weight: 600 }
 .copy-row { margin: 0; display: flex; align-items: center; gap: 12px }
 
 /* ── Источники ── */
@@ -966,28 +979,35 @@ html:not(.deck):not(.print) .body { overflow-wrap: anywhere }
 }
 
 /* ── Реестр рисков «Моторики»: карта 3 × 3 и меры с показателями ── */
-.riskmap2 { grid-template-columns: 1.25fr 1fr; align-items: stretch }
-.riskmap2 .chart { margin: 0; display: flex; flex-direction: column; gap: 6px }
-svg.riskgrid { width: 100%; height: auto }
+.riskmap2 { grid-template-columns: minmax(0, 2.9fr) minmax(0, 1fr); gap: 26px; align-items: stretch }
+.riskmap2 .chart { margin: 0; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 14px }
+svg.riskgrid { width: 100%; height: auto; flex: 1; min-height: 0 }
 .rg-cell { stroke: rgba(255, 255, 255, .08) }
-.rg-cell.h2 { fill: rgba(22, 225, 130, .1) } .rg-cell.h3 { fill: rgba(140, 200, 110, .12) } .rg-cell.h4 { fill: rgba(245, 184, 74, .14) }
-.rg-cell.h5 { fill: rgba(245, 140, 90, .17) } .rg-cell.h6 { fill: rgba(255, 110, 110, .22) }
-.rg-chip rect { fill: rgba(7, 16, 25, .55); stroke: rgba(255, 255, 255, .28); stroke-width: 1.2 }
-.rg-chip.on rect { fill: var(--mint); stroke: var(--mint) }
-.rg-c { fill: var(--soft); font: 700 15px var(--body) }
-.rg-chip.on .rg-c { fill: var(--bg) }
-.rg-ax { fill: var(--soft); font-size: 15px; font-weight: 600 }
-.rg-axt { fill: var(--muted); font-size: 13.5px }
-.riskmap2 figcaption { display: flex; align-items: center; gap: 8px }
+.rg-cell.h2 { fill: rgba(22, 225, 130, .08) } .rg-cell.h3 { fill: rgba(140, 200, 110, .1) } .rg-cell.h4 { fill: rgba(245, 184, 74, .12) }
+.rg-cell.h5 { fill: rgba(245, 140, 90, .15) } .rg-cell.h6 { fill: rgba(255, 110, 110, .2) }
+.rg-h1 { fill: var(--muted); font-size: 13px }
+.rg-h2 { fill: var(--ink); font: 700 16px var(--body) }
+.rg-pill { fill: none; stroke: rgba(255, 255, 255, .32); stroke-width: 1.2 }
+.rg-code { fill: var(--soft); font: 700 12.5px var(--body) }
+.rg-name { fill: var(--soft); font-size: 14.5px }
+.rg-it.on .rg-pill { fill: var(--mint); stroke: var(--mint) }
+.rg-it.on .rg-code { fill: var(--bg) }
+.rg-it.on .rg-name { fill: var(--ink); font-weight: 600 }
+.rg-empty { fill: var(--muted); font-size: 13.5px }
+.rg-leg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; margin: 0 }
+.rg-leg > span { display: inline-flex; align-items: center; gap: 8px }
+.rg-leg .rg-cats { flex-basis: 100%; display: block; color: var(--muted) }
+.rg-leg .rg-cats b { color: var(--soft) }
 .sw-on, .sw-off { display: inline-block; width: 22px; height: 12px; border-radius: 6px; vertical-align: middle }
 .sw-on { background: var(--mint) } .sw-off { border: 1px solid rgba(255, 255, 255, .35) }
-.rg-side { display: flex; flex-direction: column; gap: 14px; justify-content: center }
-.rg-big { margin: 0; display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: center; padding: 14px 18px; border-radius: 16px; background: var(--card); border: 1px solid var(--line) }
+.rg-side { display: flex; flex-direction: column; gap: 12px; justify-content: center }
+.rg-big { margin: 0; display: flex; flex-direction: column; gap: 6px; padding: 14px 18px; border-radius: 16px; background: var(--card); border: 1px solid var(--line) }
 .rg-big b { font: 600 34px/1 var(--head); color: var(--mint) }
-.rg-big span { color: var(--soft); font-size: 16px; line-height: 1.35 }
+.rg-big span { color: var(--soft); font-size: 15.5px; line-height: 1.35 }
 .rg-big.hot { border-color: rgba(255, 143, 143, .45); background: var(--rose-d) }
 .rg-big.hot b { color: var(--rose) }
-.riskreg .tr { grid-template-columns: 1.15fr 2.3fr .85fr .7fr 1.3fr; gap: 14px; padding: 6px 16px; font-size: 13.5px; line-height: 1.3 }
+.rg-note { margin: 0; color: var(--soft); font-size: 14.5px; line-height: 1.4 }
+.riskreg .tr { grid-template-columns: 1.15fr 2.3fr .85fr .7fr 1.3fr; gap: 14px; padding: 8px 16px; font-size: 13.5px; line-height: 1.3 }
 .riskreg .th { padding: 9px 16px }
 .riskreg .rr-k { display: flex; gap: 10px; align-items: flex-start }
 .riskreg .rr-k > span { display: flex; flex-direction: column }
@@ -996,7 +1016,7 @@ svg.riskgrid { width: 100%; height: auto }
 .riskreg small { color: var(--muted); white-space: nowrap }
 .how { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700 }
 .how-do { background: var(--mint-d); color: var(--mint) } .how-tool { background: var(--sky-d); color: var(--sky) } .how-data { background: var(--violet-d); color: var(--violet) }
-@media (max-width: 1100px) { html:not(.deck):not(.print) .riskmap2 { grid-template-columns: 1fr } html:not(.deck):not(.print) .rg-big { grid-template-columns: 110px 1fr } }
+@media (max-width: 1100px) { html:not(.deck):not(.print) .riskmap2 { grid-template-columns: 1fr } }
 
 /* ── Медицинское ПО команды и границы утверждений ── */
 .cards.c4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px }
@@ -1047,8 +1067,8 @@ svg.pst-a { align-self: center; justify-self: center; color: var(--muted); width
 @media (max-width: 1100px) { html:not(.deck):not(.print) .proc { grid-template-columns: 1fr 1fr; gap: 12px } html:not(.deck):not(.print) svg.pst-a { display: none } html:not(.deck):not(.print) .ipo { grid-template-columns: 1fr } html:not(.deck):not(.print) .chain .tr, html:not(.deck):not(.print) .ipo-t .tr { grid-template-columns: 1fr !important } }
 @media (max-width: 640px) { html:not(.deck):not(.print) .proc { grid-template-columns: 1fr } }
 
-.weak .tr { padding-top: 5px; padding-bottom: 5px }
-.weak .tr i { font-size: 12.5px; line-height: 1.3 }
+.weak .tr { padding-top: 4px; padding-bottom: 4px }
+.weak .tr i { font-size: 12.5px; line-height: 1.25 }
 
 .ms-into { margin-top: 12px; padding: 14px 18px; border-radius: 16px; background: var(--mint-d); border: 1px solid rgba(22, 225, 130, .3) }
 .ms-into .lbl { margin: 0 0 8px }
@@ -1185,7 +1205,7 @@ svg.pst-a { align-self: center; justify-self: center; color: var(--muted); width
 .eco-hub .hub-face { display: block; width: 96px; height: 96px; margin: 0 auto 6px; border-radius: 50%; object-fit: cover; border: 2px solid var(--mint); box-shadow: 0 0 0 6px rgba(22, 225, 130, .12) }
 .contact { position: relative; overflow: hidden }
 .contact > :not(.dec-hand) { position: relative; z-index: 1 }
-.dec-hand { position: absolute; right: -70px; bottom: -90px; width: 430px; height: 430px; z-index: 0; object-fit: contain; mix-blend-mode: lighten; pointer-events: none; opacity: .95;
+.dec-hand { position: absolute; right: 0; bottom: 0; width: 270px; height: 270px; z-index: 0; object-fit: contain; mix-blend-mode: lighten; pointer-events: none; opacity: .95;
   -webkit-mask-image: radial-gradient(ellipse 60% 56% at 62% 50%, #000 50%, transparent 100%); mask-image: radial-gradient(ellipse 60% 56% at 62% 50%, #000 50%, transparent 100%) }
 .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; flex: 1; min-height: 0 }
 .modes .md { padding: 0; gap: 7px; overflow: hidden }
@@ -1202,4 +1222,5 @@ svg.pst-a { align-self: center; justify-self: center; color: var(--muted); width
 @media (max-width: 1100px) {
   html:not(.deck):not(.print) .modes { grid-template-columns: 1fr }
   html:not(.deck):not(.print) .dec-hand { display: none }
+  html:not(.deck):not(.print) .ct-steps { max-width: none }
 }
