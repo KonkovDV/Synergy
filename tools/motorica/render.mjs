@@ -224,7 +224,7 @@ L.bottleneck = (s) => {
 };
 
 L.stack = (s) => {
-  const chain = [['Протез', 'BLE · 33 мс'], ['Motorica Start', 'Android · iOS · KMM'], ['Каталог игр', 'один JSON'], ['Игры', 'Арканоид · Fluxara · Sushi'], ['Signal LAB', '3 упражнения, schema v1']];
+  const chain = [['Протез', 'уровни по BLE'], ['Motorica Start', '3.3.16 · Android · iOS'], ['Каталог игр', 'один JSON'], ['Игры', 'Fluxara · Sushi Dash'], ['Signal LAB', '3 упражнения · v1']];
   const W = 1424; const gw = 262; const gap = 34; const bw = (W - gw - gap * chain.length) / chain.length;
   const boxes = chain.map(([t, sub], i) => {
     const x = i * (bw + gap);
@@ -686,7 +686,7 @@ L.market = (s) => {
   };
   const cmp = (t, a, b2) => `<div class="mrow"><span>${tx(t)}</span><b>${tx(a)}</b><b>${tx(b2)}</b></div>`;
   return `<div class="split market">
-    <figure class="chart"><figcaption>Рынок протезов в России, млрд ₽ · CAGR 18 % у обоих сегментов</figcaption>
+    <figure class="chart"><figcaption>Рынок протезов в России, млрд ₽ · CAGR 18 % у обоих сегментов; в 2025 году протезы рук и ног выросли на 50 % — оценка «Моторики»</figcaption>
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Протезы рук: 9,8 млрд ₽ в 2024 году, 26 в 2030. Протезы ног: 33,5 и 92,1 млрд ₽">
         <line x1="20" y1="${base}" x2="${W - 20}" y2="${base}" class="axis"/>${grp(70, 'Протезы рук', m.hands.rub, m.hands.rub2030, 'h')}${grp(500, 'Протезы ног', m.legs.rub, m.legs.rub2030, 'l')}
         ${svgText(W / 2, H - 24, 'рынок ног в 3,4 раза больше рынка рук', 'axt', 'middle')}</svg></figure>
@@ -728,7 +728,41 @@ L.rivals = (s) => `<div class="tbl rivals" role="table" aria-label="«Мотор
   <div class="tr th" role="row"><span role="columnheader">Игрок</span>${RV_COLS.map(([, t, i]) => `<span role="columnheader">${ic(i)}${tx(t)}</span>`).join('')}</div>
   ${s.data.rows.map((r) => `<div class="tr${r.id === 'us' ? ' rv-us' : ''}" role="row"><span role="cell" class="rv-n"><b>${tx(r.t)}</b><i>${tx(r.s)}</i></span>${RV_COLS.map(([k]) => `<span role="cell"${k === 'soft' && r[k] ? ' class="rv-soft"' : ''}>${r[k] ? tx(r[k]) : '<span class="rv-none" aria-label="нет данных">—</span>'}</span>`).join('')}</div>`).join('')}
 </div>
-<p class="strip sm">${ic('LuZap')}<span><b>Быстрее всего догоняют в ПО и данных:</b> Steplife уже собирает данные о ходьбе, у «Моторики» мониторинг — в 2028 году. Три ответа — слайд ${s.next}.</span></p>`;
+<p class="strip sm">${ic('LuZap')}<span><b>Быстрее всего догоняют в измерении результата:</b> Steplife уже снимает походку камерами, у «Моторики» мониторинг — в 2028 году. Где вы впереди и где отстаёте — слайд ${s.next}.</span></p>`;
+
+// Где «Моторика» впереди, а где отстаёт: вердикт по каждому направлению и что делать
+const VERDICT = { ahead: ['впереди', 'mint'], par: ['вровень', 'sky'], risk: ['под давлением', 'amber'], behind: ['отстаёт', 'rose'] };
+L.scorecard = (s) => {
+  const rows = s.data.rows;
+  const cnt = (v) => rows.filter((r) => r.v === v).length;
+  return `<div class="sc-sum" role="list">${Object.entries(VERDICT).map(([k, [t, c]]) => `<p role="listitem" class="sc-n c-${c}"><b>${cnt(k)}</b><span>${tx(t)}</span></p>`).join('')}<p class="sc-of">${tx(`из ${rows.length} направлений · сверено по открытым данным на 20.11.2026; вердикт — наш`)}</p></div>
+<div class="tbl scorecard" role="table" aria-label="Где «Моторика» впереди, а где отстаёт">
+  <div class="tr th" role="row"><span role="columnheader">Направление</span><span role="columnheader">«Моторика»</span><span role="columnheader">Лучшее у конкурентов</span><span role="columnheader">Вердикт</span><span role="columnheader">Что делать</span></div>
+  ${rows.map((r) => `<div class="tr v-${r.v}" role="row"><span role="cell" class="sc-t"><b>${tx(r.t)}</b></span><span role="cell">${tx(r.us)}</span><span role="cell" class="sc-them">${tx(r.them)}</span><span role="cell">${chip(VERDICT[r.v][0], VERDICT[r.v][1], 'sm')}</span><span role="cell" class="m">${r.do ? tx(r.do) : '<span class="rv-none">—</span>'}</span></div>`).join('')}
+</div>`;
+};
+
+// Правила рынка: правило с источником → что значит для «Моторики» → ответ
+L.rules = (s) => `<div class="tbl mrules" role="table" aria-label="Правила рынка 2025–2026 и что они значат для «Моторики»">
+  <div class="tr th" role="row"><span role="columnheader">Правило и факт</span><span role="columnheader">Что значит — наше прочтение</span><span role="columnheader">Ответ</span></div>
+  ${s.data.rows.map((r) => `<div class="tr" role="row"><span role="cell" class="pt">${ic(r.icon, 'badge xs')}<span><b>${tx(r.t)}</b><span class="ru-f">${tx(r.fact)}</span><i>${tx(r.src)}</i></span></span><span role="cell">${tx(r.means)}</span><span role="cell">${chip(r.wp, 'mint', 'sm')}<span class="ru-a">${tx(r.ans)}</span></span></div>`).join('')}
+</div>`;
+
+// Голос пользователя: темы отзывов RuStore о «Моторика старт», цитаты и что из этого следует
+L.voice = (s) => {
+  const v = s.data.v; const max = Math.max(...v.themes.map((t) => t[1]));
+  return `<div class="split voice">
+  <figure class="vc-left"><figcaption>${tx(`Все ${v.total} отзывов о «Моторика старт» в RuStore, ${v.from}–${v.to}: о чём жалуются`)}</figcaption>
+    <ul class="vc-themes">${v.themes.map(([t, n, q], i) => `<li${i === v.themes.length - 1 ? ' class="dev"' : ''}><p class="vc-h"><b>${tx(t)}</b><span class="vc-n">${n}</span></p><span class="vc-bar"><i class="w${Math.round((n / max) * 10)}"></i></span><q>${tx(q.replace(/^«|»$/g, ''))}</q></li>`).join('')}</ul>
+    <p class="strip sm">${ic('LuTarget')}<span>${tx(v.goal)}.</span></p>
+  </figure>
+  <div class="vc-right">
+    <div class="vc-stats"><p><b>${tx(`${v.app} из ${v.problems}`)}</b><span>жалоб — о приложении и настройке, одна — об изделии</span></p><p><b>${tx(v.rating)}</b><span>${tx(`средняя оценка при ${v.ratings} оценках`)}</span></p><p><b>${tx(`${v.answered} из ${v.total}`)}</b><span>отзывов с ответом разработчика</span></p></div>
+    <div class="card vc-fix"><p class="lbl">${ic('LuWrench')} Что с этим делать</p>${v.fix.map(([t, d, w]) => `<p class="vf"><b>${tx(t)}</b><span>${tx(d)}</span>${chip(w, 'mint', 'sm')}</p>`).join('')}</div>
+    <div class="card vc-att"><p class="lbl">${ic('LuMessageCircle')} Attilan</p>${v.attilan.map((x, i) => i ? `<q>${tx(x.replace(/^«|»$/g, ''))}</q>` : `<b>${tx(x)}</b>`).join('')}</div>
+  </div>
+</div>`;
+};
 
 // Три давления конкуренции из годового отчёта и ответ на каждое
 L.pressures = (s) => `<div class="press">${s.data.cols.map((c, i) => `
