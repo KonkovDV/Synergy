@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Сайт «План сотрудничества MOTUS Lab и ГК «Моторика»» — интерактивная презентация на 50 слайдов.
+// Сайт «План сотрудничества MOTUS Lab и ГК «Моторика»» — интерактивная презентация.
 //
 //   npm i --no-save pptxgenjs@3.12.0 sharp@0.34.4 react-icons@5.5.0 react@18.3.1 react-dom@18.3.1 qrcode@1.5.4
 //   node tools/motorica-site.mjs      → motorica/index.html, plan.html, sw.js, fonts/, img/
@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { MODEL, BASE, SCEN, RAMP, YEARS, r0, bn } from './motorica/model.mjs';
 import * as D from './motorica/data.mjs';
-import { SLIDES, SECTIONS, SOURCES, WP_EFFECT, slideOf } from './motorica/slides.mjs';
+import { SLIDES, SECTIONS, SOURCES, WP_EFFECT, slideOf, plural } from './motorica/slides.mjs';
 import { renderSlide, iconSprite, tx, esc, plain, ic, nb } from './motorica/render.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -131,7 +131,7 @@ const htmlRaw = `${head(TITLE, DESC, '', 'deck-page')}
   </nav>
   <div class="ctl">
     <label class="route-sel" title="Маршрут по слайдам (M — 20 минут)">${ic('LuRoute')}<span class="vh">Маршрут</span><select data-route aria-label="Маршрут по слайдам">
-      <option value="">Все ${slides.length} слайдов</option><option value="core">20 минут · основной</option>
+      <option value="">Все ${slides.length} ${plural(slides.length, 'слайд', 'слайда', 'слайдов')}</option><option value="core">20 минут · основной</option>
       ${D.CHAIRS.map((c) => `<option value="${c.id}">${esc(c.t)} · ${slides.filter((s) => (s.ch || []).includes(c.id)).length}</option>`).join('')}
     </select></label>
     <button type="button" class="notes-btn" data-notes aria-pressed="false" title="Текст выступления (N)">${ic('LuMessageSquareText')}<span>Речь</span></button>
