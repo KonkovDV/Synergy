@@ -132,8 +132,12 @@ try {
     const p = await ax.newPage();
     await p.goto(base + path, { waitUntil: 'load' });
     for (let y = 0; y < 20000; y += 900) { await p.evaluate(v => window.scrollTo(0, v), y); await p.waitForTimeout(40); }
+    // Блоки появляются при прокрутке с анимацией: пока она идёт, текст полупрозрачный, и axe видит «низкий контраст»,
+    // которого нет. Ждём конца конечных анимаций (бесконечные — пульс точки — не ждём).
+    await p.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running' || a.effect?.getTiming().iterations === Infinity), null, { timeout: 10000 }).catch(() => {});
     await p.addScriptTag({ path: join(root, 'node_modules/axe-core/axe.min.js') });
-    const v = await p.evaluate(async () => (await window.axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] })).violations.map(x => `${x.id} ×${x.nodes.length}`));
+    const v = await p.evaluate(async () => (await window.axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] })).violations
+      .map(x => `${x.id} ×${x.nodes.length} (${x.nodes.slice(0, 2).map(n => n.target.join(' ') + (n.any?.[0]?.data?.contrastRatio ? ` ${n.any[0].data.contrastRatio}:1` : '')).join('; ')})`));
     if (v.length) fail(`axe на ${path}: ${v.join(', ')}`);
     if (path === 'no-such-page' && !/Такой страницы нет/.test(await p.textContent('h1'))) fail('неизвестный адрес не показывает страницу 404');
     await p.close();
