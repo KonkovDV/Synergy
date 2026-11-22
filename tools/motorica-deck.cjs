@@ -91,6 +91,16 @@ const TITLE = 'План сотрудничества MOTUS Lab и ГК «Мот�
       s.addNotes(`${m.core ? '[основной маршрут] ' : '[для вопросов] '}${m.notes}\n\nИсточники: ${m.sources}`);
     }
     await pres.writeFile({ fileName: PPTX });
+    // Без записей-папок в ZIP: с ними PPTX не открывается или не редактируется совместно в облаке (OneDrive, SharePoint)
+    {
+      const JSZip = require('jszip');
+      const zip = await JSZip.loadAsync(fs.readFileSync(PPTX));
+      const files = Object.keys(zip.files).filter((n) => !zip.files[n].dir);   // zip.remove() у папки удалил бы и её файлы
+      const order = ['[Content_Types].xml', ...files.filter((n) => n !== '[Content_Types].xml')];
+      const out = new JSZip();
+      for (const n of order) out.file(n, await zip.files[n].async('nodebuffer'), { date: new Date('2026-01-01T00:00:00Z'), createFolders: false });
+      fs.writeFileSync(PPTX, await out.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } }));
+    }
 
     // ── slides.json: текст, речь, источники и числа модели ──
     fs.writeFileSync(path.join(OUT, 'slides.json'), JSON.stringify({
