@@ -247,9 +247,35 @@ L.experts = (s) => `
     ${s.data.rows.map(([q, a, d]) => `<div class="tr" role="row"><span role="cell"><b>${tx(q)}</b></span><span role="cell">${tx(a)}</span><span role="cell">${ic('LuArrowRight', 'ok')}<span>${tx(d)}</span></span></div>`).join('')}
   </div>`;
 
+// Мини-схема каждого потока: что приходит в тренажёр (иллюстрация формата, не данные)
+const streamViz = [
+  (() => {   // Поток 1 · ЭМГ: амплитуды A и B на шкале 0–255 и порог
+    const x0 = 24, w = 276, X = (v) => x0 + (w * v) / 255, thr = X(120);
+    const row = (y, name, v) => `${svgText(0, y + 11, name, 'sv-k')}<rect x="${x0}" y="${y}" width="${w}" height="14" rx="7" class="sv-trk"/><rect x="${x0}" y="${y}" width="${X(v) - x0}" height="14" rx="7" class="sv-b"/>`;
+    return `<svg class="sviz" viewBox="0 0 320 100" role="img" aria-label="Схема потока ЭМГ: амплитуды каналов A и B на шкале от 0 до 255 и порог; канал A выше порога, B ниже">
+      ${row(14, 'A', 190)}${row(42, 'B', 55)}<line x1="${thr}" y1="6" x2="${thr}" y2="66" class="sv-thr"/>
+      ${svgText(x0, 90, '0', 'sv-t')}${svgText(thr, 90, 'порог', 'sv-t', 'middle')}${svgText(x0 + w, 90, '255', 'sv-t', 'end')}</svg>`;
+  })(),
+  (() => {   // Поток 2 · СПППР: вероятности 7 состояний, выбрано наибольшее
+    const p = [0.05, 0.08, 0.62, 0.07, 0.06, 0.07, 0.05], bw = 28, gap = 12, x0 = 26, base = 76;
+    const bars = p.map((v, i) => { const h = Math.max(4, (v / 0.62) * 58); const x = x0 + i * (bw + gap); return `<rect x="${x}" y="${base - h}" width="${bw}" height="${h}" rx="5" class="${v === 0.62 ? 'sv-b' : 'sv-lo'}"/>${svgText(x + bw / 2, 94, String(i + 1), 'sv-t', 'middle')}`; }).join('');
+    const xm = x0 + 2 * (bw + gap) + bw / 2;
+    return `<svg class="sviz" viewBox="0 0 320 100" role="img" aria-label="Схема потока СПППР: вероятности семи состояний; выбрано состояние с наибольшей вероятностью">
+      ${bars}${svgText(xm, base - 58 - 6, '62 %', 'sv-k', 'middle')}</svg>`;
+  })(),
+  (() => {   // Поток 3 · нейроинтерфейс: уверенность декодера и порог подтверждения
+    const w = 300, X = (v) => v * w, thr = X(0.9);
+    return `<svg class="sviz" viewBox="0 0 320 100" role="img" aria-label="Схема потока 3: уверенность декодера 0,86 ниже порога 0,9 — действие ждёт подтверждения человека">
+      ${svgText(0, 22, 'уверенность', 'sv-t')}${svgText(X(0.86), 22, '0,86', 'sv-k', 'end')}
+      <rect x="0" y="32" width="${w}" height="14" rx="7" class="sv-trk"/><rect x="0" y="32" width="${X(0.86)}" height="14" rx="7" class="sv-b2"/>
+      <line x1="${thr}" y1="26" x2="${thr}" y2="54" class="sv-thr"/>${svgText(thr, 68, 'порог 0,9', 'sv-t', 'middle')}
+      ${svgText(0, 92, 'ниже порога → подтверждает человек', 'sv-s')}</svg>`;
+  })(),
+];
+
 L.architecture = (s) => `
   <div class="cards c3 streams">${s.data.streams.map(([h, kind, st, d, where], i) => `
-    <div class="card${i === 2 ? ' alt' : ''}">${ic(['LuActivity', 'LuBrainCircuit', 'LuBrain'][i], 'badge')}<b class="h">${tx(h)}</b>${chip(st, kind === 'ready' ? 'mint' : 'sky', 'sm')}<span>${tx(d)}</span><span class="where"><b>Где:</b> ${tx(where)}</span></div>`).join('')}
+    <div class="card${i === 2 ? ' alt' : ''}">${ic(['LuActivity', 'LuBrainCircuit', 'LuBrain'][i], 'badge')}<b class="h">${tx(h)}</b>${chip(st, kind === 'ready' ? 'mint' : 'sky', 'sm')}<span>${tx(d)}</span>${streamViz[i]}<span class="where"><b>Где:</b> ${tx(where)}</span></div>`).join('')}
   </div>
   <div class="path">${s.data.path.map(([p, d], i) => `<span class="pstep"><b>${tx(p)}</b><span>${tx(d)}</span></span>${i < s.data.path.length - 1 ? ic('LuChevronRight', 'pa') : ''}`).join('')}</div>
   <p class="strip">${ic('LuFlaskConical')}<span><b>Логика управления отлаживается на эмуляторе и цифровом двойнике</b> — до регистрации изделия и без риска для пациента.</span></p>`;
