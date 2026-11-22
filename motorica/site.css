@@ -1412,3 +1412,11 @@ html:not(.deck):not(.print) .cover-art .halo { display: none }
 /* Слайд 60: подписи схемы данных крупнее — схема ужата в колонку */
 .trust-flow .df-s { font-size: 15.5px }
 .mk.l .y24 { opacity: .75 }
+/* Слайд «Три потока»: мини-схема формата каждого потока (иллюстрация, не данные) */
+.streams .sviz { display: block; width: 100%; height: auto; margin: 14px 0 10px; overflow: visible }
+.sviz .sv-trk { fill: rgba(255, 255, 255, .07) }
+.sviz .sv-b { fill: url(#g-mint) } .sviz .sv-b2 { fill: url(#g-sky) } .sviz .sv-lo { fill: rgba(255, 255, 255, .16) }
+.sviz .sv-thr { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 4 4 }
+.sviz .sv-t { fill: var(--muted); font: 500 12.5px var(--body) }
+.sviz .sv-k { fill: var(--ink); font: 700 13px var(--body) }
+.sviz .sv-s { fill: var(--soft); font: 500 13px var(--body) }
