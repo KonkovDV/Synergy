@@ -496,6 +496,13 @@ for (const [w, h] of VIEWPORTS) {
       // 5.16: the pictures are files — measure once every one has loaded or failed (its size is reserved, but a late
       // decode under load moved the end of a page between two measurements: a «covered» once in a full run).
       await page.waitForFunction(() => [...document.images].every(i => i.complete), null, { timeout: 3000 }).catch(() => {});
+      // 22.11.2026: entrance animations are measured once finished. The results stars «pop» with an overshoot
+      // (cubic-bezier …1.4) for 0.5 s; a measurement 150 ms in caught a transient 2 px of page width at 844×390 in
+      // one run of three — the settled layout fits. Endless animations (the game itself) are not waited for.
+      await page.evaluate(() => Promise.race([
+        Promise.all(document.getAnimations().filter(a => { const t = a.effect?.getComputedTiming?.(); return t && Number.isFinite(t.endTime) && t.endTime <= 3000; }).map(a => a.finished.catch(() => {}))),
+        new Promise(r => setTimeout(r, 3000)),
+      ]));
       // Whole words at the default text size on phones from 360 px; at 320 px (the WCAG reflow width) and at 130–200 %
       // text a split is the lesser evil than text past the edge.
       const found = [...await page.evaluate(inspect, { width: w, checkWords: scale === 1 && w >= 360 }), ...(scale === 1 ? await page.evaluate(reachable) : []), ...await page.evaluate(coveredAtEnd), ...await page.evaluate(seeThrough), ...await page.evaluate(pictures)];
