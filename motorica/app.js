@@ -59,7 +59,7 @@
   }
   function fit() {
     if (mode !== 'deck') { slides.forEach((s) => { s.style.transform = ''; }); return; }
-    const top = 52, bottom = 34, right = 44, left = 16;
+    const top = 52, bottom = 60, right = 44, left = 16;   // снизу — панель «Назад · Все слайды · Дальше»
     const w = innerWidth - left - right, h = innerHeight - top - bottom;
     const k = Math.min(w / 1600, h / 900);
     const x = left + (w - 1600 * k) / 2, y = top + (h - 900 * k) / 2;
@@ -68,8 +68,8 @@
 
   // ── Навигация ──
   let cur = 1;
-  let route = '';                    // '' — все слайды, 'core' — 20 минут, иначе id кресла
-  const routes = { core: new Set(data.core), ...Object.fromEntries(Object.entries(data.chairs).map(([k, v]) => [k, new Set(v.slides)])) };
+  let route = '';                    // '' — все слайды, 'core' — 20 минут, иначе id кресла или читателя (департамент инноваций)
+  const routes = { core: new Set(data.core), ...Object.fromEntries(Object.entries({ ...data.chairs, ...(data.readers || {}) }).map(([k, v]) => [k, new Set(v.slides)])) };
   const inRoute = (n) => !route || routes[route].has(n);
   const visible = () => slides.map((s, i) => i + 1).filter(inRoute);
   const fromHash = () => { const n = parseInt(location.hash.replace(/^#s?/, ''), 10); return n >= 1 && n <= N ? n : 1; };
@@ -82,6 +82,7 @@
     const p = $('.progress i'); if (p) p.style.width = `${(n / N) * 100}%`;
     if (push && location.hash !== `#s${n}`) history.replaceState(null, '', `#s${n}`);
     notesFill();
+    navState();
     if (mode === 'flow' && push) slides[n - 1].scrollIntoView({ block: 'start' });
   }
   function step(d) {
@@ -91,9 +92,58 @@
     const next = list[Math.max(0, Math.min(list.length - 1, i + d))];
     if (next) show(next);
   }
+  // ── Мышь: «Назад · Все слайды · Дальше», колесо и тачпад, оглавление всех слайдов ──
+  const navBtns = $$('[data-step]');
+  function navState() {   // на краях маршрута кнопка выключена — щелчок не уходит в пустоту
+    const list = visible(); const i = list.indexOf(cur);
+    navBtns.forEach((b) => { b.disabled = +b.dataset.step < 0 ? i <= 0 : i < 0 || i >= list.length - 1; });
+  }
+  navBtns.forEach((b) => b.addEventListener('click', () => step(+b.dataset.step)));
+  // Колесо и тачпад: один жест — один слайд. Инерция тачпада после перелистывания не листает дальше:
+  // замок снимается, когда события колеса стихли на 180 мс и с прошлого шага прошло не меньше 350 мс.
+  let wheelAcc = 0, wheelLock = false, wheelIdle = 0, lastStep = 0;
+  addEventListener('wheel', (e) => {
+    if (mode !== 'deck' || e.ctrlKey || (ov && !ov.hidden) || (modal && !modal.hidden)) return;
+    if (e.target.closest?.('.notes-panel, select, input, textarea')) return;
+    const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    clearTimeout(wheelIdle);
+    wheelIdle = setTimeout(() => { wheelAcc = 0; wheelLock = false; }, 180);
+    if (wheelLock || performance.now() - lastStep < 350) return;
+    wheelAcc += e.deltaMode === 1 ? d * 33 : d;   // строки → пиксели (Firefox)
+    if (Math.abs(wheelAcc) < 40) return;
+    step(wheelAcc > 0 ? 1 : -1);
+    wheelAcc = 0; wheelLock = true; lastStep = performance.now();
+  }, { passive: true });
+  // Все слайды: окно поверх колоды; текущий слайд подсвечен, слайды вне маршрута — тусклее
+  const ov = $('#overview');
+  const ovBtn = $('[data-overview]');
+  const ovInert = [];
+  function openOverview() {
+    if (!ov || mode !== 'deck') return;
+    $$('li[data-n]', ov).forEach((li) => { const n = +li.dataset.n; li.classList.toggle('on', n === cur); li.classList.toggle('out', !!route && !inRoute(n)); });
+    ov.hidden = false;
+    ovBtn?.setAttribute('aria-expanded', 'true');
+    for (const el of document.body.children) if (el !== ov && !el.inert) { el.inert = true; ovInert.push(el); }
+    const here = $('li.on a', ov) || $('a', ov);
+    here?.focus({ preventScroll: true });
+    $('li.on', ov)?.scrollIntoView({ block: 'center' });
+  }
+  function closeOverview() {
+    if (!ov || ov.hidden) return;
+    ov.hidden = true;
+    ovBtn?.setAttribute('aria-expanded', 'false');
+    while (ovInert.length) ovInert.pop().inert = false;
+    ovBtn?.focus({ preventScroll: true });
+  }
+  ovBtn?.addEventListener('click', () => (ov.hidden ? openOverview() : closeOverview()));
+  $('[data-overview-close]')?.addEventListener('click', closeOverview);
+  // Щелчок по фону — закрыть; по слайду — закрыть, а переход сделает общий обработчик ссылок #sN ниже
+  ov?.addEventListener('click', (e) => { if (e.target === ov || e.target.closest('a[href^="#s"]')) closeOverview(); });
+
   addEventListener('hashchange', () => { if (mode === 'deck') show(fromHash(), false); });
   addEventListener('resize', () => { setMode(); fit(); });
   document.addEventListener('keydown', (e) => {
+    if (ov && !ov.hidden) { if (e.key === 'Escape') { e.preventDefault(); closeOverview(); } return; }   // в оглавлении стрелки не листают колоду за ним
     if (mode !== 'deck' || e.altKey || e.ctrlKey || e.metaKey) return;
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
@@ -105,6 +155,7 @@
     else if (k === 'f' || k === 'F' || k === 'а' || k === 'А') { e.preventDefault(); if (document.fullscreenElement) document.exitFullscreen(); else doc.requestFullscreen?.().catch(() => {}); }
     else if (k === 'n' || k === 'N' || k === 'т' || k === 'Т') { e.preventDefault(); toggleNotes(); }
     else if (k === 'm' || k === 'M' || k === 'ь' || k === 'Ь') { e.preventDefault(); setRoute(route === 'core' ? '' : 'core'); }
+    else if (k === 'g' || k === 'G' || k === 'п' || k === 'П') { e.preventDefault(); openOverview(); }
     else if (k === 'Escape') { closeGame(); }
   });
   // Свайп
@@ -158,6 +209,7 @@
     if (route) q.set('route', route); else q.delete('route');
     const qs = q.toString();
     history.replaceState(null, '', `${location.pathname}${qs ? '?' + qs : ''}#s${cur}`);
+    navState();
   }
   sel?.addEventListener('change', () => setRoute(sel.value, true));
   $$('[data-chair]').forEach((c) => {
@@ -387,7 +439,15 @@
   setMode();
   show(cur, false);
   if (!PRINT && params.get('route')) setRoute(params.get('route'));
-  if (PRINT) { slides.forEach((s) => s.classList.add('on')); }
+  if (PRINT) {
+    slides.forEach((s) => s.classList.add('on'));
+    // ?print=1&route=innov — PDF маршрута: только его слайды, без пустой страницы в конце (motorica-deck.cjs)
+    const pr = routes[params.get('route')];
+    if (pr) {
+      slides.forEach((s, i) => s.classList.toggle('print-out', !pr.has(i + 1)));
+      slides.filter((s, i) => pr.has(i + 1)).at(-1)?.classList.add('print-last');
+    }
+  }
   // Готовность для экспорта: шрифты загружены
   // В печати (из неё PDF): JPEG-двойники вместо WebP — PDF не знает WebP, и Chrome встроил бы картинку без сжатия
   const images = () => (PRINT ? Promise.all([...document.images].map((im) => {
@@ -395,7 +455,7 @@
     const src = im.getAttribute('src') || '';
     if (/\.webp(\?v=[^#]*)?$/.test(src)) im.src = src.replace(/\.webp(\?v=[^#]*)?$/, '.jpg');
     return im.decode().catch(() => {});
-  }).concat(['open', 'view', 'value', 'we', 'model', 'wp', 'plan', 'trust', 'next'].map((k) => {   // фоны разделов из site.css
+  }).concat((data.sections || []).map((k) => {   // фоны разделов из site.css
     const im = new Image(); im.src = `img/sec-${k}.jpg`; return im.decode().catch(() => {});
   }))) : Promise.resolve());
   Promise.all([document.fonts ? document.fonts.ready : Promise.resolve(), images()]).then(() => { doc.dataset.ready = '1'; });

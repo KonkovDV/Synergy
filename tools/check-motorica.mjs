@@ -70,6 +70,25 @@ for (const [id, c] of chairs) {
   if (!html.includes(`data-chair="${id}"`)) fail(`у кресла ${id} нет карточки, которая включает маршрут`);
 }
 
+// ── 2а. Маршрут читателя «Департамент инноваций»: те же слайды на странице (data-ch), в списке маршрутов, на своём слайде и в своём PDF ──
+const readers = Object.entries(deck.readers || {});
+if (readers.length !== 1 || !deck.readers.innov) fail(`маршрутов читателя ${readers.length}, а нужен один — innov`);
+const chOf = [...html.matchAll(/<section class="s [^"]*" id="s(\d+)" data-n="\d+" data-sec="\w+" data-ch="([^"]*)"/g)].map((m) => [+m[1], m[2].split(' ')]);
+for (const [id, r] of readers) {
+  const want = chOf.filter(([, ch]) => ch.includes(id)).map(([n]) => n);
+  if (JSON.stringify(r.slides) !== JSON.stringify(want)) fail(`маршрут ${id}: в данных ${r.slides}, на странице ${want}`);
+  if (r.slides.length < 10 || r.slides.length > 22 || r.slides[0] !== 1) fail(`маршрут ${id}: ${r.slides.length} слайдов, первый — ${r.slides[0]}`);
+  if (!html.includes(`<option value="${id}">`)) fail(`маршрута ${id} нет в списке маршрутов`);
+  const readerSlide = slides.find((s) => s.layout === 'reader')?.n;
+  if (!readerSlide || !r.slides.includes(readerSlide)) fail(`маршрут ${id} не открывается своим слайдом`);
+  const file = `MOTUS-Lab-Motorica-${id}.pdf`;
+  if (!existsSync(join(dir, file))) { fail(`нет ${file} — node tools/motorica-deck.cjs`); continue; }
+  const rpdf = readFileSync(join(dir, file)).toString('latin1');
+  const rpages = (rpdf.match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
+  if (rpages !== r.slides.length) fail(`${file}: ${rpages} страниц, а в маршруте ${r.slides.length} слайдов — node tools/motorica-deck.cjs`);
+  if (!html.includes(`href="${file}?v=`)) fail(`на странице нет ссылки на ${file}`);
+}
+
 // ── 3. Файлы, ?v=, CSP, noindex, alt, id и якоря ──
 const hash = (rel) => createHash('sha256').update(readFileSync(join(dir, rel))).digest('hex').slice(0, 8);
 const CONTACT = /(\+7|\b8)[\s( -]*\d{3}[\s) -]*\d{3}[\s ‑-]*\d{2}[\s ‑-]*\d{2}|\+79154528864|[\w.+-]+@[\w-]+\.[a-z]{2,}|&#8209;/gi;
@@ -106,7 +125,7 @@ if (!plan.includes(`href="./#s${contactsSlide}"`)) fail('план не ведё�
 if (/href="#\d+"/.test(html)) fail('ссылки на слайды вида #N — нужны #sN, как id слайдов');
 
 for (const f of ['fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2', 'fonts/unbounded-lat.woff2', 'sw.js', 'og.jpg', 'img/ambassador.webp', 'img/modes-emg.webp', 'img/modes-bci.webp', 'img/modes-glasses.webp', 'img/hero-hand.webp',
-  'MOTUS-Lab-Motorica.pdf', 'MOTUS-Lab-Motorica.pptx', 'MOTUS-Lab-Motorica-model.xlsx']) if (!existsSync(join(dir, f))) fail(`нет ${f}`);
+  'MOTUS-Lab-Motorica.pdf', 'MOTUS-Lab-Motorica-innov.pdf', 'MOTUS-Lab-Motorica.pptx', 'MOTUS-Lab-Motorica-model.xlsx']) if (!existsSync(join(dir, f))) fail(`нет ${f}`);
 if (existsSync(join(dir, 'slides'))) fail('motorica/slides/ — картинки прошлой колоды; страница больше на них не ссылается');
 const sw = readFileSync(join(dir, 'sw.js'), 'utf8');
 const core = JSON.parse(/const CORE = (\[.*\]);/.exec(sw)?.[1] ?? '[]');
@@ -170,4 +189,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`motorica: ${N} слайдов = ${pages} страниц PDF = ${pSlides} слайдов PPTX = slides.json, текст совпадает; маршрут на 20 минут — ${coreHtml.length} слайдов, кресел — ${chairs.length}; план — ${(plan.match(/<h2 id="sec-/g) || []).length} разделов; ссылки, ?v=, контакты, CSP, alt, id и якоря в порядке; числа модели сходятся`);
+console.log(`motorica: ${N} слайдов = ${pages} страниц PDF = ${pSlides} слайдов PPTX = slides.json, текст совпадает; маршрут на 20 минут — ${coreHtml.length} слайдов, кресел — ${chairs.length}, маршрут департамента инноваций — ${deck.readers?.innov?.slides.length} слайдов = страниц его PDF; план — ${(plan.match(/<h2 id="sec-/g) || []).length} разделов; ссылки, ?v=, контакты, CSP, alt, id и якоря в порядке; числа модели сходятся`);
