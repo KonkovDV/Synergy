@@ -2,7 +2,8 @@
 // Сайт и колода для «Моторики» в настоящем браузере, как их отдаёт GitHub Pages.   node tools/check-motorica-page.mjs
 // Сайт собирается как в workflow Pages: dist/ (если собран) на /Synergy/, колода — на /Synergy/motorica/.
 // Проверяется: нет ошибок консоли и упавших запросов; шрифты и картинки загружены; на широком экране — колода:
-// слайд целиком в окне, листается стрелками, PageDown, Home и End, #sN открывает нужный слайд, ссылки «слайд N →»
+// слайд целиком в окне, листается стрелками, PageDown, Home и End, мышью — кнопками «Назад» и «Дальше» (на краях они
+// выключены), колесом (один жест — один слайд) и из окна «Все слайды» (G, Esc), #sN открывает нужный слайд, ссылки «слайд N →»
 // переходят; маршрут «20 минут», маршруты восьми кресел (список и карточки) и маршрут департамента инноваций (кнопка
 // на его слайде, ?route=innov) листают только свои слайды, ?route= включает маршрут; текст выступления (N) — тот же, что у слайда; калькулятор считает как tools/motorica/model.mjs,
 // а ссылка на расчёт восстанавливает его; правило решения по пилоту и даты недель работают; тренажёр открывается в
@@ -126,6 +127,37 @@ try {
     const [h, s] = await page.evaluate(() => [location.hash, document.querySelector('#deck > .s.on')?.dataset.n]);
     if (h !== `#s${want}` || +s !== want) fail(`колода: ${key} → ${h}, слайд ${s}, а нужно ${want}`);
   }
+  // ── 2а. Мышь: «Назад · Все слайды · Дальше», колесо и тачпад, оглавление всех слайдов ──
+  await go(page, 1);
+  if (!(await page.locator('.deck-nav [data-step="-1"]').isDisabled())) fail('на первом слайде кнопка «Назад» не выключена');
+  await page.locator('.deck-nav [data-step="1"]').click();
+  if ((await on(page))[0] !== 2) fail(`кнопка «Дальше» открыла ${await on(page)}, а нужно 2`);
+  await page.locator('.deck-nav [data-step="-1"]').click();
+  if ((await on(page))[0] !== 1) fail(`кнопка «Назад» открыла ${await on(page)}, а нужно 1`);
+  await page.mouse.move(720, 450);
+  for (let i = 0; i < 6; i++) { await page.mouse.wheel(0, 60); await page.waitForTimeout(16); }   // один жест тачпада с инерцией
+  await page.waitForTimeout(420);
+  if ((await on(page))[0] !== 2) fail(`один жест колеса пролистал до ${await on(page)}, а нужно на один слайд — до 2`);
+  await page.mouse.wheel(0, -120);
+  await page.waitForTimeout(420);
+  if ((await on(page))[0] !== 1) fail(`колесо вверх открыло ${await on(page)}, а нужно 1`);
+  await page.locator('.deck-nav [data-overview]').click();
+  const ovOpen = await page.evaluate(() => ({ hidden: document.getElementById('overview').hidden, links: document.querySelectorAll('#overview a[href^="#s"]').length,
+    expanded: document.querySelector('[data-overview]').getAttribute('aria-expanded'), focus: !!document.activeElement?.closest('#overview'), inert: document.getElementById('deck').inert }));
+  if (ovOpen.hidden || ovOpen.links !== N || ovOpen.expanded !== 'true' || !ovOpen.focus || !ovOpen.inert) fail(`«Все слайды»: ${JSON.stringify(ovOpen)}`);
+  await page.keyboard.press('ArrowRight');
+  if ((await on(page))[0] !== 1) fail('стрелка в открытом оглавлении пролистала колоду за ним');
+  await page.locator(`#overview a[href="#s${nOf('model')}"]`).click();
+  const ovGone = await page.evaluate(() => ({ hidden: document.getElementById('overview').hidden, expanded: document.querySelector('[data-overview]').getAttribute('aria-expanded'), inert: document.getElementById('deck').inert }));
+  if ((await on(page))[0] !== nOf('model') || !ovGone.hidden || ovGone.expanded !== 'false' || ovGone.inert) fail(`переход из «Все слайды»: слайд ${await on(page)}, ${JSON.stringify(ovGone)}`);
+  await page.keyboard.press('g');
+  if (await page.evaluate(() => document.getElementById('overview').hidden)) fail('клавиша G не открыла «Все слайды»');
+  await page.keyboard.press('Escape');
+  if (!(await page.evaluate(() => document.getElementById('overview').hidden))) fail('Esc не закрыл «Все слайды»');
+  await page.keyboard.press('End');
+  if (!(await page.locator('.deck-nav [data-step="1"]').isDisabled())) fail('на последнем слайде кнопка «Дальше» не выключена');
+  await page.keyboard.press('Home');
+
   // Ссылки «слайд N →» и точки навигации
   await go(page, nOf('summary'));
   await page.locator(`#s${nOf('summary')} a.sum-col`).first().click();
@@ -399,6 +431,7 @@ try {
   await audit(wide, `#s${nOf('levers')}`, `колода, слайд ${nOf('levers')} с заметками`, async (p) => { await p.keyboard.press('n'); });
   await audit(wide, `#s${nOf('model')}`, 'колода, калькулятор', async (p) => { await p.locator('[data-calc] input[data-k="reach"]').fill('70'); });
   await audit(wide, `#s${nOf('decision')}`, 'колода, правило решения');
+  await audit(wide, `#s${nOf('chairs')}`, 'колода, «Все слайды»', async (p) => { await p.locator('[data-overview]').click(); });
   await audit(wide, '', 'колода с открытым тренажёром', async (p) => {
     const n = await p.evaluate(() => document.querySelector('[data-game] button')?.closest('.s')?.dataset.n);
     await p.evaluate((v) => { location.hash = `#s${v}`; }, n);
@@ -466,4 +499,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» в браузере — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут», 8 кресел и департамента инноваций (кнопка и ?route=innov), заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений (колода, печать, лента 390 px); телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);
+console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, мышь (кнопки, колесо, «Все слайды»), #sN, ссылки, маршруты «20 минут», 8 кресел и департамента инноваций (кнопка и ?route=innov), заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений (колода, печать, лента 390 px); телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);

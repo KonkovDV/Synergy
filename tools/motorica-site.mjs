@@ -87,6 +87,7 @@ const deckData = {
   core: slides.filter((s) => s.core).map((s) => s.n),
   chairs: Object.fromEntries(D.CHAIRS.map((c) => [c.id, { t: c.t, slides: slides.filter((s) => (s.ch || []).includes(c.id)).map((s) => s.n) }])),
   readers: Object.fromEntries(D.READERS.map((r) => [r.id, { t: r.t, slides: slides.filter((s) => (s.ch || []).includes(r.id)).map((s) => s.n) }])),
+  sections: SECTIONS.map((s) => s.id),
 };
 for (const [id, r] of Object.entries(deckData.readers)) if (r.slides.length < 10 || r.slides.length > 22) throw new Error(`маршрут ${id}: ${r.slides.length} слайдов`);
 
@@ -151,7 +152,18 @@ ${body}
 </main>
 <aside class="notes-panel" id="notes" hidden aria-live="polite"><p class="np-h">Текст выступления · слайд <b data-np-n>1</b></p><p data-np-text></p><p class="np-src" data-np-src></p></aside>
 <div class="game-modal" id="game" hidden><div class="gm-box" role="dialog" aria-modal="true" aria-label="Тренажёр «Синергия»"><button type="button" class="gm-close" data-game-close aria-label="Закрыть">${ic('LuX')}</button><div class="gm-frame" data-game-frame></div></div></div>
-<p class="hint" aria-hidden="true"><kbd>←</kbd><kbd>→</kbd> листать · <kbd>F</kbd> весь экран · <kbd>N</kbd> речь · <kbd>M</kbd> маршрут 20 минут</p>
+<nav class="deck-nav" aria-label="Листать слайды">
+  <button type="button" class="dn-btn" data-step="-1" title="Предыдущий слайд (←, колесо мыши вверх)">${ic('LuChevronLeft')}<span>Назад</span></button>
+  <button type="button" class="dn-btn dn-all" data-overview aria-expanded="false" aria-controls="overview" title="Все слайды по разделам (G)">${ic('LuLayoutGrid')}<span>Все слайды</span></button>
+  <button type="button" class="dn-btn" data-step="1" title="Следующий слайд (→, колесо мыши вниз)"><span>Дальше</span>${ic('LuChevronRight')}</button>
+</nav>
+<div class="overview" id="overview" role="dialog" aria-modal="true" aria-labelledby="ov-h" hidden>
+  <div class="ov-box">
+    <div class="ov-top"><div><p class="ov-h" id="ov-h">Все слайды</p><p class="ov-sub">Десять разделов — в порядке разговора за столом «Моторики». Мятный номер — маршрут на 20 минут.</p></div><button type="button" class="ov-close" data-overview-close aria-label="Закрыть оглавление">${ic('LuX')}</button></div>
+    <div class="ov-cols">${SECTIONS.map((sec, i) => `<section class="ov-sec" aria-labelledby="ov-s${i + 1}"><h2 class="ov-st" id="ov-s${i + 1}">${String(i + 1).padStart(2, '0')} · ${tx(sec.t)}</h2>${sec.q ? `<p class="ov-q">${tx(sec.q)}</p>` : ''}<ol>${slides.filter((s) => s.sec === sec.id).map((s) => `<li data-n="${s.n}"${s.core ? ' class="core"' : ''}><a href="#s${s.n}" title="${esc(`${s.n}. ${plain(s.title)}`)}"><b>${s.n}</b><span>${tx(plain(s.title))}</span></a></li>`).join('')}</ol></section>`).join('')}</div>
+  </div>
+</div>
+<p class="hint" aria-hidden="true"><kbd>←</kbd><kbd>→</kbd> и колесо · <kbd>G</kbd> все слайды · <kbd>F</kbd> экран · <kbd>N</kbd> речь</p>
 <script type="application/json" id="deck-data">${JSON.stringify(deckData).replace(/</g, '\\u003c')}</script>
 ${iconSprite()}
 </body>
@@ -253,7 +265,7 @@ writeFileSync(join(dir, 'plan.html'), planHtml);
 
 // ── Service worker: страницы — сначала из сети, файлы с ?v= — из кэша ──
 // Картинки из site.css (фоны разделов, зерно) идут без ?v=: их содержимое входит в версию кэша
-const cssImgs = ['grain.webp', ...['open', 'view', 'value', 'we', 'model', 'wp', 'plan', 'trust', 'next'].map((k) => `sec-${k}.webp`)].map((f) => `img/${f}`);
+const cssImgs = ['grain.webp', ...SECTIONS.map((s) => `sec-${s.id}.webp`)].map((f) => `img/${f}`);
 const version = createHash('sha256').update(html + planHtml).update(Buffer.concat(cssImgs.map((f) => readFileSync(join(dir, f))))).digest('hex').slice(0, 12);
 const core = ['./', 'plan.html', v('site.css'), v('app.js'), 'fonts/inter-cyr.woff2', 'fonts/inter-lat.woff2', 'fonts/unbounded-cyr.woff2',
   'fonts/unbounded-lat.woff2', ...['ambassador.webp', 'ambassador-face.webp', 'hero-hand.webp', 'modes-emg.webp', 'modes-bci.webp', 'modes-glasses.webp', 'flow-1.webp', 'flow-2.webp', 'flow-3.webp', 'flow-4.webp', 'flow-5.webp',

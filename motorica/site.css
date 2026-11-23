@@ -1518,3 +1518,58 @@ html.print #deck > .s.print-last { break-after: auto; page-break-after: auto }
 .L-pipeline .strip { flex: none }
 .rd-n b { flex: none; white-space: nowrap }
 @media (max-width: 1100px) { html:not(.deck):not(.print) .rd-mid { flex-wrap: wrap } html:not(.deck):not(.print) .rd-n { flex: 1 1 220px } }
+
+/* ════ 23.11.2026: десять разделов — порядок разговора за столом «Моторики»; навигация мышью ════ */
+/* Раздел «Где теряются деньги и пользователи»: та же волна, что у рынка, но тёплая — потери */
+.s[data-sec="pain"] { --art: url(img/sec-pain.webp) }
+html.print .s[data-sec="pain"] { --art: url(img/sec-pain.jpg) }
+/* Оглавление: десять разделов в две строки, у каждого — вопрос, на который он отвечает */
+.toc { grid-template-columns: repeat(5, 1fr); gap: 12px }
+.toc-card { padding: 12px 16px; gap: 3px }
+.toc-t { font-size: 17.5px; line-height: 1.22 }
+.toc-q { color: var(--soft); font-size: 13.5px; line-height: 1.3 }
+.toc-r { margin-top: auto; padding-top: 4px; font-size: 13px }
+.tdots { flex-wrap: wrap }
+/* Мышь: панель «Назад · Все слайды · Дальше» внизу экрана, колесо и тачпад листают (app.js) */
+.deck-nav, .overview { display: none }
+html.deck .deck-nav { position: fixed; z-index: 16; left: 50%; bottom: 7px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center }
+.dn-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line2); background: rgba(10, 22, 34, .92); color: var(--ink); font: 600 14.5px var(--body); cursor: pointer; box-shadow: var(--hi), 0 10px 30px -12px rgba(0, 0, 0, .8) }
+.dn-btn:hover:not(:disabled) { border-color: var(--mint); color: var(--mint2) }
+.dn-btn:disabled { opacity: .38; cursor: default }
+.dn-btn svg.i { width: 18px; height: 18px }
+.dn-btn.dn-all { background: color-mix(in srgb, rgb(22 225 130) 14%, rgb(10 22 34 / .94)); border-color: rgba(22, 225, 130, .5); color: var(--mint2) }
+.dn-all b { color: var(--ink); font-variant-numeric: tabular-nums }
+html.deck .hint { left: 22px; right: auto; bottom: 18px }
+@media (max-width: 1360px) { html.deck .hint { display: none } }
+/* Все слайды: оглавление по разделам; щелчок — переход, Esc или фон — закрыть */
+html.deck .overview:not([hidden]) { display: grid; position: fixed; inset: 0; z-index: 45; place-items: center; padding: 56px 24px 24px; background: rgba(3, 8, 13, .8) }
+.ov-box { width: min(1380px, 96vw); max-height: calc(100vh - 80px); overflow: auto; overscroll-behavior: contain; border-radius: 20px; background: #0b1621; border: 1px solid var(--line2); box-shadow: 0 30px 80px rgba(0, 0, 0, .6) }
+.ov-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px 12px 22px; background: #0b1621; border-bottom: 1px solid var(--line) }
+.ov-h { margin: 0; font: 600 19px var(--head) }
+.ov-sub { margin: 2px 0 0; color: var(--soft); font-size: 13.5px }
+.ov-close { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line2); background: var(--bg3); color: var(--ink); display: grid; place-items: center; cursor: pointer }
+.ov-close:hover { border-color: var(--mint); color: var(--mint) }
+.ov-cols { columns: 4 300px; column-gap: 20px; padding: 14px 18px 18px }
+.ov-sec { break-inside: avoid; margin: 0 0 14px }
+.ov-st { margin: 0 0 2px; color: var(--mint); font: 700 12.5px/1.3 var(--body); letter-spacing: .1em; text-transform: uppercase }
+.ov-q { margin: 0 0 6px; color: var(--soft); font-size: 13px; line-height: 1.3 }
+.ov-sec ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px }
+.ov-sec a { display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: baseline; min-height: 28px; padding: 4px 8px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 13.5px; line-height: 1.3 }
+.ov-sec a:hover { background: var(--surf); color: var(--mint2) }
+.ov-sec a b { color: #9fb2c0; font-variant-numeric: tabular-nums }
+.ov-sec li.core a b { color: var(--mint) }
+.ov-sec li.on a { background: var(--mint-d); box-shadow: inset 0 0 0 1px rgba(22, 225, 130, .45) }
+.ov-sec li.out a { color: #a5b6c3 }
+.ov-sec li.out a b { color: #7d92a2 }
+/* Подсказка клавиш — справа, короче; на экранах уже 1280 px её место у кнопок навигации */
+html.deck .hint { left: auto; right: 46px; bottom: 18px }
+@media (max-width: 1360px) { html.deck .hint { display: block } }
+@media (max-width: 1279px) { html.deck .hint { display: none } }
+/* Все слайды: название в одну строку (полное — во всплывающей подсказке), чтобы оглавление помещалось на экран */
+.ov-sec a { grid-template-columns: 30px minmax(0, 1fr); min-height: 26px; padding: 3px 8px }
+.ov-sec a span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis }
+/* Кресла: под названием — видимая метка маршрута (щелчок по карточке листает только слайды этого кресла) */
+.ch-tt { display: flex; flex-direction: column; gap: 3px; min-width: 0 }
+.ch-n { display: inline-flex; align-items: center; gap: 5px; width: fit-content; padding: 1px 8px 1px 6px; border-radius: 999px; background: var(--mint-d); color: var(--mint2); font: 600 11.5px/1.5 var(--body) }
+.ch-n svg.i { width: 12px; height: 12px }
+.chair.on .ch-n { background: var(--mint); color: var(--bg) }

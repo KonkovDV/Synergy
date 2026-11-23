@@ -89,7 +89,7 @@ L.toc = (s, ctx) => {
     // Мини-карта раздела: точки — не ссылки (50 мелких целей нарушают WCAG 2.5.8); щелчок по точке обрабатывает app.js,
     // а с клавиатуры и в скринридере раздел открывает его название.
     const dots = sl.map((x) => `<i class="tdot${x.core ? ' core' : ''}" data-n="${x.n}" title="${esc(x.n + '. ' + plain(x.title))}"></i>`).join('');
-    return `<div class="toc-card"><span class="toc-n">${String(i + 1).padStart(2, '0')}</span><a class="toc-t" href="#${from}">${tx(sec.t)}</a><span class="toc-r">слайды ${from}–${to}</span><span class="tdots" aria-hidden="true">${dots}</span></div>`;
+    return `<div class="toc-card"><span class="toc-n">${String(i + 1).padStart(2, '0')}</span><a class="toc-t" href="#${from}">${tx(sec.t)}</a>${sec.q ? `<span class="toc-q">${tx(sec.q)}</span>` : ''}<span class="toc-r">слайды ${from}–${to}</span><span class="tdots" aria-hidden="true">${dots}</span></div>`;
   }).join('');
   const route = ctx.slides.filter((x) => x.core).map((x) => `<a href="#${x.n}">${x.n}</a>`).join('');
   const readers = D.READERS.map((r) => `<button type="button" class="chair-btn reader-btn" data-chair="${r.id}">${ic(r.icon)}<span>${tx(r.short)}</span></button>`).join('');
@@ -681,7 +681,7 @@ L.sources = (s, ctx) => {
 
 // ════ Маршрут департамента инноваций, мировая планка, требования 2026, конвейер геймджема ════
 // Слайды по ссылкам {#layout} и {#wp:WP6}: номер — ссылка на слайд
-const refLinks = (ctx, list) => list.map((r) => { const k = ctx.slideOf(r); return `<a href="#${k}" aria-label="Слайд ${k}">${k}</a>`; }).join('');
+const refLinks = (ctx, list) => list.map((r) => +ctx.slideOf(r)).sort((a, b) => a - b).map((k) => `<a href="#${k}" aria-label="Слайд ${k}">${k}</a>`).join('');
 
 L.reader = (s, ctx) => {
   const r = D.READERS[0];
@@ -691,7 +691,7 @@ L.reader = (s, ctx) => {
     <div class="rd-l">
       <blockquote class="rd-q"><p>${tx(s.data.quote[0])}</p><cite>${tx(s.data.quote[1])}</cite></blockquote>
       <div class="card rd-route"><p class="lbl">${ic('LuRoute')} Маршрут «${tx(r.t)}»</p>
-        <div class="rd-mid"><p class="rd-n"><b>${n}</b><span>${tx(`слайдов · ≈${r.minutes} минут чтения; остальные — по ссылкам из них`)}</span></p><div class="qr rd-qr">${ctx.qrRoute[r.id]}</div></div>
+        <div class="rd-mid"><p class="rd-n"><b>${n}</b><span>${tx(`${slidesWord(n).replace(/^\d+ /, '')} · ≈${r.minutes} минут чтения; остальные — по ссылкам из них`)}</span></p><div class="qr rd-qr">${ctx.qrRoute[r.id]}</div></div>
         <p class="rd-act"><button type="button" class="btn sm" data-chair="${r.id}" aria-pressed="false">${ic('LuListFilter')}Листать только их</button>${pdf ? `<a class="btn sm" href="${pdf.href}" download>${ic('LuFileText')}PDF маршрута <small>${pdf.size}</small></a>` : ''}</p>
         <p class="fine rd-url">${tx(`QR и ссылка ведут на маршрут: ${D.SITE.replace(/^https:\/\//, '')}?route=${r.id}`)}</p></div>
     </div>
@@ -786,10 +786,12 @@ L.market = (s) => {
   </div>`;
 };
 
+// «31 слайд», «34 слайда», «40 слайдов»
+const slidesWord = (n) => { const a = n % 100, b = n % 10; return `${n} ${a > 10 && a < 20 ? 'слайдов' : b === 1 ? 'слайд' : b > 1 && b < 5 ? 'слайда' : 'слайдов'}`; };
 // Иконки кресел — 3D-стекло (ChatGPT Image 2.5, одна сетка 4 × 2 на все восемь — единый свет и масштаб)
 L.chairs = (s, ctx) => `<div class="chairs">${s.data.chairs.map((c) => `
   <div class="chair">
-    <button type="button" class="ch-h" data-chair="${c.id}" aria-pressed="false"><img class="ch-ic" src="${ctx.img(`chair-${c.id}.webp`)}" alt="" width="48" height="48" loading="lazy" decoding="async"><b>${tx(c.t)}</b><span class="vh"> — маршрут по слайдам</span></button>
+    <button type="button" class="ch-h" data-chair="${c.id}" aria-pressed="false"><img class="ch-ic" src="${ctx.img(`chair-${c.id}.webp`)}" alt="" width="48" height="48" loading="lazy" decoding="async"><span class="ch-tt"><b>${tx(c.t)}</b><span class="ch-n">${ic('LuRoute')}${tx(`маршрут · ${slidesWord(ctx.slides.filter((x) => (x.ch || []).includes(c.id)).length)}`)}</span></span><span class="vh"> — включить маршрут по слайдам</span></button>
     <p class="lbl">Что важно</p><ul>${c.care.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
     <p class="lbl give">Что даём</p><ul class="give">${c.give.map((x) => `<li>${tx(x)}</li>`).join('')}</ul>
     <p class="metric">${ic('LuGauge')}<span>${tx(c.metric)}</span></p>
