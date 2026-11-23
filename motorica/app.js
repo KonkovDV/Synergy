@@ -68,8 +68,8 @@
 
   // ── Навигация ──
   let cur = 1;
-  let route = '';                    // '' — все слайды, 'core' — 20 минут, иначе id кресла
-  const routes = { core: new Set(data.core), ...Object.fromEntries(Object.entries(data.chairs).map(([k, v]) => [k, new Set(v.slides)])) };
+  let route = '';                    // '' — все слайды, 'core' — 20 минут, иначе id кресла или читателя (департамент инноваций)
+  const routes = { core: new Set(data.core), ...Object.fromEntries(Object.entries({ ...data.chairs, ...(data.readers || {}) }).map(([k, v]) => [k, new Set(v.slides)])) };
   const inRoute = (n) => !route || routes[route].has(n);
   const visible = () => slides.map((s, i) => i + 1).filter(inRoute);
   const fromHash = () => { const n = parseInt(location.hash.replace(/^#s?/, ''), 10); return n >= 1 && n <= N ? n : 1; };
@@ -387,7 +387,15 @@
   setMode();
   show(cur, false);
   if (!PRINT && params.get('route')) setRoute(params.get('route'));
-  if (PRINT) { slides.forEach((s) => s.classList.add('on')); }
+  if (PRINT) {
+    slides.forEach((s) => s.classList.add('on'));
+    // ?print=1&route=innov — PDF маршрута: только его слайды, без пустой страницы в конце (motorica-deck.cjs)
+    const pr = routes[params.get('route')];
+    if (pr) {
+      slides.forEach((s, i) => s.classList.toggle('print-out', !pr.has(i + 1)));
+      slides.filter((s, i) => pr.has(i + 1)).at(-1)?.classList.add('print-last');
+    }
+  }
   // Готовность для экспорта: шрифты загружены
   // В печати (из неё PDF): JPEG-двойники вместо WebP — PDF не знает WebP, и Chrome встроил бы картинку без сжатия
   const images = () => (PRINT ? Promise.all([...document.images].map((im) => {

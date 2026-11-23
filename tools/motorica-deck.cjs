@@ -46,6 +46,18 @@ const TITLE = 'План сотрудничества MOTUS Lab и ГК «Мот�
     await page.pdf({ path: PDF, width: '1600px', height: '900px', printBackground: true, preferCSSPageSize: true, tagged: true, outline: true });
     await page.emulateMedia({ media: 'screen' });
 
+    // ── PDF маршрута читателя (D.READERS): только его слайды — то, что читатель открывает или пересылает ──
+    for (const r of D.READERS) {
+      const rp = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
+      await rp.goto(`${origin}/motorica/?print=1&route=${r.id}`, { waitUntil: 'load' });
+      await rp.waitForFunction(() => document.documentElement.dataset.ready === '1');
+      const shown = await rp.$$eval('#deck > .s:not(.print-out)', (ss) => ss.length);
+      if (shown < 10) throw new Error(`маршрут ${r.id}: в печати ${shown} слайдов`);
+      await rp.emulateMedia({ media: 'print' });
+      await rp.pdf({ path: path.join(OUT, `MOTUS-Lab-Motorica-${r.id}.pdf`), width: '1600px', height: '900px', printBackground: true, preferCSSPageSize: true, tagged: true, outline: true });
+      await rp.close();
+    }
+
     // Текст слайдов для slides.json: заголовок, подзаголовок, строки тела, речь и источники — из того же DOM
     const meta = await page.$$eval('#deck > .s', (ss) => ss.map((s) => {
       const t = (sel) => (s.querySelector(sel)?.textContent || '').replace(/\s+/g, ' ').trim();

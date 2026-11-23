@@ -3,8 +3,8 @@
 // Сайт собирается как в workflow Pages: dist/ (если собран) на /Synergy/, колода — на /Synergy/motorica/.
 // Проверяется: нет ошибок консоли и упавших запросов; шрифты и картинки загружены; на широком экране — колода:
 // слайд целиком в окне, листается стрелками, PageDown, Home и End, #sN открывает нужный слайд, ссылки «слайд N →»
-// переходят; маршрут «20 минут» и маршруты восьми кресел (список и карточки) листают только свои слайды, ?route=
-// включает маршрут; текст выступления (N) — тот же, что у слайда; калькулятор считает как tools/motorica/model.mjs,
+// переходят; маршрут «20 минут», маршруты восьми кресел (список и карточки) и маршрут департамента инноваций (кнопка
+// на его слайде, ?route=innov) листают только свои слайды, ?route= включает маршрут; текст выступления (N) — тот же, что у слайда; калькулятор считает как tools/motorica/model.mjs,
 // а ссылка на расчёт восстанавливает его; правило решения по пилоту и даты недель работают; тренажёр открывается в
 // окне и закрывается Esc с возвратом фокуса; у каждого слайда в печати и в колоде нет обрезанных блоков, текста на
 // тексте и подписей за краем (tools/motorica-layout.mjs), в ленте на телефоне широкие схемы листаются вбок; на телефоне — лента слайдов, ссылки прокручивают к слайду; от 320 до
@@ -38,7 +38,7 @@ else {   // без сборки игры — заглушка на её мест
   writeFileSync(join(site, 'Synergy/index.html'), '<!doctype html><html lang="ru"><title>Синергия</title><p>Тренажёр</p></html>');
 }
 mkdirSync(join(site, 'Synergy/motorica'), { recursive: true });
-const FILES = ['index.html', 'plan.html', 'site.css', 'app.js', 'sw.js', 'og.jpg', 'fonts', 'img', 'MOTUS-Lab-Motorica.pptx', 'MOTUS-Lab-Motorica.pdf', 'MOTUS-Lab-Motorica-model.xlsx'];
+const FILES = ['index.html', 'plan.html', 'site.css', 'app.js', 'sw.js', 'og.jpg', 'fonts', 'img', 'MOTUS-Lab-Motorica.pptx', 'MOTUS-Lab-Motorica.pdf', 'MOTUS-Lab-Motorica-innov.pdf', 'MOTUS-Lab-Motorica-model.xlsx'];
 for (const f of FILES) cpSync(join(root, 'motorica', f), join(site, 'Synergy/motorica', f), { recursive: true });
 let sha = '0'.repeat(40);
 try { sha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim(); } catch { /* не git */ }
@@ -107,7 +107,7 @@ try {
     dots: document.querySelectorAll('.track .dot').length, opts: document.querySelectorAll('select[data-route] option').length }));
   if (!/\bdeck\b/.test(first.mode) || first.n !== N) fail(`колода на 1440 × 900: ${JSON.stringify(first)}`);
   if (first.dots !== N) fail(`точек навигации ${first.dots}, слайдов ${N}`);
-  if (first.opts !== 10) fail(`в списке маршрутов ${first.opts} пунктов, а нужно 10: все, «20 минут» и 8 кресел`);
+  if (first.opts !== 11) fail(`в списке маршрутов ${first.opts} пунктов, а нужно 11: все, «20 минут», департамент инноваций и 8 кресел`);
   if (JSON.stringify(await on(page)) !== '[1]') fail(`при открытии показан не первый слайд: ${await on(page)}`);
   if (!(await page.evaluate(() => document.fonts.check('600 40px Unbounded', 'Моторика')))) fail('шрифт Unbounded не загрузился');
   if (!(await page.evaluate(() => document.fonts.check('400 16px Inter', 'Моторика')))) fail('шрифт Inter не загрузился');
@@ -153,6 +153,21 @@ try {
   await page.locator(`#s${nOf('chairs')} [data-chair="cfo"]`).click().catch(() => {});
   await page.selectOption('select[data-route]', '');
   if ((await page.evaluate(() => document.querySelectorAll('#deck > .s.inroute').length)) !== N) fail('после «Все слайды» маршрут не снят');
+  // Маршрут департамента инноваций: кнопка на его слайде листает только его слайды; ссылка «слайд N» на нём ведёт к слайду
+  await go(page, nOf('reader'));
+  await page.locator(`#s${nOf('reader')} button[data-chair="innov"]`).click();
+  const inv = await page.evaluate(() => ({ sel: document.querySelector('select[data-route]').value, n: [...document.querySelectorAll('#deck > .s.inroute')].map((s) => +s.dataset.n), q: location.search,
+    pressed: document.querySelector('.L-reader button[data-chair="innov"]').getAttribute('aria-pressed') }));
+  if (inv.sel !== 'innov' || JSON.stringify(inv.n) !== JSON.stringify(deckData.readers.innov.slides) || !inv.q.includes('route=innov') || inv.pressed !== 'true') fail(`маршрут департамента инноваций: ${JSON.stringify(inv)}`);
+  // Как карточка кресла, кнопка начинает маршрут: открывает следующий его слайд, дальше стрелка идёт по маршруту
+  const rs = deckData.readers.innov.slides; const at = rs.indexOf(nOf('reader'));
+  if ((await on(page))[0] !== rs[at + 1]) fail(`маршрут департамента инноваций: кнопка открыла ${await on(page)}, а нужно ${rs[at + 1]}`);
+  await page.keyboard.press('ArrowRight');
+  if ((await on(page))[0] !== rs[at + 2]) fail(`маршрут департамента инноваций: → показывает ${await on(page)}, а нужно ${rs[at + 2]}`);
+  await go(page, nOf('reader'));
+  await page.locator(`#s${nOf('reader')} .rd-ref a[href="#s${nOf('sota')}"]`).first().click();
+  if ((await on(page))[0] !== nOf('sota')) fail(`ссылка «слайд ${nOf('sota')}» со слайда департамента открыла ${await on(page)}`);
+  await page.selectOption('select[data-route]', '');
 
   // ── 4. Текст выступления ──
   await go(page, nOf('levers'));
@@ -341,6 +356,11 @@ try {
   const dl = await deep.evaluate(() => ({ on: document.querySelector('#deck > .s.on')?.dataset.n, route: document.querySelector('select[data-route]').value, n: document.querySelectorAll('#deck > .s.inroute').length }));
   if (dl.route !== 'med' || dl.n !== deckData.chairs.med.slides.length) fail(`?route=med: ${JSON.stringify(dl)}`);
   if (deckData.chairs.med.slides.includes(nOf('levers')) && +dl.on !== nOf('levers')) fail(`#s${nOf('levers')} с маршрутом: открыт слайд ${dl.on}`);
+  // Ссылка, которую получает департамент инноваций: ?route=innov — с обложки, только его слайды
+  await deep.goto(`${url}?route=innov`, { waitUntil: 'load' });
+  await ready(deep);
+  const di = await deep.evaluate(() => ({ on: document.querySelector('#deck > .s.on')?.dataset.n, route: document.querySelector('select[data-route]').value, n: document.querySelectorAll('#deck > .s.inroute').length }));
+  if (di.route !== 'innov' || di.n !== deckData.readers.innov.slides.length || +di.on !== 1) fail(`?route=innov: ${JSON.stringify(di)}`);
   await deep.close();
 
   // ── 9. Телефон: лента слайдов, ссылка прокручивает к слайду ──
@@ -446,4 +466,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» в браузере — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут» и 8 кресел, заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений (колода, печать, лента 390 px); телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);
+console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, #sN, ссылки, маршруты «20 минут», 8 кресел и департамента инноваций (кнопка и ?route=innov), заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений (колода, печать, лента 390 px); телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);

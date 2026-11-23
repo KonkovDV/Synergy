@@ -92,8 +92,9 @@ L.toc = (s, ctx) => {
     return `<div class="toc-card"><span class="toc-n">${String(i + 1).padStart(2, '0')}</span><a class="toc-t" href="#${from}">${tx(sec.t)}</a><span class="toc-r">слайды ${from}–${to}</span><span class="tdots" aria-hidden="true">${dots}</span></div>`;
   }).join('');
   const route = ctx.slides.filter((x) => x.core).map((x) => `<a href="#${x.n}">${x.n}</a>`).join('');
-  const chairs = D.CHAIRS.map((c) => `<button type="button" class="chair-btn" data-chair="${c.id}">${ic(c.icon)}<span>${tx(c.t.split(':')[0].replace('Совет директоров и генеральный директор', 'Совет и CEO').replace('Экономика, финансы и IR', 'Финансы').replace('Маркетинг и продукт', 'Продукт').replace('Цифровые продукты', 'Цифра').replace('Нейротехнологии и НИОКР', 'НИОКР').replace('Медицина и центры «Моторика Орто»', 'Медицина').replace('Производство, сервис и интеграция «Лимба»', 'Операции').replace('Регуляторика, право и ИБ', 'Право'))}</span></button>`).join('');
-  return `<div class="toc">${cards}</div><div class="route"><span class="lbl">${ic('LuRoute')} 20 минут</span><span class="route-n">${route}</span></div><div class="route chairs-row"><span class="lbl">${ic('LuUsers')} Маршрут по креслу</span><span class="chair-btns">${chairs}</span></div>`;
+  const readers = D.READERS.map((r) => `<button type="button" class="chair-btn reader-btn" data-chair="${r.id}">${ic(r.icon)}<span>${tx(r.short)}</span></button>`).join('');
+  const chairs = readers + D.CHAIRS.map((c) => `<button type="button" class="chair-btn" data-chair="${c.id}">${ic(c.icon)}<span>${tx(c.t.split(':')[0].replace('Совет директоров и генеральный директор', 'Совет и CEO').replace('Экономика, финансы и IR', 'Финансы').replace('Маркетинг и продукт', 'Продукт').replace('Цифровые продукты', 'Цифра').replace('Нейротехнологии и НИОКР', 'НИОКР').replace('Медицина и центры «Моторика Орто»', 'Медицина').replace('Производство, сервис и интеграция «Лимба»', 'Операции').replace('Регуляторика, право и ИБ', 'Право'))}</span></button>`).join('');
+  return `<div class="toc">${cards}</div><div class="route"><span class="lbl">${ic('LuRoute')} 20 минут</span><span class="route-n">${route}</span></div><div class="route chairs-row"><span class="lbl">${ic('LuUsers')} Свой маршрут</span><span class="chair-btns">${chairs}</span></div>`;
 };
 
 // Мини-инфографика в карточках «Коротко»: каждая — 228 × 150 в единицах SVG, это ширина карточки в пикселях слайда
@@ -671,7 +672,52 @@ L.decisions = (s, ctx) => `
   </div>`;
 
 // Последняя колонка — строка «Сборка из коммита …»: её заполняет app.js из build.json, который пишет workflow Pages
-L.sources = (s, ctx) => `<div class="src-cols">${ctx.sources.map(([h, items], i, all) => `<div><h3>${tx(h)}</h3><ul>${items.map(([t, u]) => `<li>${u ? `<a href="${esc(u)}">${tx(t)}</a>` : tx(t)}</li>`).join('')}</ul>${i === all.length - 1 ? '<p class="fine build" id="build"></p>' : ''}</div>`).join('')}</div>`;
+// Источники: на слайде — свои группы (data.groups); отметка сборки — в последней группе списка
+L.sources = (s, ctx) => {
+  const gs = s.data.groups || ctx.sources.map((_, i) => i);
+  return `<div class="src-cols g${gs.length}">${gs.map((i) => { const [h, items] = ctx.sources[i];
+    return `<div><h3>${tx(h)}</h3><ul>${items.map(([t, u]) => `<li>${u ? `<a href="${esc(u)}">${tx(t)}</a>` : tx(t)}</li>`).join('')}</ul>${i === ctx.sources.length - 1 ? '<p class="fine build" id="build"></p>' : ''}</div>`; }).join('')}</div>`;
+};
+
+// ════ Маршрут департамента инноваций, мировая планка, требования 2026, конвейер геймджема ════
+// Слайды по ссылкам {#layout} и {#wp:WP6}: номер — ссылка на слайд
+const refLinks = (ctx, list) => list.map((r) => { const k = ctx.slideOf(r); return `<a href="#${k}" aria-label="Слайд ${k}">${k}</a>`; }).join('');
+
+L.reader = (s, ctx) => {
+  const r = D.READERS[0];
+  const n = ctx.slides.filter((x) => (x.ch || []).includes(r.id)).length;
+  const pdf = ctx.file(`MOTUS-Lab-Motorica-${r.id}.pdf`);
+  return `<div class="split reader">
+    <div class="rd-l">
+      <blockquote class="rd-q"><p>${tx(s.data.quote[0])}</p><cite>${tx(s.data.quote[1])}</cite></blockquote>
+      <div class="card rd-route"><p class="lbl">${ic('LuRoute')} Маршрут «${tx(r.t)}»</p>
+        <div class="rd-mid"><p class="rd-n"><b>${n}</b><span>${tx(`слайдов · ≈${r.minutes} минут чтения; остальные — по ссылкам из них`)}</span></p><div class="qr rd-qr">${ctx.qrRoute[r.id]}</div></div>
+        <p class="rd-act"><button type="button" class="btn sm" data-chair="${r.id}" aria-pressed="false">${ic('LuListFilter')}Листать только их</button>${pdf ? `<a class="btn sm" href="${pdf.href}" download>${ic('LuFileText')}PDF маршрута <small>${pdf.size}</small></a>` : ''}</p>
+        <p class="fine rd-url">${tx(`QR и ссылка ведут на маршрут: ${D.SITE.replace(/^https:\/\//, '')}?route=${r.id}`)}</p></div>
+    </div>
+    <div class="rd-grid">${s.data.rows.map((x) => `<div class="card rd-c"><p class="rd-h">${ic(x.icon, 'badge xs')}<b>${tx(x.t)}</b></p><span>${tx(x.d)}</span><p class="rd-ref">${ic('LuArrowRight')}<span>${x.refs.length > 1 ? 'слайды' : 'слайд'}</span>${refLinks(ctx, x.refs)}</p></div>`).join('')}</div>
+  </div>
+  <p class="strip sm">${ic('LuHandshake')}<span><b>${tx(s.data.ask)}</b></span></p>`;
+};
+
+L.sota = (s) => `<div class="tbl sota" role="table" aria-label="Мировая планка: что есть у лидеров и что из этого берём в план">
+  <div class="tr th" role="row"><span role="columnheader">Кто</span><span role="columnheader">Что уже есть — факт и источник</span><span role="columnheader">Что берём в план</span><span role="columnheader">Пакет</span></div>
+  ${s.data.rows.map((r) => `<div class="tr${r.geo === 'Россия' ? ' so-ru' : ''}" role="row"><span role="cell" class="so-n"><b>${tx(r.who)}</b><i>${tx(r.geo)}</i></span><span role="cell">${tx(r.what)}<i class="so-src">${tx(r.src)}</i></span><span role="cell" class="so-take">${tx(r.take)}</span><span role="cell">${chip(r.wp, r.wp.includes('опцион') ? 'violet' : 'mint', 'sm')}</span></div>`).join('')}
+</div>
+<p class="strip sm">${ic('LuSearchCheck')}<span><b>Чего мы не нашли ни у кого в открытых источниках:</b> общей модели навыка, которая связывает тренировку, протез и отчёт специалисту, — это пакеты WP1 и WP7.</span></p>`;
+
+const RQ = { done: 'mint', plan: 'sky', need: 'amber' };
+L.reqs = (s) => `<div class="reqs">${s.data.cols.map((c) => `
+  <div class="card rq"><p class="rq-hd">${ic(c.icon, 'badge sm')}<b>${tx(c.h)}</b></p>
+    <ul>${c.items.map((x) => `<li><b>${tx(x.t)}</b><i>${tx(x.s)}</i><p class="rq-a">${ic('LuArrowRight')}<span>${tx(x.a)}</span>${chip(x.w, RQ[x.st], 'sm')}</p></li>`).join('')}</ul></div>`).join('')}
+</div>
+<p class="legend rq-leg"><span><i class="sw c-mint"></i>сделано</span><span><i class="sw c-sky"></i>в плане: пакет или этап</span><span><i class="sw c-amber"></i>нужно решение «Моторики»</span><span>${tx('Сверено 23.11.2026; нормы — по текстам актов и их разборам')}</span></p>`;
+
+const PST = { done: ['mint', 'готово у нас'], ready: ['sky', 'готово к пилоту'], need: ['amber', 'решение «Моторики»'] };
+L.pipeline = (s) => `<div class="jam" role="list" aria-label="Геймджем «Моторика: Код движения» в цифрах">${s.data.jam.map(([v, l], i) => `<p role="listitem" class="jm${i === s.data.jam.length - 1 ? ' last' : ''}"><b>${tx(v)}</b><span>${tx(l)}</span></p>`).join(ic('LuChevronRight', 'pa'))}</div>
+<ol class="pipe">${s.data.steps.map((st, i) => `<li class="pp"><p class="pp-h"><span class="pp-n">${i + 1}</span><b>${tx(st.t)}</b></p><span>${tx(st.d)}</span>${chip(PST[st.st][1], PST[st.st][0], 'sm')}</li>`).join('')}</ol>
+<div class="cards c3 pipe-c">${s.data.cards.map(([t, d, icn, pts]) => `<div class="card"><p class="pc-h">${ic(icn, 'badge xs')}<span><b>${tx(t)}</b><i>${tx(d)}</i></span></p><ul>${pts.map((x) => `<li>${tx(x)}</li>`).join('')}</ul></div>`).join('')}</div>
+<p class="strip sm">${ic('LuGauge')}<span>${tx(s.data.kpi)}</span></p>`;
 
 // Типограф поверх готового HTML слайда: неразрывные пробелы и в тексте, вставленном в шаблон без tx()
 export function renderSlide(s, ctx) {

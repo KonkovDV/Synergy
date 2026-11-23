@@ -52,9 +52,12 @@ const ctx = {
   img: (f) => v(`img/${f}`),
   qrSite: await qrSvg(D.SITE),
   qrDemo: await qrSvg(D.DEMO),
+  qrRoute: Object.fromEntries(await Promise.all(D.READERS.map(async (r) => [r.id, await qrSvg(`${D.SITE}?route=${r.id}`)]))),
   slides, sections: SECTIONS, sources: SOURCES, wpEffect: WP_EFFECT, wpSlide: (id) => slideOf('wp:' + id), slideOf,
   startISO: START,
   weekDate: (i) => ddmm(addDays(START, i * 7)),
+  // Файл рядом со страницей: ссылка с ?v= и размер; пока файла нет (первая сборка) — ссылки нет
+  file: (f) => (existsSync(join(dir, f)) ? { href: v(f), size: size(f) } : null),
 };
 
 // ── Слайды ──
@@ -83,7 +86,9 @@ const deckData = {
   titles: slides.map((s) => plain(s.title)),
   core: slides.filter((s) => s.core).map((s) => s.n),
   chairs: Object.fromEntries(D.CHAIRS.map((c) => [c.id, { t: c.t, slides: slides.filter((s) => (s.ch || []).includes(c.id)).map((s) => s.n) }])),
+  readers: Object.fromEntries(D.READERS.map((r) => [r.id, { t: r.t, slides: slides.filter((s) => (s.ch || []).includes(r.id)).map((s) => s.n) }])),
 };
+for (const [id, r] of Object.entries(deckData.readers)) if (r.slides.length < 10 || r.slides.length > 22) throw new Error(`маршрут ${id}: ${r.slides.length} слайдов`);
 
 const TITLE = 'План сотрудничества MOTUS Lab и ГК «Моторика»';
 const DESC = 'Освоение протеза как продукт: 11 пакетов работ в четырёх треках, стыки с Motorica Start и ATTILAN, пилот за 8 недель, данные и право, модель эффекта с калькулятором и решения на встречу.';
@@ -132,6 +137,7 @@ const htmlRaw = `${head(TITLE, DESC, '', 'deck-page')}
   <div class="ctl">
     <label class="route-sel" title="Маршрут по слайдам (M — 20 минут)">${ic('LuRoute')}<span class="vh">Маршрут</span><select data-route aria-label="Маршрут по слайдам">
       <option value="">Все ${slides.length} ${plural(slides.length, 'слайд', 'слайда', 'слайдов')}</option><option value="core">20 минут · основной</option>
+      ${D.READERS.map((r) => `<option value="${r.id}">${esc(r.t)} · ${deckData.readers[r.id].slides.length}</option>`).join('')}
       ${D.CHAIRS.map((c) => `<option value="${c.id}">${esc(c.t)} · ${slides.filter((s) => (s.ch || []).includes(c.id)).length}</option>`).join('')}
     </select></label>
     <button type="button" class="notes-btn" data-notes aria-pressed="false" title="Текст выступления (N)">${ic('LuMessageSquareText')}<span>Речь</span></button>
