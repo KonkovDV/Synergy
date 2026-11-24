@@ -782,6 +782,14 @@ table.text td { padding: 10px 14px; border-top: 1px solid var(--line); color: va
 .route-sel { display: inline-flex; align-items: center; gap: 6px; color: var(--soft) }
 .route-sel select { min-height: 36px; max-width: 290px; padding: 4px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg2); color: var(--ink); font: 600 14px var(--body); color-scheme: dark }
 html.on-route .route-sel select { border-color: var(--mint); color: var(--mint) }
+/* Плашка маршрута в ленте на телефоне (по ссылке ?route=…): какой маршрут, сколько слайдов, PDF и «Все слайды» */
+.route-flow { display: none }
+html.flow .route-flow:not([hidden]) { display: grid; grid-template-columns: 20px 1fr; align-items: center; gap: 10px 12px; margin: 0; padding: 14px 18px; background: var(--surf); border-bottom: 1px solid var(--line) }
+.route-flow > svg { width: 20px; height: 20px; color: var(--mint); flex: none }
+.route-flow p { margin: 0 }
+.route-flow b { display: block; color: var(--ink); font-size: 15px; line-height: 1.3 }
+.route-flow span { color: var(--soft); font-size: 13.5px }
+.route-flow .rf-act { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px }
 .chairs-row { padding: 10px 20px }
 .chair-btns { display: flex; flex-wrap: wrap; gap: 8px }
 .chair-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line2); background: var(--surf); color: var(--ink); font: 600 14.5px var(--body); cursor: pointer }
@@ -942,7 +950,8 @@ svg.regtree-c { flex: 1; min-height: 0; width: 100% }
 
 /* ════ Лента на узких экранах: ничего не вылезает за край ════ */
 html:not(.deck):not(.print) .s { overflow-wrap: break-word }
-html:not(.deck):not(.print) .title { overflow-wrap: anywhere; hyphens: auto }
+/* Заголовки в ленте не переносятся по слогам («про-/теза» — не Apple); длинное слово на 320 px всё равно не вылезет за край */
+html:not(.deck):not(.print) .title { overflow-wrap: anywhere; hyphens: manual }
 html:not(.deck):not(.print) .split > *, html:not(.deck):not(.print) .strip > span, html:not(.deck):not(.print) .facts p > span,
 html:not(.deck):not(.print) .gap > div, html:not(.deck):not(.print) .so, html:not(.deck):not(.print) .screens { min-width: 0 }
 html:not(.deck):not(.print) .sl input { margin: 0 }
@@ -1466,7 +1475,7 @@ html.print .rd-act { display: none }
 .sota .so-src { display: block; margin-top: 3px; font-size: 12px; line-height: 1.25 }
 .sota .so-take { color: var(--mint2) }
 .sota .so-ru { box-shadow: inset 3px 0 0 var(--amber) }
-.L-sota .strip { margin-top: auto }
+.L-sota .strip, .L-neuro .strip { margin-top: auto }
 /* Требования 2026: три колонки — наука, нормы, открытые стандарты */
 .reqs { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1.08fr 1.02fr; gap: 16px }
 .rq { padding: 14px 18px; gap: 6px }

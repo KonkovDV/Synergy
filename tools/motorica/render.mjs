@@ -686,7 +686,7 @@ L.sources = (s, ctx) => {
     return `<div><h3>${tx(h)}</h3><ul>${items.map(([t, u]) => `<li>${u ? `<a href="${esc(u)}">${tx(t)}</a>` : tx(t)}</li>`).join('')}</ul>${i === ctx.sources.length - 1 ? '<p class="fine build" id="build"></p>' : ''}</div>`; }).join('')}</div>`;
 };
 
-// ════ Маршрут департамента инноваций, мировая планка, требования 2026, конвейер геймджема ════
+// ════ Маршрут «Нейротехнологии и инновации», мировая планка, требования 2026, конвейер геймджема ════
 // Слайды по ссылкам {#layout} и {#wp:WP6}: номер — ссылка на слайд
 const refLinks = (ctx, list) => list.map((r) => +ctx.slideOf(r)).sort((a, b) => a - b).map((k) => `<a href="#${k}" aria-label="Слайд ${k}">${k}</a>`).join('');
 
@@ -712,6 +712,13 @@ L.sota = (s) => `<div class="tbl sota" role="table" aria-label="Мировая �
   ${s.data.rows.map((r) => `<div class="tr${r.geo === 'Россия' ? ' so-ru' : ''}" role="row"><span role="cell" class="so-n"><b>${tx(r.who)}</b><i>${tx(r.geo)}</i></span><span role="cell">${tx(r.what)}<i class="so-src">${tx(r.src)}</i></span><span role="cell" class="so-take">${tx(r.take)}</span><span role="cell">${chip(r.wp, r.wp.includes('опцион') ? 'violet' : 'mint', 'sm')}</span></div>`).join('')}
 </div>
 <p class="strip sm">${ic('LuSearchCheck')}<span><b>Чего мы не нашли ни у кого в открытых источниках:</b> общей модели навыка, которая связывает тренировку, протез и отчёт специалисту, — это пакеты WP1 и WP7.</span></p>`;
+
+// Нейропротезы в мире: тот же вид таблицы, что «Мировая планка», — кейсы, доказанные годами, и что берём в пакеты
+L.neuro = (s) => `<div class="tbl sota neuro" role="table" aria-label="Нейропротезы в мире: что доказано временем и что берём для NEMO Sensitive и остеоинтеграции">
+  <div class="tr th" role="row"><span role="columnheader">Кто</span><span role="columnheader">Что доказано — факт и источник</span><span role="columnheader">Что берём</span><span role="columnheader">Пакет</span></div>
+  ${s.data.rows.map((r) => `<div class="tr" role="row"><span role="cell" class="so-n"><b>${tx(r.who)}</b><i>${tx(r.geo)}</i></span><span role="cell">${tx(r.what)}<i class="so-src">${tx(r.src)}</i></span><span role="cell" class="so-take">${tx(r.take)}</span><span role="cell">${chip(r.wp, r.wp.includes('опцион') ? 'violet' : 'mint', 'sm')}</span></div>`).join('')}
+</div>
+<p class="strip sm">${ic('LuHourglass')}<span><b>Общее у лучших:</b> доказательство копится годами по одному протоколу — пороги, импеданс, функция и боль. Это и предлагаем как инфраструктуру для NEMO Sensitive и остеоинтеграции: WP4 и WP7. Электроды и стимуляторы мы не делаем — делаем ПО, протоколы и доказательства вокруг них.</span></p>`;
 
 const RQ = { done: 'mint', plan: 'sky', need: 'amber' };
 L.reqs = (s) => `<div class="reqs">${s.data.cols.map((c) => `

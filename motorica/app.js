@@ -68,7 +68,7 @@
 
   // ── Навигация ──
   let cur = 1;
-  let route = '';                    // '' — все слайды, 'core' — 20 минут, иначе id кресла или читателя (департамент инноваций)
+  let route = '';                    // '' — все слайды, 'core' — 20 минут, иначе id кресла или читателя (нейротехнологии и инновации)
   const routes = { core: new Set(data.core), ...Object.fromEntries(Object.entries({ ...data.chairs, ...(data.readers || {}) }).map(([k, v]) => [k, new Set(v.slides)])) };
   const inRoute = (n) => !route || routes[route].has(n);
   const visible = () => slides.map((s, i) => i + 1).filter(inRoute);
@@ -107,7 +107,9 @@
     if (e.target.closest?.('.notes-panel, select, input, textarea')) return;
     const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
     clearTimeout(wheelIdle);
-    wheelIdle = setTimeout(() => { wheelAcc = 0; wheelLock = false; }, 180);
+    // Жест кончается после 300 мс тишины. Было 180: пока колода рисует переход, события жеста приходят с паузами
+    // 110–150 мс, а на медленной машине и дольше — жест рвался на два, и один взмах тачпада листал два слайда.
+    wheelIdle = setTimeout(() => { wheelAcc = 0; wheelLock = false; }, 300);
     if (wheelLock || performance.now() - lastStep < 350) return;
     wheelAcc += e.deltaMode === 1 ? d * 33 : d;   // строки → пиксели (Firefox)
     if (Math.abs(wheelAcc) < 40) return;
@@ -213,7 +215,24 @@
     const qs = q.toString();
     history.replaceState(null, '', `${location.pathname}${qs ? '?' + qs : ''}#s${cur}`);
     navState();
+    routeFlow();
   }
+  // Плашка маршрута в ленте (телефон): какой маршрут, сколько слайдов, его PDF и «Все слайды». В колоде и печати скрыта (site.css)
+  function routeFlow() {
+    const rf = $('#route-flow');
+    if (!rf) return;
+    rf.hidden = !route;
+    if (!route) return;
+    const info = route === 'core' ? null : ((data.readers || {})[route] || data.chairs[route]);
+    const n = routes[route].size;
+    const word = n % 10 === 1 && n % 100 !== 11 ? 'слайд' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'слайда' : 'слайдов';
+    $('[data-rf-name]', rf).textContent = info ? `Маршрут «${info.t}»` : 'Маршрут на 20 минут';
+    $('[data-rf-meta]', rf).textContent = `${n} ${word} из ${N}${info && info.minutes ? ` · ≈${info.minutes} минут` : ''}`;
+    const pdf = $('[data-rf-pdf]', rf);
+    pdf.hidden = !(info && info.pdf);
+    if (info && info.pdf) pdf.href = info.pdf;
+  }
+  $('[data-rf-all]')?.addEventListener('click', () => setRoute(''));
   sel?.addEventListener('change', () => setRoute(sel.value, true));
   $$('[data-chair]').forEach((c) => {
     if (c.closest('.chairtime')) return;
@@ -441,7 +460,13 @@
   cur = fromHash();
   setMode();
   show(cur, false);
-  if (!PRINT && params.get('route')) setRoute(params.get('route'));
+  if (!PRINT && params.get('route')) {
+    const deep = /^#s\d+$/.test(location.hash);   // ссылка на конкретный слайд — её не трогаем
+    setRoute(params.get('route'));
+    // В ленте плашка маршрута появляется над первым слайдом, и браузер сохраняет позицию слайда — страница съезжает
+    // мимо плашки. По ссылке маршрута без #sN читатель начинает с самого верха: видит, какой это маршрут.
+    if (mode === 'flow' && !deep) requestAnimationFrame(() => scrollTo(0, 0));
+  }
   if (PRINT) {
     slides.forEach((s) => s.classList.add('on'));
     // ?print=1&route=innov — PDF маршрута: только его слайды, без пустой страницы в конце (motorica-deck.cjs)

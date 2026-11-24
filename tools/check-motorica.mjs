@@ -72,7 +72,7 @@ for (const [id, c] of chairs) {
   if (!html.includes(`data-chair="${id}"`)) fail(`у кресла ${id} нет карточки, которая включает маршрут`);
 }
 
-// ── 2а. Маршрут читателя «Департамент инноваций»: те же слайды на странице (data-ch), в списке маршрутов, на своём слайде и в своём PDF ──
+// ── 2а. Маршрут читателя «Нейротехнологии и инновации»: те же слайды на странице (data-ch), в списке маршрутов, на своём слайде и в своём PDF ──
 const readers = Object.entries(deck.readers || {});
 if (readers.length !== 1 || !deck.readers.innov) fail(`маршрутов читателя ${readers.length}, а нужен один — innov`);
 const chOf = [...html.matchAll(/<section class="s [^"]*" id="s(\d+)" data-n="\d+" data-sec="\w+" data-ch="([^"]*)"/g)].map((m) => [+m[1], m[2].split(' ')]);
@@ -195,4 +195,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`motorica: ${N} слайдов = ${pages} страниц PDF = ${pSlides} слайдов PPTX = slides.json, текст совпадает; маршрут на 20 минут — ${slidesRu(coreHtml.length)}, кресел — ${chairs.length}, маршрут департамента инноваций — ${slidesRu(deck.readers?.innov?.slides.length ?? 0)} = страниц его PDF; план — ${(plan.match(/<h2 id="sec-/g) || []).length} разделов; ссылки, ?v=, контакты, CSP, alt, id и якоря в порядке; числа модели сходятся`);
+console.log(`motorica: ${N} слайдов = ${pages} страниц PDF = ${pSlides} слайдов PPTX = slides.json, текст совпадает; маршрут на 20 минут — ${slidesRu(coreHtml.length)}, кресел — ${chairs.length}, маршрут «Нейротехнологии и инновации» — ${slidesRu(deck.readers?.innov?.slides.length ?? 0)} = страниц его PDF; план — ${(plan.match(/<h2 id="sec-/g) || []).length} разделов; ссылки, ?v=, контакты, CSP, alt, id и якоря в порядке; числа модели сходятся`);

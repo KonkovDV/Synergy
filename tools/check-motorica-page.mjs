@@ -4,7 +4,7 @@
 // Проверяется: нет ошибок консоли и упавших запросов; шрифты и картинки загружены; на широком экране — колода:
 // слайд целиком в окне, листается стрелками, PageDown, Home и End, мышью — кнопками «Назад» и «Дальше» (на краях они
 // выключены), колесом (один жест — один слайд) и из окна «Все слайды» (G, Esc), #sN открывает нужный слайд, ссылки «слайд N →»
-// переходят; маршрут «20 минут», маршруты восьми кресел (список и карточки) и маршрут департамента инноваций (кнопка
+// переходят; маршрут «20 минут», маршруты восьми кресел (список и карточки) и маршрут «Нейротехнологии и инновации» (кнопка
 // на его слайде, ?route=innov) листают только свои слайды, ?route= включает маршрут; текст выступления (N) — тот же, что у слайда; калькулятор считает как tools/motorica/model.mjs,
 // а ссылка на расчёт восстанавливает его; правило решения по пилоту и даты недель работают; тренажёр открывается в
 // окне и закрывается Esc с возвратом фокуса; у каждого слайда в печати и в колоде нет обрезанных блоков, текста на
@@ -108,7 +108,7 @@ try {
     dots: document.querySelectorAll('.track .dot').length, opts: document.querySelectorAll('select[data-route] option').length }));
   if (!/\bdeck\b/.test(first.mode) || first.n !== N) fail(`колода на 1440 × 900: ${JSON.stringify(first)}`);
   if (first.dots !== N) fail(`точек навигации ${first.dots}, слайдов ${N}`);
-  if (first.opts !== 11) fail(`в списке маршрутов ${first.opts} пунктов, а нужно 11: все, «20 минут», департамент инноваций и 8 кресел`);
+  if (first.opts !== 11) fail(`в списке маршрутов ${first.opts} пунктов, а нужно 11: все, «20 минут», «Нейротехнологии и инновации» и 8 кресел`);
   if (JSON.stringify(await on(page)) !== '[1]') fail(`при открытии показан не первый слайд: ${await on(page)}`);
   if (!(await page.evaluate(() => document.fonts.check('600 40px Unbounded', 'Моторика')))) fail('шрифт Unbounded не загрузился');
   if (!(await page.evaluate(() => document.fonts.check('400 16px Inter', 'Моторика')))) fail('шрифт Inter не загрузился');
@@ -185,20 +185,20 @@ try {
   await page.locator(`#s${nOf('chairs')} [data-chair="cfo"]`).click().catch(() => {});
   await page.selectOption('select[data-route]', '');
   if ((await page.evaluate(() => document.querySelectorAll('#deck > .s.inroute').length)) !== N) fail('после «Все слайды» маршрут не снят');
-  // Маршрут департамента инноваций: кнопка на его слайде листает только его слайды; ссылка «слайд N» на нём ведёт к слайду
+  // Маршрут «Нейротехнологии и инновации»: кнопка на его слайде листает только его слайды; ссылка «слайд N» на нём ведёт к слайду
   await go(page, nOf('reader'));
   await page.locator(`#s${nOf('reader')} button[data-chair="innov"]`).click();
   const inv = await page.evaluate(() => ({ sel: document.querySelector('select[data-route]').value, n: [...document.querySelectorAll('#deck > .s.inroute')].map((s) => +s.dataset.n), q: location.search,
     pressed: document.querySelector('.L-reader button[data-chair="innov"]').getAttribute('aria-pressed') }));
-  if (inv.sel !== 'innov' || JSON.stringify(inv.n) !== JSON.stringify(deckData.readers.innov.slides) || !inv.q.includes('route=innov') || inv.pressed !== 'true') fail(`маршрут департамента инноваций: ${JSON.stringify(inv)}`);
+  if (inv.sel !== 'innov' || JSON.stringify(inv.n) !== JSON.stringify(deckData.readers.innov.slides) || !inv.q.includes('route=innov') || inv.pressed !== 'true') fail(`маршрут «Нейротехнологии и инновации»: ${JSON.stringify(inv)}`);
   // Как карточка кресла, кнопка начинает маршрут: открывает следующий его слайд, дальше стрелка идёт по маршруту
   const rs = deckData.readers.innov.slides; const at = rs.indexOf(nOf('reader'));
-  if ((await on(page))[0] !== rs[at + 1]) fail(`маршрут департамента инноваций: кнопка открыла ${await on(page)}, а нужно ${rs[at + 1]}`);
+  if ((await on(page))[0] !== rs[at + 1]) fail(`маршрут «Нейротехнологии и инновации»: кнопка открыла ${await on(page)}, а нужно ${rs[at + 1]}`);
   await page.keyboard.press('ArrowRight');
-  if ((await on(page))[0] !== rs[at + 2]) fail(`маршрут департамента инноваций: → показывает ${await on(page)}, а нужно ${rs[at + 2]}`);
+  if ((await on(page))[0] !== rs[at + 2]) fail(`маршрут «Нейротехнологии и инновации»: → показывает ${await on(page)}, а нужно ${rs[at + 2]}`);
   await go(page, nOf('reader'));
   await page.locator(`#s${nOf('reader')} .rd-ref a[href="#s${nOf('sota')}"]`).first().click();
-  if ((await on(page))[0] !== nOf('sota')) fail(`ссылка «слайд ${nOf('sota')}» со слайда департамента открыла ${await on(page)}`);
+  if ((await on(page))[0] !== nOf('sota')) fail(`ссылка «слайд ${nOf('sota')}» со слайда маршрута открыла ${await on(page)}`);
   await page.selectOption('select[data-route]', '');
 
   // ── 4. Текст выступления ──
@@ -388,7 +388,7 @@ try {
   const dl = await deep.evaluate(() => ({ on: document.querySelector('#deck > .s.on')?.dataset.n, route: document.querySelector('select[data-route]').value, n: document.querySelectorAll('#deck > .s.inroute').length }));
   if (dl.route !== 'med' || dl.n !== deckData.chairs.med.slides.length) fail(`?route=med: ${JSON.stringify(dl)}`);
   if (deckData.chairs.med.slides.includes(nOf('levers')) && +dl.on !== nOf('levers')) fail(`#s${nOf('levers')} с маршрутом: открыт слайд ${dl.on}`);
-  // Ссылка, которую получает департамент инноваций: ?route=innov — с обложки, только его слайды
+  // Ссылка, которую получает читатель маршрута «Нейротехнологии и инновации»: ?route=innov — с обложки, только его слайды
   await deep.goto(`${url}?route=innov`, { waitUntil: 'load' });
   await ready(deep);
   const di = await deep.evaluate(() => ({ on: document.querySelector('#deck > .s.on')?.dataset.n, route: document.querySelector('select[data-route]').value, n: document.querySelectorAll('#deck > .s.inroute').length }));
@@ -407,6 +407,12 @@ try {
     const st = await mp.evaluate(() => ({ flow: document.documentElement.classList.contains('flow'), sw: document.documentElement.scrollWidth, w: innerWidth,
       vis: [...document.querySelectorAll('#deck > .s')].filter((s) => s.offsetParent !== null).length }));
     if (!st.flow || st.sw > st.w + 1 || st.vis !== deckData.readers.innov.slides.length) fail(`${dev}, ?route=innov: ${JSON.stringify(st)} — нужна лента из ${deckData.readers.innov.slides.length} слайдов шириной в экран`);
+    // Плашка маршрута: видна с самого верха, называет маршрут; «Все слайды» возвращает всю колоду
+    const rb = await mp.evaluate(() => { const r = document.querySelector('#route-flow'); return { shown: !!r && !r.hidden && r.getBoundingClientRect().height > 0, top: Math.round(scrollY), text: r?.textContent ?? '' }; });
+    if (!rb.shown || rb.top !== 0 || !rb.text.includes(deckData.readers.innov.t)) fail(`${dev}, ?route=innov: плашка маршрута ${JSON.stringify(rb)}`);
+    await mp.click('[data-rf-all]');
+    const all = await mp.evaluate(() => [...document.querySelectorAll('#deck > .s')].filter((s) => s.offsetParent !== null).length);
+    if (all !== N) fail(`${dev}: «Все слайды» на плашке маршрута показали ${all} слайдов из ${N}`);
     await m.close();
   }
 
@@ -514,4 +520,4 @@ if (problems.length) {
   console.error(`Сайт «Моторики» в браузере — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, мышь (кнопки, колесо, «Все слайды»), #sN, ссылки, маршруты «20 минут», 8 кресел и департамента инноваций (кнопка и ?route=innov), заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений (колода, печать, лента 390 px); телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);
+console.log(`Сайт «Моторики»${withGame ? ' (рядом с игрой)' : ''}: колода ${N} слайдов — клавиши, мышь (кнопки, колесо, «Все слайды»), #sN, ссылки, маршруты «20 минут», 8 кресел и «Нейротехнологии и инновации» (кнопка, ?route=innov, плашка на телефоне), заметки, калькулятор = модель, ссылка на расчёт, правило решения, недели, итог встречи, тренажёр; вёрстка всех слайдов без обрезок и наложений (колода, печать, лента 390 px); телефон — лента; 320–2560 px без прокрутки вбок; axe — 0 нарушений; офлайн-копия`);

@@ -86,7 +86,7 @@ const deckData = {
   titles: slides.map((s) => plain(s.title)),
   core: slides.filter((s) => s.core).map((s) => s.n),
   chairs: Object.fromEntries(D.CHAIRS.map((c) => [c.id, { t: c.t, slides: slides.filter((s) => (s.ch || []).includes(c.id)).map((s) => s.n) }])),
-  readers: Object.fromEntries(D.READERS.map((r) => [r.id, { t: r.t, slides: slides.filter((s) => (s.ch || []).includes(r.id)).map((s) => s.n) }])),
+  readers: Object.fromEntries(D.READERS.map((r) => [r.id, { t: r.t, minutes: r.minutes, pdf: ctx.file(`MOTUS-Lab-Motorica-${r.id}.pdf`)?.href ?? null, slides: slides.filter((s) => (s.ch || []).includes(r.id)).map((s) => s.n) }])),
   sections: SECTIONS.map((s) => s.id),
 };
 for (const [id, r] of Object.entries(deckData.readers)) if (r.slides.length < 10 || r.slides.length > 22) throw new Error(`маршрут ${id}: ${r.slides.length} слайдов`);
@@ -147,6 +147,9 @@ const htmlRaw = `${head(TITLE, DESC, '', 'deck-page')}
 </header>
 <div class="progress" aria-hidden="true"><i></i></div>
 <div class="track" aria-hidden="true"><ol>${track}</ol></div>
+<!-- Плашка маршрута в ленте на телефоне: по ссылке ?route=… видны только его слайды — плашка говорит, какой это маршрут,
+     даёт его PDF и возвращает все слайды. В колоде и в печати её нет: там маршрут виден в списке маршрутов и на дорожке. -->
+<div class="route-flow" id="route-flow" hidden role="region" aria-label="Маршрут по колоде">${ic('LuRoute')}<p><b data-rf-name></b><span data-rf-meta></span></p><p class="rf-act"><a class="btn sm" data-rf-pdf hidden download>${ic('LuFileText')}PDF</a><button type="button" class="btn sm" data-rf-all>Все слайды</button></p></div>
 <main id="deck" class="deck">
 ${body}
 </main>
