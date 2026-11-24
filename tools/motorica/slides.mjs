@@ -599,8 +599,6 @@ export const SOURCES = [
     ['Kothe C et al. Imaging Neuroscience 2025 — Lab Streaming Layer', 'https://doi.org/10.1162/IMAG.a.136'],
     ['Kamrad I et al. Acta Orthop 2020;91(4):464–470 — регистр SwedeAmp', 'https://doi.org/10.1080/17453674.2020.1756101'],
     ['Chadwell A et al. Sci Data 2019 — ношение и использование протеза', 'https://doi.org/10.1038/s41597-019-0211-6'],
-    ['Markovic M et al. J Neural Eng 2015;12(6):066022 — зрение и ЭМГ', 'https://doi.org/10.1088/1741-2560/12/6/066022'],
-    ['Ghazaei G et al. J Neural Eng 2017;14(3):036025 — хват по камере', 'https://doi.org/10.1088/1741-2552/aa6802'],
     ['Eddy E et al. IEEE Access 2023;11:87380–87397 — LibEMG', 'https://doi.org/10.1109/ACCESS.2023.3304544'],
   ]],
   ['Рынок и конкуренты', [
