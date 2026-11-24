@@ -86,7 +86,7 @@ const deckData = {
   titles: slides.map((s) => plain(s.title)),
   core: slides.filter((s) => s.core).map((s) => s.n),
   chairs: Object.fromEntries(D.CHAIRS.map((c) => [c.id, { t: c.t, slides: slides.filter((s) => (s.ch || []).includes(c.id)).map((s) => s.n) }])),
-  readers: Object.fromEntries(D.READERS.map((r) => [r.id, { t: r.t, slides: slides.filter((s) => (s.ch || []).includes(r.id)).map((s) => s.n) }])),
+  readers: Object.fromEntries(D.READERS.map((r) => [r.id, { t: r.t, minutes: r.minutes, pdf: ctx.file(`MOTUS-Lab-Motorica-${r.id}.pdf`)?.href ?? null, slides: slides.filter((s) => (s.ch || []).includes(r.id)).map((s) => s.n) }])),
   sections: SECTIONS.map((s) => s.id),
 };
 for (const [id, r] of Object.entries(deckData.readers)) if (r.slides.length < 10 || r.slides.length > 22) throw new Error(`маршрут ${id}: ${r.slides.length} слайдов`);
@@ -147,6 +147,9 @@ const htmlRaw = `${head(TITLE, DESC, '', 'deck-page')}
 </header>
 <div class="progress" aria-hidden="true"><i></i></div>
 <div class="track" aria-hidden="true"><ol>${track}</ol></div>
+<!-- Плашка маршрута в ленте на телефоне: по ссылке ?route=… видны только его слайды — плашка говорит, какой это маршрут,
+     даёт его PDF и возвращает все слайды. В колоде и в печати её нет: там маршрут виден в списке маршрутов и на дорожке. -->
+<div class="route-flow" id="route-flow" hidden role="region" aria-label="Маршрут по колоде">${ic('LuRoute')}<p><b data-rf-name></b><span data-rf-meta></span></p><p class="rf-act"><a class="btn sm" data-rf-pdf hidden download>${ic('LuFileText')}PDF</a><button type="button" class="btn sm" data-rf-all>Все слайды</button></p></div>
 <main id="deck" class="deck">
 ${body}
 </main>
@@ -159,7 +162,7 @@ ${body}
 </nav>
 <div class="overview" id="overview" role="dialog" aria-modal="true" aria-labelledby="ov-h" hidden>
   <div class="ov-box">
-    <div class="ov-top"><div><p class="ov-h" id="ov-h">Все слайды</p><p class="ov-sub">Десять разделов — в порядке разговора за столом «Моторики». Мятный номер — маршрут на 20 минут.</p></div><button type="button" class="ov-close" data-overview-close aria-label="Закрыть оглавление">${ic('LuX')}</button></div>
+    <div class="ov-top"><div><p class="ov-h" id="ov-h">Все слайды</p><p class="ov-sub">${tx('Десять разделов — в порядке разговора за столом «Моторики». Мятный номер — маршрут на 20 минут.')}</p></div><button type="button" class="ov-close" data-overview-close aria-label="Закрыть оглавление">${ic('LuX')}</button></div>
     <div class="ov-cols">${SECTIONS.map((sec, i) => `<section class="ov-sec" aria-labelledby="ov-s${i + 1}"><h2 class="ov-st" id="ov-s${i + 1}">${String(i + 1).padStart(2, '0')} · ${tx(sec.t)}</h2>${sec.q ? `<p class="ov-q">${tx(sec.q)}</p>` : ''}<ol>${slides.filter((s) => s.sec === sec.id).map((s) => `<li data-n="${s.n}"${s.core ? ' class="core"' : ''}><a href="#s${s.n}" title="${esc(`${s.n}. ${plain(s.title)}`)}"><b>${s.n}</b><span>${tx(plain(s.title))}</span></a></li>`).join('')}</ol></section>`).join('')}</div>
   </div>
 </div>
@@ -223,12 +226,14 @@ ${rows.slice(2).map((r) => `<tr>${cells(r).map((c) => `<td${/^[≈+−-]?\d[\d\s
     if (/^(- |\d+\. )/.test(line)) {
       const tag = /^\d+\. /.test(line) ? 'ol' : 'ul';
       const items = [];
-      while (i < lines.length && (/^(- |\d+\. )/.test(lines[i]) || /^ {2}- /.test(lines[i]))) {
+      // Вложенный список пункта — маркированный («  - ») или нумерованный («  1. »): шаги метода в досье пакетов — нумерованные
+      while (i < lines.length && (/^(- |\d+\. )/.test(lines[i]) || /^ {2}(- |\d+\. )/.test(lines[i]))) {
         const l = lines[i++];
-        if (/^ {2}- /.test(l)) items[items.length - 1].sub.push(l.slice(4));
-        else items.push({ text: l.replace(/^(- |\d+\. )/, ''), sub: [] });
+        const sm = /^ {2}(- |\d+\. )(.*)$/.exec(l);
+        if (sm) { const it = items[items.length - 1]; it.sub.push(sm[2]); it.subTag = sm[1] === '- ' ? 'ul' : 'ol'; }
+        else items.push({ text: l.replace(/^(- |\d+\. )/, ''), sub: [], subTag: 'ul' });
       }
-      out.push(`<${tag}>${items.map((it) => `<li>${inline(it.text)}${it.sub.length ? `<ul>${it.sub.map((x) => `<li>${inline(x)}</li>`).join('')}</ul>` : ''}</li>`).join('\n')}</${tag}>`);
+      out.push(`<${tag}>${items.map((it) => `<li>${inline(it.text)}${it.sub.length ? `<${it.subTag}>${it.sub.map((x) => `<li>${inline(x)}</li>`).join('')}</${it.subTag}>` : ''}</li>`).join('\n')}</${tag}>`);
       continue;
     }
     const para = [];
@@ -256,7 +261,7 @@ ${plan.toc.map(([id, t]) => `<li><a href="#${id}">${inline(t.replace(/^\d+\. /, 
 <main id="main" class="doc"><div class="wrap">
 ${plan.body}
 </div></main>
-<footer class="doc-foot"><div class="wrap"><p>План — предложение MOTUS Lab для обсуждения с ГК «Моторика». Факты о компании — из её открытых документов и открытого кода, ссылки — в разделе «Источники»; всё, что предлагаем мы, так и названо. Исходный текст — <a href="https://github.com/KonkovDV/Synergy/blob/main/motorica/PLAN.md">motorica/PLAN.md</a>. <span id="build"></span></p></div></footer>
+<footer class="doc-foot"><div class="wrap"><p>${tx('План — предложение MOTUS Lab для обсуждения с ГК «Моторика». Факты о компании — из её открытых документов и открытого кода, ссылки — в разделе «Источники»; всё, что предлагаем мы, так и названо. Исходный текст — ')}<a href="https://github.com/KonkovDV/Synergy/blob/main/motorica/PLAN.md">motorica/PLAN.md</a>. <span id="build"></span></p></div></footer>
 ${iconSprite()}
 </body>
 </html>

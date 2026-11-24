@@ -52,6 +52,8 @@ parts.forEach((part, i) => {
   if (!s.notes || s.notes.length < 80) fail(`слайд ${i + 1}: нет текста выступления`);
   if (!s.sources) fail(`слайд ${i + 1}: нет источников`);
   if (/\{#[\w:]+\}|undefined|NaN|\[object /.test(part)) fail(`слайд ${i + 1}: неразрешённая ссылка или пустое значение в тексте`);
+  // Типографика: перед тире — неразрывный пробел, иначе строка может начаться с тире (так было в заголовках до 24.11.2026)
+  for (const m of part.replace(/<script[\s\S]*?<\/script>/g, '').matchAll(/>([^<]+)</g)) if (/ [—–] /.test(m[1])) { fail(`слайд ${i + 1}: обычный пробел перед тире — строка может начаться с тире: «${m[1].trim().slice(0, 50)}»`); break; }
 });
 const secIds = new Set(sections.map((x) => x.id));
 for (const m of secs) if (!secIds.has(m[5])) fail(`слайд ${m[3]}: раздел ${m[5]} не описан`);
@@ -70,7 +72,7 @@ for (const [id, c] of chairs) {
   if (!html.includes(`data-chair="${id}"`)) fail(`у кресла ${id} нет карточки, которая включает маршрут`);
 }
 
-// ── 2а. Маршрут читателя «Департамент инноваций»: те же слайды на странице (data-ch), в списке маршрутов, на своём слайде и в своём PDF ──
+// ── 2а. Маршрут читателя «Нейротехнологии и инновации»: те же слайды на странице (data-ch), в списке маршрутов, на своём слайде и в своём PDF ──
 const readers = Object.entries(deck.readers || {});
 if (readers.length !== 1 || !deck.readers.innov) fail(`маршрутов читателя ${readers.length}, а нужен один — innov`);
 const chOf = [...html.matchAll(/<section class="s [^"]*" id="s(\d+)" data-n="\d+" data-sec="\w+" data-ch="([^"]*)"/g)].map((m) => [+m[1], m[2].split(' ')]);
@@ -118,7 +120,9 @@ function page(name, text) {
 }
 const indexIds = page('index.html', html);
 page('plan.html', plan);
+{ const bad = [...plan.replace(/<(script|title)[^>]*>[\s\S]*?<\/\1>/g, '').matchAll(/>([^<]+)</g)].find((m) => / [—–] /.test(m[1])); if (bad) fail(`plan.html: обычный пробел перед тире — строка может начаться с тире: «${bad[1].trim().slice(0, 50)}»`); }
 for (const m of plan.matchAll(/href="\.\/#([^"]+)"/g)) if (!indexIds.includes(m[1])) fail(`plan.html: ссылка ./#${m[1]} никуда не ведёт на главной`);
+{ const glued = plan.match(/<p>\d+\. [^<]{0,60}/); if (glued) fail(`plan.html: нумерованный список склеился в абзац — «${glued[0].slice(3)}…»: вложенные пункты «  1. » должны стать списком`); }
 if (!html.includes('href="plan.html')) fail('главная не ссылается на план сотрудничества');
 const contactsSlide = slides.find((s) => s.layout === 'decisions')?.n;
 if (!plan.includes(`href="./#s${contactsSlide}"`)) fail('план не ведёт к контактам на главной');
@@ -179,14 +183,17 @@ for (const [k, s] of Object.entries(model.scenarios)) {
   }
 }
 const b = model.scenarios.base;
-if (Math.abs(b.ebitdaFull[4] - (b.total[4] * 0.26 + b.ops)) > 0.01) fail('EBITDA 2031 со всеми рычагами ≠ (L1 + L2) × маржа + L3…L7');
-if (Math.abs(b.ops - (b.saving + b.l4 + b.l5 + b.l6 + b.l7)) > 0.01) fail('сумма рычагов L3–L7 не сходится');
+if (Math.abs(b.ebitdaFull[4] - (b.total[4] * 0.26 + b.ops)) > 0.01) fail('EBITDA 2031 со всеми рычагами ≠ (L1 + L2) × маржа + L3…L6');
+// L7 — экономия на стоимости денег: это проценты, ниже EBITDA. В EBITDA входят только рычаги затрат L3–L6.
+if (Math.abs(b.ops - (b.saving + b.l4 + b.l5 + b.l6)) > 0.01) fail('рычаги затрат L3–L6 не сходятся — L7 (стоимость денег) в EBITDA не входит');
+if (Math.abs(b.l7 - b.cashPulled * 0.15) > 0.01) fail('L7 ≠ оборотный капитал × стоимость денег');
 for (const k of ['cons', 'base', 'opt']) if (!(model.scenarios[k].ebitdaFull.every((x, i, a) => i === 0 || x > a[i - 1]))) fail(`сценарий ${k}: EBITDA по годам не растёт`);
 if (!(model.scenarios.cons.ebitdaFull[4] < b.ebitdaFull[4] && b.ebitdaFull[4] < model.scenarios.opt.ebitdaFull[4])) fail('сценарии не упорядочены: консервативный < базовый < оптимистичный');
 if (deck.model?.base?.margin !== 0.26) fail('калькулятор на странице получает не ту базу модели');
 
+const slidesRu = (n) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'слайд' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? 'слайда' : 'слайдов'}`;
 if (problems.length) {
   console.error(`Сайт «Моторики» — ${problems.length} проблем:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`motorica: ${N} слайдов = ${pages} страниц PDF = ${pSlides} слайдов PPTX = slides.json, текст совпадает; маршрут на 20 минут — ${coreHtml.length} слайдов, кресел — ${chairs.length}, маршрут департамента инноваций — ${deck.readers?.innov?.slides.length} слайдов = страниц его PDF; план — ${(plan.match(/<h2 id="sec-/g) || []).length} разделов; ссылки, ?v=, контакты, CSP, alt, id и якоря в порядке; числа модели сходятся`);
+console.log(`motorica: ${N} слайдов = ${pages} страниц PDF = ${pSlides} слайдов PPTX = slides.json, текст совпадает; маршрут на 20 минут — ${slidesRu(coreHtml.length)}, кресел — ${chairs.length}, маршрут «Нейротехнологии и инновации» — ${slidesRu(deck.readers?.innov?.slides.length ?? 0)} = страниц его PDF; план — ${(plan.match(/<h2 id="sec-/g) || []).length} разделов; ссылки, ?v=, контакты, CSP, alt, id и якоря в порядке; числа модели сходятся`);
