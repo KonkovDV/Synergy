@@ -475,7 +475,8 @@ svg.i.gt-i { color: var(--ink) }
 /* ── 90 дней ── */
 .weeks-ctl { display: flex; align-items: center; gap: 16px; flex-wrap: wrap }
 .weeks-ctl label { display: flex; align-items: center; gap: 10px; color: var(--soft); font-size: 15px }
-input[type=date] { min-height: 40px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line2); background: var(--bg2); color: var(--ink); font: 500 15px var(--body); color-scheme: dark }
+/* Ширина поля даты задана явно: в части версий Chromium она следует за шириной самих цифр, и смена даты сдвигала кнопку рядом */
+input[type=date] { inline-size: 162px; min-height: 40px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line2); background: var(--bg2); color: var(--ink); font: 500 15px var(--body); font-variant-numeric: tabular-nums; color-scheme: dark }
 svg.weeks { flex: 1; min-height: 0; width: 100% }
 .wn { fill: var(--muted); font-size: 13px }
 .wd { fill: var(--mint); font-size: 14px; font-weight: 700 }
