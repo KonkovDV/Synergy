@@ -226,12 +226,14 @@ ${rows.slice(2).map((r) => `<tr>${cells(r).map((c) => `<td${/^[≈+−-]?\d[\d\s
     if (/^(- |\d+\. )/.test(line)) {
       const tag = /^\d+\. /.test(line) ? 'ol' : 'ul';
       const items = [];
-      while (i < lines.length && (/^(- |\d+\. )/.test(lines[i]) || /^ {2}- /.test(lines[i]))) {
+      // Вложенный список пункта — маркированный («  - ») или нумерованный («  1. »): шаги метода в досье пакетов — нумерованные
+      while (i < lines.length && (/^(- |\d+\. )/.test(lines[i]) || /^ {2}(- |\d+\. )/.test(lines[i]))) {
         const l = lines[i++];
-        if (/^ {2}- /.test(l)) items[items.length - 1].sub.push(l.slice(4));
-        else items.push({ text: l.replace(/^(- |\d+\. )/, ''), sub: [] });
+        const sm = /^ {2}(- |\d+\. )(.*)$/.exec(l);
+        if (sm) { const it = items[items.length - 1]; it.sub.push(sm[2]); it.subTag = sm[1] === '- ' ? 'ul' : 'ol'; }
+        else items.push({ text: l.replace(/^(- |\d+\. )/, ''), sub: [], subTag: 'ul' });
       }
-      out.push(`<${tag}>${items.map((it) => `<li>${inline(it.text)}${it.sub.length ? `<ul>${it.sub.map((x) => `<li>${inline(x)}</li>`).join('')}</ul>` : ''}</li>`).join('\n')}</${tag}>`);
+      out.push(`<${tag}>${items.map((it) => `<li>${inline(it.text)}${it.sub.length ? `<${it.subTag}>${it.sub.map((x) => `<li>${inline(x)}</li>`).join('')}</${it.subTag}>` : ''}</li>`).join('\n')}</${tag}>`);
       continue;
     }
     const para = [];

@@ -122,6 +122,7 @@ const indexIds = page('index.html', html);
 page('plan.html', plan);
 { const bad = [...plan.replace(/<(script|title)[^>]*>[\s\S]*?<\/\1>/g, '').matchAll(/>([^<]+)</g)].find((m) => / [—–] /.test(m[1])); if (bad) fail(`plan.html: обычный пробел перед тире — строка может начаться с тире: «${bad[1].trim().slice(0, 50)}»`); }
 for (const m of plan.matchAll(/href="\.\/#([^"]+)"/g)) if (!indexIds.includes(m[1])) fail(`plan.html: ссылка ./#${m[1]} никуда не ведёт на главной`);
+{ const glued = plan.match(/<p>\d+\. [^<]{0,60}/); if (glued) fail(`plan.html: нумерованный список склеился в абзац — «${glued[0].slice(3)}…»: вложенные пункты «  1. » должны стать списком`); }
 if (!html.includes('href="plan.html')) fail('главная не ссылается на план сотрудничества');
 const contactsSlide = slides.find((s) => s.layout === 'decisions')?.n;
 if (!plan.includes(`href="./#s${contactsSlide}"`)) fail('план не ведёт к контактам на главной');
