@@ -410,6 +410,7 @@ ul.pubs li { display: flex; gap: 12px; padding: 14px 18px; border-radius: 14px; 
 /* ── Пакет работ ── */
 .L-wp .title { font-size: 36px }
 .wp-head { display: flex; gap: 10px; flex-wrap: wrap }
+.wp-head .dossier { margin-left: auto; text-decoration: none } .wp-head .dossier:hover { background: rgba(22, 225, 130, .24) }
 .wp-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1.5fr; gap: 18px }
 .wp-left, .wp-right { display: grid; gap: 14px }
 .wp-left { grid-template-rows: auto 1fr }
@@ -768,7 +769,7 @@ html:not(.deck):not(.print) .body { margin-top: 20px }
 .plan-toc a:hover { background: var(--surf); color: var(--mint) }
 main.doc { padding: 20px 0 60px }
 main.doc h2 { margin: 44px 0 14px; font: 600 26px/1.2 var(--head); scroll-margin-top: 70px }
-main.doc h3 { margin: 26px 0 10px; font-size: 19px }
+main.doc h3 { margin: 26px 0 10px; font-size: 19px; scroll-margin-top: 70px }
 main.doc p, main.doc li { color: var(--soft); font-size: 16.5px; line-height: 1.6 }
 main.doc strong { color: var(--ink) }
 main.doc code { padding: 1px 6px; border-radius: 6px; background: var(--card2); color: var(--mint2); font-size: .92em }

@@ -9,7 +9,7 @@
 EBITDA = (L1 + L2) × маржа + L3…L6; L7 — экономия на стоимости денег (проценты), она ниже EBITDA и стоит отдельной строкой.
 Синий шрифт — вводимые значения: меняйте их, остальное пересчитается. Нужны openpyxl и, для --check, LibreOffice.
 """
-import json, os, shutil, subprocess, sys, tempfile
+import json, os, shutil, subprocess, sys, tempfile, zipfile
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
@@ -246,9 +246,25 @@ def build():
 
     for ws in wb.worksheets:
         ws.sheet_view.showGridLines = False
+    wb.properties.creator = wb.properties.lastModifiedBy = 'MOTUS Lab'
+    wb.properties.title = 'Модель экономического эффекта: MOTUS Lab для ГК «Моторика»'
+    wb.properties.subject = 'Сценарии 2027–2031, рычаги L1–L7 и допущения A1–A6 с живыми формулами'
     OUT.mkdir(exist_ok=True)
     wb.save(BOOK)
+    own_app_props(BOOK)
     print(BOOK.relative_to(ROOT))
+
+
+def own_app_props(book):
+    """В свойствах файла — MOTUS Lab, а не имя и версия библиотеки, которую openpyxl пишет в docProps/app.xml."""
+    app = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+           '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">'
+           '<Company>MOTUS Lab</Company></Properties>')
+    tmp = book.with_suffix('.tmp')
+    with zipfile.ZipFile(book) as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            zout.writestr(item, app if item.filename == 'docProps/app.xml' else zin.read(item.filename))
+    tmp.replace(book)
 
 
 def recalculated(book, tmp):

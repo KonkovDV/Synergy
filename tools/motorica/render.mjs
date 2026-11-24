@@ -389,7 +389,7 @@ L.wp = (s, ctx) => {
   const ticks = [0, 2, 4, 6, 8, 10, 12, 14, 16].map((m) => `<line x1="${x0 + m * k}" y1="6" x2="${x0 + m * k}" y2="30" class="g"/>${m === 16 ? svgText(x0 + m * k - 2, 44, `${m} мес`, 'ax', 'end') : svgText(x0 + m * k + 4, 44, m === 0 ? 'старт' : `${m} мес`, 'ax')}`).join('');
   const bar = `<rect x="${x0 + w.start * k}" y="10" width="${Math.min(w.len, 16 - w.start) * k}" height="16" rx="8" class="c-${tr.c}"/>`;
   const rk = D.wpRisks(w.id);
-  return `<div class="wp-head">${chip('трек «' + tr.t + '»', tr.c)}${chip(w.stT, w.st === 'ready' ? 'mint' : w.st === 'spec' ? 'sky' : 'violet')}${chip(w.term, 'muted')}${rk.length ? chip('мера реестра рисков: ' + rk.join(' · '), 'rose') : ''}</div>
+  return `<div class="wp-head">${chip('трек «' + tr.t + '»', tr.c)}${chip(w.stT, w.st === 'ready' ? 'mint' : w.st === 'spec' ? 'sky' : 'violet')}${chip(w.term, 'muted')}${rk.length ? chip('мера реестра рисков: ' + rk.join(' · '), 'rose') : ''}<a class="chip c-mint dossier" href="${D.SITE}plan.html#${w.id.toLowerCase()}" aria-label="Досье в плане: ${w.id}">досье в плане <span aria-hidden="true">→</span></a></div>
   <div class="wp-grid">
     <div class="wp-left">
       <div class="card task"><span class="lbl">${ic('LuTarget')} Задача «Моторики»</span><p>${tx(w.task)}</p><i>${tx(w.taskSrc)}</i></div>
