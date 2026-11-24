@@ -1589,3 +1589,7 @@ html.deck .hint { left: auto; right: 46px; bottom: 18px }
 .ch-n { display: inline-flex; align-items: center; gap: 5px; width: fit-content; padding: 1px 8px 1px 6px; border-radius: 999px; background: var(--mint-d); color: var(--mint2); font: 600 11.5px/1.5 var(--body) }
 .ch-n svg.i { width: 12px; height: 12px }
 .chair.on .ch-n { background: var(--mint); color: var(--bg) }
+
+/* Пакет работ, глубокая проработка: показатели, риск и мера, мировая практика — мельче основного текста карточки */
+.L-wp .wp-x { margin: 8px 0 0; color: var(--soft); font-size: 13.5px; line-height: 1.35 }
+.L-wp .wp-x b { color: var(--ink) }

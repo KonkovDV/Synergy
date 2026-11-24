@@ -397,9 +397,9 @@ L.wp = (s, ctx) => {
     </div>
     <div class="wp-right">
       <div class="card eff"><span class="lbl">${ic('LuTrendingUp')} Эффект для «Моторики»</span><p>${tx(ctx.wpEffect[w.id])}</p>${chip('рычаг ' + w.lev, 'mint', 'sm')}</div>
-      <div class="card acc"><span class="lbl">${ic('LuBadgeCheck')} Приёмка</span><p>${tx(w.acc)}</p></div>
-      <div class="card need"><span class="lbl">${ic('LuHandshake')} Нужно от «Моторики»</span><p>${tx(w.need)}</p></div>
-      <div class="card base"><span class="lbl">${ic('LuGithub')} Опора: наш опыт</span><ul>${w.base.map((x) => `<li>${tx(x)}</li>`).join('')}</ul></div>
+      <div class="card acc"><span class="lbl">${ic('LuBadgeCheck')} Приёмка</span><p>${tx(w.acc)}</p>${w.kpi ? `<p class="wp-x"><b>Показатели:</b> ${tx(w.kpi)}</p>` : ''}</div>
+      <div class="card need"><span class="lbl">${ic('LuHandshake')} Нужно от «Моторики»</span><p>${tx(w.need)}</p>${w.risk ? `<p class="wp-x"><b>Риск и мера:</b> ${tx(w.risk)}</p>` : ''}</div>
+      <div class="card base"><span class="lbl">${ic('LuGithub')} ${w.world ? 'Опора: мир и наш опыт' : 'Опора: наш опыт'}</span>${w.world ? `<p class="wp-x"><b>В мире:</b> ${tx(w.world)}</p>` : ''}<ul>${w.base.map((x) => `<li>${tx(x)}</li>`).join('')}</ul></div>
     </div>
   </div>
   <svg class="wp-time" viewBox="0 0 ${W} 50" role="img" aria-label="${esc(`${w.id}: месяцы ${w.start}–${w.start + w.len} от старта`)}">${ticks}${bar}</svg>`;
