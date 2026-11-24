@@ -1053,11 +1053,11 @@ svg.riskgrid { width: 100%; height: auto; flex: 1; min-height: 0 }
 .bounds { grid-template-columns: 1.35fr 1fr; align-items: stretch }
 .bd { display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; border-radius: var(--r); background: var(--surf); border: 1px solid var(--line) }
 .bd h3 { margin: 0; display: flex; align-items: center; gap: 10px; font: 600 20px var(--head) }
-.bd.no h3 svg { color: var(--rose) } .bd.yes h3 svg { color: var(--mint) }
+.bd.next h3 svg { color: var(--sky) } .bd.yes h3 svg { color: var(--mint) }
 .bd.yes { background: var(--mint-d); border-color: rgba(22, 225, 130, .3) }
 .bd ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px }
 .bd li { display: flex; flex-direction: column; gap: 3px; padding-left: 14px; border-left: 3px solid var(--line2) }
-.bd.no li { border-left-color: rgba(255, 143, 143, .55) } .bd.yes li { border-left-color: var(--mint) }
+.bd.next li { border-left-color: var(--sky) } .bd.yes li { border-left-color: var(--mint) }
 .bd li b { font-size: 17px } .bd li span { color: var(--soft); font-size: 15px; line-height: 1.4 }
 @media (max-width: 1100px) { html:not(.deck):not(.print) .cards.c4 { grid-template-columns: 1fr 1fr } html:not(.deck):not(.print) .bounds { grid-template-columns: 1fr } }
 @media (max-width: 640px) { html:not(.deck):not(.print) .cards.c4 { grid-template-columns: 1fr } }
@@ -1425,7 +1425,7 @@ html:not(.deck):not(.print) .cover-art .halo { display: none }
 .layers-c li::before { color: var(--mint) }
 .bd li { position: relative; padding-left: 20px; border-left: 0 }
 .bd li::before { content: ""; position: absolute; left: 0; top: .48em; width: 8px; height: 8px; border-radius: 50%; background: var(--line2) }
-.bd.no li::before { background: var(--rose) } .bd.yes li::before { background: var(--mint) }
+.bd.next li::before { background: var(--sky) } .bd.yes li::before { background: var(--mint) }
 /* Слайд 60: подписи схемы данных крупнее — схема ужата в колонку */
 .trust-flow .df-s { font-size: 15.5px }
 .mk.l .y24 { opacity: .75 }

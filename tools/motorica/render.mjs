@@ -633,7 +633,7 @@ L.tornado = () => {
       <div class="kpi"><b>≈${r2(MODEL.cycleRevenue).replace('.', ',')} млн ₽</b><span>выручки и ≈${r2(MODEL.cycleEbitda)} млн ₽ EBITDA за каждый цикл замены от одного удержанного пользователя</span></div>
       <div class="kpi"><b>≈${r0(MODEL.breakEvenEbitda)}</b><span>удержанных пользователей возвращают 10 млн ₽ затрат по EBITDA своей следующей заменой — ${r1(MODEL.breakEvenEbitda / MODEL.newUsers * 100)} % новых пользователей года</span></div>
       <div class="kpi"><b>≈${r0(MODEL.scen.base.retained)}</b><span>пользователей в год удерживает базовый сценарий</span></div>
-      <p class="fine">${tx(`Честная граница: если повторных продаж у «Моторики» столько же, сколько у рынка (87 %), рычаг даёт ${r0(sens[4][3])} млн ₽ вместо ${r0(base)}. По кассе замена приходит через 1–3 года после выдачи; рост рынка на 18 % в год не заложен.`)}</p>
+      <p class="fine">${tx(`Нижняя оценка: при повторных продажах на уровне рынка (87 %) рычаг даёт ${r0(sens[4][3])} млн ₽ вместо ${r0(base)}. По кассе замена приходит через 1–3 года после выдачи; рост рынка на 18 % в год в модель не заложен — это запас.`)}</p>
     </div>
   </div>`;
 };
@@ -711,14 +711,14 @@ L.sota = (s) => `<div class="tbl sota" role="table" aria-label="Мировая �
   <div class="tr th" role="row"><span role="columnheader">Кто</span><span role="columnheader">Что уже есть — факт и источник</span><span role="columnheader">Что берём в план</span><span role="columnheader">Пакет</span></div>
   ${s.data.rows.map((r) => `<div class="tr${r.geo === 'Россия' ? ' so-ru' : ''}" role="row"><span role="cell" class="so-n"><b>${tx(r.who)}</b><i>${tx(r.geo)}</i></span><span role="cell">${tx(r.what)}<i class="so-src">${tx(r.src)}</i></span><span role="cell" class="so-take">${tx(r.take)}</span><span role="cell">${chip(r.wp, r.wp.includes('опцион') ? 'violet' : 'mint', 'sm')}</span></div>`).join('')}
 </div>
-<p class="strip sm">${ic('LuSearchCheck')}<span><b>Чего мы не нашли ни у кого в открытых источниках:</b> общей модели навыка, которая связывает тренировку, протез и отчёт специалисту, — это пакеты WP1 и WP7.</span></p>`;
+<p class="strip sm">${ic('LuSearchCheck')}<span><b>Ниша свободна:</b> общей модели навыка, которая связывает тренировку, протез и отчёт специалисту, в открытых источниках нет ни у кого. Её строим мы — пакеты WP1 и WP7.</span></p>`;
 
 // Нейропротезы в мире: тот же вид таблицы, что «Мировая планка», — кейсы, доказанные годами, и что берём в пакеты
 L.neuro = (s) => `<div class="tbl sota neuro" role="table" aria-label="Нейропротезы в мире: что доказано временем и что берём для NEMO Sensitive и остеоинтеграции">
   <div class="tr th" role="row"><span role="columnheader">Кто</span><span role="columnheader">Что доказано — факт и источник</span><span role="columnheader">Что берём</span><span role="columnheader">Пакет</span></div>
   ${s.data.rows.map((r) => `<div class="tr" role="row"><span role="cell" class="so-n"><b>${tx(r.who)}</b><i>${tx(r.geo)}</i></span><span role="cell">${tx(r.what)}<i class="so-src">${tx(r.src)}</i></span><span role="cell" class="so-take">${tx(r.take)}</span><span role="cell">${chip(r.wp, r.wp.includes('опцион') ? 'violet' : 'mint', 'sm')}</span></div>`).join('')}
 </div>
-<p class="strip sm">${ic('LuHourglass')}<span><b>Общее у лучших:</b> доказательство копится годами по одному протоколу — пороги, импеданс, функция и боль. Это и предлагаем как инфраструктуру для NEMO Sensitive и остеоинтеграции: WP4 и WP7. Электроды и стимуляторы мы не делаем — делаем ПО, протоколы и доказательства вокруг них.</span></p>`;
+<p class="strip sm">${ic('LuHourglass')}<span><b>Урок лидеров:</b> доказательство копится годами по одному протоколу — пороги, импеданс, функция и боль. Эту инфраструктуру строим для NEMO Sensitive и остеоинтеграции в WP4 и WP7: электроды и стимуляторы — ваши, ПО, протоколы и доказательная база — наши.</span></p>`;
 
 const RQ = { done: 'mint', plan: 'sky', need: 'amber' };
 L.reqs = (s) => `<div class="reqs">${s.data.cols.map((c) => `
@@ -926,10 +926,10 @@ L.medsw = () => {
 // Что из медицинского ПО переходит в пакеты «Моторики»
 L.medinto = (s) => `<div class="cards c4 medinto">${s.data.items.map((x) => `<div class="card mi"><p class="mi-h">${chip(x.wp, 'mint', 'sm')}<b>${tx(x.t)}</b></p><span>${tx(x.what)}</span><p class="mi-from">${ic('LuGitBranch')}<span>${tx(x.from)}</span></p><p class="mi-why">${ic('LuTarget')}<span>${tx(x.why)}</span></p></div>`).join('')}</div>`;
 
-// Границы утверждений: что не утверждаем и чем подтверждаем то, что утверждаем
+// Проверяемость: что доказано сегодня (первая колонка) и что докажет пилот (вторая)
 L.bounds = (s) => `<div class="split bounds">
-  <div class="bd no"><h3>${ic('LuBan')} Не утверждаем</h3><ul>${s.data.no.map(([a, b]) => `<li><b>${tx(a)}</b><span>${tx(b)}</span></li>`).join('')}</ul></div>
-  <div class="bd yes"><h3>${ic('LuCircleCheck')} Утверждаем — и чем подтверждаем</h3><ul>${s.data.yes.map(([a, b]) => `<li><b>${tx(a)}</b><span>${tx(b)}</span></li>`).join('')}</ul></div>
+  <div class="bd yes"><h3>${ic('LuCircleCheck')} Доказано сегодня</h3><ul>${s.data.yes.map(([a, b]) => `<li><b>${tx(a)}</b><span>${tx(b)}</span></li>`).join('')}</ul></div>
+  <div class="bd next"><h3>${ic('LuFlaskConical')} Докажем в пилоте</h3><ul>${s.data.no.map(([a, b]) => `<li><b>${tx(a)}</b><span>${tx(b)}</span></li>`).join('')}</ul></div>
 </div>`;
 
 // Карта ключевых рисков — как на с. 87 годового отчёта: строки — существенность, столбцы — вероятность.
@@ -1045,7 +1045,7 @@ L.speedopt = () => {
     [`−${b.pathDays} дней`, `путь пациента у ${Math.round(b.pathShare * 100)} % пациентов: тренировка до выдачи и проверка документов`, 'WP8 · WP10'],
     ['−50 %', 'возвратов комплектов документов на доработку', 'WP8'],
     ['−1 месяц', 'до самостоятельной работы нового специалиста', 'WP11'],
-    ['2027', 'модули ATTILAN — мониторинг и геймификация, а не в 2028', 'WP1 · WP7'],
+    ['2027', 'модули ATTILAN — мониторинг и геймификация, на год раньше', 'WP1 · WP7'],
     ['без стенда', 'отладка логики управления и Потока 3 на эмуляторе и двойнике', 'WP6'],
   ];
   const free = [
