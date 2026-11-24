@@ -327,8 +327,8 @@ export const SLIDES = [
   wpSlide('WP5', ['rnd', 'product', IN], 'Пятый пакет — ИИ-очки. Очки понимают, на что смотрит человек, ИИ выбирает хват и раскрывает кисть заранее, короткий сигнал ЭМГ подтверждает. Опора — наш DeftSort с кистями Inspire. Автономию включаем только после теневого режима.',
     'Mouchoux et al., IEEE T-RO 2021; arXiv:2601.17991 (HRI 2026); Knyshenko et al., OSF Preprints 2025; README DeftSort'),
 
-  wpSlide('WP6', ['rnd', 'digital', IN], 'Шестой пакет — Поток 3, вход для нейроинтерфейсов. Контракт тот же, что у СПППР: время устройства, сторож потерь, откат ошибок, подтверждение необратимого. Логика отлаживается на эмуляторе и цифровом двойнике до регистрации изделия.',
-    'годовой отчёт «Моторики» 2025 (центр кибернетической медицины и нейропротезирования, «Моторика Немо»); техническое задание геймджема (Поток 2); docs/INTEGRATION.md'),
+  wpSlide('WP6', ['rnd', 'digital', IN], 'Шестой пакет — Поток 3, вход для нейроинтерфейсов. Надёжная передача сигнала — одно из трёх препятствий, которые называет ваш департамент. Источник сигнала будет меняться: поверхностная ЭМГ, вживлённые электроды, интерфейсы нервов. А логика кисти должна оставаться той же и быть проверена без пациента. Контракт — как у СПППР в «Синергии»: время устройства, стоп при тишине, откат одиночных ошибок, подтверждение необратимого. Каталог сценариев отказа гоняем на эмуляторе и цифровом двойнике кисти, двойник сверяем со стендом — так доверие к моделям строят FDA и стандарт ASME V&V 40. Так в программе DARPA работала среда VIE: декодеры разных групп и рука — на одном интерфейсе.',
+    'Наука Mail, 15.07.2025; годовой отчёт «Моторики» 2025 (центр кибернетической медицины и нейропротезирования); Armiger et al., Johns Hopkins APL Tech Dig 2011; FDA: Implanted BCI Devices, 2021; FDA: Credibility of Computational Modeling, 2023; ASME V&V 40-2018; docs/INTEGRATION.md'),
 
   wpSlide('WP7', ['digital', 'cfo', 'product', IN], 'Седьмой пакет — платформа исходов. Signal LAB уже пишет результат по своей схеме. Предлагаем общий словарь метрик и формат результата для всех игр каталога, чтобы отчёт специалиста, ATTILAN и инвесторы читали одно и то же. Это часть функций ATTILAN на год раньше 2028.',
     'годовой отчёт «Моторики» 2025 (ATTILAN: мониторинг использования, геймификация, запуск 2028); открытый код Fluxara Drift (Signal LAB); README Vesta, Mandat'),
@@ -592,6 +592,9 @@ export const SOURCES = [
     ['Garske CA et al. JMIR Serious Games 2021;9(4):e28079', 'https://doi.org/10.2196/28079'],
     ['Sui Y et al. ICML 2018 — безопасная оптимизация стимуляции', 'https://proceedings.mlr.press/v80/sui18a.html'],
     ['Graczyk EL et al. Sci Rep 2018;8:9866 — ощущения дома', 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6026118'],
+    ['Armiger RS et al. JHU APL Tech Dig 2011 — среда VIE, DARPA', 'https://jhuapl.edu/sites/default/files/2024-09/30-3-Armiger.pdf'],
+    ['FDA, 2021 — имплантируемые интерфейсы «мозг — компьютер»', 'https://www.fda.gov/regulatory-information/search-fda-guidance-documents/implanted-brain-computer-interface-bci-devices-patients-paralysis-or-amputation-non-clinical-testing'],
+    ['FDA, 2023 — доверие к моделям; ASME V&V 40', 'https://www.fda.gov/regulatory-information/search-fda-guidance-documents/assessing-credibility-computational-modeling-and-simulation-medical-device-submissions'],
     ['Lendaro E et al. Pain 2025;166(3):571–586', 'https://doi.org/10.1097/j.pain.0000000000003384'],
     ['Kothe C et al. Imaging Neuroscience 2025 — Lab Streaming Layer', 'https://doi.org/10.1162/IMAG.a.136'],
     ['Eddy E et al. IEEE Access 2023;11:87380–87397 — LibEMG', 'https://doi.org/10.1109/ACCESS.2023.3304544'],
