@@ -163,6 +163,7 @@ html.deck .s.on .hero-img { opacity: 1; transform: none }
 .viz .f-mint { fill: var(--mint) } .viz .f-mint-d { fill: rgba(22, 225, 130, .38) } .viz .f-sky { fill: var(--sky) } .viz .f-violet { fill: var(--violet) }
 .viz .f-amber { fill: var(--amber) } .viz .f-rose { fill: var(--rose) } .viz .f-teal { fill: var(--mint2) } .viz .f-ink { fill: var(--ink) }
 .viz .f-off { fill: rgba(255, 255, 255, .13) } .viz .f-cut { fill: none; stroke: var(--amber); stroke-width: 1.5; stroke-dasharray: 3 3 } .viz .f-cut-m { fill: none; stroke: var(--mint); stroke-width: 1.5; stroke-dasharray: 3 3 }
+.viz .f-out { fill: none; stroke: var(--mint2); stroke-width: 1.5; stroke-dasharray: 2.5 2 }
 .vz-v { fill: var(--soft); font-size: 12.5px; font-weight: 600 } .vz-v.hi, .vz-l2.hi { fill: var(--mint) }
 .vz-l { fill: var(--muted); font-size: 12px } .vz-l2 { fill: var(--soft); font-size: 13px; font-weight: 600 } .vz-c { fill: var(--muted); font-size: 11.5px }
 
@@ -181,6 +182,8 @@ svg.history { width: 100%; flex: 1 }
 .col.half rect { fill: var(--sky) }
 .c-val { fill: var(--ink); font: 600 22px var(--head) }
 .c-lab { fill: var(--ink); font-size: 17px; font-weight: 600 }
+.c-yoy { fill: var(--sky); font-size: 15px; font-weight: 700 }
+.c-sep { stroke: var(--line2); stroke-width: 1.5; stroke-dasharray: 5 6 }
 .c-note { fill: var(--muted); font-size: 14px }
 .kpi-list { display: grid; grid-template-rows: repeat(5, 1fr); gap: 12px }
 .kpi { display: flex; align-items: center; gap: 18px; padding: 12px 20px; border-radius: 16px; background: var(--surf); border: 1px solid var(--line) }
@@ -679,7 +682,8 @@ html.deck .track { display: block; position: fixed; z-index: 15; right: 10px; to
 .hint { display: none }
 html.deck .hint { display: block; position: fixed; z-index: 15; right: 46px; bottom: 10px; margin: 0; color: var(--muted); font-size: 12.5px }
 kbd { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 5px; margin: 0 2px; border-radius: 5px; border: 1px solid var(--line2); font: 600 11.5px var(--body); color: var(--soft) }
-html.deck.route .s:not(.inroute) { display: none }
+/* Маршрут — и в колоде, и в ленте на телефоне: видны только его слайды (ссылка на слайд вне маршрута выключает маршрут) */
+html.on-route:not(.print) .s:not(.inroute) { display: none }
 .track .dot.out { opacity: .18 }
 .notes-panel { position: fixed; z-index: 25; left: 20px; right: 50px; bottom: 34px; max-height: 34vh; overflow: auto; padding: 16px 20px; border-radius: 16px; background: rgba(10, 22, 34, .96); border: 1px solid var(--line2); box-shadow: 0 20px 60px rgba(0, 0, 0, .5); font-size: 17px; line-height: 1.5 }
 .notes-panel p { margin: 0 }
@@ -777,7 +781,7 @@ table.text td { padding: 10px 14px; border-top: 1px solid var(--line); color: va
 /* ════ Взгляд «Моторики» и бизнес-эффект ════ */
 .route-sel { display: inline-flex; align-items: center; gap: 6px; color: var(--soft) }
 .route-sel select { min-height: 36px; max-width: 290px; padding: 4px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg2); color: var(--ink); font: 600 14px var(--body); color-scheme: dark }
-html.route .route-sel select { border-color: var(--mint); color: var(--mint) }
+html.on-route .route-sel select { border-color: var(--mint); color: var(--mint) }
 .chairs-row { padding: 10px 20px }
 .chair-btns { display: flex; flex-wrap: wrap; gap: 8px }
 .chair-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line2); background: var(--surf); color: var(--ink); font: 600 14.5px var(--body); cursor: pointer }
@@ -867,6 +871,9 @@ svg.efftree { flex: 1; min-height: 0; width: 100% }
 .et-s { fill: var(--soft); font-size: 14.5px }
 .et-l { fill: none; stroke: var(--line2); stroke-width: 2 }
 .et-rail { stroke: var(--line2); stroke-width: 2 }
+/* Деньги приходят раньше — вне EBITDA (проценты и оборотный капитал): связь и рамки пунктиром, значение не мятное */
+.et-l.out, .et-rail.out { stroke-dasharray: 6 6 }
+.et.out rect { stroke-dasharray: 7 5 } .et.leaf.out .et-v { fill: var(--violet) }
 
 /* Ускорится и освободится */
 .speedopt { grid-template-columns: 1fr 1fr }

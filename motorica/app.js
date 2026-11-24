@@ -194,7 +194,10 @@
   const sel = $('select[data-route]');
   function setRoute(r, jump = false) {
     route = r && routes[r] ? r : '';
-    doc.classList.toggle('route', !!route);
+    // Класс корня — on-route, а не route: .route — строка маршрута в оглавлении (display: flex, отступы), и на <html>
+    // он делал корень flex-контейнером — лента на телефоне расползалась до ≈1000 px, браузер отдалял масштаб, и страница
+    // переключалась в колоду (до 24.11.2026 ссылка ?route=… на телефоне открывалась крошечной колодой).
+    doc.classList.toggle('on-route', !!route);
     slides.forEach((s, i) => s.classList.toggle('inroute', inRoute(i + 1)));
     $$('.track .dot').forEach((d) => d.classList.toggle('out', !inRoute(+d.dataset.n)));
     $$('[data-chair]').forEach((c) => {
@@ -367,15 +370,15 @@
     const saving = (p.sales * s.hours / p.hoursPerFte) * fteCost;
     const ebitda5 = total[4] * p.margin + saving;
     const breakEven = 10 / (asp * p.loyalty * p.margin);
-    // L4–L7 — как в tools/motorica/model.mjs
+    // L4–L7 — как в tools/motorica/model.mjs: EBITDA = (L1 + L2) × маржа + L3…L6
     const hourCost = fteCost / p.hoursPerFte;
     const l4 = p.ulUnits * p.period * p.reqPerUser * s.preVisit * (p.visitHours * hourCost + p.visitLogistics);
     const l5 = p.sales * p.docReturn * s.docFix * p.docHours * hourCost;
     const l6 = p.newSpecialists * s.onboard / 12 * fteCost;
-    const l7 = ul * s.pathShare * s.pathDays / 365 * p.costOfMoney;
-    const ops = saving + l4 + l5 + l6 + l7;
+    const l7 = ul * s.pathShare * s.pathDays / 365 * p.costOfMoney;   // стоимость денег — ниже EBITDA, в EBITDA не входит
+    const ops = saving + l4 + l5 + l6;
     const ebitdaFull = M.ramp.map((r, i) => total[i] * p.margin + r * ops);
-    return { total, cum, ebitda5, retained, breakEven, ops, ebitdaFull };
+    return { total, cum, ebitda5, retained, breakEven, ops, l7, ebitdaFull };
   }
   window.motoricaCalc = (p, s) => calc({ ...M.base, ...p }, { ...M.scen.base, ...s }); // для проверки check:motorica-page
   if (calcEl) {

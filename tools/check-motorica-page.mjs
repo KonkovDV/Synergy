@@ -23,7 +23,7 @@ import { layoutIssues } from './motorica-layout.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const { chromium, devices } = require('playwright');
 const axePath = join(root, 'node_modules/axe-core/axe.min.js');
 if (!existsSync(axePath)) { console.log('Нет node_modules/axe-core — сначала npm ci'); process.exit(1); }
 const { BASE, SCEN, calc } = await import(pathToFileURL(join(root, 'tools/motorica/model.mjs')).href);
@@ -213,8 +213,8 @@ try {
   await go(page, nOf('model'));
   const mc = await page.evaluate(() => { const r = window.motoricaCalc({}, {}); const c = window.motoricaCalc({ repeat: 0.45, period: 2 }, { reach: 0.7, drop: 0.15 }); return { r, c }; });
   const ref = calc(BASE, SCEN.base), refC = calc({ ...BASE, repeat: 0.45, period: 2 }, { ...SCEN.base, reach: 0.7, drop: 0.15 });
-  for (const [k, a, b] of [['2031', mc.r.total[4], ref.total[4]], ['cum', mc.r.cum, ref.cum], ['EBITDA все рычаги', mc.r.ebitdaFull[4], ref.ebitdaFull[4]], ['рычаги L3–L7', mc.r.ops, ref.ops],
-    ['свой сценарий 2031', mc.c.total[4], refC.total[4]], ['свой сценарий EBITDA', mc.c.ebitdaFull[4], refC.ebitdaFull[4]]]) {
+  for (const [k, a, b] of [['2031', mc.r.total[4], ref.total[4]], ['cum', mc.r.cum, ref.cum], ['EBITDA все рычаги', mc.r.ebitdaFull[4], ref.ebitdaFull[4]], ['рычаги затрат L3–L6', mc.r.ops, ref.ops],
+    ['L7 · стоимость денег', mc.r.l7, ref.l7], ['свой сценарий 2031', mc.c.total[4], refC.total[4]], ['свой сценарий EBITDA', mc.c.ebitdaFull[4], refC.ebitdaFull[4]]]) {
     if (Math.abs(a - b) > 1e-6) fail(`калькулятор ≠ модель (${k}): ${a} и ${b}`);
   }
   const shown = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-calc] [data-o]')].map((e) => [e.dataset.o, e.textContent])));
@@ -394,6 +394,21 @@ try {
   const di = await deep.evaluate(() => ({ on: document.querySelector('#deck > .s.on')?.dataset.n, route: document.querySelector('select[data-route]').value, n: document.querySelectorAll('#deck > .s.inroute').length }));
   if (di.route !== 'innov' || di.n !== deckData.readers.innov.slides.length || +di.on !== 1) fail(`?route=innov: ${JSON.stringify(di)}`);
   await deep.close();
+  // Телефон по ссылке маршрута (Android и iPhone, как из мессенджера): лента, только слайды маршрута, ничего не шире экрана.
+  // До 24.11.2026 класс route на <html> совпадал с .route строки маршрута (display: flex) — корень становился flex-контейнером,
+  // лента расползалась до ≈1000 px, браузер отдалял масштаб, и страница переключалась в колоду: маршрут открывался крошечной колодой.
+  for (const dev of ['Pixel 7', 'iPhone 13']) {
+    const m = await browser.newContext({ ...devices[dev], serviceWorkers: 'block' });
+    const mp = await m.newPage();
+    watch(mp);
+    await mp.goto(`${url}?route=innov`, { waitUntil: 'load' });
+    await ready(mp);
+    await mp.waitForTimeout(400);
+    const st = await mp.evaluate(() => ({ flow: document.documentElement.classList.contains('flow'), sw: document.documentElement.scrollWidth, w: innerWidth,
+      vis: [...document.querySelectorAll('#deck > .s')].filter((s) => s.offsetParent !== null).length }));
+    if (!st.flow || st.sw > st.w + 1 || st.vis !== deckData.readers.innov.slides.length) fail(`${dev}, ?route=innov: ${JSON.stringify(st)} — нужна лента из ${deckData.readers.innov.slides.length} слайдов шириной в экран`);
+    await m.close();
+  }
 
   // ── 9. Телефон: лента слайдов, ссылка прокручивает к слайду ──
   const phone = await browser.newContext({ viewport: { width: 375, height: 800 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });

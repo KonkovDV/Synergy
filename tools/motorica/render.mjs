@@ -8,15 +8,19 @@ import * as D from './data.mjs';
 
 // ── Текст ──
 export const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const UNITS = 'мс|МБ|КБ|%|млн|млрд|₽|тыс\\.|мес|месяц|месяца|месяцев|дней|дня|день|недель|недели|неделя|неделе|лет|года|год|п\\.п\\.|ч\\b|Гц|мин|с\\b|человек|пользователей|участников|пакетов|теорем|тестов|проверок|слайдов|репозиториев|игр|уровней|раза?\\b';
+const UNITS = 'мс|МБ|КБ|%|млн|млрд|₽|тыс\\.|мес|месяц|месяца|месяцев|дней|дня|день|недель|недели|неделя|неделе|лет|года|год|п\\.п\\.|ч\\b|Гц|мин|с\\b|человек|пользователей|участников|пакетов|теорем|тестов|проверок|слайдов|репозиториев|игр|уровней|раза?\\b|ставк|центр|визит|клиник|команд|игрок|решени|жест|направлени|кресл|риск';
 // Неразрывные пробелы: число не отрывается от единицы, «≈ 2», «№ 5», «3–6 месяцев» не рвётся на тире.
 export function nb(s) {
   return String(s)
     .replace(new RegExp(`(\\d) (?=(${UNITS}))`, 'g'), '$1 ')
-    .replace(/(^|[\s(])(≈|№|≥|≤|>|<|—|–) (?=\S)/g, '$1$2 ')
+    // Тире остаётся в конце строки: неразрывный пробел перед ним, обычный — после (строка не начинается с тире)
     .replace(/ (—|–) /g, ' $1 ')
+    .replace(/(?<=^|[\s(])(≈|№|≥|≤|>|<) (?=\S)/g, '$1 ')
+    .replace(/^(—|–) (?=\S)/, '$1 ')
     .replace(/(\d) (\d{3})/g, '$1 $2')
-    .replace(/(^|[\s(«])(в|и|к|с|у|о|а|по|на|за|от|до|не|из|без|для|при|или|что|как|это) /gi, '$1$2 ')
+    .replace(/(млн|млрд|тыс\.) ₽/g, '$1 ₽')
+    // Короткие слова подряд («и в итог»): просмотр назад, чтобы каждое получило свой неразрывный пробел
+    .replace(/(?<=^|[\s(«])(в|и|к|с|у|о|а|по|на|за|от|до|не|из|без|для|при|или|что|как|это) /gi, '$1 ')
     .replace(/(слайд[а-я]*|с\.|ст\.|п\.) (?=\d)/g, '$1 ');
 }
 // Текст для HTML: экранирование, неразрывные пробелы, *выделение*, ^{степень}, диапазоны цифр не рвутся.
@@ -107,12 +111,14 @@ const SUMVIZ = {
   },
   ebitda: () => {
     const b = MODEL.scen.base;
-    const seg = [['L1–L2', b.total[4] * MODEL.base.margin, 'mint'], ['L3', b.saving, 'sky'], ['L4', b.l4, 'violet'], ['L5', b.l5, 'amber'], ['L6', b.l6, 'rose'], ['L7', b.l7, 'teal']];
+    // L7 — стоимость денег, это проценты: ниже EBITDA, поэтому в полосе EBITDA его нет, а в легенде он отдельно, пунктиром
+    const seg = [['L1–L2', b.total[4] * MODEL.base.margin, 'mint'], ['L3', b.saving, 'sky'], ['L4', b.l4, 'violet'], ['L5', b.l5, 'amber'], ['L6', b.l6, 'rose']];
     const sum = seg.reduce((a, x) => a + x[1], 0); let x = 0;
     const bar = seg.map(([, v, c]) => { const w = (v / sum) * 228; const r = `<rect x="${x}" y="4" width="${Math.max(w - 2, 2)}" height="20" rx="3" class="f-${c}"/>`; x += w; return r; }).join('');
     const leg = seg.map(([k, v, c], i) => { const X = (i % 2) * 118; const Y = 50 + Math.floor(i / 2) * 26;
       return `<rect x="${X}" y="${Y - 10}" width="11" height="11" rx="2" class="f-${c}"/>${svgText(X + 18, Y, `${k} · ${r1(v)}`, 'vz-l2')}`; }).join('');
-    return { label: `Из чего складывается EBITDA 2031, млн ₽: ${seg.map(([k, v]) => `${k} — ${r1(v)}`).join(', ')}`, svg: `${bar}${leg}${svgText(114, 148, 'млн ₽ EBITDA в 2031 году', 'vz-c', 'middle')}` };
+    const out = `<rect x="118.5" y="${50 + 2 * 26 - 9.5}" width="10" height="10" rx="2" class="f-out"/>${svgText(136, 50 + 2 * 26, 'L7 вне EBITDA', 'vz-l')}`;
+    return { label: `Из чего складывается EBITDA 2031, млн ₽: ${seg.map(([k, v]) => `${k} — ${r1(v)}`).join(', ')}; L7 — ${r1(b.l7)} млн ₽ в год на стоимости денег, это проценты, вне EBITDA`, svg: `${bar}${leg}${out}${svgText(114, 148, 'млн ₽ EBITDA в 2031 году', 'vz-c', 'middle')}` };
   },
   speed: () => {
     const d = MODEL.scen.base.pathDays; const k = 228 / 180;
@@ -530,20 +536,21 @@ L.baseline = (s) => {
 
 L.dataflow = (s) => {
   const W = 1000, H = 520;
-  const box = (x, y, w, t, sub, cls) => `<g class="df ${cls}"><rect x="${x}" y="${y}" width="${w}" height="76" rx="14"/>${svgText(x + 16, y + 31, t, 'df-t')}${svgLines(x + 16, y + 55, sub, Math.floor(w / 8.6), 18, 'df-s')}</g>`;
+  // Высота блока — по числу строк подписи: подпись не выходит за рамку, даже если перенесётся (на слайде шрифт подписи — 15,5)
+  const box = (x, y, w, t, sub, cls) => { const lines = wrap(sub, Math.floor(w / 8.8)); return `<g class="df ${cls}"><rect x="${x}" y="${y}" width="${w}" height="${58 + lines.length * 18}" rx="14"/>${svgText(x + 16, y + 31, t, 'df-t')}${lines.map((l, i) => `<text x="${x + 16}" y="${y + 55 + i * 18}" class="df-s">${esc(l)}</text>`).join('')}</g>`; };
   const arrow = (x1, y1, x2, y2, cls = '') => `<path d="M${x1} ${y1} L${x2} ${y2}" class="dfa ${cls}"/>`;
   return `<div class="split dataflow">
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Потоки данных: протез, Motorica Start, тренажёр на телефоне, пользователь, специалист, ATTILAN; MOTUS Lab получает только обезличенные выгрузки">
       <rect x="10" y="10" width="420" height="500" rx="20" class="zone zm"/>${svgText(30, 40, 'контур «Моторики»', 'zt')}
-      <rect x="470" y="10" width="300" height="300" rx="20" class="zone zu"/>${svgText(490, 40, 'телефон пользователя', 'zt')}
+      <rect x="460" y="10" width="330" height="300" rx="20" class="zone zu"/>${svgText(480, 40, 'телефон пользователя', 'zt')}
       ${box(40, 60, 360, 'Протез', 'уровни и пороги по BLE', 'p')}
       ${box(40, 180, 360, 'Motorica Start', 'снимок v1 через службу', 'p')}
-      ${box(500, 60, 240, 'Тренажёр', 'итоги — только на устройстве', 'u')}
-      ${box(500, 200, 240, 'Пользователь', 'сам выгружает отчёт', 'u')}
+      ${box(480, 60, 290, 'Тренажёр', 'итоги — только на устройстве', 'u')}
+      ${box(480, 200, 290, 'Пользователь', 'сам выгружает отчёт', 'u')}
       ${box(40, 300, 360, 'Специалист и центр', 'отчёт PDF, CSV, JSON', 'p')}
       ${box(40, 420, 360, 'ATTILAN и CRM', 'карточка пациента, исходы', 'p')}
-      ${box(800, 420, 190, 'MOTUS Lab', 'обезличенно, по договору', 'x')}
-      ${arrow(220, 136, 220, 180)}${arrow(400, 218, 500, 110)}${arrow(620, 136, 620, 200)}${arrow(500, 250, 400, 330)}${arrow(220, 376, 220, 420)}${arrow(400, 470, 800, 460, 'dash')}
+      ${box(730, 420, 262, 'MOTUS Lab', 'обезличенно, по договору', 'x')}
+      ${arrow(220, 136, 220, 180)}${arrow(400, 218, 480, 110)}${arrow(625, 136, 625, 200)}${arrow(480, 250, 400, 330)}${arrow(220, 376, 220, 420)}${arrow(400, 470, 730, 458, 'dash')}
     </svg>
     <ul class="rules">${s.data.rules.map((r) => `<li>${ic('LuShieldCheck', 'ok')}<span>${tx(r)}</span></li>`).join('')}</ul>
   </div>`;
@@ -605,7 +612,7 @@ L.model = (s, ctx) => {
       <div class="assume print-only"><p class="lbl">${ic('LuListChecks')} Допущения A1–A6 · базовый сценарий</p><ul>
         <li>охват новых пользователей тренажёром — 30 / <b>50</b> / 70 %</li><li>снижение отказов среди них — 5 / <b>10</b> / 15 п.п.</li>
         <li>сдвиг к флагманам — 1 / <b>2</b> / 4 п.п.; доля повторных продаж — 55 %</li><li>замена протеза раз в 3 года; возврат при замене — 80 %</li></ul></div>
-      <p class="fine">* EBITDA со всеми рычагами L1–L7 — формулы на слайде ${ctx.slideOf('levers')}. База — 2025 год без роста рынка; только протезы рук. Не учтены ноги («Лимб»), центры, нейротех и экспорт.</p>
+      <p class="fine">${tx(`* EBITDA — маржа 26 % с новой выручки и рычаги затрат L3–L6, без процентов L7 (слайд ${ctx.slideOf('levers')}). База — 2025 год, только протезы рук; ноги, центры, нейротех и экспорт не учтены.`)}</p>
     </div>
   </div>`;
 };
@@ -624,9 +631,9 @@ L.tornado = () => {
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(sens.map(([n, lo, hi, a, b]) => `${n}: ${lo} — ${r0(a)}, ${hi} — ${r0(b)}`).join('; '))}"><line x1="${cx}" y1="20" x2="${cx}" y2="${H - 10}" class="mid"/>${rows}</svg></figure>
     <div class="side">
       <div class="kpi"><b>≈${r2(MODEL.cycleRevenue).replace('.', ',')} млн ₽</b><span>выручки и ≈${r2(MODEL.cycleEbitda)} млн ₽ EBITDA за каждый цикл замены от одного удержанного пользователя</span></div>
-      <div class="kpi"><b>≈${r0(MODEL.breakEvenEbitda)}</b><span>удержанных пользователей окупают каждые 10 млн ₽ затрат в год по EBITDA — ${r1(MODEL.breakEvenEbitda / MODEL.newUsers * 100)} % новых пользователей года</span></div>
+      <div class="kpi"><b>≈${r0(MODEL.breakEvenEbitda)}</b><span>удержанных пользователей возвращают 10 млн ₽ затрат по EBITDA своей следующей заменой — ${r1(MODEL.breakEvenEbitda / MODEL.newUsers * 100)} % новых пользователей года</span></div>
       <div class="kpi"><b>≈${r0(MODEL.scen.base.retained)}</b><span>пользователей в год удерживает базовый сценарий</span></div>
-      <p class="fine">Честная граница: если повторных продаж у «Моторики» столько же, сколько у рынка (87 %), рычаг даёт ${r0(sens[4][3])} млн ₽ вместо ${r0(base)}. Рост рынка на 18 % в год в базу не заложен.</p>
+      <p class="fine">${tx(`Честная граница: если повторных продаж у «Моторики» столько же, сколько у рынка (87 %), рычаг даёт ${r0(sens[4][3])} млн ₽ вместо ${r0(base)}. По кассе замена приходит через 1–3 года после выдачи; рост рынка на 18 % в год не заложен.`)}</p>
     </div>
   </div>`;
 };
@@ -723,7 +730,18 @@ L.pipeline = (s) => `<div class="jam" role="list" aria-label="Геймджем �
 export function renderSlide(s, ctx) {
   const fn = L[s.layout];
   if (!fn) throw new Error(`нет макета ${s.layout}`);
-  return fn(s, ctx).replace(/>([^<]+)</g, (m, t) => `>${nb(t)}<`);
+  // Типограф для всех текстов макета, в том числе «сырых» строк шаблонов: неразрывные пробелы везде, а вне SVG ещё
+  // и диапазоны цифр («1–3 года») не рвутся на тире — span.nw, как в tx(). Внутри SVG span не работает, там только пробелы.
+  let svg = 0; let nw = false;
+  return fn(s, ctx).replace(/<(\/?)([a-z][\w-]*)\b[^>]*>|[^<]+/gi, (m, close, tag) => {
+    if (tag) {
+      if (tag.toLowerCase() === 'svg' && !m.endsWith('/>')) svg += close ? -1 : 1;
+      nw = !close && /\bclass="nw"/.test(m);
+      return m;
+    }
+    const t = nb(m);
+    return svg > 0 || nw ? t : t.replace(/(\d+)–(\d+)/g, '<span class="nw">$1–$2</span>');
+  });
 }
 
 // ════ Макеты взгляда «Моторики» и бизнес-эффекта ════
@@ -737,13 +755,11 @@ L.company = (s) => {
   const bars = f.revenue.map(([y, v], i) => {
     const h = (v / maxV) * 300; const half = y.startsWith('I');
     const mg = { 1: 38, 2: 26, 3: 28 }[i];
-    return `<g class="col${half ? ' half' : ''}"><rect x="${xs(i)}" y="${base - h}" width="${bw}" height="${h}" rx="10"/>${svgText(xs(i) + bw / 2, base - h - 14, fmt1(v), 'c-val', 'middle')}${svgText(xs(i) + bw / 2, base + 30, y, 'c-lab', 'middle')}${mg ? svgText(xs(i) + bw / 2, base + 56, `скорр. EBITDA ${mg} %`, 'c-mg', 'middle') : ''}</g>`;
+    // Полугодие — не год: столбец другого цвета, над ним — рост к I полугодию 2025, и он отделён от лет пунктиром
+    return `<g class="col${half ? ' half' : ''}"><rect x="${xs(i)}" y="${base - h}" width="${bw}" height="${h}" rx="10"/>${svgText(xs(i) + bw / 2, base - h - 14, fmt1(v), 'c-val', 'middle')}${half ? svgText(xs(i) + bw / 2, base - h - 50, '+62 % г/г', 'c-yoy', 'middle') : ''}${svgText(xs(i) + bw / 2, base + 30, y, 'c-lab', 'middle')}${mg ? svgText(xs(i) + bw / 2, base + 56, `скорр. EBITDA ${mg} %`, 'c-mg', 'middle') : ''}</g>`;
   }).join('');
-  // Рентабельность EBITDA: точки над 2024, 2025, I пол. 2026 и линия цели 30 %
-  const my = (m) => 110 - (m - 20) * 4.2;
-  const mpts = [[1, 38], [2, 26], [3, 28]].map(([i, m]) => [xs(i) + bw / 2, my(m), m]);
-  const mline = `<polyline points="${mpts.map(([x, y]) => `${x},${y}`).join(' ')}" class="mg"/>${mpts.map(([x, y, m]) => `<circle cx="${x}" cy="${y}" r="6" class="mgd"/>${svgText(x + 12, y - 8, m + ' %', 'mg-t')}`).join('')}`;
-  const target = `<line x1="${xs(1)}" y1="${my(30)}" x2="${xs(3) + bw}" y2="${my(30)}" class="mg-goal"/>${svgText(xs(3) + bw, my(30) - 8, 'цель 30 %', 'mg-g', 'end')}`;
+  const sepX = (xs(2) + bw + xs(3)) / 2;
+  const sep = `<line x1="${sepX}" y1="${base - 250}" x2="${sepX}" y2="${base + 66}" class="c-sep"/>`;
   const tiles = [
     ['≈40 %', 'рынка протезов рук; «Моторика» — № 1 в сегменте'],
     ['78', 'протезистов и медиков на всю сеть центров'],
@@ -754,8 +770,8 @@ L.company = (s) => {
   ];
   return `<div class="split company2">
     <figure class="chart"><figcaption>Выручка группы по МСФО, млрд ₽ · рентабельность по скорр. EBITDA, %</figcaption>
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Выручка: 2023 — 2,0; 2024 — 4,2; 2025 — 7,1; I полугодие 2026 — 4,3 млрд ₽. Рентабельность по скорректированной EBITDA: 2024 — 38 %, 2025 — 26 %, I полугодие 2026 — 28 %, цель — 30 %">
-      <line x1="${x0 - 10}" y1="${base}" x2="${W - 40}" y2="${base}" class="axis"/>${bars}${svgText(W - 40, H - 8, 'цель «Моторики» — 30 % по скорр. EBITDA', 'mg-g', 'end')}</svg></figure>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Выручка: 2023 — 2,0; 2024 — 4,2; 2025 — 7,1; I полугодие 2026 — 4,3 млрд ₽, на 62 % больше, чем в I полугодии 2025. Рентабельность по скорректированной EBITDA: 2024 — 38 %, 2025 — 26 %, I полугодие 2026 — 28 %, цель — 30 %">
+      <line x1="${x0 - 10}" y1="${base}" x2="${W - 40}" y2="${base}" class="axis"/>${sep}${bars}${svgText(W - 40, H - 8, 'цель «Моторики» — 30 % по скорр. EBITDA', 'mg-g', 'end')}</svg></figure>
     <div class="tiles6">${tiles.map(([v, l]) => `<div class="tile"><b>${tx(v)}</b><span>${tx(l)}</span></div>`).join('')}</div>
   </div>`;
 };
@@ -780,7 +796,7 @@ L.market = (s) => {
       ${cmp('Нуждаются в протезе, тыс. человек', `${fmt1(m.hands.need)} → ${fmt1(m.hands.need2030)}`, `${m.legs.need} → ${m.legs.need2030}`)}
       ${cmp('Изделий в 2024 году, тыс.', fmt1(m.hands.units), String(m.legs.units))}
       ${cmp('Доля первичных пациентов', `${fmt1(m.hands.primary)} → ${fmt1(m.hands.primary2030)} %`, `${fmt1(m.legs.primary)} → ${fmt1(m.legs.primary2030)} %`)}
-      ${cmp('Доля «Моторики»', '≈40 %, № 1', '«Лимб» с 09.2026')}
+      ${cmp('Доля «Моторики»', '≈40 %, № 1', '«Лимб» с 08.2026')}
       <p class="strip sm">${ic('LuRepeat')}<span><b>Повторные пациенты — 87 % спроса на протезы рук в 2024 году и ≈96 % к 2030-му.</b> Удержанный пользователь — это следующая замена через 1–3 года.</span></p>
     </div>
   </div>`;
@@ -969,15 +985,16 @@ L.efftree = () => {
   const b = MODEL.scen.base; const mg = MODEL.base.margin;
   const W = 1424, H = 540;
   const box = (x, y, w, h, title, val, sub, cls) => `<g class="et ${cls}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14"/>${svgText(x + 16, y + 30, title, 'et-t')}${svgText(x + w - 16, y + 30, val, 'et-v', 'end')}${sub ? svgLines(x + 16, y + 54, sub, Math.floor(w / 8.4), 19, 'et-s') : ''}</g>`;
-  const line = (x1, y1, x2, y2) => `<path d="M${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}" class="et-l"/>`;
+  const line = (x1, y1, x2, y2, cls = '') => `<path d="M${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}" class="et-l${cls}"/>`;
   const rev = b.total[4] * mg; const cost = b.saving + b.l4 + b.l5 + b.l6;
+  // EBITDA = выручка × маржа + затраты (L3–L6). Деньги (L7) — проценты и оборотный капитал: ниже EBITDA, ветвь пунктиром
   const root = box(422, 0, 580, 74, 'EBITDA 2031, базовый сценарий', `≈${r0(b.ebitdaFull[4])} млн ₽`, '', 'root');
   const br = [
-    [40, 'Выручка растёт', `${r0(b.total[4])} млн ₽ × 26 % = ${r0(rev)}`, 'rev'],
-    [512, 'Затраты снижаются', `≈${r0(cost)} млн ₽ в год`, 'cost'],
-    [984, 'Деньги приходят раньше', `≈${r0(b.l7)} млн ₽ в год`, 'cash'],
+    [40, 'Выручка растёт', `${r0(b.total[4])} млн ₽ × 26 % = ${r0(rev)}`, 'rev', ''],
+    [512, 'Затраты снижаются', `≈${r0(cost)} млн ₽ в год`, 'cost', ''],
+    [984, 'Деньги приходят раньше', `вне EBITDA: ≈${r0(b.cashPulled)} млн ₽ разово`, 'cash', ' out'],
   ];
-  const branches = br.map(([x, t, v, c]) => `${line(712, 74, x + 200, 130)}${box(x, 130, 400, 70, t, '', v, 'br ' + c)}`).join('');
+  const branches = br.map(([x, t, v, c, o]) => `${line(712, 74, x + 200, 130, o)}${box(x, 130, 400, 70, t, '', v, 'br ' + c + o)}`).join('');
   const leaves = [
     [40, 'L1 · удержание', `${r0(b.l1[4])} млн ₽`, `+${r0(b.retained)} удержанных в год · WP1, WP7`, 'rev'],
     [40, 'L2 · флагманы', `${r0(b.l2[4])} млн ₽`, '+2 п.п. перехода на флагманы · WP2, WP5', 'rev'],
@@ -985,14 +1002,14 @@ L.efftree = () => {
     [512, 'L4 · визиты в сервис', `${r1(b.l4)} млн ₽`, `≈${r0(b.visits)} визитов в год · WP9`, 'cost'],
     [512, 'L5 · документы', `${r1(b.l5)} млн ₽`, `${r0(b.docHoursSaved)} ч доработки · WP8`, 'cost'],
     [512, 'L6 · онбординг', `${r1(b.l6)} млн ₽`, `${r1(b.onboardFte)} ставки · WP11`, 'cost'],
-    [984, 'L7 · путь пациента', `${r1(b.l7)} млн ₽`, `−${b.pathDays} дней у ${Math.round(b.pathShare * 100)} %: ≈${r0(b.cashPulled)} млн ₽ раньше · WP10`, 'cash'],
+    [984, 'L7 · путь пациента', `${r1(b.l7)} млн ₽`, `в год на процентах · −${b.pathDays} дней у ${Math.round(b.pathShare * 100)} % · WP10`, 'cash out'],
   ];
   const cnt = {}; const lv = leaves.map(([x, t, v, sub, c]) => {
     const k = (cnt[x] = (cnt[x] || 0) + 1) - 1; const y = 236 + k * 76;
     return `${box(x + 20, y, 380, 66, t, v, sub, 'leaf ' + c)}`;
   }).join('');
-  const rails = [40, 512, 984].map((x) => `<line x1="${x + 10}" y1="200" x2="${x + 10}" y2="${236 + (x === 512 ? 3 : x === 40 ? 1 : 0) * 76 + 33}" class="et-rail"/>`).join('');
-  return `<svg class="efftree" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`Эффект в 2031 году ≈${r0(b.ebitdaFull[4])} млн ₽ EBITDA: выручка ${r0(rev)}, затраты ${r0(cost)}, деньги ${r0(b.l7)}`)}">${root}${branches}${rails}${lv}</svg>`;
+  const rails = [40, 512, 984].map((x) => `<line x1="${x + 10}" y1="200" x2="${x + 10}" y2="${236 + (x === 512 ? 3 : x === 40 ? 1 : 0) * 76 + 33}" class="et-rail${x === 984 ? ' out' : ''}"/>`).join('');
+  return `<svg class="efftree" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(`EBITDA 2031 года ≈${r0(b.ebitdaFull[4])} млн ₽: выручка ${r0(rev)} и затраты ${r0(cost)}. Отдельно, вне EBITDA: ≈${r0(b.cashPulled)} млн ₽ оборотного капитала разово и ${r1(b.l7)} млн ₽ в год экономии на процентах`)}">${root}${branches}${rails}${lv}</svg>`;
 };
 
 L.levers = () => {
@@ -1010,9 +1027,9 @@ L.levers = () => {
   return `<div class="tbl levers" role="table" aria-label="Рычаги эффекта: формулы, база, допущения и значения в 2031 году">
     <div class="tr th" role="row"><span role="columnheader">Рычаг</span><span role="columnheader">Формула</span><span role="columnheader">База «Моторики»</span><span role="columnheader">Допущение</span><span role="columnheader">Конс.</span><span role="columnheader">База</span><span role="columnheader">Опт.</span></div>
     ${rows.map(([c, n, f, base, a, vals]) => `<div class="tr" role="row"><span role="cell"><b>${c}</b> ${tx(n)}</span><span role="cell"><i>${tx(f)}</i></span><span role="cell">${tx(base)}</span><span role="cell" class="m">${tx(a)}</span>${vals.map((x, i) => `<span role="cell" class="num${i === 1 ? ' hl' : ''}">${x}</span>`).join('')}</div>`).join('')}
-    <div class="tr total" role="row"><span role="cell"><b>EBITDA 2031</b></span><span role="cell"><i>(L1 + L2) × 26 % + L3 + L4 + L5 + L6 + L7</i></span><span role="cell">маржа EBITDA 2025 — 26 %</span><span role="cell" class="m">L1–L2 — выручка, L3–L7 — EBITDA</span>${v((s) => s.ebitdaFull[4]).map((x, i) => `<span role="cell" class="num${i === 1 ? ' hl' : ''}">${x}</span>`).join('')}</div>
+    <div class="tr total" role="row"><span role="cell"><b>EBITDA 2031</b></span><span role="cell"><i>(L1 + L2) × 26 % + L3 + L4 + L5 + L6</i></span><span role="cell">маржа EBITDA 2025 — 26 %</span><span role="cell" class="m">L1–L2 — выручка, L3–L6 — затраты; L7 — проценты, вне EBITDA</span>${v((s) => s.ebitdaFull[4]).map((x, i) => `<span role="cell" class="num${i === 1 ? ' hl' : ''}">${x}</span>`).join('')}</div>
   </div>
-  <p class="fine">Млн ₽ в 2031 году при полном охвате. База 2025 года заморожена: рост рынка на 18 % в год, ноги, центры, нейротех и экспорт не учтены. L7 — ещё и разовое высвобождение ≈${r0(S.base.cashPulled)} млн ₽ оборотного капитала в базовом сценарии.</p>`;
+  <p class="fine">${tx(`Млн ₽ в 2031 году при полном охвате. L1 распределяет выручку замены по годам цикла: по кассе первая замена приходит через 1–3 года после выдачи. L7 — экономия на процентах, она ниже EBITDA и в итог не входит; ещё ≈${r0(S.base.cashPulled)} млн ₽ оборотного капитала высвобождаются разово. База 2025 года заморожена: рост рынка на 18 % в год, ноги, центры, нейротех и экспорт не учтены.`)}</p>`;
 };
 
 L.speedopt = () => {
