@@ -238,9 +238,13 @@ test('5.29 dist lock: a lock file still empty (being created) is not taken over,
   const probe = `import { acquireDistLock } from './tools/dist-lock.mjs'; const t = Date.now(); const release = acquireDistLock(); console.log(Date.now() - t); release();`;
   const child = () => Number(execFileSync(process.execPath, ['--input-type=module', '-e', probe], { encoding: 'utf8', timeout: 20000, env: { ...process.env, SYNERGY_DIST_LOCK: lock } }).trim());
   try {
+    // The age of the lock runs from its creation, so the wait is measured here, not in the child: starting node
+    // takes up to a second on Windows runners, and the child's own clock missed that part (1249 ms seen on CI).
+    const created = Date.now();
     write(lock, ''); // fresh and empty: another process between open and write
-    const waited = child();
-    assert.ok(waited >= 1500, `an empty lock younger than 2 s was taken over after ${waited} ms`);
+    child();
+    const waited = Date.now() - created;
+    assert.ok(waited >= 1900, `an empty lock younger than 2 s was taken over after ${waited} ms`);
     write(lock, '999999999'); // a pid that does not run
     assert.ok(child() < 1000, 'a dead owner\'s lock is taken at once');
     write(lock, '');

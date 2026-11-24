@@ -24,6 +24,26 @@ const OUT = path.join(ROOT, 'motorica');
 const PDF = path.join(OUT, 'MOTUS-Lab-Motorica.pdf');
 const PPTX = path.join(OUT, 'MOTUS-Lab-Motorica.pptx');
 const TITLE = 'План сотрудничества MOTUS Lab и ГК «Моторика»';
+const SUBJECT = '11 пакетов работ, стыки с Motorica Start и ATTILAN, пилот за 8 недель, данные и право, модель эффекта, решения';
+
+// Свойства PDF: Chromium пишет только название страницы и «Chromium». Автора, тему и название маршрута дописываем
+// инкрементальным обновлением (новый словарь /Info, своя таблица xref, /Prev на старую) — байты страниц не трогаем.
+function pdfInfo(file, { title, subject }) {
+  const buf = fs.readFileSync(file);
+  const tail = buf.subarray(Math.max(0, buf.length - 2048)).toString('latin1');
+  const tr = /trailer\s*<<([\s\S]*?)>>\s*startxref\s+(\d+)\s+%%EOF\s*$/.exec(tail);
+  if (!tr) throw new Error(`${path.basename(file)}: нет таблицы xref в конце файла — формат PDF Chromium сменился`);
+  const size = +/\/Size (\d+)/.exec(tr[1])[1], root = /\/Root (\d+ \d+ R)/.exec(tr[1])[1], infoRef = /\/Info (\d+) 0 R/.exec(tr[1])?.[1];
+  const head = buf.toString('latin1');
+  const old = infoRef ? new RegExp(`(?:^|\\n)${infoRef} 0 obj\\s*<<([\\s\\S]*?)>>\\s*endobj`).exec(head)?.[1] ?? '' : '';
+  const keep = ['Creator', 'Producer', 'CreationDate', 'ModDate'].map((k) => new RegExp(`/${k} \\([^()\\\\]*\\)`).exec(old)?.[0]).filter(Boolean);
+  const u16 = (t) => '<FEFF' + [...Buffer.from(t, 'utf16le').swap16()].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase() + '>';
+  const obj = `${size} 0 obj\n<</Title ${u16(title)}\n/Author ${u16('MOTUS Lab')}\n/Subject ${u16(subject)}\n${keep.join('\n')}>>\nendobj\n`;
+  const at = buf.length + 1, xref = at + Buffer.byteLength(obj, 'latin1');
+  const add = `\n${obj}xref\n0 1\n0000000000 65535 f \n${size} 1\n${String(at).padStart(10, '0')} 00000 n \n` +
+    `trailer\n<</Size ${size + 1}\n/Root ${root}\n/Info ${size} 0 R\n/Prev ${tr[2]}>>\nstartxref\n${xref}\n%%EOF\n`;
+  fs.writeFileSync(file, Buffer.concat([buf, Buffer.from(add, 'latin1')]));
+}
 
 (async () => {
   const { startServer } = await import(path.join(ROOT, 'tools/static-server.mjs'));
@@ -44,6 +64,7 @@ const TITLE = 'План сотрудничества MOTUS Lab и ГК «Мот�
     if (errors.length) throw new Error('ошибки на странице: ' + errors.join('; '));
     await page.emulateMedia({ media: 'print' });
     await page.pdf({ path: PDF, width: '1600px', height: '900px', printBackground: true, preferCSSPageSize: true, tagged: true, outline: true });
+    pdfInfo(PDF, { title: TITLE, subject: SUBJECT });
     await page.emulateMedia({ media: 'screen' });
 
     // ── PDF маршрута читателя (D.READERS): только его слайды — то, что читатель открывает или пересылает ──
@@ -55,6 +76,7 @@ const TITLE = 'План сотрудничества MOTUS Lab и ГК «Мот�
       if (shown < 10) throw new Error(`маршрут ${r.id}: в печати ${shown} слайдов`);
       await rp.emulateMedia({ media: 'print' });
       await rp.pdf({ path: path.join(OUT, `MOTUS-Lab-Motorica-${r.id}.pdf`), width: '1600px', height: '900px', printBackground: true, preferCSSPageSize: true, tagged: true, outline: true });
+      pdfInfo(path.join(OUT, `MOTUS-Lab-Motorica-${r.id}.pdf`), { title: `${r.t} — маршрут на ${r.minutes} минут · MOTUS Lab × ГК «Моторика»`, subject: `${shown} слайдов маршрута «${r.t}» из плана сотрудничества MOTUS Lab и ГК «Моторика»` });
       await rp.close();
     }
 
@@ -84,6 +106,10 @@ const TITLE = 'План сотрудничества MOTUS Lab и ГК «Мот�
       shots.push(await sharp(png).jpeg({ quality: 86, mozjpeg: true }).toBuffer());
     }
     await sharp(shots[0]).resize(1200, 675).extract({ left: 0, top: 22, width: 1200, height: 630 }).jpeg({ quality: 84, mozjpeg: true }).toFile(path.join(OUT, 'og.jpg'));
+    // Превью короткого адреса маршрута (/motorica/neuro/) — его слайд «Нейротехнологии и инновации»
+    const reader = meta.findIndex((m) => m.layout === 'reader');
+    if (reader < 0) throw new Error('нет слайда маршрута читателя для og-innov.jpg');
+    await sharp(shots[reader]).resize(1200, 675).extract({ left: 0, top: 22, width: 1200, height: 630 }).jpeg({ quality: 84, mozjpeg: true }).toFile(path.join(OUT, 'og-innov.jpg'));
 
     // ── PowerPoint: снимок на весь слайд, речь в заметках, разделы ──
     const pres = new pptxgen();
@@ -91,7 +117,7 @@ const TITLE = 'План сотрудничества MOTUS Lab и ГК «Мот�
     pres.author = 'MOTUS Lab';
     pres.company = 'MOTUS Lab';
     pres.title = TITLE;
-    pres.subject = '11 пакетов работ, стыки с Motorica Start и ATTILAN, пилот за 8 недель, данные и право, модель эффекта, решения';
+    pres.subject = SUBJECT;
     const secTitle = Object.fromEntries(SECTIONS.map((s) => [s.id, s.t]));
     let lastSec = '';
     for (const [i, m] of meta.entries()) {

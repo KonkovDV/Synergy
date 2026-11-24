@@ -164,6 +164,24 @@ for (const m of readFileSync(join(dir, 'PLAN.md'), 'utf8').matchAll(/^## (.+)$/g
 
 // ── 5а. План говорит то же, что колода: все пакеты работ с теми же названиями и итоги модели ──
 const D = await import(new URL('./motorica/data.mjs', import.meta.url).href);
+// Досье пакетов: якорь #wpN в плане и ссылка на него со слайда пакета
+for (const w of D.WPS) {
+  const id = w.id.toLowerCase();
+  if (!plan.includes(`<h3 id="${id}">`)) fail(`plan.html: у досье ${w.id} нет якоря #${id}`);
+  if (!html.includes(`href="${D.SITE}plan.html#${id}"`)) fail(`слайд ${w.id} не ведёт на своё досье в плане`);
+}
+// Короткий адрес маршрута /motorica/neuro/: своё превью для мессенджеров и сразу переход на колоду с маршрутом
+{
+  const f = join(dir, 'neuro', 'index.html');
+  if (!existsSync(f)) fail('нет neuro/index.html — короткого адреса маршрута (node tools/motorica-site.mjs)');
+  else {
+    const t = readFileSync(f, 'utf8');
+    page('neuro/index.html', t);
+    if (!t.includes(`<meta http-equiv="refresh" content="0; url=${D.SITE}?route=innov">`)) fail('neuro/index.html: нет перехода на ?route=innov');
+    if (!t.includes(`<meta property="og:image" content="${D.SITE}og-innov.jpg">`)) fail('neuro/index.html: превью — не снимок слайда маршрута');
+    if (!existsSync(join(dir, 'og-innov.jpg'))) fail('нет og-innov.jpg — превью маршрута (node tools/motorica-deck.cjs)');
+  }
+}
 const planMd = readFileSync(join(dir, 'PLAN.md'), 'utf8').replace(/\u00a0/g, ' ');
 for (const w of D.WPS) if (!planMd.includes(`### ${w.id}. ${w.t.replace(/\u00a0/g, ' ')}`)) fail(`PLAN.md: нет пакета «${w.id}. ${w.t}» — названия в плане и в колоде должны совпадать`);
 const rubP = (x) => Math.round(x).toLocaleString('ru-RU').replace(/\s/g, ' ');

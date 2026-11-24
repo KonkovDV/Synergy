@@ -21,7 +21,7 @@
 - `slides.mjs` — слайды: раздел, маршрут, заголовок, данные, речь, источники; ссылки между слайдами — `{#layout}` и `{#wp:WP5}`;
 - `render.mjs` — HTML и SVG каждого макета, без атрибутов `style` (строгая CSP).
 
-Из них `tools/motorica-site.mjs` собирает `index.html`, `plan.html` (из `PLAN.md`) и `sw.js`, а `tools/motorica-deck.cjs` открывает ту же страницу в Chromium (`?print=1`) и печатает PDF, по `?print=1&route=innov` — PDF маршрута «Нейротехнологии и инновации», снимает слайды для PowerPoint и `og.jpg` и пишет `slides.json`. Поэтому сайт, PDF и PPTX не расходятся. Калькулятор сайта (`app.js`) и Excel-книга (`tools/motorica-model.py`) считают по тем же формулам, что `model.mjs`; проверки сверяют все три.
+Из них `tools/motorica-site.mjs` собирает `index.html`, `plan.html` (из `PLAN.md`), `sw.js` и короткий адрес маршрута `neuro/index.html`, а `tools/motorica-deck.cjs` открывает ту же страницу в Chromium (`?print=1`) и печатает PDF, по `?print=1&route=innov` — PDF маршрута «Нейротехнологии и инновации» (у обоих PDF в свойствах автор MOTUS Lab, тема и своё название), снимает слайды для PowerPoint, `og.jpg` и `og-innov.jpg` и пишет `slides.json`. Поэтому сайт, PDF и PPTX не расходятся. Калькулятор сайта (`app.js`) и Excel-книга (`tools/motorica-model.py`) считают по тем же формулам, что `model.mjs`; проверки сверяют все три.
 
 ## Как пересобрать
 

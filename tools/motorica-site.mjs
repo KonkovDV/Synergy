@@ -209,7 +209,7 @@ function markdown(md) {
     if ((m = /^(#{1,3}) (.+)$/.exec(line))) {
       if (m[1].length === 1) title = m[2];
       else if (m[1].length === 2) { const id = `sec-${toc.length + 1}`; toc.push([id, m[2]]); out.push(`<h2 id="${id}">${inline(m[2])}</h2>`); }
-      else out.push(`<h3>${inline(m[2])}</h3>`);
+      else { const wp = /^(WP\d+)\. /.exec(m[2]); out.push(`<h3${wp ? ` id="${wp[1].toLowerCase()}"` : ''}>${inline(m[2])}</h3>`); } // #wp4 — досье пакета, на него ведёт его слайд
       i++; continue;
     }
     if (line.startsWith('|')) {
@@ -267,6 +267,52 @@ ${iconSprite()}
 </html>
 `;
 writeFileSync(join(dir, 'plan.html'), planHtml);
+
+// ── Короткий адрес маршрута читателя: /motorica/neuro/ ──
+// Мессенджеры строят превью ссылки по og:-тегам страницы, а ?route=innov у всей колоды одно превью на всех.
+// Здесь своё: заголовок маршрута, его описание и снимок слайда маршрута (og-innov.jpg из tools/motorica-deck.cjs);
+// сама страница сразу переводит на колоду с маршрутом — без скриптов, по meta refresh, CSP та же.
+{
+  const r = D.READERS.find((x) => x.id === 'innov');
+  const n = deckData.readers.innov.slides.length;
+  const to = `${D.SITE}?route=innov`;
+  const t = `${r.t} — маршрут на ${r.minutes} минут`;
+  const d = `${n} слайдов для департамента нейротехнологий «Моторики»: очувствление NEMO Sensitive, Поток 3, исходы и остеоинтеграция; что доказано сегодня и что докажет пилот.`;
+  mkdirSync(join(dir, 'neuro'), { recursive: true });
+  writeFileSync(join(dir, 'neuro', 'index.html'), `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${esc(t)} · MOTUS Lab × ГК «Моторика»</title>
+<meta name="description" content="${esc(d)}">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#071019">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="refresh" content="0; url=${to}">
+<link rel="canonical" href="${to}">
+<meta property="og:type" content="article">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="MOTUS Lab × ГК «Моторика»">
+<meta property="og:title" content="${esc(t)}">
+<meta property="og:description" content="${esc(d)}">
+<meta property="og:url" content="${D.SITE}neuro/">
+<meta property="og:image" content="${D.SITE}og-innov.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Слайд маршрута: «${esc(r.t)}: шесть ответов на ваши вопросы»">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../../icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../${v('site.css')}">
+</head>
+<body class="doc">
+<main class="doc"><div class="wrap"><p><a href="${to}">Открыть маршрут «${esc(r.t)}» — ${n} слайдов, ≈${r.minutes} минут</a></p></div></main>
+</body>
+</html>
+`);
+}
 
 // ── Service worker: страницы — сначала из сети, файлы с ?v= — из кэша ──
 // Картинки из site.css (фоны разделов, зерно) идут без ?v=: их содержимое входит в версию кэша
